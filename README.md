@@ -45,6 +45,31 @@ A comprehensive graduate-level textbook covering the theory, mathematics, and im
 
 ## 🚀 Quick Start
 
+### 🆕 Interactive Node.js Version (Recommended)
+Experience the textbook in a modern, fast, and beautiful web application:
+
+```bash
+cd nodejs-version
+npm install
+npm start
+```
+
+Open http://localhost:3000 for:
+- ⚡ Lightning-fast loading (< 1 second)
+- 🎨 Beautiful UI with dark mode
+- 📱 Perfect mobile experience
+- 🔍 Instant chapter search
+- ⌨️ Keyboard navigation
+- 📑 Chapter table of contents
+
+**Deploy to Vercel in 5 minutes:**
+```bash
+cd nodejs-version
+./deploy-vercel.sh
+```
+
+**[See nodejs-version/README.md for details](nodejs-version/README.md)** | **[Deploy Guide](nodejs-version/DEPLOY_NOW.md)**
+
 ### Read Online
 Visit the [HTML version](https://pietkonijn007.github.io/deep-learning-transformers-textbook/) for the best reading experience with:
 - Beautiful math rendering via MathJax
@@ -118,6 +143,10 @@ The HTML files will be created in `html-build/output/` and automatically copied 
 │   ├── chapters/
 │   ├── css/
 │   └── js/
+├── nodejs-version/             # 🆕 Interactive Node.js web app
+│   ├── server.js              # Express server
+│   ├── public/                # Frontend assets
+│   └── *.md                   # Comprehensive documentation
 ├── html-build/                 # HTML build system
 │   ├── convert_to_html.py     # Python converter script
 │   ├── css/

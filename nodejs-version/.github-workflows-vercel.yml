@@ -1,0 +1,50 @@
+# Optional: GitHub Actions workflow for Vercel deployment
+# To use this:
+# 1. Rename this file to: .github/workflows/vercel.yml (create .github/workflows/ directory)
+# 2. Add Vercel secrets to GitHub repository settings:
+#    - VERCEL_TOKEN (from vercel.com/account/tokens)
+#    - VERCEL_ORG_ID (from .vercel/project.json after first deploy)
+#    - VERCEL_PROJECT_ID (from .vercel/project.json after first deploy)
+
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'nodejs-version/**'
+      - 'docs/chapters/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'nodejs-version/**'
+      - 'docs/chapters/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: nodejs-version
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: nodejs-version
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        working-directory: nodejs-version
