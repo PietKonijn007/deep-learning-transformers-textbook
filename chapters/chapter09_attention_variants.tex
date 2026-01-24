@@ -1,0 +1,307 @@
+\chapter{Attention Variants and Mechanisms}
+\label{chap:attention_variants}
+
+\section*{Chapter Overview}
+
+Beyond standard scaled dot-product attention, numerous variants have been developed for specific use cases and improved efficiency. This chapter explores cross-attention for encoder-decoder models, soft vs hard attention, attention with relative position representations, and practical considerations for implementing attention mechanisms.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Distinguish between self-attention and cross-attention
+    \item Understand relative position representations
+    \item Implement attention with different scoring functions
+    \item Apply attention masking for various scenarios
+    \item Understand attention dropout and layer normalization
+    \item Visualize and interpret attention patterns
+\end{enumerate}
+
+\section{Cross-Attention}
+\label{sec:cross_attention}
+
+\begin{definition}[Cross-Attention]
+\label{def:cross_attention}
+In encoder-decoder architectures, decoder attends to encoder output via cross-attention:
+\begin{align}
+\mQ &= \mX_{\text{dec}} \mW^Q \quad \text{(queries from decoder)} \\
+\mK &= \mX_{\text{enc}} \mW^K \quad \text{(keys from encoder)} \\
+\mV &= \mX_{\text{enc}} \mW^V \quad \text{(values from encoder)} \\
+\text{CrossAttn}(\mX_{\text{dec}}, \mX_{\text{enc}}) &= \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+\end{align}
+\end{definition}
+
+\textbf{Dimensions:}
+\begin{itemize}
+    \item Decoder input: $\mX_{\text{dec}} \in \R^{m \times d}$ ($m$ decoder positions)
+    \item Encoder output: $\mX_{\text{enc}} \in \R^{n \times d}$ ($n$ encoder positions)
+    \item Attention matrix: $\mA \in \R^{m \times n}$ (decoder $\times$ encoder)
+    \item Output: $\R^{m \times d_v}$ (same decoder length)
+\end{itemize}
+
+\begin{example}[Machine Translation Cross-Attention]
+\label{ex:translation_cross_attention}
+English source: "The cat sat" (3 tokens encoded to $\mX_{\text{enc}} \in \R^{3 \times 512}$)
+
+French target: "Le chat" (2 tokens so far, $\mX_{\text{dec}} \in \R^{2 \times 512}$)
+
+Cross-attention computes:
+\begin{equation}
+\mA = \begin{bmatrix}
+\alpha_{1,1} & \alpha_{1,2} & \alpha_{1,3} \\
+\alpha_{2,1} & \alpha_{2,2} & \alpha_{2,3}
+\end{bmatrix} \in \R^{2 \times 3}
+\end{equation}
+
+where $\alpha_{1,j}$ = attention from decoder position 1 ("Le") to encoder position $j$.
+
+When generating "Le" (the), model should attend strongly to "The" in source.
+
+When generating "chat" (cat), model should attend strongly to "cat" in source.
+\end{example}
+
+\subsection{Transformer Decoder Attention Layers}
+
+A transformer decoder block contains \textbf{three} attention mechanisms:
+
+\begin{enumerate}
+    \item \textbf{Masked self-attention:} Decoder attends to previous decoder positions
+    \begin{equation}
+    \mQ = \mK = \mV = \mX_{\text{dec}} \quad \text{(with causal mask)}
+    \end{equation}
+
+    \item \textbf{Cross-attention:} Decoder attends to encoder output
+    \begin{equation}
+    \mQ = \mX_{\text{dec}}, \quad \mK = \mV = \mX_{\text{enc}}
+    \end{equation}
+
+    \item \textbf{Feed-forward:} Position-wise MLP (not attention)
+\end{enumerate}
+
+\begin{keypoint}
+Encoder-only models (BERT) use only self-attention. Decoder-only models (GPT) use only masked self-attention. Encoder-decoder models (T5, BART) use all three mechanisms.
+\end{keypoint}
+
+\section{Relative Position Representations}
+\label{sec:relative_position}
+
+\textbf{Problem with absolute positions:} Model learns positions 0-512 during training. How to handle position 600 at inference?
+
+\textbf{Solution:} Relative position representations—encode distance between positions, not absolute positions.
+
+\subsection{Shaw et al. Relative Attention}
+
+\begin{definition}[Relative Position Attention]
+\label{def:relative_position_attention}
+Modify attention scores to include relative position information:
+\begin{equation}
+e_{ij} = \frac{\vq_i\transpose \vk_j}{\sqrt{d_k}} + \vq_i\transpose \vr^{K}_{i-j}
+\end{equation}
+where $\vr^{K}_{i-j} \in \R^{d_k}$ encodes relative position $i-j$ (clipped to maximum distance).
+\end{equation}
+\end{definition}
+
+\textbf{Advantages:}
+\begin{itemize}
+    \item Generalize to longer sequences
+    \item Model learns distance-based patterns
+    \item More parameter efficient
+\end{itemize}
+
+\subsection{T5 Relative Position Bias}
+
+T5 uses even simpler approach—add learned bias based on relative position:
+\begin{equation}
+\mA_{ij} = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}} + \mB\right)_{ij}
+\end{equation}
+where $B_{ij}$ depends only on $|i-j|$ (bucketed by distance).
+
+\section{Alternative Attention Scoring Functions}
+\label{sec:scoring_functions}
+
+Beyond scaled dot-product, various scoring functions exist:
+
+\subsection{Additive (Bahdanau)}
+\begin{equation}
+\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
+\end{equation}
+
+\subsection{Multiplicative (Luong)}
+\begin{equation}
+\text{score}(\vq, \vk) = \vq\transpose \mW \vk
+\end{equation}
+
+\subsection{Scaled Dot-Product (Transformers)}
+\begin{equation}
+\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
+\end{equation}
+
+\subsection{General}
+\begin{equation}
+\text{score}(\vq, \vk) = \vq\transpose \mW \vk
+\end{equation}
+
+\textbf{Comparison:}
+\begin{itemize}
+    \item \textbf{Additive:} More parameters, handles different dimensions
+    \item \textbf{Dot-product:} Efficient, used in transformers
+    \item \textbf{General:} Flexible but more parameters
+\end{itemize}
+
+\section{Attention Masking}
+\label{sec:attention_masking}
+
+\subsection{Padding Mask}
+
+For variable-length sequences in batch, mask padding tokens:
+\begin{equation}
+M_{ij} = \begin{cases}
+0 & \text{if position } j \text{ is valid} \\
+-\infty & \text{if position } j \text{ is padding}
+\end{cases}
+\end{equation}
+
+\begin{example}[Padding Mask]
+\label{ex:padding_mask}
+Batch with sequences of length [5, 7, 4], padded to length 7:
+\begin{align}
+\text{Seq 1:} & \quad [w_1, w_2, w_3, w_4, w_5, \text{PAD}, \text{PAD}] \\
+\text{Seq 2:} & \quad [w_1, w_2, w_3, w_4, w_5, w_6, w_7] \\
+\text{Seq 3:} & \quad [w_1, w_2, w_3, w_4, \text{PAD}, \text{PAD}, \text{PAD}]
+\end{align}
+
+Mask for Seq 1:
+\begin{equation}
+[0, 0, 0, 0, 0, -\infty, -\infty]
+\end{equation}
+
+Prevents attending to padding tokens.
+\end{example}
+
+\subsection{Combined Masks}
+
+For decoder, combine causal mask and padding mask:
+\begin{equation}
+\mM_{\text{total}} = \mM_{\text{causal}} + \mM_{\text{padding}}
+\end{equation}
+
+Element-wise, use most restrictive: if either mask blocks, result blocks.
+
+\section{Attention Dropout}
+\label{sec:attention_dropout}
+
+Apply dropout to attention weights for regularization:
+\begin{equation}
+\mA = \text{Dropout}\left(\text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right)\right)
+\end{equation}
+
+Typical dropout rate: 0.1 (10\%)
+
+\textbf{Effect:} Randomly zero out some attention connections, preventing over-reliance on specific positions.
+
+\section{Layer Normalization with Attention}
+\label{sec:layer_norm_attention}
+
+Two architectures for combining attention with layer norm:
+
+\subsection{Post-Norm (Original Transformer)}
+\begin{align}
+\vh &= \mX + \text{MultiHeadAttn}(\mX) \\
+\mZ &= \text{LayerNorm}(\vh)
+\end{align}
+
+\subsection{Pre-Norm (More Common Now)}
+\begin{align}
+\vh &= \mX + \text{MultiHeadAttn}(\text{LayerNorm}(\mX)) \\
+\mZ &= \vh
+\end{align}
+
+\textbf{Pre-norm advantages:}
+\begin{itemize}
+    \item More stable training
+    \item Easier gradient flow
+    \item Used in GPT-2, GPT-3, modern transformers
+\end{itemize}
+
+\section{Visualizing Attention}
+\label{sec:visualizing_attention}
+
+Attention weights $\mA \in \R^{n \times n}$ reveal what model attends to:
+
+\subsection{Attention Heatmaps}
+
+For sentence "The cat sat on the mat":
+\begin{itemize}
+    \item Row $i$: attention distribution when processing token $i$
+    \item Bright cell $(i,j)$: token $i$ strongly attends to token $j$
+\end{itemize}
+
+\textbf{Patterns observed:}
+\begin{itemize}
+    \item Diagonal: Attending to self
+    \item Vertical lines: Attending to specific important words (e.g., subject, verb)
+    \item Symmetric patterns: Mutual attention between related words
+    \item Head-specific patterns: Different heads learn different relationships
+\end{itemize}
+
+\subsection{Interpreting Multiple Heads}
+
+In 12-head attention, different heads specialize:
+\begin{itemize}
+    \item Some heads attend to adjacent words (local syntax)
+    \item Some heads attend to distant words (long-range dependencies)
+    \item Some heads attend to specific parts of speech
+    \item Some heads attend based on semantic similarity
+\end{itemize}
+
+\begin{caution}
+Attention weights are NOT necessarily model explanations! High attention doesn't always mean high importance for prediction. Attention shows where model looks, not why decisions are made.
+\end{caution}
+
+\section{Practical Implementation Considerations}
+\label{sec:implementation_considerations}
+
+\subsection{Memory-Efficient Attention}
+
+For very long sequences, store attention matrix in chunks:
+\begin{enumerate}
+    \item Compute $\mQ \mK\transpose$ for chunk of queries
+    \item Apply softmax
+    \item Multiply by $\mV$ chunk
+    \item Accumulate results
+\end{enumerate}
+
+Reduces peak memory from $O(n^2)$ to $O(nc)$ where $c$ is chunk size.
+
+\subsection{Fused Attention Kernels}
+
+Modern implementations fuse operations:
+\begin{equation}
+\text{QK}^T \to \text{Scale} \to \text{Mask} \to \text{Softmax} \to \text{Dropout} \to \text{multiply } \mV
+\end{equation}
+
+Single fused kernel faster than separate operations (fewer memory transfers).
+
+Example: FlashAttention achieves 2-4x speedup through fused operations and memory hierarchy optimization.
+
+\section{Exercises}
+
+\begin{exercise}
+Implement cross-attention layer in PyTorch. Test with encoder output (length 10, dim 128) and decoder input (length 7, dim 128). Verify attention matrix shape is $7 \times 10$.
+\end{exercise}
+
+\begin{exercise}
+For sequence length 1000 with 8 attention heads and $d_{\text{model}} = 512$: (1) Calculate attention matrix memory for all heads, (2) Estimate speedup if using sparse attention (10\% sparsity), (3) What is memory reduction?
+\end{exercise}
+
+\begin{exercise}
+Implement relative position bias as in T5. Use buckets: [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32+]. Show how attention scores change with relative distance.
+\end{exercise}
+
+\begin{exercise}
+Create visualization showing: (1) Self-attention patterns for sentence "The quick brown fox jumps", (2) Effect of causal masking, (3) Difference between heads 1 and 12 in multi-head attention. What patterns emerge?
+\end{exercise}
+
+\begin{exercise}
+Compare computational cost of: (1) Additive (Bahdanau) attention, (2) Multiplicative attention, (3) Scaled dot-product attention. For $n = 512$, $d_k = 64$, which is most efficient?
+\end{exercise}
+

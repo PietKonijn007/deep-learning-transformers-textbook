@@ -1,0 +1,325 @@
+\chapter{Attention Mechanisms: Fundamentals}
+\label{chap:attention_fundamentals}
+
+\section*{Chapter Overview}
+
+Attention mechanisms revolutionized sequence modeling by allowing models to focus on relevant parts of the input when producing each output. This chapter introduces attention from first principles, developing the query-key-value paradigm that underpins modern transformers.
+
+Attention solves a fundamental limitation of RNN encoder-decoder models: compressing entire input sequence into single fixed-size vector. Instead, attention computes dynamic, context-dependent representations by weighted combination of all input positions.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand the motivation for attention in sequence-to-sequence models
+    \item Master the query-key-value attention paradigm
+    \item Implement additive (Bahdanau) and multiplicative (Luong) attention
+    \item Understand scaled dot-product attention
+    \item Compute attention weights and apply to values
+    \item Visualize and interpret attention distributions
+\end{enumerate}
+
+\section{Motivation: The Seq2Seq Bottleneck}
+\label{sec:seq2seq_bottleneck}
+
+\subsection{RNN Encoder-Decoder Architecture}
+
+\textbf{Problem setup:} Translate input sequence $\vx_1, \ldots, \vx_n$ to output sequence $\vy_1, \ldots, \vy_m$
+
+\textbf{Standard approach (pre-attention):}
+\begin{enumerate}
+    \item \textbf{Encoder RNN:} Process input, produce final hidden state $\mathbf{c}$ (context vector)
+    \begin{equation}
+    \vh_t^{\text{enc}} = \text{RNN}(\vx_t, \vh_{t-1}^{\text{enc}}), \quad \mathbf{c} = \vh_n^{\text{enc}}
+    \end{equation}
+
+    \item \textbf{Decoder RNN:} Generate output conditioned on $\mathbf{c}$
+    \begin{equation}
+    \vh_t^{\text{dec}} = \text{RNN}([\vy_{t-1}, \mathbf{c}], \vh_{t-1}^{\text{dec}})
+    \end{equation}
+\end{enumerate}
+
+\textbf{Bottleneck:} Entire input sequence compressed into single fixed-size vector $\mathbf{c}$! 
+\begin{itemize}
+    \item Long sequences: information loss
+    \item All input words contribute equally
+    \item Performance degrades with sequence length
+\end{itemize}
+
+\subsection{Attention Solution}
+
+\textbf{Key insight:} When generating output word $\vy_t$, different input words have different relevance.
+
+\textbf{Attention mechanism:}
+\begin{itemize}
+    \item Compute \textbf{context vector} $\mathbf{c}_t$ for each output position $t$
+    \item $\mathbf{c}_t$ is weighted sum of all encoder hidden states
+    \item Weights reflect relevance of each input to current output
+\end{itemize}
+
+\begin{example}[Translation with Attention]
+\label{ex:translation_attention}
+Translate "The cat sat on the mat" to "Le chat était assis sur le tapis"
+
+When generating "chat" (cat), attention should focus on "cat" in input.
+
+When generating "assis" (sat), attention should focus on "sat".
+
+Attention weights adapt dynamically based on what decoder is generating!
+\end{example}
+
+\section{Additive Attention (Bahdanau)}
+\label{sec:additive_attention}
+
+\begin{definition}[Bahdanau Attention]
+\label{def:bahdanau_attention}
+Given:
+\begin{itemize}
+    \item Encoder hidden states: $\vh_1, \ldots, \vh_n \in \R^{d_h}$
+    \item Decoder hidden state at time $t$: $\mathbf{s}_t \in \R^{d_s}$
+\end{itemize}
+
+\textbf{Step 1: Compute alignment scores}
+\begin{equation}
+e_{t,i} = \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_t + \mW_2 \vh_i)
+\end{equation}
+where $\mW_1 \in \R^{d_a \times d_s}$, $\mW_2 \in \R^{d_a \times d_h}$, $\mathbf{v} \in \R^{d_a}$, and $d_a$ is attention dimension.
+
+\textbf{Step 2: Compute attention weights (softmax)}
+\begin{equation}
+\alpha_{t,i} = \frac{\exp(e_{t,i})}{\sum_{j=1}^{n} \exp(e_{t,j})}
+\end{equation}
+
+\textbf{Step 3: Compute context vector}
+\begin{equation}
+\mathbf{c}_t = \sum_{i=1}^{n} \alpha_{t,i} \vh_i
+\end{equation}
+
+\textbf{Step 4: Use in decoder}
+\begin{equation}
+\mathbf{s}_t = \text{RNN}([\vy_{t-1}, \mathbf{c}_t], \mathbf{s}_{t-1})
+\end{equation}
+\end{definition}
+
+\begin{keypoint}
+Attention weights $\alpha_{t,i}$ form probability distribution: $\alpha_{t,i} \geq 0$ and $\sum_{i=1}^n \alpha_{t,i} = 1$.
+Context vector $\mathbf{c}_t$ is weighted average of encoder states.
+\end{keypoint}
+
+\begin{example}[Bahdanau Attention Computation]
+\label{ex:bahdanau_computation}
+Setup:
+\begin{itemize}
+    \item Encoder hidden states: $\vh_1, \vh_2, \vh_3 \in \R^{4}$
+    \item Decoder state: $\mathbf{s}_2 \in \R^{4}$
+    \item Attention dimension: $d_a = 3$
+\end{itemize}
+
+\textbf{Step 1:} Compute scores for each encoder position
+\begin{align}
+e_{2,1} &= \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_2 + \mW_2 \vh_1) \in \R \\
+e_{2,2} &= \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_2 + \mW_2 \vh_2) \in \R \\
+e_{2,3} &= \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_2 + \mW_2 \vh_3) \in \R
+\end{align}
+
+Suppose: $e_{2,1} = 0.8$, $e_{2,2} = 2.1$, $e_{2,3} = 0.5$
+
+\textbf{Step 2:} Softmax to get weights
+\begin{align}
+\sum_j \exp(e_{2,j}) &= \exp(0.8) + \exp(2.1) + \exp(0.5) \\
+&\approx 2.23 + 8.17 + 1.65 = 12.05 \\
+\alpha_{2,1} &= \frac{2.23}{12.05} \approx 0.185 \\
+\alpha_{2,2} &= \frac{8.17}{12.05} \approx 0.678 \\
+\alpha_{2,3} &= \frac{1.65}{12.05} \approx 0.137
+\end{align}
+
+Most attention (67.8\%) on position 2!
+
+\textbf{Step 3:} Compute context
+\begin{equation}
+\mathbf{c}_2 = 0.185 \vh_1 + 0.678 \vh_2 + 0.137 \vh_3 \in \R^{4}
+\end{equation}
+\end{example}
+
+\section{Scaled Dot-Product Attention}
+\label{sec:scaled_dot_product}
+
+\begin{definition}[Scaled Dot-Product Attention]
+\label{def:scaled_dot_product}
+Given queries $\mQ \in \R^{m \times d_k}$, keys $\mK \in \R^{n \times d_k}$, values $\mV \in \R^{n \times d_v}$:
+
+\textbf{Step 1: Compute attention scores}
+\begin{equation}
+\mE = \mQ \mK\transpose \in \R^{m \times n}
+\end{equation}
+Score $e_{i,j}$ measures compatibility of query $i$ with key $j$.
+
+\textbf{Step 2: Scale by $\sqrt{d_k}$}
+\begin{equation}
+\mE_{\text{scaled}} = \frac{\mQ \mK\transpose}{\sqrt{d_k}}
+\end{equation}
+
+\textbf{Step 3: Softmax over keys (row-wise)}
+\begin{equation}
+\mA = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \in \R^{m \times n}
+\end{equation}
+
+\textbf{Step 4: Apply attention to values}
+\begin{equation}
+\text{Attention}(\mQ, \mK, \mV) = \mA \mV \in \R^{m \times d_v}
+\end{equation}
+\end{definition}
+
+\textbf{Complete formula:}
+\begin{equation}
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+\end{equation}
+
+\begin{keypoint}
+\textbf{Why scale by $\sqrt{d_k}$?}
+
+For large $d_k$, dot products grow large in magnitude, pushing softmax into regions with tiny gradients. Scaling keeps values moderate, maintaining good gradient flow.
+
+If $\mQ$ and $\mK$ have unit variance elements:
+\begin{equation}
+\text{Var}(\vq\transpose \vk) = d_k \quad \Rightarrow \quad \text{Var}\left(\frac{\vq\transpose \vk}{\sqrt{d_k}}\right) = 1
+\end{equation}
+\end{keypoint}
+
+\begin{example}[Scaled Dot-Product Computation]
+\label{ex:scaled_dot_product}
+Query-key-value dimensions: $d_k = 4$, $d_v = 5$
+
+Single query attending to 3 keys:
+\begin{equation}
+\vq = \begin{bmatrix} 1.0 \\ 0.5 \\ -0.3 \\ 0.8 \end{bmatrix}, \quad
+\mK = \begin{bmatrix}
+0.8 & 0.2 & -0.1 & 0.5 \\
+0.3 & 0.7 & 0.4 & -0.2 \\
+-0.5 & 0.1 & 0.9 & 0.6
+\end{bmatrix}
+\end{equation}
+
+\textbf{Step 1:} Compute dot products
+\begin{align}
+\vq\transpose \vk_1 &= 1.0(0.8) + 0.5(0.2) + (-0.3)(-0.1) + 0.8(0.5) = 1.33 \\
+\vq\transpose \vk_2 &= 1.0(0.3) + 0.5(0.7) + (-0.3)(0.4) + 0.8(-0.2) = 0.43 \\
+\vq\transpose \vk_3 &= 1.0(-0.5) + 0.5(0.1) + (-0.3)(0.9) + 0.8(0.6) = -0.22
+\end{align}
+
+\textbf{Step 2:} Scale by $\sqrt{d_k} = \sqrt{4} = 2$
+\begin{equation}
+\text{scores} = [0.665, 0.215, -0.110]
+\end{equation}
+
+\textbf{Step 3:} Softmax
+\begin{equation}
+\sum_j \exp(\text{score}_j) \approx 1.95 + 1.24 + 0.90 = 4.09
+\end{equation}
+\begin{equation}
+\boldsymbol{\alpha} = [0.477, 0.303, 0.220]
+\end{equation}
+
+\textbf{Step 4:} Apply to values (suppose $\mV \in \R^{3 \times 5}$)
+\begin{equation}
+\text{output} = 0.477 \vv_1 + 0.303 \vv_2 + 0.220 \vv_3 \in \R^{5}
+\end{equation}
+\end{example}
+
+\section{Query-Key-Value Paradigm}
+\label{sec:qkv_paradigm}
+
+\subsection{Intuition}
+
+\textbf{Analogy:} Information retrieval system
+\begin{itemize}
+    \item \textbf{Query ($\vq$):} What I'm looking for
+    \item \textbf{Keys ($\vk_i$):} Indexed content descriptions
+    \item \textbf{Values ($\vv_i$):} Actual content to retrieve
+\end{itemize}
+
+\textbf{Process:}
+\begin{enumerate}
+    \item Compare query to all keys (compute similarity)
+    \item Convert similarities to weights (softmax)
+    \item Retrieve weighted combination of values
+\end{enumerate}
+
+\subsection{Projecting to QKV}
+
+In transformers, $\mQ$, $\mK$, $\mV$ are computed from inputs via learned projections:
+
+\begin{align}
+\mQ &= \mX \mW^Q && \mW^Q \in \R^{d_{\text{model}} \times d_k} \\
+\mK &= \mX \mW^K && \mW^K \in \R^{d_{\text{model}} \times d_k} \\
+\mV &= \mX \mW^V && \mW^V \in \R^{d_{\text{model}} \times d_v}
+\end{align}
+
+where $\mX \in \R^{n \times d_{\text{model}}}$ is the input.
+
+\begin{example}[QKV Projection]
+\label{ex:qkv_projection}
+Input: Sequence of 5 tokens, each $d_{\text{model}} = 512$ dimensions
+\begin{equation}
+\mX \in \R^{5 \times 512}
+\end{equation}
+
+Project to $d_k = d_v = 64$:
+\begin{align}
+\mQ &= \mX \mW^Q \in \R^{5 \times 64} \quad (\mW^Q \in \R^{512 \times 64}) \\
+\mK &= \mX \mW^K \in \R^{5 \times 64} \quad (\mW^K \in \R^{512 \times 64}) \\
+\mV &= \mX \mW^V \in \R^{5 \times 64} \quad (\mW^V \in \R^{512 \times 64})
+\end{align}
+
+\textbf{Attention computation:}
+\begin{equation}
+\underbrace{\text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{64}}\right)}_{\R^{5 \times 5}} \underbrace{\mV}_{\R^{5 \times 64}} = \underbrace{\text{Output}}_{\R^{5 \times 64}}
+\end{equation}
+
+Attention matrix $\mA \in \R^{5 \times 5}$: entry $(i,j)$ is attention from position $i$ to position $j$.
+\end{example}
+
+\section{Attention Variants}
+\label{sec:attention_variants}
+
+\subsection{Self-Attention vs Cross-Attention}
+
+\textbf{Self-Attention:} $\mQ$, $\mK$, $\mV$ all from same source
+\begin{equation}
+\mQ = \mK = \mV = \mX \mW
+\end{equation}
+Used in: Transformer encoder, BERT
+
+\textbf{Cross-Attention:} Queries from one source, keys and values from another
+\begin{equation}
+\mQ = \mX_{\text{dec}} \mW^Q, \quad \mK = \mV = \mX_{\text{enc}} \mW^{K/V}
+\end{equation}
+Used in: Transformer decoder (attending to encoder output)
+
+\subsection{Masked Attention}
+
+For autoregressive models (GPT), prevent attending to future positions:
+\begin{equation}
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose + \mM}{\sqrt{d_k}}\right) \mV
+\end{equation}
+where mask $\mM_{ij} = -\infty$ if $j > i$, else $\mM_{ij} = 0$.
+
+After softmax, $\exp(-\infty) = 0$, so no attention to future!
+
+\section{Exercises}
+
+\begin{exercise}
+Compute Bahdanau attention for sequence length 4, decoder state dim 3, attention dim 2. Given specific $\mW_1$, $\mW_2$, $\mathbf{v}$, encoder states, and decoder state, calculate all attention weights.
+\end{exercise}
+
+\begin{exercise}
+For scaled dot-product attention with $\mQ \in \R^{10 \times 64}$, $\mK \in \R^{20 \times 64}$, $\mV \in \R^{20 \times 128}$: (1) What is output dimension? (2) What is attention matrix shape? (3) How many FLOPs for computing $\mQ \mK\transpose$?
+\end{exercise}
+
+\begin{exercise}
+Show that without scaling, for $d_k = 64$ and unit variance elements, dot products have variance 64. Demonstrate numerically how this affects softmax gradients.
+\end{exercise}
+
+\begin{exercise}
+Implement scaled dot-product attention in PyTorch. Test with sequences of length 5 and 10, dimensions $d_k = 32$, $d_v = 48$. Visualize attention weights as heatmap.
+\end{exercise}
+

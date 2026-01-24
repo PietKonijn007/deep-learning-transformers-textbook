@@ -1,0 +1,297 @@
+\chapter{Self-Attention and Multi-Head Attention}
+\label{chap:self_attention}
+
+\section*{Chapter Overview}
+
+Self-attention is the core innovation enabling transformers. This chapter develops self-attention from first principles, then introduces multi-head attention—the mechanism that allows transformers to attend to multiple types of relationships simultaneously.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand self-attention and its advantages over RNNs
+    \item Implement multi-head attention from scratch
+    \item Compute output dimensions and parameter counts
+    \item Understand positional encodings for sequence order
+    \item Analyze computational complexity of attention
+    \item Apply masking for causal (autoregressive) attention
+\end{enumerate}
+
+\section{Self-Attention Mechanism}
+\label{sec:self_attention_mechanism}
+
+\begin{definition}[Self-Attention]
+\label{def:self_attention}
+For input sequence $\mX \in \R^{n \times d}$, self-attention computes output where each position attends to all positions:
+\begin{align}
+\mQ &= \mX \mW^Q, \quad \mK = \mX \mW^K, \quad \mV = \mX \mW^V \\
+\text{SelfAttn}(\mX) &= \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+\end{align}
+where $\mW^Q, \mW^K \in \R^{d \times d_k}$ and $\mW^V \in \R^{d \times d_v}$.
+\end{definition}
+
+\textbf{Key properties:}
+\begin{itemize}
+    \item \textbf{Permutation equivariant:} If input order changes, output changes correspondingly
+    \item \textbf{All-to-all connections:} Every position attends to every other position
+    \item \textbf{Parallel computation:} No sequential dependency (unlike RNN)
+    \item \textbf{Long-range dependencies:} Direct paths between all positions
+\end{itemize}
+
+\begin{example}[Self-Attention Computation]
+\label{ex:self_attention_computation}
+Input: 3 word embeddings, each $d=4$ dimensional
+\begin{equation}
+\mX = \begin{bmatrix}
+1.0 & 0.5 & 0.2 & 0.8 \\
+0.3 & 1.2 & 0.7 & 0.4 \\
+0.6 & 0.9 & 1.1 & 0.3
+\end{bmatrix} \in \R^{3 \times 4}
+\end{equation}
+
+Projection matrices with $d_k = d_v = 3$:
+\begin{equation}
+\mW^Q, \mW^K, \mW^V \in \R^{4 \times 3}
+\end{equation}
+
+\textbf{Step 1:} Project to QKV
+\begin{align}
+\mQ &= \mX \mW^Q \in \R^{3 \times 3} \\
+\mK &= \mX \mW^K \in \R^{3 \times 3} \\
+\mV &= \mX \mW^V \in \R^{3 \times 3}
+\end{align}
+
+\textbf{Step 2:} Compute attention scores
+\begin{equation}
+\mQ \mK\transpose \in \R^{3 \times 3}
+\end{equation}
+
+Entry $(i,j)$ measures how much position $i$ attends to position $j$.
+
+\textbf{Step 3:} Scale and softmax
+\begin{equation}
+\mA = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{3}}\right) \in \R^{3 \times 3}
+\end{equation}
+
+Each row sums to 1 (probability distribution over positions to attend to).
+
+\textbf{Step 4:} Apply to values
+\begin{equation}
+\text{Output} = \mA \mV \in \R^{3 \times 3}
+\end{equation}
+
+Each output position is weighted combination of all input value vectors.
+\end{example}
+
+\section{Multi-Head Attention}
+\label{sec:multi_head_attention}
+
+\textbf{Motivation:} Single attention might miss different types of relationships (syntactic, semantic, positional). Multiple heads allow attending to different aspects simultaneously.
+
+\begin{definition}[Multi-Head Attention]
+\label{def:multi_head_attention}
+With $h$ attention heads, each with dimension $d_k = d_v = d_{\text{model}}/h$:
+
+\textbf{For each head $i = 1, \ldots, h$:}
+\begin{align}
+\mQ^{(i)} &= \mX \mW^{Q(i)}, \quad \mK^{(i)} = \mX \mW^{K(i)}, \quad \mV^{(i)} = \mX \mW^{V(i)} \\
+\text{head}_i &= \text{Attention}(\mQ^{(i)}, \mK^{(i)}, \mV^{(i)})
+\end{align}
+
+\textbf{Concatenate and project:}
+\begin{equation}
+\text{MultiHead}(\mX) = [\text{head}_1; \ldots; \text{head}_h] \mW^O
+\end{equation}
+
+where $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)} \in \R^{d_{\text{model}} \times d_k}$ and $\mW^O \in \R^{hd_k \times d_{\text{model}}}$.
+\end{definition}
+
+\begin{example}[BERT-base Multi-Head Attention]
+\label{ex:bert_mha}
+BERT-base parameters:
+\begin{itemize}
+    \item Model dimension: $d_{\text{model}} = 768$
+    \item Number of heads: $h = 12$
+    \item Dimension per head: $d_k = d_v = 768/12 = 64$
+    \item Sequence length: $n = 512$ (maximum)
+\end{itemize}
+
+\textbf{For single head:}
+\begin{align}
+\mQ^{(i)} &= \mX \mW^{Q(i)} \in \R^{512 \times 64} \quad (\mW^{Q(i)} \in \R^{768 \times 64}) \\
+\mK^{(i)} &= \mX \mW^{K(i)} \in \R^{512 \times 64} \\
+\mV^{(i)} &= \mX \mW^{V(i)} \in \R^{512 \times 64}
+\end{align}
+
+Attention matrix: $\mA^{(i)} \in \R^{512 \times 512}$ (huge!)
+
+\textbf{Concatenate all 12 heads:}
+\begin{equation}
+[\text{head}_1; \ldots; \text{head}_{12}] \in \R^{512 \times 768}
+\end{equation}
+
+\textbf{Output projection:}
+\begin{equation}
+\text{Output} = [\text{head}_1; \ldots; \text{head}_{12}] \mW^O \in \R^{512 \times 768}
+\end{equation}
+where $\mW^O \in \R^{768 \times 768}$.
+
+\textbf{Parameter count:}
+\begin{align}
+\text{QKV projections:} \quad &3h \cdot d_{\text{model}} \cdot d_k = 3 \times 12 \times 768 \times 64 = 1{,}769{,}472 \\
+\text{Output projection:} \quad &d_{\text{model}}^2 = 768^2 = 589{,}824 \\
+\text{Total:} \quad &2{,}359{,}296 \text{ parameters per attention layer}
+\end{align}
+\end{example}
+
+\begin{keypoint}
+Multi-head attention allows the model to jointly attend to information from different representation subspaces. Different heads learn different types of relationships (e.g., syntactic vs semantic).
+\end{keypoint}
+
+\section{Positional Encoding}
+\label{sec:positional_encoding}
+
+\textbf{Problem:} Self-attention is permutation equivariant—it ignores sequence order! Shuffle input tokens, output shuffles correspondingly.
+
+\textbf{Solution:} Add positional information to input embeddings.
+
+\begin{definition}[Sinusoidal Positional Encoding]
+\label{def:positional_encoding}
+For position $\text{pos}$ and dimension $i$:
+\begin{align}
+\text{PE}_{(\text{pos}, 2i)} &= \sin\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
+\text{PE}_{(\text{pos}, 2i+1)} &= \cos\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right)
+\end{align}
+\end{definition}
+
+\textbf{Properties:}
+\begin{itemize}
+    \item Unique encoding for each position
+    \item Periodic functions allow extrapolation to longer sequences
+    \item Different frequencies for different dimensions
+    \item Relative positions have fixed linear transformation
+\end{itemize}
+
+\textbf{Usage:}
+\begin{equation}
+\mX_{\text{input}} = \mX_{\text{embed}} + \text{PE}
+\end{equation}
+
+\begin{example}[Positional Encoding Values]
+\label{ex:pe_values}
+For $d_{\text{model}} = 512$:
+
+\textbf{Position 0:}
+\begin{align}
+\text{PE}_{(0,0)} &= \sin(0) = 0 \\
+\text{PE}_{(0,1)} &= \cos(0) = 1 \\
+&\vdots \\
+\text{PE}_{(0,510)} &= \sin(0) = 0 \\
+\text{PE}_{(0,511)} &= \cos(0) = 1
+\end{align}
+
+\textbf{Position 1:}
+\begin{align}
+\text{PE}_{(1,0)} &= \sin\left(\frac{1}{10000^{0/512}}\right) = \sin(1) \approx 0.841 \\
+\text{PE}_{(1,1)} &= \cos\left(\frac{1}{10000^{0/512}}\right) = \cos(1) \approx 0.540
+\end{align}
+
+Higher dimension indices have lower frequencies (longer periods).
+\end{example}
+
+\section{Computational Complexity}
+\label{sec:computational_complexity}
+
+\subsection{Self-Attention Complexity}
+
+\textbf{Memory:} Attention matrix $\mA \in \R^{n \times n}$ requires $O(n^2)$ memory.
+
+\textbf{Computation:}
+\begin{enumerate}
+    \item $\mQ \mK\transpose$: $O(n^2 d_k)$ FLOPs
+    \item Softmax: $O(n^2)$ FLOPs
+    \item $\mA \mV$: $O(n^2 d_v)$ FLOPs
+\end{enumerate}
+
+Total: $O(n^2 d)$ time and $O(n^2)$ memory
+
+\textbf{Comparison with RNN:}
+\begin{itemize}
+    \item RNN: $O(nd^2)$ time, $O(nd)$ memory, but sequential (no parallelism)
+    \item Transformer: $O(n^2d)$ time, $O(n^2)$ memory, fully parallel
+\end{itemize}
+
+For $n < d$ (typical in NLP), transformer is faster when parallelized!
+
+But for very long sequences ($n \gg d$), quadratic scaling problematic.
+
+\subsection{Efficient Attention Variants}
+
+For long sequences, various approximations reduce complexity:
+\begin{itemize}
+    \item \textbf{Sparse attention:} Attend to subset of positions
+    \item \textbf{Linear attention:} Approximate attention in $O(nd^2)$
+    \item \textbf{Sliding window:} Local attention within window
+    \item \textbf{Random/learned patterns:} Structured sparsity
+\end{itemize}
+
+We cover these in Chapter 16 (Efficient Transformers).
+
+\section{Causal (Masked) Self-Attention}
+\label{sec:causal_attention}
+
+For autoregressive models (GPT), prevent attending to future:
+
+\begin{definition}[Causal Mask]
+\label{def:causal_mask}
+Create mask matrix $\mM \in \R^{n \times n}$:
+\begin{equation}
+M_{ij} = \begin{cases}
+0 & \text{if } j \leq i \\
+-\infty & \text{if } j > i
+\end{cases}
+\end{equation}
+
+Apply before softmax:
+\begin{equation}
+\mA = \text{softmax}\left(\frac{\mQ \mK\transpose + \mM}{\sqrt{d_k}}\right)
+\end{equation}
+\end{definition}
+
+After softmax, $\exp(-\infty) = 0$, so position $i$ cannot attend to positions $j > i$.
+
+\begin{example}[Causal Mask for Length 4]
+\label{ex:causal_mask}
+\begin{equation}
+\mM = \begin{bmatrix}
+0 & -\infty & -\infty & -\infty \\
+0 & 0 & -\infty & -\infty \\
+0 & 0 & 0 & -\infty \\
+0 & 0 & 0 & 0
+\end{bmatrix}
+\end{equation}
+
+Position 0 attends only to itself.
+Position 1 attends to positions 0, 1.
+Position 3 attends to all positions 0, 1, 2, 3.
+
+This ensures autoregressive property for language modeling.
+\end{example}
+
+\section{Exercises}
+
+\begin{exercise}
+For GPT-2 ($d_{\text{model}} = 1024$, $h = 16$, $n = 1024$): (1) Compute attention matrix memory in MB (float32), (2) Count parameters in one multi-head attention layer, (3) Estimate FLOPs for single forward pass.
+\end{exercise}
+
+\begin{exercise}
+Implement multi-head attention in PyTorch. Test with batch size 32, sequence length 20, $d_{\text{model}} = 128$, 4 heads. Verify output shape and parameter count.
+\end{exercise}
+
+\begin{exercise}
+Show that sinusoidal positional encoding allows computing $\text{PE}_{\text{pos}+k}$ as linear function of $\text{PE}_{\text{pos}}$ for any offset $k$.
+\end{exercise}
+
+\begin{exercise}
+Compare attention weights with and without positional encoding. Show numerically how word order affects attention without PE.
+\end{exercise}
+
