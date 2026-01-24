@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Interactive textbook on Deep Learning and Transformers with mathematical rigor and practical implementation">
     <title>Deep Learning and Transformers - Interactive Textbook</title>
+    
+    <!-- Preconnect to CDN for faster loading -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
     <link rel="stylesheet" href="styles.css">
     
     <!-- MathJax Configuration -->
@@ -60,8 +65,18 @@
             }
         };
     </script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Load MathJax only when needed, not on initial page load -->
+    <script>
+        // Defer MathJax loading until after page is interactive
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+                script.async = true;
+                document.head.appendChild(script);
+            }, 100);
+        });
+    </script>
 </head>
 <body>
     <!-- Loading indicator -->
@@ -112,6 +127,10 @@
                             <div class="feature">
                                 <h3>🚀 Progressive Learning</h3>
                                 <p>Systematic knowledge building from foundations</p>
+                            </div>
+                            <div class="feature">
+                                <h3>⚡ Fast & Responsive</h3>
+                                <p>Optimized for quick loading and smooth navigation</p>
                             </div>
                         </div>
                     </div>
