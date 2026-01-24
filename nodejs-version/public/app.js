@@ -182,6 +182,16 @@ function setupEventListeners() {
     elements.sidebarToggle.addEventListener('click', () => {
         elements.sidebar.classList.toggle('open');
     });
+    
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && 
+            elements.sidebar.classList.contains('open') &&
+            !elements.sidebar.contains(e.target) &&
+            !elements.sidebarToggle.contains(e.target)) {
+            elements.sidebar.classList.remove('open');
+        }
+    });
 
     // Theme toggle
     elements.themeToggle.addEventListener('click', toggleTheme);
