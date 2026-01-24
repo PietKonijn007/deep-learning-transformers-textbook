@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 6: Recurrent Neural Networks - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+    </nav>
+
+    <main>
+        <h1>Recurrent Neural Networks</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Recurrent Neural Networks (RNNs) process sequential data by maintaining hidden states that capture information from previous time steps. This chapter develops RNNs from basic recurrence to modern architectures like LSTMs and GRUs, establishing foundations for understanding transformers.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand recurrent architectures for sequential data
+    <li>Implement vanilla RNNs, LSTMs, and GRUs
+    <li>Understand vanishing/exploding gradient problems
+    <li>Apply RNNs to sequence modeling tasks
+    <li>Understand bidirectional and multi-layer RNNs
+</ol>
+
+<h2>Vanilla RNNs</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+An RNN processes sequence $\vx_1, \vx_2, \ldots, \vx_T$ by maintaining hidden state $\vh_t \in \R^h$:
+<div class="equation">
+$$\begin{align}
+\vh_t &= \tanh(\mW_{hh} \vh_{t-1} + \mW_{xh} \vx_t + \vb_h) \\
+\vy_t &= \mW_{hy} \vh_t + \vb_y
+\end{align}$$
+</div>
+where:
+<ul>
+    <li>$\mW_{hh} \in \R^{h \times h}$: hidden-to-hidden weights
+    <li>$\mW_{xh} \in \R^{h \times d}$: input-to-hidden weights
+    <li>$\mW_{hy} \in \R^{k \times h}$: hidden-to-output weights
+    <li>$\vh_0$ initialized (often zeros)
+</ul>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Character-level language model with vocabulary size $V=5$, hidden size $h=3$.
+
+<p>Input sequence: "hello" encoded as one-hot vectors $\vx_1, \ldots, \vx_5 \in \R^5$</p>
+
+<p>Initialize: $\vh_0 = [0, 0, 0]\transpose$</p>
+
+<p><strong>Time step 1:</strong> Process 'h'
+<div class="equation">
+$$\begin{align}
+\vh_1 &= \tanh(\mW_{hh}\vh_0 + \mW_{xh}\vx_1 + \vb_h) \in \R^3 \\
+\vy_1 &= \mW_{hy}\vh_1 + \vb_y \in \R^5 \\
+\hat{\mathbf{p}}_1 &= \text{softmax}(\vy_1) \quad \text{(predict next character)}
+\end{align}$$
+</div>
+
+<p><strong>Time step 2:</strong> Process 'e' using $\vh_1$
+<div class="equation">
+$$
+\vh_2 = \tanh(\mW_{hh}\vh_1 + \mW_{xh}\vx_2 + \vb_h)
+$$
+</div>
+
+<p>Hidden state $\vh_t$ carries information from all previous time steps.
+</div>
+
+<h3>Backpropagation Through Time (BPTT)</h3>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Backpropagation Through Time</div>
+\KwIn{Sequence $\{\vx_1, \ldots, \vx_T\}$, targets $\{\vy_1, \ldots, \vy_T\}$}
+\KwOut{Gradients for all parameters}
+
+<p>\tcp{Forward Pass}
+\For{$t = 1$ \KwTo $T$}{
+    $\vh_t = \tanh(\mW_{hh}\vh_{t-1} + \mW_{xh}\vx_t + \vb_h)$ \\
+    $\vy_t = \mW_{hy}\vh_t + \vb_y$ \\
+    $L_t = \text{Loss}(\vy_t, \text{target}_t)$
+}</p>
+
+<p>\tcp{Backward Pass}
+Initialize $\frac{\partial L}{\partial \vh_{T+1}} = \mathbf{0}$ \\
+\For{$t = T$ \KwTo $1$}{
+    Compute $\frac{\partial L}{\partial \vh_t}$ (includes gradient from $t+1$) \\
+    Accumulate $\frac{\partial L}{\partial \mW_{hh}}, \frac{\partial L}{\partial \mW_{xh}}, \frac{\partial L}{\partial \mW_{hy}}$
+}
+</div>
+
+<h3>Vanishing and Exploding Gradients</h3>
+
+<p>Gradient of loss with respect to $\vh_0$ involves product:
+<div class="equation">
+$$
+\frac{\partial \vh_T}{\partial \vh_0} = \prod_{t=1}^{T} \frac{\partial \vh_t}{\partial \vh_{t-1}} = \prod_{t=1}^{T} \mW_{hh}\transpose \text{diag}(\tanh'(\cdot))
+$$
+</div>
+
+<p><strong>Problem:</strong> Long sequences cause:
+<ul>
+    <li><strong>Vanishing gradients:</strong> If $\norm{\mW_{hh}} < 1$, gradients $\to 0$ exponentially
+    <li><strong>Exploding gradients:</strong> If $\norm{\mW_{hh}} > 1$, gradients $\to \infty$ exponentially
+</ul>
+
+<p><strong>Solutions:</strong>
+<ul>
+    <li>Gradient clipping (for exploding)
+    <li>Better architectures: LSTM, GRU
+    <li>Eventually: Transformers with attention (no sequential bottleneck)
+</ul>
+
+<h2>Long Short-Term Memory (LSTM)</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+LSTM uses gating mechanisms to control information flow:
+<div class="equation">
+$$\begin{align}
+\vf_t &= \sigma(\mW_f[\vh_{t-1}, \vx_t] + \vb_f) && \text{(forget gate)} \\
+\vi_t &= \sigma(\mW_i[\vh_{t-1}, \vx_t] + \vb_i) && \text{(input gate)} \\
+\tilde{\mathbf{c}}_t &= \tanh(\mW_c[\vh_{t-1}, \vx_t] + \vb_c) && \text{(candidate cell)} \\
+\mathbf{c}_t &= \vf_t \odot \mathbf{c}_{t-1} + \vi_t \odot \tilde{\mathbf{c}}_t && \text{(cell state)} \\
+\vo_t &= \sigma(\mW_o[\vh_{t-1}, \vx_t] + \vb_o) && \text{(output gate)} \\
+\vh_t &= \vo_t \odot \tanh(\mathbf{c}_t) && \text{(hidden state)}
+\end{align}$$
+</div>
+where $\sigma$ is sigmoid, $\odot$ is element-wise multiplication, and $[\cdot, \cdot]$ is concatenation.
+</div>
+
+<p><strong>Key components:</strong>
+<ul>
+    <li><strong>Cell state $\mathbf{c</strong>_t$:} Long-term memory, flows with minimal modification
+    <li><strong>Forget gate $\vf_t$:</strong> What to remove from cell state
+    <li><strong>Input gate $\vi_t$:</strong> What new information to store
+    <li><strong>Output gate $\vo_t$:</strong> What to output from cell state
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+For input dimension $d=512$ and hidden dimension $h=1024$:
+
+<p>Each gate has weight matrix for $[\vh_{t-1}, \vx_t] \in \R^{h+d}$:
+<div class="equation">
+$$\begin{align}
+\text{Single gate:} \quad &(h+d) \times h + h = (1024 + 512) \times 1024 + 1024 \\
+&= 1{,}572{,}864 + 1{,}024 = 1{,}573{,}888
+\end{align}$$
+</div>
+
+<p>LSTM has 4 gates (forget, input, cell, output):
+<div class="equation">
+$$
+\text{Total:} \quad 4 \times 1{,}573{,}888 = 6{,}295{,}552 \text{ parameters}
+$$
+</div>
+
+<p>Compare to transformer attention with same dimensions: often fewer parameters and better parallelization!
+</div>
+
+<h2>Gated Recurrent Unit (GRU)</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+GRU simplifies LSTM by merging cell and hidden states:
+<div class="equation">
+$$\begin{align}
+\vz_t &= \sigma(\mW_z[\vh_{t-1}, \vx_t] + \vb_z) && \text{(update gate)} \\
+\vr_t &= \sigma(\mW_r[\vh_{t-1}, \vx_t] + \vb_r) && \text{(reset gate)} \\
+\tilde{\vh}_t &= \tanh(\mW_h[\vr_t \odot \vh_{t-1}, \vx_t] + \vb_h) && \text{(candidate)} \\
+\vh_t &= (1 - \vz_t) \odot \vh_{t-1} + \vz_t \odot \tilde{\vh}_t && \text{(hidden state)}
+\end{align}$$
+</div>
+</div>
+
+<p><strong>Advantages over LSTM:</strong>
+<ul>
+    <li>Fewer parameters (3 gates vs 4)
+    <li>Simpler architecture
+    <li>Often similar performance
+    <li>Faster training
+</ul>
+
+<h2>Bidirectional RNNs</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+Process sequence in both directions:
+<div class="equation">
+$$\begin{align}
+\overrightarrow{\vh}_t &= \text{RNN}_{\text{forward}}(\vx_t, \overrightarrow{\vh}_{t-1}) \\
+\overleftarrow{\vh}_t &= \text{RNN}_{\text{backward}}(\vx_t, \overleftarrow{\vh}_{t+1}) \\
+\vh_t &= [\overrightarrow{\vh}_t; \overleftarrow{\vh}_t]
+\end{align}$$
+</div>
+</div>
+
+<p>Bidirectional RNNs capture context from both past and future, useful when entire sequence is available (not for online/causal tasks).</p>
+
+<p><strong>Example:</strong> BERT uses bidirectional transformers (attention, not RNN), capturing full context.</p>
+
+<h2>RNN Applications</h2>
+
+<p><strong>Sequence-to-Sequence:</strong>
+<ul>
+    <li>Machine translation: Encoder RNN $\to$ Decoder RNN
+    <li>Text summarization
+    <li>Speech recognition
+</ul>
+
+<p><strong>Sequence Labeling:</strong>
+<ul>
+    <li>Part-of-speech tagging
+    <li>Named entity recognition
+    <li>Output at each time step
+</ul>
+
+<p><strong>Sequence Generation:</strong>
+<ul>
+    <li>Language modeling
+    <li>Music generation
+    <li>Sample from output distribution
+</ul>
+
+<div class="keypoint">
+While RNNs were dominant for sequences, transformers now excel in most NLP tasks due to: (1) Better parallelization, (2) Direct long-range dependencies via attention, (3) No vanishing gradients. RNNs still useful for online/streaming tasks.
+</div>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+For vanilla RNN with input dim $d=128$, hidden dim $h=256$: (1) Count total parameters, (2) Compute hidden state dimensions after processing sequence length $T=50$, (3) Why can't RNNs process batches of different length sequences efficiently?
+</div>
+
+<p>\begin{exercise}
+Derive gradient $\frac{\partial L}{\partial \mW_{hh}}$ for 3-step sequence. Show how gradient involves products of Jacobians and explain vanishing gradient problem.
+</div>
+
+<p>\begin{exercise}
+Compare parameter counts for: (1) LSTM with $h=512$, (2) GRU with $h=512$, (3) Transformer attention layer with $d_{\text{model}}=512$, $d_k=64$, $h=8$ heads. Which is most parameter-efficient?
+</div>
+
+<p>\begin{exercise}
+Implement bidirectional LSTM in PyTorch. Process sequence "The cat sat on the mat" with vocabulary size 10, embedding dim 16, hidden dim 32. Show output dimensions.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter05_convolutional_networks.html">← Chapter 5: Convolutional Neural Networks</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter07_attention_fundamentals.html">Chapter 7: Attention Mechanisms: Fundamentals →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
