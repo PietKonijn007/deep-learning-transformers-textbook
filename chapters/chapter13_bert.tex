@@ -1,0 +1,349 @@
+\chapter{BERT: Bidirectional Encoder Representations}
+\label{chap:bert}
+
+\section*{Chapter Overview}
+
+BERT (Bidirectional Encoder Representations from Transformers) revolutionized NLP by introducing effective bidirectional pre-training. This chapter covers BERT's architecture, pre-training objectives (masked language modeling and next sentence prediction), fine-tuning strategies, and variants (RoBERTa, ALBERT, DistilBERT).
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand BERT's encoder-only architecture
+    \item Implement masked language modeling (MLM)
+    \item Apply BERT to downstream tasks via fine-tuning
+    \item Compare BERT variants and their improvements
+    \item Analyze BERT's learned representations
+    \item Understand limitations and failure modes
+\end{enumerate}
+
+\section{BERT Architecture}
+\label{sec:bert_architecture}
+
+\subsection{Model Specification}
+
+\begin{definition}[BERT Model]
+\label{def:bert_model}
+BERT is a stack of transformer encoder layers with:
+\begin{itemize}
+    \item \textbf{Input:} Token + Segment + Position embeddings
+    \item \textbf{Processing:} $L$ transformer encoder layers
+    \item \textbf{Output:} Contextualized representations for all tokens
+\end{itemize}
+\end{definition}
+
+\textbf{BERT-base:}
+\begin{itemize}
+    \item Layers: $L = 12$
+    \item Hidden size: $d = 768$
+    \item Attention heads: $h = 12$
+    \item Feed-forward size: $d_{ff} = 3072$
+    \item Parameters: $\approx 110$M
+\end{itemize}
+
+\textbf{BERT-large:}
+\begin{itemize}
+    \item Layers: $L = 24$
+    \item Hidden size: $d = 1024$
+    \item Attention heads: $h = 16$
+    \item Feed-forward size: $d_{ff} = 4096$
+    \item Parameters: $\approx 340$M
+\end{itemize}
+
+\subsection{Input Representation}
+
+\begin{equation}
+\text{Input} = \text{TokenEmb} + \text{SegmentEmb} + \text{PositionEmb}
+\end{equation}
+
+\textbf{Token Embeddings:} WordPiece tokenization, vocabulary $\approx 30{,}000$
+
+\textbf{Segment Embeddings:} Distinguish sentence A vs B (for sentence-pair tasks)
+\begin{equation}
+\text{SegEmb}(i) = \begin{cases}
+\mathbf{e}_A & \text{if token } i \text{ in sentence A} \\
+\mathbf{e}_B & \text{if token } i \text{ in sentence B}
+\end{cases}
+\end{equation}
+
+\textbf{Position Embeddings:} Learned absolute positions (not sinusoidal)
+
+\textbf{Special tokens:}
+\begin{itemize}
+    \item \texttt{[CLS]}: Start of sequence, used for classification
+    \item \texttt{[SEP]}: Separate sentences
+    \item \texttt{[MASK]}: Masked token for MLM
+    \item \texttt{[PAD]}: Padding
+\end{itemize}
+
+\begin{example}[BERT Input]
+\label{ex:bert_input}
+Sentence pair: "The cat sat" and "It was tired"
+
+\textbf{Tokenized:}
+\begin{equation}
+[\texttt{[CLS]}, \text{The}, \text{cat}, \text{sat}, \texttt{[SEP]}, \text{It}, \text{was}, \text{tired}, \texttt{[SEP]}]
+\end{equation}
+
+\textbf{Segment IDs:}
+\begin{equation}
+[0, 0, 0, 0, 0, 1, 1, 1, 1]
+\end{equation}
+
+\textbf{Position IDs:}
+\begin{equation}
+[0, 1, 2, 3, 4, 5, 6, 7, 8]
+\end{equation}
+\end{example}
+
+\section{Pre-Training Objectives}
+\label{sec:bert_pretraining}
+
+\subsection{Masked Language Modeling (MLM)}
+
+\begin{definition}[Masked Language Modeling]
+\label{def:mlm}
+Randomly mask 15\% of tokens and predict them:
+\begin{enumerate}
+    \item Select 15\% of tokens
+    \item Of selected tokens:
+    \begin{itemize}
+        \item 80\%: Replace with \texttt{[MASK]}
+        \item 10\%: Replace with random token
+        \item 10\%: Keep original
+    \end{itemize}
+    \item Predict original tokens
+\end{enumerate}
+\end{definition}
+
+\textbf{Objective:}
+\begin{equation}
+\mathcal{L}_{\text{MLM}} = -\sum_{i \in \mathcal{M}} \log P(x_i | \vx_{\backslash \mathcal{M}})
+\end{equation}
+where $\mathcal{M}$ is set of masked positions and $\vx_{\backslash \mathcal{M}}$ are unmasked tokens.
+
+\begin{example}[MLM Example]
+\label{ex:mlm}
+Original: "The cat sat on the mat"
+
+\textbf{Step 1:} Select 15\%: positions 2, 5
+
+\textbf{Step 2:} Apply masking strategy:
+\begin{itemize}
+    \item Position 2 ("cat"): Replace with \texttt{[MASK]} (80\% case)
+    \item Position 5 ("the"): Keep original (10\% case)
+\end{itemize}
+
+\textbf{Input:} "The \texttt{[MASK]} sat on the mat"
+
+\textbf{Targets:} Predict "cat" at position 2, "the" at position 5
+
+\textbf{Output layer:}
+\begin{equation}
+\text{logits}_2 = \vh_2 \mW_{\text{vocab}} \quad \text{where } \vh_2 \in \R^{768}
+\end{equation}
+\begin{equation}
+P(\text{token} | \text{position 2}) = \text{softmax}(\text{logits}_2)
+\end{equation}
+\end{example}
+
+\textbf{Why this masking strategy?}
+\begin{itemize}
+    \item 80\% \texttt{[MASK]}: Standard masking
+    \item 10\% random: Prevents over-reliance on \texttt{[MASK]} token
+    \item 10\% original: Encourages model to maintain representations
+\end{itemize}
+
+\subsection{Next Sentence Prediction (NSP)}
+
+\begin{definition}[Next Sentence Prediction]
+\label{def:nsp}
+Binary classification: Does sentence B follow sentence A?
+\begin{equation}
+P(\text{IsNext} | \texttt{[CLS]}) = \sigma(\mW_{\text{NSP}} \vh_{\texttt{[CLS]}} + \vb_{\text{NSP}})
+\end{equation}
+\end{definition}
+
+\textbf{Training data:}
+\begin{itemize}
+    \item 50\%: B actually follows A (label: IsNext)
+    \item 50\%: B is random sentence (label: NotNext)
+\end{itemize}
+
+\textbf{NSP Loss:}
+\begin{equation}
+\mathcal{L}_{\text{NSP}} = -\log P(y_{\text{NSP}} | \texttt{[CLS]})
+\end{equation}
+
+\textbf{Total pre-training loss:}
+\begin{equation}
+\mathcal{L} = \mathcal{L}_{\text{MLM}} + \mathcal{L}_{\text{NSP}}
+\end{equation}
+
+\begin{keypoint}
+Later work (RoBERTa) showed NSP provides minimal benefit. Modern models often use only MLM or variants like span corruption.
+\end{keypoint}
+
+\section{Fine-Tuning BERT}
+\label{sec:bert_finetuning}
+
+\subsection{Classification Tasks}
+
+For sequence classification (sentiment, topic, etc.):
+\begin{enumerate}
+    \item Add classification head on \texttt{[CLS]} token
+    \begin{equation}
+    \text{logits} = \mW_{\text{cls}} \vh_{\texttt{[CLS]}} + \vb_{\text{cls}}
+    \end{equation}
+    \item Fine-tune entire model end-to-end
+\end{enumerate}
+
+\begin{example}[Sentiment Classification]
+\label{ex:bert_sentiment}
+Task: Binary sentiment (positive/negative)
+
+\textbf{Input:} "This movie was amazing!" $\to$ \texttt{[CLS]} This movie was amazing ! \texttt{[SEP]}
+
+\textbf{BERT encoding:} $\vh_{\texttt{[CLS]}} \in \R^{768}$
+
+\textbf{Classification head:}
+\begin{equation}
+\text{logits} = \mW \vh_{\texttt{[CLS]}} + \vb \quad \text{where } \mW \in \R^{2 \times 768}
+\end{equation}
+
+\textbf{Prediction:}
+\begin{equation}
+P(\text{positive}) = \text{softmax}(\text{logits})_1
+\end{equation}
+
+\textbf{Fine-tuning:} Train on labeled sentiment data for 2-4 epochs with small learning rate ($2 \times 10^{-5}$).
+\end{example}
+
+\subsection{Token-Level Tasks}
+
+For named entity recognition (NER), POS tagging:
+\begin{enumerate}
+    \item Add classification head on each token
+    \begin{equation}
+    \text{logits}_i = \mW_{\text{token}} \vh_i + \vb_{\text{token}}
+    \end{equation}
+    \item Predict label for each token independently
+\end{enumerate}
+
+\subsection{Question Answering (SQuAD)}
+
+For span-based QA:
+\begin{enumerate}
+    \item Input: \texttt{[CLS]} Question \texttt{[SEP]} Context \texttt{[SEP]}
+    \item Predict start and end positions in context
+    \begin{align}
+    P_{\text{start}}(i) &= \text{softmax}(\vh_i\transpose \mathbf{s}) \\
+    P_{\text{end}}(i) &= \text{softmax}(\vh_i\transpose \mathbf{e})
+    \end{align}
+    where $\mathbf{s}, \mathbf{e} \in \R^{768}$ are learned vectors.
+\end{enumerate}
+
+\section{BERT Variants}
+\label{sec:bert_variants}
+
+\subsection{RoBERTa (Robustly Optimized BERT)}
+
+Improvements over BERT:
+\begin{enumerate}
+    \item \textbf{Remove NSP:} Train only with MLM
+    \item \textbf{Dynamic masking:} Change masks during training
+    \item \textbf{Larger batches:} 8K vs 256
+    \item \textbf{More data:} 160GB vs 16GB text
+    \item \textbf{Longer training:} 500K vs 1M steps
+\end{enumerate}
+
+Result: Significant performance improvements on GLUE, SQuAD, RACE
+
+\subsection{ALBERT (A Lite BERT)}
+
+Parameter reduction techniques:
+\begin{enumerate}
+    \item \textbf{Factorized embedding:} $V \times H = V \times E \times E \times H$
+    \begin{itemize}
+        \item Instead: vocab $\to$ 768, use vocab $\to$ 128 $\to$ 768
+        \item Reduces embedding parameters from 23M to 4M
+    \end{itemize}
+
+    \item \textbf{Cross-layer parameter sharing:} Same weights for all layers
+    \begin{itemize}
+        \item Reduces parameters by $\approx 12\times$
+        \item Slight performance drop but huge memory savings
+    \end{itemize}
+
+    \item \textbf{Replace NSP with SOP:} Sentence Order Prediction
+\end{enumerate}
+
+ALBERT-xxlarge: 235M parameters but same performance as BERT-large (340M)
+
+\subsection{DistilBERT}
+
+Knowledge distillation for compression:
+\begin{itemize}
+    \item 6 layers instead of 12
+    \item 40\% smaller, 60\% faster
+    \item Retains 97\% of BERT's performance
+\end{itemize}
+
+\textbf{Distillation loss:}
+\begin{equation}
+\mathcal{L} = \alpha \mathcal{L}_{\text{CE}} + (1-\alpha) \mathcal{L}_{\text{KD}}
+\end{equation}
+where:
+\begin{equation}
+\mathcal{L}_{\text{KD}} = \text{KL}(\text{softmax}(z_s/T) \| \text{softmax}(z_t/T))
+\end{equation}
+$z_s$ = student logits, $z_t$ = teacher logits, $T$ = temperature
+
+\section{Analysis and Interpretability}
+\label{sec:bert_analysis}
+
+\subsection{What BERT Learns}
+
+\textbf{Lower layers:} Syntactic information (POS tags, parse trees)
+
+\textbf{Middle layers:} Semantic information (word sense, entity types)
+
+\textbf{Upper layers:} Task-specific information
+
+\textbf{Attention patterns:}
+\begin{itemize}
+    \item Some heads attend to next token (language modeling pattern)
+    \item Some heads attend to syntactic relations (e.g., verbs to subjects)
+    \item Some heads attend broadly (averaging)
+\end{itemize}
+
+\subsection{Probing Tasks}
+
+Test what linguistic information is encoded:
+\begin{itemize}
+    \item Surface: Sentence length, word order
+    \item Syntactic: POS tags, dependency labels, constituency trees
+    \item Semantic: Named entities, semantic roles, coreference
+\end{itemize}
+
+Method: Train linear classifier on frozen BERT representations
+
+Result: BERT captures surprisingly rich linguistic structure!
+
+\section{Exercises}
+
+\begin{exercise}
+Implement masked language modeling. For sentence "The quick brown fox jumps", mask 15\% of tokens and compute MLM loss. Show prediction probabilities for masked positions.
+\end{exercise}
+
+\begin{exercise}
+Fine-tune BERT-base on binary classification with 10,000 examples. Compare learning curves for: (1) Training only classification head, (2) Fine-tuning all layers. Which converges faster? Which achieves better performance?
+\end{exercise}
+
+\begin{exercise}
+Compare parameter counts for BERT-base, RoBERTa-base, ALBERT-base, DistilBERT. For each, calculate: (1) Total parameters, (2) Memory footprint (FP32), (3) Inference FLOPs for sequence length 128.
+\end{exercise}
+
+\begin{exercise}
+Visualize attention patterns for multi-head attention in BERT. For sentence "The cat that chased the mouse ran away", identify heads that capture: (1) Adjacent words, (2) Subject-verb relations, (3) Long-range dependencies.
+\end{exercise}
+

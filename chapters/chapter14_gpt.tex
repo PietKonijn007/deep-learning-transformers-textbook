@@ -1,0 +1,335 @@
+\chapter{GPT: Generative Pre-Training}
+\label{chap:gpt}
+
+\section*{Chapter Overview}
+
+GPT (Generative Pre-trained Transformer) pioneered decoder-only transformer architectures for autoregressive language modeling. This chapter traces the evolution from GPT-1 through GPT-4, covering architecture, pre-training, scaling, few-shot learning, and emergent abilities.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand GPT's decoder-only architecture
+    \item Implement autoregressive language modeling
+    \item Apply in-context learning and few-shot prompting
+    \item Analyze scaling laws and emergent abilities
+    \item Compare GPT variants (GPT-1, GPT-2, GPT-3, GPT-4)
+    \item Understand instruction tuning and RLHF
+\end{enumerate}
+
+\section{GPT Architecture}
+\label{sec:gpt_architecture}
+
+\subsection{Decoder-Only Transformers}
+
+\begin{definition}[GPT Architecture]
+\label{def:gpt_architecture}
+GPT uses transformer decoder blocks with:
+\begin{itemize}
+    \item \textbf{Masked self-attention:} Causal masking (no future tokens)
+    \item \textbf{No cross-attention:} Decoder-only (vs encoder-decoder)
+    \item \textbf{Position-wise FFN:} Same as standard transformer
+    \item \textbf{Pre-norm:} Layer norm before sub-layers (GPT-2+)
+\end{itemize}
+\end{definition}
+
+\textbf{Key difference from BERT:}
+\begin{itemize}
+    \item BERT: Bidirectional encoder (can see future)
+    \item GPT: Unidirectional decoder (causal, autoregressive)
+\end{itemize}
+
+\subsection{GPT Model Sizes}
+
+\textbf{GPT-1 (2018):}
+\begin{itemize}
+    \item Layers: $L = 12$, Hidden: $d = 768$, Heads: $h = 12$
+    \item Parameters: 117M
+    \item Context: 512 tokens
+\end{itemize}
+
+\textbf{GPT-2 (2019):}
+\begin{itemize}
+    \item Small: 117M, Medium: 345M, Large: 762M, XL: 1.5B
+    \item GPT-2 XL: $L=48$, $d=1600$, $h=25$
+    \item Context: 1024 tokens
+\end{itemize}
+
+\textbf{GPT-3 (2020):}
+\begin{itemize}
+    \item Small: 125M to XL: 175B
+    \item GPT-3 175B: $L=96$, $d=12288$, $h=96$
+    \item Context: 2048 tokens
+    \item Parameters: 175 billion!
+\end{itemize}
+
+\textbf{GPT-4 (2023):}
+\begin{itemize}
+    \item Architecture details not fully disclosed
+    \item Estimated: 1-1.7 trillion parameters (mixture of experts)
+    \item Context: 8K (standard), 32K (extended)
+\end{itemize}
+
+\begin{example}[GPT-2 Small Layer]
+\label{ex:gpt2_layer}
+Configuration: $L=12$, $d=768$, $h=12$, $d_{ff}=3072$
+
+\textbf{Single decoder layer:}
+\begin{enumerate}
+    \item Layer norm
+    \item Masked multi-head attention (12 heads)
+    \item Residual connection
+    \item Layer norm
+    \item Feed-forward (768 $\to$ 3072 $\to$ 768)
+    \item Residual connection
+\end{enumerate}
+
+\textbf{Parameters per layer:}
+\begin{align}
+\text{Attention:} \quad &4 \times 768^2 = 2{,}359{,}296 \\
+\text{FFN:} \quad &2 \times 768 \times 3072 = 4{,}718{,}592 \\
+\text{Layer norms:} \quad &2 \times 2 \times 768 = 3{,}072 \\
+\text{Total:} \quad &7{,}080{,}960 \approx 7M
+\end{align}
+
+12 layers: $\approx 85$M, plus embeddings $\approx 32$M = \textbf{117M total}
+\end{example}
+
+\section{Pre-Training: Autoregressive Language Modeling}
+\label{sec:gpt_pretraining}
+
+\subsection{Training Objective}
+
+\begin{definition}[Autoregressive Language Modeling]
+\label{def:autoregressive_lm}
+Maximize likelihood of next token given previous context:
+\begin{equation}
+\mathcal{L} = \sum_{i=1}^{n} \log P(x_i | x_1, \ldots, x_{i-1}; \theta)
+\end{equation}
+\end{definition}
+
+\textbf{Implementation:}
+\begin{enumerate}
+    \item Input: $[x_1, x_2, \ldots, x_n]$
+    \item Target: $[x_2, x_3, \ldots, x_{n+1}]$ (shifted by 1)
+    \item Causal mask: Position $i$ cannot attend to $j > i$
+    \item Cross-entropy loss at each position
+\end{enumerate}
+
+\begin{example}[GPT Training Example]
+\label{ex:gpt_training}
+Sentence: "The cat sat on the mat"
+
+\textbf{Tokenized:} $[T_1, T_2, T_3, T_4, T_5, T_6]$ = [The, cat, sat, on, the, mat]
+
+\textbf{Training:}
+\begin{align}
+P(T_2 | T_1) &= \text{softmax}(\vh_1 \mW_{\text{out}}) \quad \text{predict "cat"} \\
+P(T_3 | T_1, T_2) &= \text{softmax}(\vh_2 \mW_{\text{out}}) \quad \text{predict "sat"} \\
+&\vdots \\
+P(T_6 | T_1, \ldots, T_5) &= \text{softmax}(\vh_5 \mW_{\text{out}}) \quad \text{predict "mat"}
+\end{align}
+
+\textbf{Loss:}
+\begin{equation}
+\mathcal{L} = -\sum_{i=1}^{5} \log P(T_{i+1} | T_1, \ldots, T_i)
+\end{equation}
+
+All positions trained simultaneously in parallel (teacher forcing)!
+\end{example}
+
+\subsection{Pre-Training Data}
+
+\textbf{GPT-1:} BooksCorpus (7,000 books, $\approx$ 800M words)
+
+\textbf{GPT-2:} WebText (40GB, 8M web pages)
+
+\textbf{GPT-3:} Common Crawl (filtered), WebText2, Books1, Books2, Wikipedia
+\begin{itemize}
+    \item Total: $\approx$ 570GB text
+    \item Tokens: $\approx$ 300 billion
+    \item Training: Single pass (not multiple epochs)
+\end{itemize}
+
+\section{In-Context Learning and Few-Shot Prompting}
+\label{sec:in_context_learning}
+
+\subsection{Zero-Shot, One-Shot, Few-Shot}
+
+\textbf{Zero-shot:} Task description only
+\begin{verbatim}
+Translate English to French:
+sea otter =>
+\end{verbatim}
+
+\textbf{One-shot:} One example
+\begin{verbatim}
+Translate English to French:
+sea otter => loutre de mer
+cheese =>
+\end{verbatim}
+
+\textbf{Few-shot:} Multiple examples (typical: 10-100)
+\begin{verbatim}
+Translate English to French:
+sea otter => loutre de mer
+peppermint => menthe poivrée
+plush giraffe => girafe en peluche
+cheese =>
+\end{verbatim}
+
+\begin{keypoint}
+GPT-3's key discovery: Large language models can perform tasks through in-context learning without parameter updates! Performance improves with model scale and number of examples.
+\end{keypoint}
+
+\subsection{Emergent Abilities}
+
+Abilities that appear suddenly at certain scales:
+\begin{itemize}
+    \item \textbf{Few-shot learning:} Emerges around 1B-10B parameters
+    \item \textbf{Chain-of-thought reasoning:} Emerges around 100B parameters
+    \item \textbf{Complex instruction following:} Largest models
+\end{itemize}
+
+\textbf{Scaling curve:} Performance on many tasks follows smooth power law, but some tasks show sharp phase transitions.
+
+\section{Scaling Laws}
+\label{sec:gpt_scaling_laws}
+
+\subsection{Parameter Scaling}
+
+Performance (measured by loss) scales as:
+\begin{equation}
+L(N) \approx \left(\frac{N_c}{N}\right)^{\alpha}
+\end{equation}
+where $N$ is number of parameters, $N_c$ is constant, $\alpha \approx 0.076$.
+
+\textbf{Implications:}
+\begin{itemize}
+    \item Every 10× increase in parameters $\to$ consistent loss reduction
+    \item No sign of saturation up to 175B parameters
+    \item Motivates continued scaling
+\end{itemize}
+
+\subsection{Compute-Optimal Training}
+
+Chinchilla findings: For compute budget $C$, optimal allocation is:
+\begin{equation}
+N_{\text{optimal}} \propto C^{0.5}, \quad D_{\text{optimal}} \propto C^{0.5}
+\end{equation}
+
+\textbf{GPT-3 analysis:}
+\begin{itemize}
+    \item 175B parameters trained on 300B tokens
+    \item Chinchilla suggests: 80B parameters on 1.4T tokens would be better
+    \item Many large models are over-parameterized, under-trained
+\end{itemize}
+
+\section{Instruction Tuning and RLHF}
+\label{sec:instruction_tuning}
+
+\subsection{Instruction Tuning}
+
+Fine-tune on (instruction, output) pairs:
+\begin{verbatim}
+Instruction: Summarize the following in one sentence:
+[long text]
+Output: [one-sentence summary]
+\end{verbatim}
+
+\textbf{InstructGPT / ChatGPT approach:}
+\begin{enumerate}
+    \item Pre-train with language modeling
+    \item Supervised fine-tuning on high-quality instructions
+    \item Train reward model from human preferences
+    \item Optimize policy with reinforcement learning
+\end{enumerate}
+
+\subsection{RLHF (Reinforcement Learning from Human Feedback)}
+
+\begin{algorithm}[H]
+\caption{RLHF Training}
+\label{alg:rlhf}
+
+\textbf{Step 1: Supervised Fine-Tuning}
+\begin{itemize}
+    \item Collect demonstrations: (prompt, high-quality response)
+    \item Fine-tune GPT on demonstrations
+\end{itemize}
+
+\textbf{Step 2: Reward Model Training}
+\begin{itemize}
+    \item Generate multiple responses per prompt
+    \item Humans rank responses
+    \item Train reward model $r(x, y)$ to predict rankings
+\end{itemize}
+
+\textbf{Step 3: RL Fine-Tuning}
+\begin{itemize}
+    \item Optimize policy $\pi_\theta$ using PPO
+    \item Objective: $\mathbb{E}_{x,y \sim \pi_\theta}[r(x,y)] - \beta \text{KL}(\pi_\theta \| \pi_{\text{ref}})$
+    \item KL penalty prevents divergence from original model
+\end{itemize}
+\end{algorithm}
+
+\textbf{Result:} Models better aligned with human preferences, more helpful, honest, and harmless.
+
+\section{GPT Capabilities and Limitations}
+\label{sec:gpt_capabilities}
+
+\subsection{Capabilities}
+
+\textbf{Strong:}
+\begin{itemize}
+    \item Text generation (creative writing, code, dialogue)
+    \item Translation and summarization
+    \item Question answering
+    \item Few-shot learning
+    \item Chain-of-thought reasoning
+    \item Instruction following
+\end{itemize}
+
+\subsection{Limitations}
+
+\textbf{Weak:}
+\begin{itemize}
+    \item Factual accuracy (hallucinations)
+    \item Mathematical reasoning (without tools)
+    \item Long-term coherence in very long texts
+    \item True understanding vs pattern matching
+    \item Consistent personality/beliefs
+\end{itemize}
+
+\textbf{Hallucinations:} Model generates plausible but false information with high confidence.
+
+\textbf{Mitigation strategies:}
+\begin{itemize}
+    \item Retrieval-augmented generation (RAG)
+    \item Tool use (calculators, search)
+    \item Verification and fact-checking
+    \item Constitutional AI principles
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement autoregressive language modeling loss. For sequence "The quick brown fox", compute loss with teacher forcing. Compare with exposed schedule where model sees its own predictions.
+\end{exercise}
+
+\begin{exercise}
+Estimate training cost for GPT-3 (175B params, 300B tokens):
+\begin{enumerate}
+    \item FLOPs per forward pass
+    \item FLOPs for entire training (forward + backward $\approx 3\times$ forward)
+    \item Time on 1024 A100 GPUs (312 TFLOPS each)
+    \item Cost at \$2/GPU-hour
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement few-shot prompting. Test GPT-2 on classification task with 0, 1, 5, 10 examples. Plot accuracy vs number of shots. Does performance improve?
+\end{exercise}
+
+\begin{exercise}
+Analyze scaling: Train models with [10M, 50M, 100M, 500M] parameters on same data. Plot loss vs parameters on log-log scale. Does it follow power law? Estimate exponent.
+\end{exercise}
+

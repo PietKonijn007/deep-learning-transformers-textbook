@@ -1,0 +1,422 @@
+\chapter{Hardware Optimization and Deployment}
+\label{chap:hardware_optimization}
+
+\section*{Chapter Overview}
+
+Deploying transformers efficiently requires understanding hardware architectures, optimization techniques, and deployment strategies. This chapter covers GPUs, TPUs, model quantization, pruning, distillation, and production deployment best practices.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand GPU/TPU architectures for transformers
+    \item Apply model quantization (INT8, FP16)
+    \item Implement pruning and sparsity
+    \item Use knowledge distillation for compression
+    \item Optimize inference latency and throughput
+    \item Deploy models in production environments
+\end{enumerate}
+
+\section{Hardware Architectures}
+\label{sec:hardware_architectures}
+
+\subsection{GPU Architecture for Deep Learning}
+
+\textbf{NVIDIA Tensor Cores:}
+\begin{itemize}
+    \item Specialized matrix multiplication units
+    \item Mixed precision (FP16): 312 TFLOPS (A100)
+    \item FP32: 156 TFLOPS
+    \item INT8: 624 TOPS
+\end{itemize}
+
+\textbf{Memory hierarchy:}
+\begin{enumerate}
+    \item \textbf{Registers:} Fastest, smallest ($\sim$256KB/SM)
+    \item \textbf{Shared memory (SRAM):} Fast, limited (164KB/SM on A100)
+    \item \textbf{L2 cache:} Medium speed (40MB on A100)
+    \item \textbf{HBM (High Bandwidth Memory):} Largest, slower (40-80GB)
+\end{enumerate}
+
+\textbf{Bandwidth:}
+\begin{itemize}
+    \item A100 HBM: 1.6 TB/s
+    \item V100 HBM: 900 GB/s
+    \item Memory bandwidth often bottleneck for transformers
+\end{itemize}
+
+\subsection{Computational Intensity}
+
+\begin{definition}[Arithmetic Intensity]
+\label{def:arithmetic_intensity}
+\begin{equation}
+\text{Arithmetic Intensity} = \frac{\text{FLOPs}}{\text{Bytes transferred}}
+\end{equation}
+\end{definition}
+
+\textbf{For attention:}
+\begin{itemize}
+    \item $\mQ \mK\transpose$: Intensity = $\frac{2n^2d}{2nd + 2nd} = \frac{nd}{2d} = \frac{n}{2}$
+    \item For small $n$ (< 1024): Memory-bound
+    \item For large $n$ (> 4096): Compute-bound
+\end{itemize}
+
+\subsection{TPU Architecture}
+
+\textbf{Tensor Processing Units (TPUs):}
+\begin{itemize}
+    \item Systolic array architecture
+    \item Optimized for matrix multiplications
+    \item High memory bandwidth (900 GB/s, TPU v4)
+    \item 275 TFLOPS (bfloat16)
+\end{itemize}
+
+\textbf{TPU vs GPU:}
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspect} & \textbf{GPU} & \textbf{TPU} \\
+\midrule
+Flexibility & High (general purpose) & Medium (ML-specific) \\
+Peak FLOPS & 312 (A100 FP16) & 275 (v4 bf16) \\
+Memory & 40-80 GB & 32 GB (per chip) \\
+Batch size & Medium-Large & Very Large \\
+Best for & Flexibility, research & Large-scale training \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Model Quantization}
+\label{sec:quantization}
+
+\subsection{Quantization Fundamentals}
+
+\begin{definition}[Quantization]
+\label{def:quantization}
+Map FP32 weights to lower precision (INT8, FP16):
+\begin{equation}
+w_{\text{quant}} = \text{round}\left(\frac{w_{\text{float}}}{s}\right) + z
+\end{equation}
+where $s$ is scale factor, $z$ is zero-point.
+\end{definition}
+
+\textbf{Precision options:}
+\begin{itemize}
+    \item \textbf{FP32:} 32 bits, full precision (baseline)
+    \item \textbf{FP16:} 16 bits, 2× compression
+    \item \textbf{BF16:} 16 bits, better range than FP16
+    \item \textbf{INT8:} 8 bits, 4× compression
+    \item \textbf{INT4:} 4 bits, 8× compression (extreme)
+\end{itemize}
+
+\subsection{Post-Training Quantization (PTQ)}
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item Train model in FP32
+    \item Collect activation statistics on calibration set
+    \item Determine scale factors
+    \item Convert weights and activations to INT8
+\end{enumerate}
+
+\begin{example}[INT8 Quantization]
+\label{ex:int8_quantization}
+\textbf{FP32 weight:} $w = 0.137$
+
+\textbf{Determine range:} $w \in [-1.0, 1.0]$
+
+\textbf{Scale:} $s = \frac{2.0}{256} = 0.0078125$
+
+\textbf{Quantize:}
+\begin{equation}
+w_{\text{INT8}} = \text{round}\left(\frac{0.137}{0.0078125}\right) = \text{round}(17.54) = 18
+\end{equation}
+
+\textbf{Dequantize:} $w' = 18 \times 0.0078125 = 0.1406$
+
+\textbf{Error:} $|0.137 - 0.1406| = 0.0036$ (2.6\% relative)
+\end{example}
+
+\subsection{Quantization-Aware Training (QAT)}
+
+\textbf{Simulate quantization during training:}
+\begin{enumerate}
+    \item Forward pass: Quantize weights/activations
+    \item Compute loss with quantized values
+    \item Backward pass: FP32 gradients
+    \item Update FP32 weights
+\end{enumerate}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Model learns to be robust to quantization
+    \item Better accuracy than PTQ
+    \item Minimal accuracy loss with INT8
+\end{itemize}
+
+\begin{example}[BERT-base Quantization Results]
+\label{ex:bert_quantization}
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Precision} & \textbf{GLUE Score} & \textbf{Speedup} \\
+\midrule
+FP32 (baseline) & 84.5 & 1.0× \\
+FP16 & 84.4 & 1.8× \\
+INT8 (PTQ) & 82.1 & 2.9× \\
+INT8 (QAT) & 84.2 & 2.9× \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+QAT recovers most accuracy lost in PTQ!
+\end{example}
+
+\section{Model Pruning}
+\label{sec:pruning}
+
+\subsection{Pruning Strategies}
+
+\textbf{Magnitude-based pruning:}
+\begin{equation}
+\text{Prune if } |w_{ij}| < \tau
+\end{equation}
+
+\textbf{Structured pruning:}
+\begin{itemize}
+    \item Remove entire neurons, heads, layers
+    \item Easier to deploy (no sparse kernels needed)
+    \item Less aggressive compression
+\end{itemize}
+
+\textbf{Unstructured pruning:}
+\begin{itemize}
+    \item Remove individual weights
+    \item Higher compression ratios
+    \item Requires sparse matrix operations
+\end{itemize}
+
+\subsection{Iterative Pruning}
+
+\begin{algorithm}[H]
+\caption{Iterative Magnitude Pruning}
+\label{alg:iterative_pruning}
+
+\textbf{Input:} Model, sparsity target $s_{\text{target}}$
+
+\For{sparsity $s = 0$ \KwTo $s_{\text{target}}$ by steps}{
+    Train model to convergence \\
+    Prune $\Delta s$ lowest-magnitude weights \\
+    Fine-tune model
+}
+\end{algorithm}
+
+\begin{example}[Attention Head Pruning]
+\label{ex:head_pruning}
+BERT-base: 12 layers × 12 heads = 144 heads
+
+\textbf{Finding:} Can remove 50\% of heads with minimal impact!
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item Compute importance score per head
+    \item Rank heads by importance
+    \item Prune lowest 50\% (72 heads)
+    \item Fine-tune remaining model
+\end{enumerate}
+
+\textbf{Result:}
+\begin{itemize}
+    \item 50\% fewer attention operations
+    \item GLUE score: 84.5 $\to$ 83.8 (0.7 point drop)
+    \item 1.5× faster inference
+\end{itemize}
+\end{example}
+
+\section{Knowledge Distillation}
+\label{sec:knowledge_distillation_detail}
+
+\subsection{Distillation Loss}
+
+\begin{definition}[Distillation Objective]
+\label{def:distillation_objective}
+\begin{equation}
+\mathcal{L} = \alpha \mathcal{L}_{\text{CE}}(y, y_{\text{student}}) + (1-\alpha) \mathcal{L}_{\text{KD}}(y_{\text{teacher}}, y_{\text{student}})
+\end{equation}
+
+where:
+\begin{equation}
+\mathcal{L}_{\text{KD}} = \text{KL}\left(\frac{\exp(z_t/T)}{\sum \exp(z_t/T)} \Big\| \frac{\exp(z_s/T)}{\sum \exp(z_s/T)}\right)
+\end{equation}
+
+$T$ = temperature (typically 2-5), higher = softer probabilities
+\end{definition}
+
+\subsection{DistilBERT Approach}
+
+\textbf{Student architecture:}
+\begin{itemize}
+    \item 6 layers (vs 12 in BERT)
+    \item Same hidden size (768)
+    \item Initialize from teacher's even layers
+\end{itemize}
+
+\textbf{Training:}
+\begin{itemize}
+    \item Distillation loss from teacher
+    \item Masked language modeling loss
+    \item Cosine distance between hidden states
+\end{itemize}
+
+\textbf{Results:}
+\begin{itemize}
+    \item 40\% smaller (66M vs 110M params)
+    \item 60\% faster
+    \item Retains 97\% of BERT performance
+\end{itemize}
+
+\section{Inference Optimization}
+\label{sec:inference_optimization}
+
+\subsection{ONNX Runtime}
+
+\textbf{ONNX (Open Neural Network Exchange):}
+\begin{itemize}
+    \item Framework-agnostic model format
+    \item Optimized inference engine
+    \item Supports quantization, pruning
+\end{itemize}
+
+\textbf{Optimizations:}
+\begin{itemize}
+    \item Operator fusion (combine LayerNorm + Add)
+    \item Constant folding
+    \item Dead code elimination
+    \item Graph optimization
+\end{itemize}
+
+\subsection{TensorRT}
+
+\textbf{NVIDIA TensorRT:}
+\begin{itemize}
+    \item Deep learning inference optimizer
+    \item Layer fusion
+    \item Kernel auto-tuning
+    \item INT8 calibration
+\end{itemize}
+
+\textbf{Typical speedups:}
+\begin{itemize}
+    \item BERT-base: 2-3× over PyTorch
+    \item With INT8: 4-5× over PyTorch FP32
+\end{itemize}
+
+\subsection{Batching Strategies}
+
+\textbf{Static batching:}
+\begin{itemize}
+    \item Fixed batch size
+    \item Pad to max length
+    \item Simple but wasteful
+\end{itemize}
+
+\textbf{Dynamic batching:}
+\begin{itemize}
+    \item Accumulate requests until batch full or timeout
+    \item Reduces latency while maintaining throughput
+\end{itemize}
+
+\textbf{Continuous batching:}
+\begin{itemize}
+    \item For autoregressive generation
+    \item Add new sequences as others finish
+    \item Maximizes GPU utilization
+\end{itemize}
+
+\section{Production Deployment}
+\label{sec:production_deployment}
+
+\subsection{Serving Frameworks}
+
+\textbf{TorchServe:}
+\begin{itemize}
+    \item PyTorch native serving
+    \item REST/gRPC APIs
+    \item Batching, versioning, monitoring
+\end{itemize}
+
+\textbf{Triton Inference Server:}
+\begin{itemize}
+    \item Multi-framework (PyTorch, TensorFlow, ONNX)
+    \item Concurrent model execution
+    \item Dynamic batching
+    \item Model ensembles
+\end{itemize}
+
+\textbf{FastAPI + Custom:}
+\begin{itemize}
+    \item Lightweight, flexible
+    \item Full control over serving logic
+    \item Easy integration with existing systems
+\end{itemize}
+
+\subsection{Deployment Checklist}
+
+\textbf{Performance:}
+\begin{itemize}
+    \item Quantize to INT8/FP16
+    \item Export to ONNX/TensorRT
+    \item Optimize batch size for latency/throughput
+    \item Enable KV caching for generation
+\end{itemize}
+
+\textbf{Reliability:}
+\begin{itemize}
+    \item Graceful degradation on errors
+    \item Request timeouts
+    \item Health checks
+    \item Model versioning
+\end{itemize}
+
+\textbf{Monitoring:}
+\begin{itemize}
+    \item Latency (p50, p95, p99)
+    \item Throughput (requests/second)
+    \item GPU utilization
+    \item Error rates
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Quantize BERT-base to INT8:
+\begin{enumerate}
+    \item Use PyTorch quantization APIs
+    \item Calibrate on 1000 examples
+    \item Measure: (a) Model size, (b) Inference speed, (c) GLUE accuracy
+    \item Compare PTQ vs QAT
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement attention head pruning:
+\begin{enumerate}
+    \item Compute importance scores for all heads
+    \item Prune 25\%, 50\%, 75\% of heads
+    \item Fine-tune after pruning
+    \item Plot accuracy vs sparsity
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Optimize inference pipeline:
+\begin{enumerate}
+    \item Baseline: PyTorch FP32
+    \item Convert to ONNX, measure speedup
+    \item Apply INT8 quantization
+    \item Implement dynamic batching
+    \item Report final throughput improvement
+\end{enumerate}
+\end{exercise}
+

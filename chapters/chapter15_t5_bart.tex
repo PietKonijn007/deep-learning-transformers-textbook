@@ -1,0 +1,415 @@
+\chapter{T5 and BART: Encoder-Decoder Architectures}
+\label{chap:t5_bart}
+
+\section*{Chapter Overview}
+
+T5 (Text-to-Text Transfer Transformer) and BART (Bidirectional and Auto-Regressive Transformers) represent encoder-decoder architectures that combine the strengths of BERT and GPT. This chapter covers their architectures, pre-training objectives, unified text-to-text framework, and applications to sequence-to-sequence tasks.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand encoder-decoder transformer architectures
+    \item Implement span corruption and denoising objectives
+    \item Apply text-to-text framework to diverse tasks
+    \item Compare T5, BART, and other seq2seq transformers
+    \item Fine-tune for summarization, translation, and question answering
+    \item Understand prefix LM and mixture of denoisers
+\end{enumerate}
+
+\section{T5: Text-to-Text Transfer Transformer}
+\label{sec:t5}
+
+\subsection{Unified Text-to-Text Framework}
+
+\begin{definition}[Text-to-Text Format]
+\label{def:text_to_text}
+All tasks formulated as: text input $\to$ text output
+\begin{itemize}
+    \item Translation: "translate English to German: That is good" $\to$ "Das ist gut"
+    \item Summarization: "summarize: [article]" $\to$ "[summary]"
+    \item Classification: "sst2 sentence: This movie is great" $\to$ "positive"
+    \item QA: "question: ... context: ..." $\to$ "[answer]"
+\end{itemize}
+\end{definition}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Single model for all tasks
+    \item Same architecture and objective
+    \item Transfer learning across tasks
+    \item Consistent evaluation framework
+\end{itemize}
+
+\subsection{T5 Architecture}
+
+\textbf{Standard encoder-decoder transformer with modifications:}
+
+\textbf{Encoder:}
+\begin{itemize}
+    \item Fully-visible self-attention (like BERT)
+    \item No causal masking
+    \item Processes input text
+\end{itemize}
+
+\textbf{Decoder:}
+\begin{itemize}
+    \item Causal self-attention (like GPT)
+    \item Cross-attention to encoder
+    \item Generates output text autoregressively
+\end{itemize}
+
+\textbf{Positional Encodings:}
+\begin{itemize}
+    \item Relative position bias (not absolute sinusoidal)
+    \item Shared across all layers
+    \item Learned bucket-based distances
+\end{itemize}
+
+\begin{example}[T5-Base Architecture]
+\label{ex:t5_base}
+Configuration:
+\begin{itemize}
+    \item Encoder layers: $L_{\text{enc}} = 12$
+    \item Decoder layers: $L_{\text{dec}} = 12$
+    \item Hidden size: $d = 768$
+    \item Attention heads: $h = 12$
+    \item FFN dimension: $d_{ff} = 3072$
+    \item Vocabulary: $V = 32{,}000$ (SentencePiece)
+    \item Parameters: $\approx 220$M
+\end{itemize}
+
+\textbf{Parameter breakdown:}
+\begin{align}
+\text{Embeddings:} \quad &32{,}000 \times 768 = 24.6\text{M} \\
+\text{Encoder (12 layers):} \quad &12 \times 7.1\text{M} = 85.2\text{M} \\
+\text{Decoder (12 layers):} \quad &12 \times 9.4\text{M} = 112.8\text{M} \\
+\text{Total:} \quad &\approx 220\text{M}
+\end{align}
+
+Decoder has more parameters due to cross-attention layer.
+\end{example}
+
+\subsection{Pre-Training Objective: Span Corruption}
+
+\begin{definition}[Span Corruption]
+\label{def:span_corruption}
+Corrupt spans of consecutive tokens, predict them:
+\begin{enumerate}
+    \item Sample span lengths from Poisson($\lambda = 3$)
+    \item Mask 15\% of tokens in spans
+    \item Replace each span with sentinel token \texttt{<X>}, \texttt{<Y>}, etc.
+    \item Predict original spans
+\end{enumerate}
+\end{definition}
+
+\begin{example}[Span Corruption Example]
+\label{ex:span_corruption}
+\textbf{Original:} "Thank you for inviting me to your party last week"
+
+\textbf{Step 1:} Select spans (15\% total): positions [3-4], [8-9]
+
+\textbf{Corrupted input:}
+\begin{verbatim}
+Thank you <X> inviting me to your <Y> week
+\end{verbatim}
+
+\textbf{Target output:}
+\begin{verbatim}
+<X> for <Y> party last <Z>
+\end{verbatim}
+
+Model must predict masked content and sentinel order.
+\end{example}
+
+\textbf{Why span corruption vs MLM?}
+\begin{itemize}
+    \item More challenging: Predict multiple tokens
+    \item Better for generation: Decoder learns to produce sequences
+    \item Efficient: Fewer prediction targets than MLM
+\end{itemize}
+
+\subsection{T5 Variants}
+
+\textbf{T5 Model Sizes:}
+\begin{itemize}
+    \item T5-Small: 60M parameters
+    \item T5-Base: 220M parameters
+    \item T5-Large: 770M parameters
+    \item T5-3B: 3 billion parameters
+    \item T5-11B: 11 billion parameters
+\end{itemize}
+
+\textbf{T5.1.1:} Improved version with:
+\begin{itemize}
+    \item GEGLU activation instead of ReLU
+    \item No dropout in pre-training
+    \item Trained on C4 + additional data
+\end{itemize}
+
+\section{BART: Denoising Autoencoder}
+\label{sec:bart}
+
+\subsection{BART Architecture}
+
+\begin{definition}[BART]
+\label{def:bart}
+Bidirectional And Auto-Regressive Transformers:
+\begin{itemize}
+    \item Encoder: Bidirectional (like BERT)
+    \item Decoder: Autoregressive (like GPT)
+    \item Pre-training: Reconstruct original text from corrupted input
+\end{itemize}
+\end{definition}
+
+\textbf{Configuration (BART-large):}
+\begin{itemize}
+    \item Encoder: 12 layers
+    \item Decoder: 12 layers
+    \item Hidden: $d = 1024$
+    \item Heads: $h = 16$
+    \item Parameters: $\approx 400$M
+\end{itemize}
+
+\subsection{Denoising Objectives}
+
+BART explores multiple corruption strategies:
+
+\textbf{1. Token Masking:} Replace tokens with \texttt{[MASK]} (like BERT)
+
+\textbf{2. Token Deletion:} Remove random tokens
+\begin{verbatim}
+Original: A B C D E
+Corrupted: A C E
+\end{verbatim}
+
+\textbf{3. Text Infilling:} Replace spans with single \texttt{[MASK]}
+\begin{verbatim}
+Original: A B C D E F
+Corrupted: A [MASK] F
+Target: B C D E
+\end{verbatim}
+
+\textbf{4. Sentence Permutation:} Shuffle sentence order
+
+\textbf{5. Document Rotation:} Rotate document, model finds start
+
+\textbf{Best combination (BART's final):} Text infilling + sentence permutation
+
+\begin{example}[BART Pre-training]
+\label{ex:bart_pretraining}
+\textbf{Original document:}
+\begin{verbatim}
+The cat sat on the mat. It was very comfortable.
+The dog barked loudly.
+\end{verbatim}
+
+\textbf{After corruption (infilling + permutation):}
+\begin{verbatim}
+The dog barked loudly.
+The [MASK] comfortable.
+\end{verbatim}
+
+\textbf{Encoder input:} Corrupted text
+
+\textbf{Decoder target:} Original complete text
+
+Model learns to:
+\begin{itemize}
+    \item Reconstruct missing spans
+    \item Reorder sentences
+    \item Generate coherent output
+\end{itemize}
+\end{example}
+
+\subsection{Fine-tuning BART}
+
+\textbf{Sequence Classification:}
+\begin{itemize}
+    \item Feed input through encoder and decoder
+    \item Use final decoder token for classification
+    \item Same input to encoder and decoder
+\end{itemize}
+
+\textbf{Generation Tasks (Summarization, Translation):}
+\begin{itemize}
+    \item Encoder: Source text
+    \item Decoder: Generate target autoregressively
+    \item Standard seq2seq fine-tuning
+\end{itemize}
+
+\section{Comparing T5 and BART}
+\label{sec:t5_bart_comparison}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspect} & \textbf{T5} & \textbf{BART} \\
+\midrule
+Framework & Text-to-text & Denoising autoencoder \\
+Pre-training & Span corruption & Multiple denoisers \\
+Position encoding & Relative bias & Absolute learned \\
+Vocabulary & 32K (SentencePiece) & 50K (BPE) \\
+Best for & Unified multi-task & Summarization/generation \\
+Largest size & 11B parameters & 400M parameters \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Performance comparison on GLUE:}
+\begin{itemize}
+    \item T5-11B: 90.3 (state-of-art at release)
+    \item BART-large: 88.4
+    \item RoBERTa-large: 88.5
+\end{itemize}
+
+\textbf{Summarization (CNN/DailyMail):}
+\begin{itemize}
+    \item BART-large: ROUGE-L 44.16 (best)
+    \item T5-base: ROUGE-L 42.05
+\end{itemize}
+
+\section{Prefix Language Models}
+\label{sec:prefix_lm}
+
+\subsection{Prefix LM Objective}
+
+\begin{definition}[Prefix Language Model]
+\label{def:prefix_lm}
+Bidirectional attention on prefix, causal on rest:
+\begin{itemize}
+    \item Prefix (input): Fully-visible attention
+    \item Target (output): Causal attention
+    \item Single model (no separate encoder/decoder)
+\end{itemize}
+\end{definition}
+
+\textbf{Example:}
+\begin{verbatim}
+Prefix: "Translate to French: Hello"
+Target: "Bonjour"
+\end{verbatim}
+
+Attention mask:
+\begin{itemize}
+    \item Prefix tokens can attend to all prefix
+    \item Target tokens attend causally
+    \item Enables both understanding and generation
+\end{itemize}
+
+\textbf{Models using Prefix LM:}
+\begin{itemize}
+    \item UniLM (Microsoft)
+    \item GLM (Tsinghua)
+    \item UL2 (Google)
+\end{itemize}
+
+\section{Applications and Fine-tuning}
+\label{sec:applications}
+
+\subsection{Summarization}
+
+\textbf{Task:} Input document $\to$ Summary
+
+\textbf{T5 format:}
+\begin{verbatim}
+summarize: [article text]
+\end{verbatim}
+
+\textbf{BART approach:}
+\begin{itemize}
+    \item Encoder: Full article
+    \item Decoder: Generate summary
+\end{itemize}
+
+\textbf{Metrics:}
+\begin{itemize}
+    \item ROUGE-1, ROUGE-2, ROUGE-L (n-gram overlap)
+    \item BERTScore (semantic similarity)
+\end{itemize}
+
+\subsection{Translation}
+
+\textbf{T5 format:}
+\begin{verbatim}
+translate English to German: That is good.
+\end{verbatim}
+
+\textbf{Output:} "Das ist gut."
+
+\textbf{Multi-task advantage:} Single T5 model handles multiple language pairs by conditioning on task prefix.
+
+\subsection{Question Answering}
+
+\textbf{T5 format:}
+\begin{verbatim}
+question: What is the capital of France?
+context: Paris is the capital and largest city of France...
+\end{verbatim}
+
+\textbf{Output:} "Paris"
+
+\textbf{Comparison to BERT:}
+\begin{itemize}
+    \item BERT: Span prediction (start/end positions)
+    \item T5: Text generation (more flexible)
+\end{itemize}
+
+\section{Mixture of Denoisers (UL2)}
+\label{sec:mixture_denoisers}
+
+\textbf{UL2 combines multiple objectives:}
+
+\textbf{R-Denoiser (Regular):} Short spans (like T5)
+
+\textbf{S-Denoiser (Sequential):} Prefix LM
+
+\textbf{X-Denoiser (Extreme):} Very long spans or high corruption
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item More robust representations
+    \item Better transfer to diverse tasks
+    \item Single model for understanding and generation
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement span corruption. For text "The quick brown fox jumps over the lazy dog":
+\begin{enumerate}
+    \item Sample span lengths from Poisson($\lambda=3$)
+    \item Corrupt 15\% with spans
+    \item Generate corrupted input and target
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Fine-tune T5-base on summarization (CNN/DailyMail):
+\begin{enumerate}
+    \item Format data as "summarize: [article]" $\to$ "[summary]"
+    \item Train for 3 epochs with learning rate $10^{-4}$
+    \item Evaluate ROUGE scores
+    \item Compare with BART-base
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Calculate parameter counts for:
+\begin{enumerate}
+    \item T5-base (encoder + decoder)
+    \item BART-large
+    \item Compare to BERT-base (encoder only) and GPT-2 (decoder only)
+\end{enumerate}
+Explain why encoder-decoder has most parameters.
+\end{exercise}
+
+\begin{exercise}
+Implement text-to-text framework. Convert these tasks to T5 format:
+\begin{enumerate}
+    \item Sentiment classification (positive/negative)
+    \item Named entity recognition
+    \item Textual entailment (premise + hypothesis $\to$ entailed/contradiction/neutral)
+\end{enumerate}
+\end{exercise}
+

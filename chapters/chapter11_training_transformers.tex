@@ -1,0 +1,321 @@
+\chapter{Training Transformers}
+\label{chap:training_transformers}
+
+\section*{Chapter Overview}
+
+Training transformers requires specialized techniques beyond standard optimization. This chapter covers learning rate schedules, regularization strategies, initialization methods, and training stability techniques specific to transformers. We examine why transformers need warmup, how to prevent overfitting, and best practices from state-of-the-art models.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Implement learning rate warmup and decay schedules
+    \item Apply dropout in appropriate transformer components
+    \item Use label smoothing for better generalization
+    \item Understand gradient accumulation for large batches
+    \item Apply mixed precision training
+    \item Monitor training metrics and diagnose issues
+\end{enumerate}
+
+\section{Learning Rate Schedules}
+\label{sec:lr_schedules}
+
+\subsection{Warmup and Decay}
+
+\begin{definition}[Transformer Learning Rate Schedule]
+\label{def:transformer_lr_schedule}
+Original "Attention is All You Need" schedule:
+\begin{equation}
+\eta(t) = d_{\text{model}}^{-0.5} \cdot \min(t^{-0.5}, t \cdot \text{warmup\_steps}^{-1.5})
+\end{equation}
+\end{definition}
+
+\textbf{Two phases:}
+\begin{enumerate}
+    \item \textbf{Warmup ($t \leq$ warmup\_steps):} Linear increase
+    \begin{equation}
+    \eta(t) = d_{\text{model}}^{-0.5} \cdot t \cdot \text{warmup\_steps}^{-1.5}
+    \end{equation}
+
+    \item \textbf{Decay ($t >$ warmup\_steps):} Inverse square root
+    \begin{equation}
+    \eta(t) = d_{\text{model}}^{-0.5} \cdot t^{-0.5}
+    \end{equation}
+\end{enumerate}
+
+\begin{example}[BERT Learning Rate Schedule]
+\label{ex:bert_lr}
+BERT uses simpler schedule:
+\begin{itemize}
+    \item Linear warmup: 10,000 steps
+    \item Linear decay: After warmup to end of training
+    \item Peak learning rate: $1 \times 10^{-4}$
+    \item Adam optimizer: $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-6}$
+\end{itemize}
+
+For 1M training steps:
+\begin{align}
+\eta(t) = \begin{cases}
+10^{-4} \cdot \frac{t}{10000} & t \leq 10000 \quad \text{(warmup)} \\
+10^{-4} \cdot \frac{1000000 - t}{990000} & t > 10000 \quad \text{(decay)}
+\end{cases}
+\end{align}
+\end{example}
+
+\begin{keypoint}
+\textbf{Why warmup?} Large learning rates early in training can lead to unstable gradients, especially with Adam's adaptive learning rates. Warmup prevents early instability.
+\end{keypoint}
+
+\section{Regularization Techniques}
+\label{sec:regularization}
+
+\subsection{Dropout in Transformers}
+
+Dropout applied at three locations:
+
+\begin{enumerate}
+    \item \textbf{Attention dropout:} On attention weights
+    \begin{equation}
+    \mA = \text{Dropout}(\text{softmax}(\frac{\mQ \mK\transpose}{\sqrt{d_k}}))
+    \end{equation}
+
+    \item \textbf{Residual dropout:} Before adding to residual
+    \begin{equation}
+    \text{output} = \vx + \text{Dropout}(\text{Sublayer}(\vx))
+    \end{equation}
+
+    \item \textbf{Embedding dropout:} On embeddings
+    \begin{equation}
+    \mX = \text{Dropout}(\text{Embedding} + \text{PositionalEncoding})
+    \end{equation}
+\end{enumerate}
+
+\textbf{Typical dropout rates:}
+\begin{itemize}
+    \item BERT: $p = 0.1$ (10\% dropout)
+    \item GPT-2: $p = 0.1$ for all dropout locations
+    \item Larger models sometimes use lower dropout
+\end{itemize}
+
+\subsection{Label Smoothing}
+
+\begin{definition}[Label Smoothing]
+\label{def:label_smoothing}
+Instead of hard targets $y \in \{0, 1\}^V$, use soft targets:
+\begin{equation}
+y'_i = \begin{cases}
+1 - \epsilon + \frac{\epsilon}{V} & \text{if } i = \text{true class} \\
+\frac{\epsilon}{V} & \text{otherwise}
+\end{cases}
+\end{equation}
+where $\epsilon$ is smoothing parameter (typically 0.1).
+\end{definition}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Prevents overconfidence
+    \item Better calibrated probabilities
+    \item Improved generalization
+\end{itemize}
+
+\begin{example}[Label Smoothing Computation]
+\label{ex:label_smoothing}
+For 4-class problem with $\epsilon = 0.1$:
+
+\textbf{Hard target (one-hot):} $[0, 1, 0, 0]$
+
+\textbf{Smoothed target:}
+\begin{equation}
+y' = [0.025, 0.925, 0.025, 0.025]
+\end{equation}
+
+where $0.925 = 1 - 0.1 + 0.1/4$ and $0.025 = 0.1/4$.
+\end{example}
+
+\section{Optimization Techniques}
+\label{sec:optimization}
+
+\subsection{Adam Variants for Transformers}
+
+\textbf{AdamW (Adam with decoupled Weight decay):}
+\begin{equation}
+\vw_{t+1} = \vw_t - \eta_t(\hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon) + \lambda \vw_t)
+\end{equation}
+
+Weight decay applied directly to weights, not through gradient.
+
+\textbf{Benefits over Adam:}
+\begin{itemize}
+    \item Better generalization
+    \item Decouples learning rate from weight decay
+    \item Used in BERT, GPT-2, GPT-3
+\end{itemize}
+
+\subsection{Gradient Clipping}
+
+Prevent exploding gradients:
+\begin{equation}
+\mathbf{g} \leftarrow \begin{cases}
+\mathbf{g} & \text{if } \norm{\mathbf{g}}_2 \leq \theta \\
+\frac{\theta \mathbf{g}}{\norm{\mathbf{g}}_2} & \text{otherwise}
+\end{cases}
+\end{equation}
+
+Typical threshold: $\theta = 1.0$
+
+\subsection{Gradient Accumulation}
+
+For large effective batch sizes on limited memory:
+
+\begin{algorithm}[H]
+\caption{Gradient Accumulation}
+\label{alg:grad_accumulation}
+\KwIn{Mini-batches $\{\mathcal{B}_1, \ldots, \mathcal{B}_k\}$, accumulation steps $k$}
+
+Initialize gradients: $\mathbf{g}_{\text{accum}} = \mathbf{0}$ \\
+\For{$i = 1$ \KwTo $k$}{
+    Forward pass on $\mathcal{B}_i$ \\
+    Backward pass: compute $\mathbf{g}_i$ \\
+    $\mathbf{g}_{\text{accum}} \leftarrow \mathbf{g}_{\text{accum}} + \mathbf{g}_i / k$
+}
+Update parameters using $\mathbf{g}_{\text{accum}}$ \\
+Zero gradients
+\end{algorithm}
+
+\textbf{Example:} To simulate batch size 1024 with 256 available memory:
+\begin{itemize}
+    \item Physical batch size: 256
+    \item Accumulation steps: 4
+    \item Effective batch size: $256 \times 4 = 1024$
+\end{itemize}
+
+\section{Mixed Precision Training}
+\label{sec:mixed_precision}
+
+\subsection{FP16 Training}
+
+Store and compute in float16 (half precision), maintain master weights in float32:
+
+\begin{algorithm}[H]
+\caption{Mixed Precision Training}
+\label{alg:mixed_precision}
+
+Maintain master weights $\vw_{\text{fp32}}$ \\
+\For{each training step}{
+    Copy to FP16: $\vw_{\text{fp16}} = \text{float16}(\vw_{\text{fp32}})$ \\
+    Forward pass in FP16 \\
+    Compute loss, scale by loss scale $S$ \\
+    Backward pass in FP16: compute $\mathbf{g}_{\text{fp16}}$ \\
+    Unscale gradients: $\mathbf{g}_{\text{fp16}} \leftarrow \mathbf{g}_{\text{fp16}} / S$ \\
+    Convert to FP32: $\mathbf{g}_{\text{fp32}} = \text{float32}(\mathbf{g}_{\text{fp16}})$ \\
+    Update master weights: $\vw_{\text{fp32}} \leftarrow \vw_{\text{fp32}} - \eta \mathbf{g}_{\text{fp32}}$
+}
+\end{algorithm}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item 2× memory reduction
+    \item 2-3× speedup on modern GPUs (Tensor Cores)
+    \item Enables larger models and batch sizes
+\end{itemize}
+
+\textbf{Loss scaling:} Prevents underflow in gradients (typically $S = 2^{16}$).
+
+\section{Training Stability}
+\label{sec:training_stability}
+
+\subsection{Common Issues and Solutions}
+
+\textbf{Issue 1: Loss spikes}
+\begin{itemize}
+    \item Symptom: Sudden increase in loss
+    \item Causes: Learning rate too high, gradient explosion
+    \item Solutions: Lower LR, gradient clipping, increase warmup
+\end{itemize}
+
+\textbf{Issue 2: Slow convergence}
+\begin{itemize}
+    \item Symptom: Loss decreases very slowly
+    \item Causes: Learning rate too low, poor initialization
+    \item Solutions: Increase LR, check weight initialization
+\end{itemize}
+
+\textbf{Issue 3: NaN/Inf values}
+\begin{itemize}
+    \item Symptom: Loss becomes NaN
+    \item Causes: Numerical instability, exploding activations
+    \item Solutions: Lower LR, use mixed precision with loss scaling, check for bugs
+\end{itemize}
+
+\subsection{Pre-Norm vs Post-Norm}
+
+\textbf{Post-Norm (original):}
+\begin{equation}
+\text{output} = \text{LayerNorm}(\vx + \text{Sublayer}(\vx))
+\end{equation}
+
+\textbf{Pre-Norm (more stable):}
+\begin{equation}
+\text{output} = \vx + \text{Sublayer}(\text{LayerNorm}(\vx))
+\end{equation}
+
+Pre-norm provides more direct gradient path, easier training for deep models (GPT-2, GPT-3 use pre-norm).
+
+\section{Monitoring and Debugging}
+\label{sec:monitoring}
+
+\subsection{Key Metrics to Track}
+
+\textbf{Training metrics:}
+\begin{itemize}
+    \item Loss (overall and per-component if applicable)
+    \item Perplexity: $\text{PPL} = \exp(\text{cross-entropy loss})$
+    \item Gradient norms
+    \item Learning rate value
+    \item Parameter norms
+\end{itemize}
+
+\textbf{Validation metrics:}
+\begin{itemize}
+    \item Validation loss
+    \item Task-specific metrics (accuracy, BLEU, F1, etc.)
+    \item Attention statistics (entropy, max values)
+\end{itemize}
+
+\subsection{Diagnostic Checks}
+
+\textbf{Gradient flow:}
+\begin{lstlisting}[language=Python]
+# Check gradient norms per layer
+for name, param in model.named_parameters():
+    if param.grad is not None:
+        grad_norm = param.grad.norm().item()
+        print(f"{name}: {grad_norm:.4f}")
+\end{lstlisting}
+
+\textbf{Activation statistics:}
+\begin{lstlisting}[language=Python]
+# Monitor activation magnitudes
+def forward_hook(module, input, output):
+    print(f"Mean: {output.mean():.4f}, Std: {output.std():.4f}")
+
+model.register_forward_hook(forward_hook)
+\end{lstlisting}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement transformer learning rate schedule from scratch. Plot learning rate for first 100,000 steps with $d_{\text{model}} = 512$, warmup\_steps = 4000. Compare with linear warmup + linear decay.
+\end{exercise}
+
+\begin{exercise}
+For model with 12 layers, $d_{\text{model}} = 768$: If training with physical batch size 32 but want effective batch size 512, how many gradient accumulation steps needed? Calculate memory savings vs single batch.
+\end{exercise}
+
+\begin{exercise}
+Implement label smoothing with $\epsilon = 0.1$ for vocabulary size 30,000. Compute cross-entropy loss for smoothed vs hard targets. Show improved calibration.
+\end{exercise}
+
+\begin{exercise}
+Compare AdamW vs Adam on small transformer. Track weight norms, gradient norms, and validation performance. Explain differences.
+\end{exercise}
+

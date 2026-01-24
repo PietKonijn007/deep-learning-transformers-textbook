@@ -1,0 +1,398 @@
+\chapter{Long Context Transformers}
+\label{chap:long_context}
+
+\section*{Chapter Overview}
+
+Extending transformer context length beyond standard limits (512-2048 tokens) enables processing long documents, books, and extended conversations. This chapter covers techniques for scaling to 32K, 100K, and even 1M+ token contexts.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand context length limitations and bottlenecks
+    \item Implement position interpolation and extrapolation
+    \item Apply memory-augmented transformers
+    \item Use retrieval-augmented generation (RAG)
+    \item Implement recurrent transformers (Transformer-XL)
+    \item Compare long-context methods and trade-offs
+\end{enumerate}
+
+\section{Context Length Limitations}
+\label{sec:context_limitations}
+
+\subsection{Why Standard Transformers Fail at Long Context}
+
+\textbf{1. Computational Complexity:} $O(n^2)$ attention
+
+\textbf{2. Memory:} Attention matrix grows quadratically
+
+\textbf{3. Position Encodings:} Trained on fixed length, don't extrapolate
+
+\begin{example}[Scaling Costs]
+\label{ex:scaling_costs}
+Model: GPT-3 scale ($L=96$, $d=12288$, $h=96$)
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Context} & \textbf{Attn Memory/Layer} & \textbf{Total Memory} \\
+\midrule
+2K & 32 MB & 3 GB \\
+8K & 512 MB & 49 GB \\
+32K & 8 GB & 768 GB \\
+128K & 131 GB & 12.6 TB \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At 128K context, attention alone exceeds typical GPU memory!
+\end{example}
+
+\section{Position Encoding Extensions}
+\label{sec:position_extensions}
+
+\subsection{Absolute Position Interpolation}
+
+\begin{definition}[Position Interpolation (PI)]
+\label{def:position_interpolation}
+To extend from length $L$ to $L'$:
+
+\textbf{Original:} Positions $0, 1, \ldots, L-1$
+
+\textbf{Interpolated:} Map position $i$ to $i \cdot \frac{L}{L'}$
+\begin{equation}
+\text{PE}_{\text{new}}(i) = \text{PE}_{\text{original}}(i \cdot L/L')
+\end{equation}
+
+Interpolate between learned position embeddings.
+\end{definition}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Works with absolute position embeddings
+    \item Minimal fine-tuning needed
+    \item LLaMA 2: 4K $\to$ 32K with small amount of training
+\end{itemize}
+
+\subsection{RoPE: Rotary Position Embedding}
+
+\begin{definition}[Rotary Position Embedding]
+\label{def:rope}
+Apply rotation to queries and keys based on position:
+\begin{align}
+\vq_m' &= \mR_m \vq_m \\
+\vk_n' &= \mR_n \vk_n
+\end{align}
+
+where $\mR_m$ is rotation matrix for position $m$:
+\begin{equation}
+\mR_m = \begin{bmatrix}
+\cos(m\theta_1) & -\sin(m\theta_1) & 0 & 0 & \cdots \\
+\sin(m\theta_1) & \cos(m\theta_1) & 0 & 0 & \cdots \\
+0 & 0 & \cos(m\theta_2) & -\sin(m\theta_2) & \cdots \\
+0 & 0 & \sin(m\theta_2) & \cos(m\theta_2) & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \ddots
+\end{bmatrix}
+\end{equation}
+\end{definition}
+
+\textbf{Key property:} Attention between positions $m$ and $n$ depends only on relative distance $m-n$!
+\begin{equation}
+(\vq_m')\transpose \vk_n' = \vq_m\transpose \mR_{m-n} \vk_n
+\end{equation}
+
+\textbf{Advantages:}
+\begin{itemize}
+    \item Relative position information
+    \item Better extrapolation to longer sequences
+    \item Used in GPT-NeoX, LLaMA, PaLM
+\end{itemize}
+
+\subsection{ALiBi: Attention with Linear Biases}
+
+\begin{definition}[ALiBi]
+\label{def:alibi}
+Add bias to attention scores based on distance:
+\begin{equation}
+\text{score}(q_i, k_j) = \vq_i\transpose \vk_j - m \cdot |i - j|
+\end{equation}
+
+where $m$ is head-specific slope (different per attention head).
+\end{definition}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item No position embeddings needed
+    \item Perfect extrapolation: Train on 1K, infer on 10K
+    \item Simpler than RoPE
+\end{itemize}
+
+\textbf{Used in:} BLOOM, MPT models
+
+\section{Recurrent Transformers}
+\label{sec:recurrent_transformers}
+
+\subsection{Transformer-XL}
+
+\begin{definition}[Transformer-XL]
+\label{def:transformer_xl}
+Segment long sequence, reuse representations from previous segments:
+
+\textbf{Segment $n$:} Tokens $[s_n, s_n+1, \ldots, s_n+L-1]$
+
+\textbf{Compute:}
+\begin{equation}
+\vh_n = \text{Transformer}([\text{stop\_grad}(\vh_{n-1}), \vx_n])
+\end{equation}
+
+Previous segment hidden states provide additional context without recomputation!
+\end{definition}
+
+\begin{example}[Transformer-XL Processing]
+\label{ex:transformer_xl}
+Segment length: $L = 512$
+
+\textbf{Segment 1:} Process tokens $0$-$511$
+\begin{itemize}
+    \item Save hidden states $\vh_1$
+\end{itemize}
+
+\textbf{Segment 2:} Process tokens $512$-$1023$
+\begin{itemize}
+    \item Concatenate with $\vh_1$ (frozen)
+    \item Effective context: $512 + 512 = 1024$ tokens
+    \item Computation: Still $O(512^2)$ per segment
+\end{itemize}
+
+\textbf{Segment 3:} Process tokens $1024$-$1535$
+\begin{itemize}
+    \item Use $\vh_2$ from previous segment
+    \item Effective context: $1024 + 512 = 1536$ tokens
+\end{itemize}
+
+Context grows linearly with segments, computation stays constant!
+\end{example}
+
+\textbf{Relative position encodings:} Modified for segment-level recurrence
+
+\section{Retrieval-Augmented Generation}
+\label{sec:rag}
+
+\subsection{RAG Architecture}
+
+\begin{definition}[Retrieval-Augmented Generation]
+\label{def:rag}
+Combine retrieval with generation:
+
+\textbf{Step 1: Retrieval}
+\begin{equation}
+\text{docs} = \text{Retrieve}(\text{query}, \text{corpus}, k=5)
+\end{equation}
+
+\textbf{Step 2: Concatenate}
+\begin{equation}
+\text{input} = [\text{docs}_1, \ldots, \text{docs}_k, \text{query}]
+\end{equation}
+
+\textbf{Step 3: Generate}
+\begin{equation}
+\text{output} = \text{LM}(\text{input})
+\end{equation}
+\end{definition}
+
+\textbf{Retrieval methods:}
+\begin{itemize}
+    \item BM25 (sparse)
+    \item Dense retrieval (BERT embeddings + nearest neighbors)
+    \item Hybrid (combine sparse and dense)
+\end{itemize}
+
+\begin{example}[RAG for Question Answering]
+\label{ex:rag_qa}
+\textbf{Question:} "When was the Eiffel Tower built?"
+
+\textbf{Step 1: Retrieve} (from Wikipedia)
+\begin{enumerate}
+    \item "The Eiffel Tower was constructed from 1887 to 1889..."
+    \item "Gustave Eiffel designed the tower for the 1889 World's Fair..."
+    \item "The tower is 330 meters tall and was the tallest..."
+\end{enumerate}
+
+\textbf{Step 2: Concatenate}
+\begin{verbatim}
+Context 1: The Eiffel Tower was constructed from 1887 to 1889...
+Context 2: Gustave Eiffel designed the tower for the 1889 World's Fair...
+Context 3: The tower is 330 meters tall and was the tallest...
+Question: When was the Eiffel Tower built?
+Answer:
+\end{verbatim}
+
+\textbf{Step 3: Generate}
+"The Eiffel Tower was built from 1887 to 1889."
+
+\textbf{Advantages:}
+\begin{itemize}
+    \item Access to external knowledge
+    \item No need to fit everything in context window
+    \item Cite sources
+    \item Update knowledge without retraining
+\end{itemize}
+\end{example}
+
+\subsection{RETRO: Retrieval-Enhanced Transformer}
+
+\textbf{Architecture:}
+\begin{itemize}
+    \item Chunk input into segments (64 tokens)
+    \item Retrieve neighbors for each chunk
+    \item Cross-attend to retrieved chunks
+    \item Chunked cross-attention layers
+\end{itemize}
+
+\textbf{Performance:} 25× fewer parameters with retrieval achieves same performance as larger model without retrieval!
+
+\section{Memory-Augmented Transformers}
+\label{sec:memory_augmented}
+
+\subsection{Compressive Transformer}
+
+\begin{definition}[Compressive Transformer]
+\label{def:compressive_transformer}
+Extend Transformer-XL with compression:
+
+\textbf{Three levels of memory:}
+\begin{enumerate}
+    \item \textbf{Active:} Current segment (full attention)
+    \item \textbf{Recent:} Last $n_m$ segments (cached, full precision)
+    \item \textbf{Compressed:} Older segments (compressed representations)
+\end{enumerate}
+
+\textbf{Compression:}
+\begin{itemize}
+    \item Learned compression function
+    \item Reduce $n$ tokens to $n/c$ (e.g., $c=3$)
+    \item Compression ratio balances memory vs information
+\end{itemize}
+\end{definition}
+
+\textbf{Effective context:} Active + Recent + Compressed
+\begin{equation}
+L_{\text{eff}} = L + n_m \cdot L + n_c \cdot (L/c)
+\end{equation}
+
+\subsection{Memorizing Transformers}
+
+\textbf{Key innovation:} $k$-NN attention over entire history
+
+\textbf{Architecture:}
+\begin{itemize}
+    \item Store all past $(key, value)$ pairs in memory
+    \item For each query, retrieve $k$ nearest neighbors
+    \item Attend to local context + retrieved keys/values
+\end{itemize}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Effectively infinite context (limited by storage)
+    \item Constant-time attention (with approximate $k$-NN)
+    \item Improves perplexity on long documents
+\end{itemize}
+
+\section{Recent Long-Context Models}
+\label{sec:recent_models}
+
+\subsection{GPT-4 Turbo (128K context)}
+
+\begin{itemize}
+    \item Architecture details undisclosed
+    \item Likely: Combination of techniques (RoPE, optimized attention, maybe sparse)
+    \item Can process ~300 pages of text
+    \item Applications: Long document analysis, code repositories
+\end{itemize}
+
+\subsection{Claude 2 (100K context)}
+
+\begin{itemize}
+    \item ~75,000 words
+    \item Entire books in context
+    \item Strong retrieval from context
+\end{itemize}
+
+\subsection{Llama 2 Long (32K → 100K)}
+
+Extension techniques:
+\begin{itemize}
+    \item Position interpolation
+    \item Fine-tuning on long sequences
+    \item Maintains quality at extended lengths
+\end{itemize}
+
+\section{Comparison and Trade-offs}
+\label{sec:comparison_tradeoffs}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Method} & \textbf{Max Length} & \textbf{Complexity} & \textbf{Quality} & \textbf{Implementation} \\
+\midrule
+Standard & 2-4K & $O(n^2)$ & Best & Easy \\
+Sparse (Longformer) & 16K & $O(nw)$ & Good & Medium \\
+Linear (Performer) & 64K+ & $O(n)$ & Medium & Medium \\
+Transformer-XL & Unlimited & $O(L^2)$/seg & Good & Medium \\
+RAG & Unlimited & $O(n^2)$ & Excellent & Hard \\
+Flash Attention & 32K+ & $O(n^2)$ & Best & Easy (w/ kernel) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Recommendations:}
+\begin{itemize}
+    \item \textbf{Up to 8K:} Standard + Flash Attention
+    \item \textbf{8K-32K:} RoPE/ALiBi + Position Interpolation + Flash
+    \item \textbf{32K-128K:} Sparse attention or hybrid approaches
+    \item \textbf{Beyond 128K:} RAG, compression, or specialized methods
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement position interpolation:
+\begin{enumerate}
+    \item Load model trained on 2K context
+    \item Extend to 8K using position interpolation
+    \item Test on long document
+    \item Measure perplexity vs position
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Calculate memory requirements:
+\begin{enumerate}
+    \item Standard attention: 2K, 8K, 32K, 128K contexts
+    \item Sparse attention (window 512): Same contexts
+    \item What GPU memory needed for each?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement simple RAG:
+\begin{enumerate}
+    \item Create small document corpus (1000 documents)
+    \item Embed with BERT
+    \item Build FAISS index for retrieval
+    \item For query, retrieve top-5 and generate answer
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Compare position encodings:
+\begin{enumerate}
+    \item Train on length 512: (a) Absolute, (b) RoPE, (c) ALiBi
+    \item Test on length 2048
+    \item Which extrapolates best?
+    \item Plot perplexity vs position
+\end{enumerate}
+\end{exercise}
+

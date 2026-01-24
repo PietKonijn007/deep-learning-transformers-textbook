@@ -1,0 +1,353 @@
+\chapter{Implementing Transformers in PyTorch}
+\label{chap:pytorch_implementation}
+
+\section*{Chapter Overview}
+
+This chapter provides complete, production-ready PyTorch implementations of transformer models. We build from scratch: attention mechanisms, encoder/decoder blocks, position encodings, and full models (BERT, GPT, T5). Each implementation includes training loops, optimization, and best practices.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Implement multi-head attention from scratch
+    \item Build transformer encoder and decoder blocks
+    \item Create complete BERT and GPT models
+    \item Write efficient training loops with mixed precision
+    \item Apply gradient accumulation and checkpointing
+    \item Debug common implementation issues
+\end{enumerate}
+
+\section{Multi-Head Attention Implementation}
+\label{sec:mha_implementation}
+
+\subsection{Core Components}
+
+\textbf{Key implementation considerations:}
+\begin{itemize}
+    \item Efficient batched matrix multiplications
+    \item Proper dimension handling for multi-head split
+    \item Memory-efficient attention computation
+    \item Gradient flow through softmax
+\end{itemize}
+
+\textbf{PyTorch multi-head attention structure:}
+\begin{enumerate}
+    \item Project Q, K, V: Linear layers
+    \item Reshape for multiple heads: view + transpose
+    \item Compute scaled dot-product attention
+    \item Concatenate heads and project output
+\end{enumerate}
+
+\subsection{Dimension Tracking Example}
+
+For BERT-base configuration ($d=768$, $h=12$):
+
+\textbf{Input:} $(B, n, 768)$ where $B$ is batch size, $n$ is sequence length
+
+\textbf{After Q/K/V projection:} $(B, n, 768)$
+
+\textbf{Reshape for heads:} $(B, n, 12, 64) \to (B, 12, n, 64)$
+
+\textbf{Attention scores:} $(B, 12, n, n)$
+
+\textbf{After applying to V:} $(B, 12, n, 64)$
+
+\textbf{Concatenate heads:} $(B, n, 12, 64) \to (B, n, 768)$
+
+\textbf{Output projection:} $(B, n, 768)$
+
+\section{Position Encodings}
+\label{sec:position_encodings_impl}
+
+\subsection{Sinusoidal Encoding}
+
+\textbf{Mathematical formula:}
+\begin{align}
+PE_{(\text{pos}, 2i)} &= \sin\left(\frac{\text{pos}}{10000^{2i/d}}\right) \\
+PE_{(\text{pos}, 2i+1)} &= \cos\left(\frac{\text{pos}}{10000^{2i/d}}\right)
+\end{align}
+
+\textbf{Implementation strategy:}
+\begin{enumerate}
+    \item Pre-compute position encoding matrix at initialization
+    \item Register as buffer (not parameter, doesn't need gradients)
+    \item Add to embeddings in forward pass
+\end{enumerate}
+
+\subsection{Learned Positional Embeddings}
+
+\textbf{Alternative approach (BERT):}
+\begin{itemize}
+    \item Embedding layer: max\_len $\times$ d\_model
+    \item Learn position representations during training
+    \item More flexible but requires fixed max length
+\end{itemize}
+
+\section{Masking Strategies}
+\label{sec:masking_strategies}
+
+\subsection{Causal Mask for GPT}
+
+\textbf{Lower triangular mask:}
+\begin{equation}
+M_{ij} = \begin{cases}
+1 & \text{if } j \leq i \\
+0 & \text{if } j > i
+\end{cases}
+\end{equation}
+
+\textbf{Implementation:}
+\begin{verbatim}
+causal_mask = torch.tril(torch.ones(seq_len, seq_len))
+scores = scores.masked_fill(mask == 0, -1e9)
+\end{verbatim}
+
+\subsection{Padding Mask}
+
+\textbf{For variable-length sequences:}
+\begin{verbatim}
+# input_ids: (batch, seq_len)
+# 0 indicates padding
+pad_mask = (input_ids != 0).unsqueeze(1).unsqueeze(2)
+# Shape: (batch, 1, 1, seq_len)
+\end{verbatim}
+
+\section{Training Optimizations}
+\label{sec:training_optimizations}
+
+\subsection{Mixed Precision Training}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item 2× memory reduction
+    \item 2-3× training speedup on modern GPUs
+    \item Same final accuracy with proper loss scaling
+\end{itemize}
+
+\textbf{Key components:}
+\begin{enumerate}
+    \item Automatic mixed precision (AMP) context
+    \item Gradient scaler for loss scaling
+    \item FP32 master weights, FP16 forward/backward
+\end{enumerate}
+
+\subsection{Gradient Accumulation}
+
+\textbf{Purpose:} Simulate large batch sizes on limited memory
+
+\textbf{Effective batch size:}
+\begin{equation}
+B_{\text{effective}} = B_{\text{physical}} \times N_{\text{accumulation}}
+\end{equation}
+
+\textbf{Example:}
+\begin{itemize}
+    \item Physical batch: 32 (fits in GPU)
+    \item Accumulation steps: 8
+    \item Effective batch: 256
+\end{itemize}
+
+\subsection{Gradient Checkpointing}
+
+\textbf{Trade computation for memory:}
+\begin{itemize}
+    \item Don't store all activations
+    \item Recompute during backward pass
+    \item Enables larger models/batches
+    \item 20-30\% slower but saves significant memory
+\end{itemize}
+
+\section{Model Initialization}
+\label{sec:model_initialization}
+
+\subsection{Best Practices}
+
+\textbf{Weight initialization:}
+\begin{itemize}
+    \item Linear layers: Xavier/Glorot normal
+    \item Embeddings: Normal(0, 0.02)
+    \item Layer norm: gamma=1, beta=0
+\end{itemize}
+
+\textbf{Special considerations:}
+\begin{itemize}
+    \item Scale residual connections by $1/\sqrt{N_{\text{layers}}}$
+    \item Weight tying: LM head shares embeddings
+    \item Careful initialization prevents gradient issues
+\end{itemize}
+
+\section{Debugging Transformers}
+\label{sec:debugging}
+
+\subsection{Common Issues}
+
+\textbf{1. Dimension mismatches:}
+\begin{itemize}
+    \item Check shapes at each operation
+    \item Use assertions for critical dimensions
+    \item Print intermediate tensor shapes
+\end{itemize}
+
+\textbf{2. NaN/Inf in training:}
+\begin{itemize}
+    \item Too high learning rate
+    \item Gradient explosion (add clipping)
+    \item Numerical instability in softmax (check mask values)
+\end{itemize}
+
+\textbf{3. Slow convergence:}
+\begin{itemize}
+    \item Insufficient warmup
+    \item Bad initialization
+    \item Learning rate too low
+\end{itemize}
+
+\textbf{4. Memory issues:}
+\begin{itemize}
+    \item Reduce batch size
+    \item Use gradient checkpointing
+    \item Enable mixed precision
+    \item Reduce sequence length
+\end{itemize}
+
+\subsection{Validation Checks}
+
+\textbf{Sanity checks before full training:}
+\begin{enumerate}
+    \item Overfit single batch (should reach near-zero loss)
+    \item Check gradient norms are reasonable
+    \item Verify attention weights sum to 1
+    \item Test with different sequence lengths
+    \item Profile memory usage
+\end{enumerate}
+
+\section{Complete Training Pipeline}
+\label{sec:complete_pipeline}
+
+\subsection{Training Script Structure}
+
+\textbf{1. Configuration:}
+\begin{verbatim}
+config = {
+    'd_model': 768,
+    'num_heads': 12,
+    'num_layers': 12,
+    'd_ff': 3072,
+    'vocab_size': 30000,
+    'max_seq_len': 512,
+    'dropout': 0.1,
+    'batch_size': 32,
+    'learning_rate': 1e-4,
+    'warmup_steps': 10000,
+    'max_steps': 1000000
+}
+\end{verbatim}
+
+\textbf{2. Model instantiation:}
+\begin{verbatim}
+model = BERTModel(**config)
+model = model.to(device)
+\end{verbatim}
+
+\textbf{3. Optimizer setup:}
+\begin{verbatim}
+from torch.optim import AdamW
+optimizer = AdamW(
+    model.parameters(),
+    lr=config['learning_rate'],
+    betas=(0.9, 0.999),
+    eps=1e-6,
+    weight_decay=0.01
+)
+\end{verbatim}
+
+\textbf{4. Learning rate scheduler:}
+\begin{verbatim}
+from transformers import get_linear_schedule_with_warmup
+scheduler = get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=config['warmup_steps'],
+    num_training_steps=config['max_steps']
+)
+\end{verbatim}
+
+\textbf{5. Training loop with all optimizations:}
+\begin{itemize}
+    \item Mixed precision
+    \item Gradient accumulation
+    \item Gradient clipping
+    \item Checkpointing
+    \item Logging
+\end{itemize}
+
+\section{Distributed Training}
+\label{sec:distributed_training}
+
+\subsection{Data Parallel}
+
+\textbf{Simple multi-GPU:}
+\begin{verbatim}
+if torch.cuda.device_count() > 1:
+    model = nn.DataParallel(model)
+\end{verbatim}
+
+\textbf{Effective batch size:} $B \times N_{\text{GPUs}}$
+
+\subsection{Distributed Data Parallel (DDP)}
+
+\textbf{More efficient than DataParallel:}
+\begin{itemize}
+    \item One process per GPU
+    \item Gradient synchronization via all-reduce
+    \item Better scaling to multiple nodes
+\end{itemize}
+
+\textbf{Setup requires:}
+\begin{enumerate}
+    \item Initialize process group
+    \item Wrap model in DistributedDataParallel
+    \item Use DistributedSampler for data
+    \item Synchronize across processes
+\end{enumerate}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement complete multi-head attention:
+\begin{enumerate}
+    \item Write class from scratch
+    \item Test on BERT-base dimensions
+    \item Verify output shapes
+    \item Compare speed: your implementation vs nn.MultiheadAttention
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Build mini-GPT and train on WikiText-2:
+\begin{enumerate}
+    \item 6 layers, 8 heads, d=512
+    \item Implement causal masking correctly
+    \item Train for 10 epochs
+    \item Generate samples, measure perplexity
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Optimize training:
+\begin{enumerate}
+    \item Baseline: Standard FP32 training
+    \item Add mixed precision, measure speedup
+    \item Add gradient accumulation (4 steps)
+    \item Add gradient checkpointing, measure memory
+    \item Report: speed, memory, final accuracy for each
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Debug a broken transformer:
+\begin{enumerate}
+    \item Provided: Transformer with subtle bugs
+    \item Find and fix: (a) dimension error, (b) masking error, (c) initialization error
+    \item Verify fixes by successful training
+\end{enumerate}
+\end{exercise}
+

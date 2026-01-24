@@ -1,0 +1,556 @@
+\chapter{Pre-training Strategies and Transfer Learning}
+\label{chap:pretraining_strategies}
+
+\section*{Chapter Overview}
+
+Pre-training on large unlabeled corpora followed by task-specific fine-tuning has become the dominant paradigm in deep learning. This chapter covers pre-training objectives, data curation, curriculum learning, continual pre-training, and transfer learning strategies for maximizing downstream performance.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand different pre-training objectives and their trade-offs
+    \item Curate and process pre-training data at scale
+    \item Apply curriculum learning and domain-adaptive pre-training
+    \item Implement parameter-efficient fine-tuning (LoRA, adapters)
+    \item Design multi-task and multi-stage pre-training
+    \item Measure and improve transfer learning effectiveness
+\end{enumerate}
+
+\section{Pre-training Objectives}
+\label{sec:pretraining_objectives}
+
+\subsection{Language Modeling Objectives}
+
+\textbf{Causal Language Modeling (CLM):}
+\begin{equation}
+\mathcal{L}_{\text{CLM}} = -\sum_{t=1}^{T} \log P(x_t | x_{<t}; \theta)
+\end{equation}
+
+\textbf{Pros:} Natural for generation, simple objective
+
+\textbf{Cons:} Unidirectional, can't use future context
+
+\textbf{Used by:} GPT, GPT-2, GPT-3, all decoder-only models
+
+\textbf{Masked Language Modeling (MLM):}
+\begin{equation}
+\mathcal{L}_{\text{MLM}} = -\sum_{t \in \mathcal{M}} \log P(x_t | x_{\backslash \mathcal{M}}; \theta)
+\end{equation}
+
+\textbf{Pros:} Bidirectional context, better representations
+
+\textbf{Cons:} Pre-training/fine-tuning mismatch ([MASK] token)
+
+\textbf{Used by:} BERT, RoBERTa, ALBERT
+
+\textbf{Prefix Language Modeling:}
+\begin{equation}
+\mathcal{L}_{\text{prefix}} = -\sum_{t=|p|+1}^{T} \log P(x_t | x_{<t}; \theta)
+\end{equation}
+where $p$ is prefix with bidirectional attention.
+
+\textbf{Pros:} Combines benefits of CLM and MLM
+
+\textbf{Used by:} UniLM, GLM
+
+\subsection{Denoising Objectives}
+
+\textbf{Span Corruption (T5):}
+\begin{itemize}
+    \item Corrupt contiguous spans
+    \item Predict all masked content
+    \item More challenging than single tokens
+\end{itemize}
+
+\textbf{Sentence Shuffling (BART):}
+\begin{itemize}
+    \item Permute sentences
+    \item Model must reorder
+    \item Learns document structure
+\end{itemize}
+
+\textbf{Text Infilling:}
+\begin{itemize}
+    \item Delete spans of varying length
+    \item Model predicts span length and content
+\end{itemize}
+
+\begin{example}[Objective Comparison on Same Data]
+\label{ex:objective_comparison}
+Text: "The quick brown fox jumps over the lazy dog"
+
+\textbf{CLM:} Predict each token given previous
+\begin{verbatim}
+The -> quick
+The quick -> brown
+The quick brown -> fox
+...
+\end{verbatim}
+
+\textbf{MLM (15% masking):}
+\begin{verbatim}
+Input:  "The [MASK] brown fox [MASK] over the lazy dog"
+Target: "quick" at position 2, "jumps" at position 5
+\end{verbatim}
+
+\textbf{Span Corruption:}
+\begin{verbatim}
+Input:  "The <X> fox <Y> the lazy dog"
+Target: "<X> quick brown <Y> jumps over <Z>"
+\end{verbatim}
+
+Different objectives lead to different learned representations!
+\end{example}
+
+\subsection{Contrastive Objectives}
+
+\textbf{Contrastive Learning:}
+\begin{equation}
+\mathcal{L}_{\text{contrastive}} = -\log \frac{\exp(\text{sim}(z_i, z_i^+)/\tau)}{\sum_{j} \exp(\text{sim}(z_i, z_j)/\tau)}
+\end{equation}
+
+\textbf{Applications:}
+\begin{itemize}
+    \item SimCLR (vision): Augmented views as positives
+    \item CLIP: Image-text pairs
+    \item SimCSE (text): Dropout as augmentation
+\end{itemize}
+
+\section{Data Curation and Processing}
+\label{sec:data_curation}
+
+\subsection{Data Sources}
+
+\textbf{Common Crawl:}
+\begin{itemize}
+    \item Petabytes of web data
+    \item Noisy, requires filtering
+    \item Used by: GPT-3, LLaMA, many large models
+\end{itemize}
+
+\textbf{Books:}
+\begin{itemize}
+    \item Long-form text
+    \item Higher quality than web
+    \item Copyright considerations
+\end{itemize}
+
+\textbf{Code:}
+\begin{itemize}
+    \item GitHub, StackOverflow
+    \item Improves reasoning abilities
+    \item Used by: Codex, GPT-4
+\end{itemize}
+
+\textbf{Wikipedia:}
+\begin{itemize}
+    \item High quality, factual
+    \item Multilingual
+    \item Structured format
+\end{itemize}
+
+\subsection{Data Filtering and Cleaning}
+
+\begin{algorithm}[H]
+\caption{Data Filtering Pipeline}
+\label{alg:data_filtering}
+
+\textbf{Step 1: Quality Filtering}
+\begin{itemize}
+    \item Remove duplicates (exact and near-duplicates)
+    \item Filter by language (fastText classifier)
+    \item Remove toxic/harmful content
+    \item Filter low-quality (perplexity-based, classifier)
+\end{itemize}
+
+\textbf{Step 2: Deduplication}
+\begin{itemize}
+    \item Exact match: Hash-based
+    \item Near-duplicates: MinHash LSH
+    \item Document-level and paragraph-level
+\end{itemize}
+
+\textbf{Step 3: Privacy}
+\begin{itemize}
+    \item Remove PII (emails, phone numbers, addresses)
+    \item Filter memorized content
+    \item Redact sensitive information
+\end{itemize}
+
+\textbf{Step 4: Formatting}
+\begin{itemize}
+    \item Unicode normalization
+    \item Remove excessive whitespace
+    \item Clean HTML/markup artifacts
+\end{itemize}
+\end{algorithm}
+
+\begin{example}[GPT-3 Data Mixture]
+\label{ex:gpt3_data}
+Total: ~570GB, 300B tokens
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Dataset} & \textbf{Weight} & \textbf{Epochs} \\
+\midrule
+Common Crawl (filtered) & 60\% & 0.44 \\
+WebText2 & 22\% & 2.9 \\
+Books1 & 8\% & 1.9 \\
+Books2 & 8\% & 1.9 \\
+Wikipedia & 3\% & 3.4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Higher-quality sources sampled more frequently (multiple epochs).
+Lower-quality sources seen less to avoid overfitting to noise.
+\end{example}
+
+\subsection{Data Deduplication}
+
+\textbf{Why deduplicate?}
+\begin{itemize}
+    \item Prevents memorization
+    \item Better generalization
+    \item Fairer evaluation (test set contamination)
+\end{itemize}
+
+\textbf{Methods:}
+
+\textbf{1. Exact Deduplication:}
+\begin{lstlisting}[language=Python]
+seen_hashes = set()
+for doc in corpus:
+    hash_val = hash(doc)
+    if hash_val not in seen_hashes:
+        keep(doc)
+        seen_hashes.add(hash_val)
+\end{lstlisting}
+
+\textbf{2. Fuzzy Deduplication (MinHash):}
+\begin{itemize}
+    \item Compute MinHash signatures
+    \item Use LSH for near-neighbor search
+    \item Remove documents with Jaccard similarity $> 0.8$
+\end{itemize}
+
+\section{Curriculum Learning}
+\label{sec:curriculum_learning}
+
+\subsection{Progressive Training}
+
+\begin{definition}[Curriculum Learning]
+\label{def:curriculum_learning}
+Train on progressively harder examples:
+
+\textbf{Stage 1:} Easy examples (short sequences, simple patterns)
+
+\textbf{Stage 2:} Medium difficulty
+
+\textbf{Stage 3:} Full difficulty (long sequences, complex patterns)
+\end{definition}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Faster convergence
+    \item Better final performance
+    \item More stable training
+\end{itemize}
+
+\begin{example}[Sequence Length Curriculum]
+\label{ex:length_curriculum}
+\textbf{GPT-3 training:}
+
+\textbf{Stage 1 (0-100B tokens):} 
+\begin{itemize}
+    \item Sequence length: 1024
+    \item Batch size: 3.2M tokens
+\end{itemize}
+
+\textbf{Stage 2 (100B-300B tokens):}
+\begin{itemize}
+    \item Sequence length: 2048
+    \item Batch size: 3.2M tokens (fewer sequences)
+\end{itemize}
+
+Starting with shorter sequences reduces memory and computation early in training.
+\end{example}
+
+\subsection{Domain-Adaptive Pre-training}
+
+\textbf{Continue pre-training on domain-specific data:}
+
+\begin{algorithm}[H]
+\caption{Domain Adaptation}
+\label{alg:domain_adaptation}
+
+\textbf{Step 1:} Pre-train on general corpus (e.g., Common Crawl)
+
+\textbf{Step 2:} Continue pre-training on domain data (e.g., biomedical)
+
+\textbf{Step 3:} Fine-tune on task
+\end{algorithm}
+
+\textbf{Examples:}
+\begin{itemize}
+    \item BioBERT: BERT + PubMed/PMC
+    \item SciBERT: BERT + scientific papers
+    \item FinBERT: BERT + financial documents
+    \item CodeBERT: BERT + code
+\end{itemize}
+
+\section{Parameter-Efficient Fine-tuning}
+\label{sec:parameter_efficient}
+
+\subsection{Motivation}
+
+\textbf{Full fine-tuning challenges:}
+\begin{itemize}
+    \item Requires storing full model copy per task
+    \item 175B model $\times$ 100 tasks = 17.5T parameters!
+    \item Expensive and slow
+\end{itemize}
+
+\textbf{Solution:} Fine-tune small subset of parameters.
+
+\subsection{LoRA: Low-Rank Adaptation}
+
+\begin{definition}[LoRA]
+\label{def:lora}
+Inject trainable low-rank matrices into frozen model:
+
+\textbf{Original:} $\vh = \mW \vx$ where $\mW \in \R^{d \times d}$
+
+\textbf{LoRA:} 
+\begin{equation}
+\vh = \mW \vx + \Delta \mW \vx = \mW \vx + \mB \mA \vx
+\end{equation}
+
+where $\mA \in \R^{r \times d}$, $\mB \in \R^{d \times r}$, and $r \ll d$ (typically $r = 4$ to $64$).
+
+\textbf{Parameters:}
+\begin{itemize}
+    \item Original: $d^2$ (frozen)
+    \item LoRA: $2rd$ (trainable)
+    \item Reduction: $\frac{2rd}{d^2} = \frac{2r}{d}$
+\end{itemize}
+\end{definition}
+
+\begin{example}[LoRA for GPT-3]
+\label{ex:lora_gpt3}
+GPT-3 175B, apply LoRA with $r=8$ to attention projections.
+
+\textbf{Single attention layer:}
+\begin{itemize}
+    \item $\mW^Q, \mW^K, \mW^V, \mW^O \in \R^{12288 \times 12288}$
+    \item Original params: $4 \times 12288^2 = 604M$
+\end{itemize}
+
+\textbf{LoRA params per layer:}
+\begin{equation}
+4 \times 2 \times 8 \times 12288 = 786{,}432 \approx 0.79M
+\end{equation}
+
+\textbf{96 layers total:}
+\begin{itemize}
+    \item LoRA params: $96 \times 0.79M = 75.8M$
+    \item Full model: 175B
+    \item \textbf{Reduction: 2,300×} (train only 0.04\% of parameters!)
+\end{itemize}
+
+\textbf{Performance:} Matches full fine-tuning on many tasks!
+\end{example}
+
+\subsection{Adapter Layers}
+
+\begin{definition}[Adapter]
+\label{def:adapter}
+Insert small bottleneck layers between frozen layers:
+
+\begin{equation}
+\vh_{\text{adapter}} = \vh + \text{FFN}_{\text{adapter}}(\text{LayerNorm}(\vh))
+\end{equation}
+
+where FFN$_{\text{adapter}}$: $d \to d_{\text{bottleneck}} \to d$ with $d_{\text{bottleneck}} \ll d$.
+\end{definition}
+
+\textbf{Typical bottleneck:} $d_{\text{bottleneck}} = 64$ for $d = 768$
+
+\textbf{Parameters per adapter:}
+\begin{equation}
+2d \cdot d_{\text{bottleneck}} = 2 \times 768 \times 64 = 98{,}304
+\end{equation}
+
+\subsection{Prompt Tuning}
+
+\begin{definition}[Prompt Tuning]
+\label{def:prompt_tuning}
+Prepend learnable "soft prompt" vectors:
+
+\textbf{Input:} $[\vp_1, \ldots, \vp_k, \vx_1, \ldots, \vx_n]$
+
+where $\vp_i \in \R^d$ are learned continuous prompts (not discrete tokens).
+
+\textbf{Parameters:} Only $k \times d$ prompt vectors (model frozen).
+\end{definition}
+
+\textbf{Typical:} $k = 20$ prompts, $d = 768$ $\to$ only 15,360 parameters!
+
+\section{Multi-Task and Multi-Stage Pre-training}
+\label{sec:multitask_pretraining}
+
+\subsection{Multi-Task Pre-training}
+
+\textbf{Train on multiple objectives simultaneously:}
+
+\begin{equation}
+\mathcal{L}_{\text{total}} = \sum_{i=1}^{K} \lambda_i \mathcal{L}_i
+\end{equation}
+
+\textbf{Example (T5):}
+\begin{itemize}
+    \item Span corruption (main)
+    \item Prefix LM
+    \item Deshuffling
+\end{itemize}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item More robust representations
+    \item Better transfer to diverse tasks
+    \item Can balance objectives with $\lambda_i$
+\end{itemize}
+
+\subsection{Multi-Stage Pre-training}
+
+\textbf{Stage 1: General pre-training}
+\begin{itemize}
+    \item Large diverse corpus
+    \item Language modeling
+    \item Build general knowledge
+\end{itemize}
+
+\textbf{Stage 2: Instruction tuning}
+\begin{itemize}
+    \item Instruction-response pairs
+    \item Learn to follow instructions
+    \item Improve helpfulness
+\end{itemize}
+
+\textbf{Stage 3: RLHF}
+\begin{itemize}
+    \item Reinforcement learning from human feedback
+    \item Align with human preferences
+    \item Improve safety
+\end{itemize}
+
+\begin{example}[InstructGPT Pipeline]
+\label{ex:instructgpt_pipeline}
+\textbf{Stage 1:} GPT-3 pre-training (175B params, 300B tokens)
+
+\textbf{Stage 2:} Supervised fine-tuning
+\begin{itemize}
+    \item 13,000 instruction-output examples
+    \item Fine-tune for 16 epochs
+    \item Learning rate: $9.65 \times 10^{-6}$
+\end{itemize}
+
+\textbf{Stage 3:} Reward modeling
+\begin{itemize}
+    \item 33,000 comparison examples
+    \item Train 6B reward model
+    \item Predicts human preferences
+\end{itemize}
+
+\textbf{Stage 4:} PPO optimization
+\begin{itemize}
+    \item 31,000 prompts
+    \item Optimize policy to maximize reward
+    \item KL penalty from SFT model
+\end{itemize}
+
+\textbf{Result:} 1.3B InstructGPT preferred over 175B GPT-3 by humans!
+\end{example}
+
+\section{Transfer Learning Analysis}
+\label{sec:transfer_analysis}
+
+\subsection{Measuring Transfer}
+
+\textbf{Metrics:}
+
+\textbf{1. Downstream Performance:}
+\begin{equation}
+\Delta = \text{Performance}_{\text{fine-tuned}} - \text{Performance}_{\text{from-scratch}}
+\end{equation}
+
+\textbf{2. Sample Efficiency:}
+\begin{itemize}
+    \item Number of examples to reach target performance
+    \item Pre-trained models: 10-100× fewer examples
+\end{itemize}
+
+\textbf{3. Convergence Speed:}
+\begin{itemize}
+    \item Training steps to convergence
+    \item Pre-trained: 10× faster
+\end{itemize}
+
+\subsection{What Makes Good Pre-training?}
+
+\textbf{Data scale:} More data $\to$ better transfer (up to a point)
+
+\textbf{Data diversity:} Diverse pre-training $\to$ broader transfer
+
+\textbf{Model scale:} Larger models transfer better
+
+\textbf{Objective alignment:} Pre-training objective similar to downstream task
+
+\textbf{Domain match:} Domain-specific pre-training helps domain-specific tasks
+
+\section{Exercises}
+
+\begin{exercise}
+Compare pre-training objectives:
+\begin{enumerate}
+    \item Train BERT-tiny with: (a) MLM, (b) CLM, (c) Span corruption
+    \item Evaluate on GLUE tasks
+    \item Which objective transfers best? Why?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement data filtering pipeline:
+\begin{enumerate}
+    \item Download 10,000 documents from Common Crawl
+    \item Remove duplicates (exact and near-duplicate)
+    \item Filter by language (keep English)
+    \item Filter low-quality (perplexity > threshold)
+    \item Report statistics at each stage
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement LoRA:
+\begin{enumerate}
+    \item Load pre-trained GPT-2
+    \item Add LoRA layers with $r=8$ to attention
+    \item Fine-tune on sentiment analysis
+    \item Compare: (a) Full fine-tuning, (b) LoRA, (c) Frozen
+    \item Measure: parameters trained, memory, accuracy
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Analyze transfer learning:
+\begin{enumerate}
+    \item Fine-tune BERT on 5 GLUE tasks
+    \item Vary training data: [100, 500, 1000, 5000, all]
+    \item Compare to training from scratch
+    \item Plot sample efficiency curves
+    \item At what point does pre-training stop helping?
+\end{enumerate}
+\end{exercise}
+

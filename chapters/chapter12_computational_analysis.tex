@@ -1,0 +1,267 @@
+\chapter{Computational Analysis of Transformers}
+\label{chap:computational_analysis}
+
+\section*{Chapter Overview}
+
+Understanding computational requirements is crucial for deploying transformers. This chapter analyzes time and space complexity, memory footprints, and inference costs. We derive exact FLOP counts, memory requirements, and scaling laws for transformers of different sizes.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Calculate FLOPs for transformer forward and backward passes
+    \item Analyze memory requirements for training and inference
+    \item Understand scaling laws for model size, data, and compute
+    \item Optimize inference through batching and caching
+    \item Estimate training time and costs for large models
+\end{enumerate}
+
+\section{Computational Complexity}
+\label{sec:computational_complexity}
+
+\subsection{Self-Attention Complexity}
+
+For sequence length $n$ and model dimension $d$:
+
+\textbf{QKV Projections:}
+\begin{equation}
+3nd^2 \text{ FLOPs} \quad (\text{three matrix multiplications } \mX \mW^{Q/K/V})
+\end{equation}
+
+\textbf{Attention Scores:}
+\begin{equation}
+\mQ \mK\transpose: \quad 2n^2d \text{ FLOPs}
+\end{equation}
+
+\textbf{Attention Output:}
+\begin{equation}
+\mA \mV: \quad 2n^2d \text{ FLOPs}
+\end{equation}
+
+\textbf{Output Projection:}
+\begin{equation}
+nd^2 \text{ FLOPs}
+\end{equation}
+
+\textbf{Total self-attention:}
+\begin{equation}
+4nd^2 + 4n^2d \text{ FLOPs}
+\end{equation}
+
+\subsection{Feed-Forward Complexity}
+
+For FFN with dimension $d_{ff} = 4d$:
+\begin{align}
+\text{First projection:} \quad &2nd \cdot d_{ff} = 8nd^2 \\
+\text{Second projection:} \quad &2nd_{ff} \cdot d = 8nd^2 \\
+\text{Total:} \quad &16nd^2 \text{ FLOPs}
+\end{align}
+
+\subsection{Per-Layer Total}
+
+\begin{equation}
+\text{Transformer layer} = (4nd^2 + 4n^2d) + 16nd^2 = 20nd^2 + 4n^2d \text{ FLOPs}
+\end{equation}
+
+\begin{example}[BERT-base Single Layer]
+\label{ex:bert_flops}
+Parameters: $n = 512$, $d = 768$
+
+\textbf{Self-attention:}
+\begin{align}
+&4 \times 512 \times 768^2 + 4 \times 512^2 \times 768 \\
+&= 1{,}207{,}959{,}552 + 805{,}306{,}368 \\
+&= 2{,}013{,}265{,}920 \approx 2.0 \text{ GFLOPs}
+\end{align}
+
+\textbf{Feed-forward:}
+\begin{equation}
+16 \times 512 \times 768^2 = 4{,}831{,}838{,}208 \approx 4.8 \text{ GFLOPs}
+\end{equation}
+
+\textbf{Total per layer:} $\approx 6.8$ GFLOPs
+
+\textbf{Full 12-layer BERT-base:} $12 \times 6.8 \approx 82$ GFLOPs per forward pass
+\end{example}
+
+\subsection{Complexity Analysis}
+
+\begin{theorem}[Transformer Complexity]
+\label{thm:transformer_complexity}
+For $L$ layers, sequence length $n$, dimension $d$:
+
+\textbf{Time complexity:} $O(Ln^2d + Lnd^2)$
+
+\textbf{Space complexity:} $O(Ln^2 + Lnd)$
+\end{theorem}
+
+\textbf{Comparison with RNN:}
+\begin{itemize}
+    \item RNN: $O(Lnd^2)$ time, $O(Ld^2)$ space
+    \item Transformer: Quadratic in $n$ but parallel; RNN sequential
+\end{itemize}
+
+\textbf{Bottleneck regimes:}
+\begin{itemize}
+    \item Short sequences $(n < d)$: FFN dominates, $O(Lnd^2)$
+    \item Long sequences $(n > d)$: Attention dominates, $O(Ln^2d)$
+\end{itemize}
+
+\section{Memory Requirements}
+\label{sec:memory_requirements}
+
+\subsection{Model Parameters}
+
+For BERT-base:
+\begin{align}
+\text{Token embeddings:} \quad &30000 \times 768 \times 4\text{ bytes} = 92.2\text{ MB} \\
+\text{Position embeddings:} \quad &512 \times 768 \times 4 = 1.6\text{ MB} \\
+\text{Transformer layers:} \quad &85M \times 4 = 340\text{ MB} \\
+\text{Total:} \quad &\approx 434\text{ MB (float32)}
+\end{align}
+
+With FP16: $434 / 2 \approx 217$ MB
+
+\subsection{Activations}
+
+For single sequence, activations stored for backprop:
+
+\textbf{Per layer:}
+\begin{itemize}
+    \item Query, Key, Value: $3 \times (n \times d)$
+    \item Attention matrix: $h \times (n \times n)$ (for $h$ heads)
+    \item Attention output: $n \times d$
+    \item FFN intermediate: $n \times d_{ff}$
+\end{itemize}
+
+\textbf{Total per layer:}
+\begin{equation}
+\text{Memory} \approx (5nd + hn^2 + nd_{ff}) \times 4\text{ bytes}
+\end{equation}
+
+\begin{example}[GPT-2 Activation Memory]
+\label{ex:gpt2_activation_memory}
+GPT-2 (small): $L=12$, $d=768$, $h=12$, $n=1024$
+
+\textbf{Per layer:}
+\begin{align}
+&(5 \times 1024 \times 768 + 12 \times 1024^2 + 1024 \times 3072) \times 4 \\
+&\approx (3{,}932{,}160 + 12{,}582{,}912 + 3{,}145{,}728) \times 4 \\
+&\approx 78.6\text{ MB per layer}
+\end{align}
+
+\textbf{12 layers:} $78.6 \times 12 \approx 943$ MB
+
+\textbf{Batch size 32:} $943 \times 32 \approx 30$ GB!
+
+This is why large batch sizes require multiple GPUs.
+\end{example}
+
+\subsection{Training Memory Budget}
+
+\textbf{Total training memory:}
+\begin{equation}
+\text{Memory} = \text{Model} + \text{Gradients} + \text{Optimizer States} + \text{Activations}
+\end{equation}
+
+For AdamW:
+\begin{itemize}
+    \item Model parameters: $P$ bytes
+    \item Gradients: $P$ bytes
+    \item First moment: $P$ bytes
+    \item Second moment: $P$ bytes
+    \item Activations: $A$ bytes (depends on batch size)
+\end{itemize}
+
+\textbf{Total:} $4P + A$
+
+\begin{example}[BERT-base Training Memory]
+\label{ex:bert_training_memory}
+Model: 110M parameters
+
+\textbf{Float32:}
+\begin{align}
+\text{Parameters:} \quad &110M \times 4 = 440\text{ MB} \\
+\text{Gradients:} \quad &440\text{ MB} \\
+\text{Adam states:} \quad &2 \times 440 = 880\text{ MB} \\
+\text{Activations (batch 32):} \quad &\approx 8\text{ GB} \\
+\text{Total:} \quad &\approx 9.7\text{ GB}
+\end{align}
+
+Fits on single GPU with 16GB memory!
+\end{example}
+
+\section{Inference Optimization}
+\label{sec:inference_optimization}
+
+\subsection{KV Caching for Autoregressive Decoding}
+
+Problem: Generating token $t$ requires computing attention over all previous tokens $1, \ldots, t-1$.
+
+Solution: Cache key and value projections from previous steps.
+
+\textbf{Without caching:} Generate 1000 tokens requires $\sum_{t=1}^{1000} t \approx 500{,}000$ attention computations
+
+\textbf{With caching:} Generate 1000 tokens requires $1000$ attention computations (500× speedup!)
+
+\textbf{Memory cost:} Store $\mK, \mV$ for all previous positions:
+\begin{equation}
+2 \times L \times h \times n \times d_k \text{ values}
+\end{equation}
+
+For GPT-2: $2 \times 12 \times 12 \times 1024 \times 64 \times 4\text{ bytes} \approx 75$ MB per sequence
+
+\subsection{Batched Inference}
+
+Process multiple sequences simultaneously:
+\begin{itemize}
+    \item Single sequence: Underutilizes GPU (low parallelism)
+    \item Batched: Higher throughput
+    \item Trade-off: Latency vs throughput
+\end{itemize}
+
+\textbf{Padding challenge:} Different sequence lengths require padding to batch, wasting computation.
+
+\section{Scaling Laws}
+\label{sec:scaling_laws}
+
+\subsection{Kaplan et al. Scaling Laws}
+
+Performance scales as power law with model size $N$, dataset size $D$, and compute $C$:
+\begin{equation}
+L(N, D, C) \approx \left(\frac{N_c}{N}\right)^{\alpha_N} + \left(\frac{D_c}{D}\right)^{\alpha_D} + \left(\frac{C_c}{C}\right)^{\alpha_C}
+\end{equation}
+
+\textbf{Key findings:}
+\begin{itemize}
+    \item Larger models are more sample-efficient
+    \item Compute-optimal: Balance model size and data
+    \item Doubling compute $\to$ consistent loss reduction
+\end{itemize}
+
+\subsection{Chinchilla Scaling Laws}
+
+For fixed compute budget, optimal allocation:
+\begin{equation}
+N_{\text{optimal}} \propto C^{0.5}, \quad D_{\text{optimal}} \propto C^{0.5}
+\end{equation}
+
+\textbf{Implication:} Many large models (GPT-3) are over-parameterized and under-trained! Chinchilla (70B params, more data) outperforms Gopher (280B params, less data).
+
+\section{Exercises}
+
+\begin{exercise}
+Calculate FLOPs for GPT-3 (175B parameters, $L=96$, $d=12288$, $h=96$, $n=2048$) for: (1) Single forward pass, (2) Generating 100 tokens autoregressively, (3) Training on 1 trillion tokens.
+\end{exercise}
+
+\begin{exercise}
+Estimate memory for training 1.3B parameter model with batch size 64, sequence length 2048. What GPU memory required? How to fit on A100 (80GB)?
+\end{exercise}
+
+\begin{exercise}
+Implement KV caching for GPT-2. Measure speedup for generating 256 tokens. Plot generation time vs sequence length with/without caching.
+\end{exercise}
+
+\begin{exercise}
+For fixed compute budget $C = 10^{24}$ FLOPs: Use Chinchilla scaling to find optimal model size and data size. Compare with GPT-3 allocation.
+\end{exercise}
+

@@ -1,0 +1,407 @@
+\chapter{Vision Transformers}
+\label{chap:vision_transformers}
+
+\section*{Chapter Overview}
+
+Vision Transformers (ViT) apply transformer architecture to computer vision, replacing convolutional neural networks. This chapter covers patch embeddings, position encodings for 2D images, ViT architecture variants, and hybrid CNN-transformer models.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand how to apply transformers to images
+    \item Implement patch embedding and position encoding
+    \item Compare ViT to CNNs (ResNet, EfficientNet)
+    \item Apply data augmentation and regularization for ViT
+    \item Understand ViT variants (DeiT, Swin, CoAtNet)
+    \item Implement masked autoencoding (MAE) for vision
+\end{enumerate}
+
+\section{From Images to Sequences}
+\label{sec:images_to_sequences}
+
+\subsection{The Patch Embedding Approach}
+
+\textbf{Challenge:} Image is 2D array, transformer expects 1D sequence.
+
+\textbf{Solution:} Divide image into patches, flatten each patch.
+
+\begin{definition}[Patch Embedding]
+\label{def:patch_embedding}
+For image $\mI \in \R^{H \times W \times C}$ with patch size $P$:
+
+\textbf{Step 1:} Divide into $N = HW/P^2$ patches
+\begin{equation}
+\mI_{\text{patches}} \in \R^{N \times (P^2 \cdot C)}
+\end{equation}
+
+\textbf{Step 2:} Linear projection
+\begin{equation}
+\mX = \mI_{\text{patches}} \mW_{\text{patch}} + \vb \quad \text{where } \mW_{\text{patch}} \in \R^{(P^2C) \times d}
+\end{equation}
+
+\textbf{Step 3:} Add position embeddings
+\begin{equation}
+\mX = \mX + \mE_{\text{pos}}
+\end{equation}
+\end{definition}
+
+\begin{example}[ImageNet Patch Embedding]
+\label{ex:imagenet_patches}
+Image: $224 \times 224 \times 3$ (ImageNet standard)
+
+Patch size: $P = 16$
+
+\textbf{Number of patches:}
+\begin{equation}
+N = \frac{224 \times 224}{16^2} = \frac{50176}{256} = 196 \text{ patches}
+\end{equation}
+
+\textbf{Each patch:} $16 \times 16 \times 3 = 768$ values
+
+\textbf{Linear projection to } $d = 768$:
+\begin{equation}
+\mW_{\text{patch}} \in \R^{768 \times 768}
+\end{equation}
+
+\textbf{Sequence length:} 196 tokens (much shorter than full image 50,176 pixels!)
+
+\textbf{With [CLS] token:} 197 total sequence length
+\end{example}
+
+\subsection{Position Encodings for 2D}
+
+\textbf{Option 1: 1D Position Embeddings}
+\begin{equation}
+\mE_{\text{pos}} \in \R^{N \times d}
+\end{equation}
+Learned absolute positions, treats as 1D sequence.
+
+\textbf{Option 2: 2D Position Embeddings}
+\begin{equation}
+\mE_{\text{pos}}(i,j) = \mE_{\text{row}}(i) + \mE_{\text{col}}(j)
+\end{equation}
+Separate embeddings for row and column.
+
+\textbf{Original ViT uses 1D:} Simpler, works well in practice!
+
+\section{Vision Transformer (ViT) Architecture}
+\label{sec:vit_architecture}
+
+\subsection{Complete ViT Model}
+
+\begin{definition}[Vision Transformer]
+\label{def:vit}
+\textbf{Input:} Image $\mI \in \R^{H \times W \times C}$
+
+\textbf{Step 1:} Patch embedding
+\begin{equation}
+\vx_{\text{patches}} = \text{PatchEmbed}(\mI) \in \R^{N \times d}
+\end{equation}
+
+\textbf{Step 2:} Add [CLS] token
+\begin{equation}
+\vx_0 = [\vx_{\text{cls}}, \vx_{\text{patches}}] \in \R^{(N+1) \times d}
+\end{equation}
+
+\textbf{Step 3:} Add position embeddings
+\begin{equation}
+\vx_0 = \vx_0 + \mE_{\text{pos}}
+\end{equation}
+
+\textbf{Step 4:} Transformer encoder (L layers)
+\begin{equation}
+\vx_L = \text{Transformer}(\vx_0)
+\end{equation}
+
+\textbf{Step 5:} Classification head on [CLS]
+\begin{equation}
+y = \text{softmax}(\mW_{\text{head}} \vx_L^{\text{cls}} + \vb)
+\end{equation}
+\end{definition}
+
+\subsection{ViT Model Variants}
+
+\textbf{ViT-Base:}
+\begin{itemize}
+    \item Layers: $L = 12$
+    \item Hidden: $d = 768$
+    \item Heads: $h = 12$
+    \item Patch size: $P = 16$
+    \item Parameters: 86M
+\end{itemize}
+
+\textbf{ViT-Large:}
+\begin{itemize}
+    \item Layers: $L = 24$
+    \item Hidden: $d = 1024$
+    \item Heads: $h = 16$
+    \item Parameters: 307M
+\end{itemize}
+
+\textbf{ViT-Huge:}
+\begin{itemize}
+    \item Layers: $L = 32$
+    \item Hidden: $d = 1280$
+    \item Heads: $h = 16$
+    \item Parameters: 632M
+\end{itemize}
+
+\begin{example}[ViT-Base Parameter Count]
+\label{ex:vit_params}
+Configuration: $L=12$, $d=768$, $h=12$, $P=16$, ImageNet ($N=196$)
+
+\textbf{Patch embedding:}
+\begin{equation}
+768 \times 768 = 589{,}824
+\end{equation}
+
+\textbf{Position embeddings:}
+\begin{equation}
+197 \times 768 = 151{,}296
+\end{equation}
+
+\textbf{Transformer encoder (12 layers):}
+\begin{equation}
+12 \times 7{,}084{,}800 = 85{,}017{,}600
+\end{equation}
+
+\textbf{Classification head (ImageNet, 1000 classes):}
+\begin{equation}
+768 \times 1000 = 768{,}000
+\end{equation}
+
+\textbf{Total:} $\approx 86{,}527{,}000 \approx$ \textbf{86M parameters}
+\end{example}
+
+\section{Training Vision Transformers}
+\label{sec:training_vit}
+
+\subsection{Pre-training Strategies}
+
+\textbf{Supervised Pre-training (Original ViT):}
+\begin{itemize}
+    \item Large datasets: JFT-300M (300M images, 18K classes)
+    \item Standard classification loss
+    \item Then fine-tune on ImageNet
+\end{itemize}
+
+\textbf{Key finding:} ViT requires massive data to outperform CNNs!
+\begin{itemize}
+    \item On ImageNet alone: ResNet > ViT
+    \item Pre-trained on JFT-300M: ViT > ResNet
+\end{itemize}
+
+\subsection{Data Augmentation and Regularization}
+
+\textbf{Essential for ViT (lacks CNN inductive biases):}
+
+\textbf{Augmentation:}
+\begin{itemize}
+    \item RandAugment: Random augmentation policies
+    \item Mixup: $\tilde{x} = \lambda x_i + (1-\lambda) x_j$
+    \item CutMix: Cut and paste patches between images
+    \item Random erasing
+\end{itemize}
+
+\textbf{Regularization:}
+\begin{itemize}
+    \item Dropout: 0.1
+    \item Stochastic depth: Drop entire layers randomly
+    \item Weight decay: $10^{-4}$ to $10^{-2}$
+\end{itemize}
+
+\subsection{DeiT: Data-efficient Image Transformers}
+
+Improvements for training without massive datasets:
+
+\textbf{1. Knowledge Distillation}
+\begin{itemize}
+    \item Teacher: CNN (RegNetY) or ViT
+    \item Student: ViT
+    \item Distillation token alongside [CLS]
+\end{itemize}
+
+\textbf{2. Strong Augmentation}
+\begin{itemize}
+    \item Aggressive RandAugment
+    \item Repeated augmentation
+\end{itemize}
+
+\textbf{Result:} DeiT-Base achieves 81.8\% on ImageNet trained only on ImageNet (1.3M images)!
+
+\section{Masked Autoencoders (MAE)}
+\label{sec:mae}
+
+\subsection{Self-Supervised Pre-training for Vision}
+
+\begin{definition}[Masked Autoencoder]
+\label{def:mae}
+BERT-style masking for images:
+
+\textbf{Step 1:} Randomly mask 75\% of patches
+
+\textbf{Step 2:} Encoder processes only visible patches
+
+\textbf{Step 3:} Decoder reconstructs all patches (including masked)
+
+\textbf{Loss:} Pixel-level MSE on masked patches
+\begin{equation}
+\mathcal{L} = \frac{1}{|\mathcal{M}|} \sum_{i \in \mathcal{M}} \|\hat{\vx}_i - \vx_i\|^2
+\end{equation}
+\end{definition}
+
+\begin{example}[MAE Architecture]
+\label{ex:mae_architecture}
+\textbf{Image:} $224 \times 224$, patches $16 \times 16$ ($N=196$)
+
+\textbf{Masking:} Keep 25\% = 49 patches, mask 147 patches
+
+\textbf{Encoder:}
+\begin{itemize}
+    \item Input: 49 visible patches only
+    \item Architecture: ViT-Large (24 layers, $d=1024$)
+    \item Much faster (process 1/4 of patches)
+\end{itemize}
+
+\textbf{Decoder:}
+\begin{itemize}
+    \item Input: Encoder output + mask tokens
+    \item Architecture: Smaller (8 layers, $d=512$)
+    \item Reconstruct all 196 patches
+\end{itemize}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Self-supervised (no labels needed)
+    \item Learns strong representations
+    \item Fine-tune on ImageNet: 87.8\% accuracy
+\end{itemize}
+\end{example}
+
+\section{Hierarchical Vision Transformers}
+\label{sec:hierarchical_vit}
+
+\subsection{Swin Transformer}
+
+\textbf{Problem with ViT:} Fixed patch size, no hierarchical features.
+
+\textbf{Swin solution:} Multi-scale with shifted windows.
+
+\begin{definition}[Swin Transformer]
+\label{def:swin}
+\textbf{Key innovations:}
+
+\textbf{1. Hierarchical architecture}
+\begin{itemize}
+    \item Stage 1: Small patches (4×4), many tokens
+    \item Stage 2: Merge patches, fewer tokens
+    \item Stage 3, 4: Further merging
+    \item Like CNN pyramid: high-res → low-res
+\end{itemize}
+
+\textbf{2. Shifted window attention}
+\begin{itemize}
+    \item Partition image into windows
+    \item Attention within window only
+    \item Shift windows between layers
+    \item Enables cross-window connections
+\end{itemize}
+\end{definition}
+
+\textbf{Complexity:} $O(MHW)$ instead of $O((HW)^2)$ where $M$ is window size.
+
+\textbf{Performance:}
+\begin{itemize}
+    \item ImageNet: 87.3\% (Swin-Large)
+    \item COCO object detection: SOTA
+    \item Combines ViT flexibility with CNN efficiency
+\end{itemize}
+
+\subsection{Hybrid Models: CoAtNet}
+
+Combine convolution and attention:
+
+\textbf{Architecture:}
+\begin{enumerate}
+    \item \textbf{Stage 1-2:} Convolutional blocks (local features)
+    \item \textbf{Stage 3-4:} Transformer blocks (global features)
+    \item \textbf{Stage 5:} Attention pooling
+\end{enumerate}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item CNN inductive bias early
+    \item Transformer global modeling late
+    \item Best of both worlds
+\end{itemize}
+
+\textbf{Result:} CoAtNet-7 achieves 90.88\% ImageNet (SOTA at release)
+
+\section{ViT vs CNN Comparison}
+\label{sec:vit_vs_cnn}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspect} & \textbf{CNN (ResNet)} & \textbf{ViT} \\
+\midrule
+Inductive bias & Strong (locality, translation) & Weak \\
+Data requirement & Moderate (ImageNet) & Large (JFT-300M) \\
+Computation & $O(HW)$ & $O((HW)^2)$ or hierarchical \\
+Interpretability & Filter visualization & Attention maps \\
+Transfer & Good & Excellent (large-scale) \\
+Best use & Small/medium data & Large-scale pre-training \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{When to use:}
+\begin{itemize}
+    \item \textbf{CNN:} Limited data, need efficiency, strong prior
+    \item \textbf{ViT:} Massive pre-training data, transfer learning, SOTA performance
+    \item \textbf{Hybrid:} Production systems balancing performance and efficiency
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement patch embedding for image $224 \times 224 \times 3$ with patch size 16:
+\begin{enumerate}
+    \item Reshape image to patches
+    \item Apply linear projection
+    \item Add position embeddings
+    \item Verify output shape: $(196, 768)$
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Compare ViT-Base and ResNet-50:
+\begin{enumerate}
+    \item Parameter count
+    \item FLOPs for $224 \times 224$ image
+    \item Memory footprint
+    \item Which is more efficient?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement MAE masking:
+\begin{enumerate}
+    \item Randomly mask 75\% of 196 patches
+    \item Keep 49 visible patches
+    \item Add mask tokens for decoder
+    \item Compute reconstruction loss
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Train ViT-Tiny on CIFAR-10:
+\begin{enumerate}
+    \item Use patch size 4 (for $32 \times 32$ images)
+    \item 6 layers, $d=192$, 3 heads
+    \item Apply RandAugment
+    \item Compare to small ResNet
+\end{enumerate}
+\end{exercise}
+

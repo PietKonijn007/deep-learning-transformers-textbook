@@ -1,0 +1,399 @@
+\chapter{The Transformer Model}
+\label{chap:transformer_model}
+
+\section*{Chapter Overview}
+
+The Transformer architecture, introduced in "Attention is All You Need" (Vaswani et al., 2017), revolutionized deep learning by replacing recurrence with pure attention mechanisms. This chapter presents the complete transformer architecture, combining all attention mechanisms from previous chapters into a powerful encoder-decoder model.
+
+We develop the transformer from bottom to top: starting with the attention layer, building encoder and decoder blocks, and assembling the full architecture. We provide complete mathematical specifications, dimension tracking, and parameter counts for standard transformer configurations.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand the complete transformer encoder-decoder architecture
+    \item Implement position-wise feed-forward networks
+    \item Apply layer normalization and residual connections
+    \item Compute output dimensions through the entire network
+    \item Count parameters for transformer models (BERT-base, GPT-2)
+    \item Understand training objectives for different transformer variants
+\end{enumerate}
+
+\section{Transformer Architecture Overview}
+\label{sec:transformer_overview}
+
+\subsection{High-Level Structure}
+
+\textbf{Encoder-Decoder Architecture:}
+\begin{itemize}
+    \item \textbf{Encoder:} Processes input sequence, produces contextualized representations
+    \item \textbf{Decoder:} Generates output sequence, attends to encoder via cross-attention
+\end{itemize}
+
+\textbf{Key innovations:}
+\begin{enumerate}
+    \item No recurrence—fully parallel processing
+    \item Multi-head self-attention for capturing relationships
+    \item Position-wise feed-forward networks
+    \item Residual connections and layer normalization
+    \item Positional encodings for sequence order
+\end{enumerate}
+
+\begin{keypoint}
+Transformers achieve $O(1)$ sequential operations (vs $O(n)$ for RNNs), enabling massive parallelization. This is crucial for training on modern GPUs.
+\end{keypoint}
+
+\section{Transformer Encoder}
+\label{sec:transformer_encoder}
+
+\subsection{Single Encoder Layer}
+
+\begin{definition}[Transformer Encoder Layer]
+\label{def:encoder_layer}
+An encoder layer applies multi-head self-attention followed by feed-forward network, with residual connections and layer normalization:
+
+\textbf{Step 1: Multi-Head Self-Attention}
+\begin{equation}
+\vh^{(1)} = \text{LayerNorm}(\mX + \text{MultiHeadAttn}(\mX, \mX, \mX))
+\end{equation}
+
+\textbf{Step 2: Position-wise Feed-Forward}
+\begin{equation}
+\vh^{(2)} = \text{LayerNorm}(\vh^{(1)} + \text{FFN}(\vh^{(1)}))
+\end{equation}
+
+where FFN is:
+\begin{equation}
+\text{FFN}(\vx) = \mW_2 \cdot \text{ReLU}(\mW_1 \vx + \vb_1) + \vb_2
+\end{equation}
+\end{definition}
+
+\begin{example}[BERT-base Encoder Layer]
+\label{ex:bert_encoder_layer}
+Parameters:
+\begin{itemize}
+    \item Model dimension: $d_{\text{model}} = 768$
+    \item Attention heads: $h = 12$
+    \item Feed-forward dimension: $d_{ff} = 3072$ (4× model dim)
+    \item Sequence length: $n = 512$
+\end{itemize}
+
+\textbf{Input:} $\mX \in \R^{512 \times 768}$
+
+\textbf{Multi-Head Attention:}
+\begin{align}
+\text{Parameters:} \quad &4 \times 768^2 = 2{,}359{,}296 \\
+\text{Output:} \quad &\R^{512 \times 768}
+\end{align}
+
+\textbf{Feed-Forward Network:}
+\begin{align}
+\mW_1 &\in \R^{768 \times 3072}, \quad \vb_1 \in \R^{3072} \\
+\mW_2 &\in \R^{3072 \times 768}, \quad \vb_2 \in \R^{768} \\
+\text{Parameters:} \quad &768 \times 3072 + 3072 + 3072 \times 768 + 768 \\
+&= 2{,}359{,}296 + 3{,}072 + 2{,}359{,}296 + 768 \\
+&= 4{,}722{,}432
+\end{align}
+
+\textbf{Layer Normalization:} $2 \times 2 \times 768 = 3{,}072$ parameters (scale $\gamma$ and shift $\beta$)
+
+\textbf{Total per encoder layer:} $2{,}359{,}296 + 4{,}722{,}432 + 3{,}072 = 7{,}084{,}800$ parameters
+\end{example}
+
+\subsection{Complete Encoder Stack}
+
+\begin{definition}[Transformer Encoder]
+\label{def:transformer_encoder}
+Stack $N$ encoder layers:
+\begin{equation}
+\mX^{(0)} = \text{Embedding}(\text{input}) + \text{PositionalEncoding}
+\end{equation}
+\begin{equation}
+\mX^{(\ell)} = \text{EncoderLayer}^{(\ell)}(\mX^{(\ell-1)}) \quad \text{for } \ell = 1, \ldots, N
+\end{equation}
+\end{definition}
+
+\begin{example}[BERT-base Complete Encoder]
+\label{ex:bert_complete}
+\textbf{Architecture:}
+\begin{itemize}
+    \item Layers: $N = 12$
+    \item Model dim: $d_{\text{model}} = 768$
+    \item Heads: $h = 12$
+    \item FFN dim: $d_{ff} = 3072$
+    \item Vocabulary: $V = 30{,}000$
+    \item Max sequence length: $n = 512$
+\end{itemize}
+
+\textbf{Parameter Count:}
+\begin{align}
+\text{Token embeddings:} \quad &30{,}000 \times 768 = 23{,}040{,}000 \\
+\text{Position embeddings:} \quad &512 \times 768 = 393{,}216 \\
+\text{12 encoder layers:} \quad &12 \times 7{,}084{,}800 = 85{,}017{,}600 \\
+\text{Total:} \quad &\approx 108{,}450{,}816 \approx \textbf{110M parameters}
+\end{align}
+
+This matches the reported BERT-base size!
+\end{example}
+
+\section{Position-wise Feed-Forward Networks}
+\label{sec:feed_forward}
+
+\begin{definition}[Position-wise FFN]
+\label{def:position_wise_ffn}
+Applied independently to each position:
+\begin{equation}
+\text{FFN}(\vx) = \max(0, \vx \mW_1 + \vb_1) \mW_2 + \vb_2
+\end{equation}
+
+For input $\mX \in \R^{n \times d_{\text{model}}}$, apply to each row independently:
+\begin{equation}
+\text{FFN}(\mX)_i = \text{FFN}(\mX_{i,:}) \quad \text{for } i = 1, \ldots, n
+\end{equation}
+\end{definition}
+
+\textbf{Why "position-wise"?} Same network applied to all positions, but positions don't interact (unlike attention where positions interact).
+
+\textbf{Alternative: GELU activation} (used in BERT, GPT):
+\begin{equation}
+\text{FFN}_{\text{GELU}}(\vx) = \text{GELU}(\vx \mW_1 + \vb_1) \mW_2 + \vb_2
+\end{equation}
+
+\section{Transformer Decoder}
+\label{sec:transformer_decoder}
+
+\subsection{Single Decoder Layer}
+
+\begin{definition}[Transformer Decoder Layer]
+\label{def:decoder_layer}
+Decoder layer has three sub-layers:
+
+\textbf{Step 1: Masked Self-Attention}
+\begin{equation}
+\vh^{(1)} = \text{LayerNorm}(\mY + \text{MaskedMultiHeadAttn}(\mY, \mY, \mY))
+\end{equation}
+
+\textbf{Step 2: Cross-Attention to Encoder}
+\begin{equation}
+\vh^{(2)} = \text{LayerNorm}(\vh^{(1)} + \text{MultiHeadAttn}(\vh^{(1)}, \mX_{\text{enc}}, \mX_{\text{enc}}))
+\end{equation}
+
+\textbf{Step 3: Feed-Forward}
+\begin{equation}
+\vh^{(3)} = \text{LayerNorm}(\vh^{(2)} + \text{FFN}(\vh^{(2)}))
+\end{equation}
+\end{definition}
+
+The masked self-attention ensures autoregressive property: position $i$ cannot attend to positions $j > i$.
+
+\subsection{Complete Decoder Stack}
+
+\begin{definition}[Transformer Decoder]
+\label{def:transformer_decoder}
+Stack $N$ decoder layers:
+\begin{equation}
+\mY^{(0)} = \text{Embedding}(\text{output}) + \text{PositionalEncoding}
+\end{equation}
+\begin{equation}
+\mY^{(\ell)} = \text{DecoderLayer}^{(\ell)}(\mY^{(\ell-1)}, \mX_{\text{enc}}) \quad \text{for } \ell = 1, \ldots, N
+\end{equation}
+\end{definition}
+
+\begin{example}[Decoder Layer Parameter Count]
+\label{ex:decoder_params}
+For same dimensions as BERT-base ($d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$):
+
+\textbf{Per decoder layer:}
+\begin{align}
+\text{Masked self-attention:} \quad &2{,}359{,}296 \\
+\text{Cross-attention:} \quad &2{,}359{,}296 \\
+\text{Feed-forward:} \quad &4{,}722{,}432 \\
+\text{Layer norms (3):} \quad &4{,}608 \\
+\text{Total:} \quad &9{,}445{,}632 \text{ parameters}
+\end{align}
+
+Decoder layer has ~33\% more parameters than encoder layer (cross-attention adds third attention mechanism).
+\end{example}
+
+\section{Complete Transformer Architecture}
+\label{sec:complete_transformer}
+
+\subsection{Full Encoder-Decoder Model}
+
+\begin{algorithm}[H]
+\caption{Transformer Forward Pass}
+\label{alg:transformer_forward}
+\KwIn{Source sequence $\mathbf{x} = [x_1, \ldots, x_n]$, target sequence $\mathbf{y} = [y_1, \ldots, y_m]$}
+\KwOut{Predicted probabilities for each target position}
+
+\tcp{Encoder}
+$\mX_{\text{emb}} = \text{Embedding}(\mathbf{x})$ \\
+$\mX^{(0)} = \mX_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$ \\
+\For{$\ell = 1$ \KwTo $N_{\text{enc}}$}{
+    $\mX^{(\ell)} = \text{EncoderLayer}^{(\ell)}(\mX^{(\ell-1)})$
+}
+$\mX_{\text{enc}} = \mX^{(N_{\text{enc}})}$
+
+\tcp{Decoder}
+$\mY_{\text{emb}} = \text{Embedding}(\mathbf{y})$ \\
+$\mY^{(0)} = \mY_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$ \\
+\For{$\ell = 1$ \KwTo $N_{\text{dec}}$}{
+    $\mY^{(\ell)} = \text{DecoderLayer}^{(\ell)}(\mY^{(\ell-1)}, \mX_{\text{enc}})$
+}
+$\mY_{\text{dec}} = \mY^{(N_{\text{dec}})}$
+
+\tcp{Output Projection}
+$\text{logits} = \mY_{\text{dec}} \mW_{\text{out}} + \vb_{\text{out}}$ \quad where $\mW_{\text{out}} \in \R^{d_{\text{model}} \times V}$ \\
+$\text{probs} = \text{softmax}(\text{logits})$ \\
+
+\Return{probs}
+\end{algorithm}
+
+\subsection{Original Transformer Configuration}
+
+"Attention is All You Need" base model:
+\begin{itemize}
+    \item Encoder layers: $N_{\text{enc}} = 6$
+    \item Decoder layers: $N_{\text{dec}} = 6$
+    \item Model dimension: $d_{\text{model}} = 512$
+    \item Attention heads: $h = 8$
+    \item Feed-forward dimension: $d_{ff} = 2048$
+    \item Dropout rate: $p = 0.1$
+\end{itemize}
+
+\textbf{Parameter count:}
+\begin{align}
+\text{Encoder (6 layers):} \quad &6 \times (\text{attn} + \text{FFN}) \approx 25M \\
+\text{Decoder (6 layers):} \quad &6 \times (\text{2×attn} + \text{FFN}) \approx 31M \\
+\text{Embeddings:} \quad &\text{varies by vocabulary} \\
+\text{Total (excluding embeddings):} \quad &\approx \textbf{56M parameters}
+\end{align}
+
+\section{Residual Connections and Layer Normalization}
+\label{sec:residual_layer_norm}
+
+\subsection{Residual Connections}
+
+Every sub-layer uses residual connection:
+\begin{equation}
+\text{output} = \text{LayerNorm}(\vx + \text{Sublayer}(\vx))
+\end{equation}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Gradient flow: Direct path from output to input
+    \item Easier optimization of deep networks
+    \item Prevents degradation with depth
+\end{itemize}
+
+\subsection{Layer Normalization}
+
+\begin{definition}[Layer Normalization]
+\label{def:layer_norm}
+For input $\vx \in \R^d$, normalize across features:
+\begin{align}
+\mu &= \frac{1}{d} \sum_{i=1}^d x_i \\
+\sigma^2 &= \frac{1}{d} \sum_{i=1}^d (x_i - \mu)^2 \\
+\hat{x}_i &= \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}} \\
+y_i &= \gamma \hat{x}_i + \beta
+\end{align}
+where $\gamma, \beta \in \R^d$ are learnable parameters.
+\end{definition}
+
+\textbf{Layer Norm vs Batch Norm:}
+\begin{itemize}
+    \item \textbf{Batch Norm:} Normalize across batch dimension (for CNNs)
+    \item \textbf{Layer Norm:} Normalize across feature dimension (for transformers)
+    \item Layer norm doesn't depend on batch size—works for batch size 1
+\end{itemize}
+
+\section{Training Objectives}
+\label{sec:training_objectives}
+
+\subsection{Sequence-to-Sequence Training}
+
+For machine translation, minimize cross-entropy loss:
+\begin{equation}
+\mathcal{L} = -\sum_{t=1}^m \log P(y_t | y_{<t}, \mathbf{x}; \theta)
+\end{equation}
+
+\textbf{Teacher forcing:} During training, use ground-truth previous tokens $y_{<t}$, not model predictions.
+
+\subsection{Autoregressive Generation}
+
+At inference, generate one token at a time:
+\begin{algorithm}[H]
+\caption{Autoregressive Decoding}
+\label{alg:autoregressive_decoding}
+\KwIn{Source sequence $\mathbf{x}$, max length $T$}
+\KwOut{Generated sequence $\mathbf{y}$}
+
+Encode source: $\mX_{\text{enc}} = \text{Encoder}(\mathbf{x})$ \\
+Initialize: $\mathbf{y} = [\text{BOS}]$ \quad (begin-of-sequence token) \\
+\For{$t = 1$ \KwTo $T$}{
+    $\text{probs}_t = \text{Decoder}(\mathbf{y}, \mX_{\text{enc}})$ \\
+    $y_t = \arg\max(\text{probs}_t)$ \quad (or sample from distribution) \\
+    Append $y_t$ to $\mathbf{y}$ \\
+    \If{$y_t = \text{EOS}$}{
+        \textbf{break} \quad (end-of-sequence token)
+    }
+}
+\Return{$\mathbf{y}$}
+\end{algorithm}
+
+\section{Transformer Variants}
+\label{sec:transformer_variants_intro}
+
+\textbf{Three main architectural patterns:}
+
+\textbf{1. Encoder-only (BERT):}
+\begin{itemize}
+    \item Bidirectional self-attention
+    \item Pre-training: Masked language modeling
+    \item Use cases: Classification, named entity recognition, question answering
+\end{itemize}
+
+\textbf{2. Decoder-only (GPT):}
+\begin{itemize}
+    \item Causal (masked) self-attention
+    \item Pre-training: Autoregressive language modeling
+    \item Use cases: Text generation, few-shot learning
+\end{itemize}
+
+\textbf{3. Encoder-Decoder (T5, BART):}
+\begin{itemize}
+    \item Encoder: Bidirectional, Decoder: Causal
+    \item Pre-training: Various objectives (denoising, span corruption)
+    \item Use cases: Translation, summarization, question answering
+\end{itemize}
+
+We cover each in detail in subsequent chapters.
+
+\section{Exercises}
+
+\begin{exercise}
+For transformer with $N=6$, $d_{\text{model}}=512$, $h=8$, $d_{ff}=2048$, $V=32000$:
+\begin{enumerate}
+    \item Calculate total parameters in encoder
+    \item Calculate total parameters in decoder
+    \item What percentage are in embeddings vs transformer layers?
+    \item How does this change if vocabulary increases to 50,000?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement single transformer encoder layer in PyTorch. Test with batch size 16, sequence length 64, $d_{\text{model}}=256$. Verify output shape and gradient flow through residual connections.
+\end{exercise}
+
+\begin{exercise}
+Compare memory and computation for:
+\begin{enumerate}
+    \item Encoder processing sequence length 1024
+    \item Decoder generating 1024 tokens autoregressively
+\end{enumerate}
+Why is decoding slower? How many forward passes required?
+\end{exercise}
+
+\begin{exercise}
+Show that layer normalization is invariant to input scale: if $\vx' = c\vx$ for constant $c > 0$, then $\text{LayerNorm}(\vx') = \text{LayerNorm}(\vx)$ (ignoring learnable $\gamma, \beta$).
+\end{exercise}
+

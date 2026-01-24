@@ -1,0 +1,435 @@
+\chapter{Multimodal Transformers}
+\label{chap:multimodal_transformers}
+
+\section*{Chapter Overview}
+
+Multimodal transformers process multiple modalities (text, images, audio, video) in a unified framework. This chapter covers vision-language models (CLIP, DALL-E), audio-text models (Whisper), and unified architectures that handle arbitrary combinations of modalities.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand multimodal fusion strategies
+    \item Implement contrastive learning (CLIP)
+    \item Apply vision-language models to zero-shot classification
+    \item Generate images from text (DALL-E, Stable Diffusion)
+    \item Process audio with transformers (Whisper)
+    \item Build unified multimodal models
+\end{enumerate}
+
+\section{Multimodal Learning Fundamentals}
+\label{sec:multimodal_fundamentals}
+
+\subsection{Fusion Strategies}
+
+\textbf{1. Early Fusion}
+\begin{itemize}
+    \item Combine modalities at input level
+    \item Single encoder processes all modalities
+    \item Example: Concatenate text and image embeddings
+\end{itemize}
+
+\textbf{2. Late Fusion}
+\begin{itemize}
+    \item Separate encoders per modality
+    \item Combine at decision level
+    \item Example: Average image and text predictions
+\end{itemize}
+
+\textbf{3. Cross-Modal Attention}
+\begin{itemize}
+    \item Modality A attends to modality B
+    \item Bidirectional cross-attention
+    \item Example: Text queries attend to image regions
+\end{itemize}
+
+\subsection{Alignment Objectives}
+
+\textbf{Contrastive Learning:}
+\begin{equation}
+\mathcal{L}_{\text{contrastive}} = -\log \frac{\exp(\text{sim}(v_i, t_i)/\tau)}{\sum_j \exp(\text{sim}(v_i, t_j)/\tau)}
+\end{equation}
+where $v_i$ = image embedding, $t_i$ = text embedding, $\tau$ = temperature
+
+\textbf{Matching Loss:}
+\begin{equation}
+\mathcal{L}_{\text{match}} = -\mathbb{E}[\log P(\text{match}|v, t)]
+\end{equation}
+
+\textbf{Reconstruction:}
+\begin{equation}
+\mathcal{L}_{\text{recon}} = \|f_{\text{dec}}(v) - t\|^2
+\end{equation}
+
+\section{CLIP: Contrastive Language-Image Pre-training}
+\label{sec:clip}
+
+\subsection{CLIP Architecture}
+
+\begin{definition}[CLIP Model]
+\label{def:clip}
+\textbf{Components:}
+\begin{itemize}
+    \item \textbf{Image Encoder:} ViT or ResNet $\to$ embedding $\vv \in \R^{d}$
+    \item \textbf{Text Encoder:} Transformer $\to$ embedding $\vt \in \R^{d}$
+    \item \textbf{Projection:} Map both to shared embedding space
+\end{itemize}
+
+\textbf{Training:}
+\begin{enumerate}
+    \item Batch of $(image, text)$ pairs
+    \item Encode all images and texts
+    \item Compute $N \times N$ similarity matrix
+    \item Maximize diagonal (correct pairs)
+\end{enumerate}
+\end{definition}
+
+\begin{example}[CLIP Training]
+\label{ex:clip_training}
+Batch size $N = 4$, dimension $d = 512$
+
+\textbf{Images:} $\mV = [\vv_1, \vv_2, \vv_3, \vv_4]\transpose \in \R^{4 \times 512}$
+
+\textbf{Texts:} $\mT = [\vt_1, \vt_2, \vt_3, \vt_4]\transpose \in \R^{4 \times 512}$
+
+\textbf{Similarity matrix:}
+\begin{equation}
+\mS = \mV \mT\transpose \in \R^{4 \times 4}
+\end{equation}
+
+\textbf{Normalize:}
+\begin{equation}
+S_{ij} = \frac{\vv_i \cdot \vt_j}{\|\vv_i\| \|\vt_j\|} \quad (\text{cosine similarity})
+\end{equation}
+
+\textbf{Loss (image-to-text):}
+\begin{equation}
+\mathcal{L}_i = -\log \frac{\exp(S_{ii}/\tau)}{\sum_j \exp(S_{ij}/\tau)}
+\end{equation}
+
+\textbf{Total loss:}
+\begin{equation}
+\mathcal{L} = \frac{1}{2N} \sum_{i=1}^{N} (\mathcal{L}_i^{\text{img}\to\text{txt}} + \mathcal{L}_i^{\text{txt}\to\text{img}})
+\end{equation}
+
+Temperature $\tau = 0.07$ (learned during training)
+\end{example}
+
+\subsection{Zero-Shot Classification with CLIP}
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item Create text prompts for each class
+    \begin{itemize}
+        \item "a photo of a dog"
+        \item "a photo of a cat"
+        \item ...
+    \end{itemize}
+    \item Encode all prompts: $\vt_1, \ldots, \vt_C$ (C classes)
+    \item Encode image: $\vv$
+    \item Compute similarities: $s_i = \vv \cdot \vt_i$
+    \item Predict: $\arg\max_i s_i$
+\end{enumerate}
+
+\textbf{Performance:}
+\begin{itemize}
+    \item ImageNet zero-shot: 76.2\% (CLIP ViT-L/14)
+    \item Comparable to supervised ResNet-50 trained on ImageNet!
+    \item Generalizes to new datasets without fine-tuning
+\end{itemize}
+
+\subsection{CLIP Variants}
+
+\textbf{CLIP:} 400M image-text pairs from web
+
+\textbf{OpenCLIP:} Open-source reproduction, various scales
+
+\textbf{ALIGN (Google):} 1.8B image-text pairs, noisy data
+
+\textbf{Florence:} Unified vision foundation model
+
+\section{DALL-E and Stable Diffusion}
+\label{sec:dalle}
+
+\subsection{DALL-E: Text-to-Image Generation}
+
+\begin{definition}[DALL-E Architecture]
+\label{def:dalle}
+\textbf{DALL-E 1 (2021):}
+\begin{itemize}
+    \item Encoder: Compress images to discrete tokens (VQ-VAE)
+    \item Transformer: Autoregressive model over text + image tokens
+    \item Training: Next token prediction
+\end{itemize}
+
+\textbf{Sequence:}
+\begin{equation}
+[\text{BOS}, \text{text tokens}, \text{image tokens}, \text{EOS}]
+\end{equation}
+
+Generate image by: (1) Encode text, (2) Sample image tokens autoregressively
+\end{definition}
+
+\textbf{DALL-E 2 (2022):}
+\begin{itemize}
+    \item Use CLIP embeddings
+    \item Prior: Text embedding $\to$ Image embedding
+    \item Decoder: Image embedding $\to$ Image (diffusion model)
+    \item Much higher quality than DALL-E 1
+\end{itemize}
+
+\subsection{Stable Diffusion}
+
+\textbf{Latent Diffusion Model:}
+\begin{enumerate}
+    \item Encode image to latent space (VAE)
+    \item Add noise iteratively (forward diffusion)
+    \item Learn to denoise (reverse diffusion)
+    \item Condition on text via cross-attention
+\end{enumerate}
+
+\textbf{Text conditioning:}
+\begin{itemize}
+    \item Text encoder: CLIP or T5
+    \item Cross-attention: Latent queries attend to text keys/values
+    \item Enables text-guided image generation
+\end{itemize}
+
+\begin{example}[Stable Diffusion Architecture]
+\label{ex:stable_diffusion}
+\textbf{Components:}
+
+\textbf{1. Text Encoder:} CLIP text encoder
+\begin{equation}
+\text{prompt} \to \vt \in \R^{77 \times 768}
+\end{equation}
+
+\textbf{2. VAE Encoder:} Image $\to$ latent
+\begin{equation}
+\mI \in \R^{512 \times 512 \times 3} \to \vz \in \R^{64 \times 64 \times 4}
+\end{equation}
+
+\textbf{3. U-Net Denoiser:} Diffusion model with cross-attention
+\begin{itemize}
+    \item Input: Noisy latent $\vz_t$
+    \item Condition: Text embedding $\vt$
+    \item Output: Predicted noise $\epsilon_\theta(\vz_t, t, \vt)$
+\end{itemize}
+
+\textbf{4. VAE Decoder:} Latent $\to$ image
+\begin{equation}
+\vz \in \R^{64 \times 64 \times 4} \to \mI \in \R^{512 \times 512 \times 3}
+\end{equation}
+
+\textbf{Parameters:} $\approx 860$M total
+\end{example}
+
+\section{Vision-Language Understanding}
+\label{sec:vision_language_understanding}
+
+\subsection{BLIP: Bootstrapped Language-Image Pre-training}
+
+\textbf{Architecture:}
+\begin{itemize}
+    \item Image encoder (ViT)
+    \item Text encoder (BERT)
+    \item Multimodal encoder (cross-attention between vision and text)
+\end{itemize}
+
+\textbf{Training objectives:}
+\begin{enumerate}
+    \item \textbf{ITC:} Image-Text Contrastive (like CLIP)
+    \item \textbf{ITM:} Image-Text Matching (binary: match or not)
+    \item \textbf{LM:} Language Modeling on text
+\end{enumerate}
+
+\textbf{Bootstrapping:} Generate synthetic captions, filter with model, retrain
+
+\subsection{Flamingo: Few-Shot Learning}
+
+\textbf{Key innovation:} Interleave images and text
+
+\textbf{Architecture:}
+\begin{itemize}
+    \item Frozen vision encoder (CLIP)
+    \item Frozen language model (Chinchilla)
+    \item Learned cross-attention layers (Perceiver Resampler)
+\end{itemize}
+
+\textbf{Input format:}
+\begin{verbatim}
+<image1> Caption for image 1. <image2> Caption for image 2.
+Question: What is in <image3>? Answer:
+\end{verbatim}
+
+\textbf{Performance:}
+\begin{itemize}
+    \item Few-shot image captioning: SOTA
+    \item Visual question answering: Competitive with fine-tuned models
+    \item Zero-shot to 32-shot learning
+\end{itemize}
+
+\section{Audio Transformers}
+\label{sec:audio_transformers}
+
+\subsection{Whisper: Speech Recognition}
+
+\begin{definition}[Whisper Architecture]
+\label{def:whisper}
+Encoder-decoder transformer for speech:
+
+\textbf{Input:} Audio waveform $\to$ Log-mel spectrogram
+
+\textbf{Encoder:}
+\begin{itemize}
+    \item Input: Spectrogram (80 mel bins)
+    \item Convolution layers (downsample)
+    \item Transformer encoder layers
+\end{itemize}
+
+\textbf{Decoder:}
+\begin{itemize}
+    \item Autoregressive text generation
+    \item Special tokens for language, task, timestamps
+\end{itemize}
+\end{definition}
+
+\textbf{Training data:} 680,000 hours of multilingual audio
+
+\textbf{Tasks supported:}
+\begin{itemize}
+    \item Speech recognition (transcription)
+    \item Translation (to English)
+    \item Language identification
+    \item Voice activity detection
+    \item Timestamp prediction
+\end{itemize}
+
+\begin{example}[Whisper Input Format]
+\label{ex:whisper_format}
+\textbf{Special tokens:}
+\begin{verbatim}
+<|startoftranscript|><|en|><|transcribe|><|notimestamps|>
+\end{verbatim}
+
+\textbf{Spectrogram:}
+\begin{itemize}
+    \item 80 mel bins
+    \item 3000 frames (30 seconds audio at 100 Hz)
+    \item Input: $3000 \times 80$
+\end{itemize}
+
+\textbf{Encoder:}
+\begin{itemize}
+    \item Conv layers: $3000 \times 80 \to 1500 \times 768$
+    \item Transformer: Process 1500 tokens
+\end{itemize}
+
+\textbf{Decoder:} Generate text tokens autoregressively
+\end{example}
+
+\subsection{Audio-Text Pre-training}
+
+\textbf{Contrastive learning:} Like CLIP but audio-text
+
+\textbf{AudioCLIP:} Tri-modal (image, text, audio)
+
+\textbf{Applications:}
+\begin{itemize}
+    \item Zero-shot audio classification
+    \item Audio captioning
+    \item Text-to-audio generation
+\end{itemize}
+
+\section{Unified Multimodal Models}
+\label{sec:unified_multimodal}
+
+\subsection{Perceiver and Perceiver IO}
+
+\textbf{Key idea:} Map arbitrary modalities to latent space via cross-attention
+
+\begin{definition}[Perceiver]
+\label{def:perceiver}
+\textbf{Components:}
+
+\textbf{1. Latent array:} Fixed set of learned queries $\mZ \in \R^{M \times d}$
+
+\textbf{2. Cross-attention:} Latents attend to inputs
+\begin{equation}
+\mZ_1 = \text{CrossAttn}(\mQ=\mZ, \mK=\mX, \mV=\mX)
+\end{equation}
+
+\textbf{3. Transformer:} Process latents
+\begin{equation}
+\mZ_L = \text{Transformer}(\mZ_1)
+\end{equation}
+
+\textbf{4. Output:} Decode latents to task outputs
+\end{definition}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item Handles arbitrary input sizes
+    \item Computation independent of input size (fixed latents)
+    \item Unified architecture for images, video, audio, text
+\end{itemize}
+
+\subsection{GPT-4V and LLaVA}
+
+\textbf{GPT-4V (Vision):} GPT-4 with vision capabilities
+\begin{itemize}
+    \item Interleaved image and text inputs
+    \item Strong vision-language understanding
+    \item Details not fully disclosed
+\end{itemize}
+
+\textbf{LLaVA (Open-source):}
+\begin{itemize}
+    \item CLIP vision encoder
+    \item LLaMA language model
+    \item Linear projection to align embeddings
+    \item Instruction tuning on visual conversations
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement CLIP contrastive loss for batch size 8:
+\begin{enumerate}
+    \item Generate random image embeddings $(8, 512)$
+    \item Generate random text embeddings $(8, 512)$
+    \item Compute $8 \times 8$ similarity matrix
+    \item Calculate contrastive loss with $\tau = 0.07$
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Use CLIP for zero-shot classification on CIFAR-10:
+\begin{enumerate}
+    \item Load pre-trained CLIP model
+    \item Create text prompts for 10 classes
+    \item Encode images and prompts
+    \item Compute accuracy
+    \item Compare to supervised baseline
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Analyze Whisper architecture:
+\begin{enumerate}
+    \item Calculate parameters for encoder (24 layers, $d=1024$)
+    \item Calculate parameters for decoder (24 layers)
+    \item Estimate memory for 30-second audio
+    \item Compare to text-only GPT-2
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Design multimodal fusion strategy for video understanding (visual + audio + captions):
+\begin{enumerate}
+    \item Propose architecture
+    \item Define fusion mechanism
+    \item Specify training objective
+    \item Estimate parameter count
+\end{enumerate}
+\end{exercise}
+

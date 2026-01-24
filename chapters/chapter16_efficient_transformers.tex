@@ -1,0 +1,338 @@
+\chapter{Efficient Transformers}
+\label{chap:efficient_transformers}
+
+\section*{Chapter Overview}
+
+Standard transformers have $O(n^2)$ complexity in sequence length, limiting their application to long sequences. This chapter covers efficient attention mechanisms that reduce complexity: sparse attention, linear attention, low-rank methods, and kernel-based approaches.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand the quadratic bottleneck in standard attention
+    \item Implement sparse attention patterns (sliding window, strided, global)
+    \item Apply Linformer and Performer for linear complexity
+    \item Use Flash Attention for memory-efficient computation
+    \item Compare trade-offs: accuracy vs efficiency vs memory
+    \item Deploy long-context models (Longformer, BigBird)
+\end{enumerate}
+
+\section{The Quadratic Bottleneck}
+\label{sec:quadratic_bottleneck}
+
+\subsection{Complexity Analysis}
+
+Standard self-attention:
+\begin{equation}
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+\end{equation}
+
+\textbf{Bottlenecks:}
+\begin{itemize}
+    \item \textbf{Computation:} $\mQ \mK\transpose \in \R^{n \times n}$ requires $O(n^2 d)$ FLOPs
+    \item \textbf{Memory:} Storing attention matrix requires $O(n^2)$ memory
+\end{itemize}
+
+\begin{example}[Long Sequence Costs]
+\label{ex:long_sequence_costs}
+For $n = 4096$, $d = 768$:
+
+\textbf{Attention matrix:}
+\begin{equation}
+4096^2 \times 4\text{ bytes} = 67\text{ MB per head}
+\end{equation}
+
+With 12 heads: $804$ MB just for attention weights!
+
+\textbf{Quadratic scaling:}
+\begin{itemize}
+    \item $n = 512$: 1.3 MB/head
+    \item $n = 2048$: 16.8 MB/head (16× increase for 4× length)
+    \item $n = 8192$: 268 MB/head (256× increase for 16× length)
+\end{itemize}
+
+This is why BERT limits to 512 tokens, GPT-2 to 1024.
+\end{example}
+
+\section{Sparse Attention Patterns}
+\label{sec:sparse_attention}
+
+\subsection{Fixed Sparse Patterns}
+
+\begin{definition}[Sparse Attention]
+\label{def:sparse_attention}
+Restrict attention to subset of positions: Each query attends to $k \ll n$ keys
+\begin{equation}
+\text{Attention}_{\text{sparse}}(\mQ, \mK, \mV)_{ij} = \begin{cases}
+\text{Attention}(\mQ, \mK, \mV)_{ij} & \text{if } (i,j) \in \mathcal{S} \\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+where $\mathcal{S}$ is sparse pattern.
+\end{definition}
+
+\textbf{Common patterns:}
+
+\textbf{1. Sliding Window (Local)}
+\begin{equation}
+\mathcal{S}_{\text{local}} = \{(i,j) : |i-j| \leq w\}
+\end{equation}
+Each token attends to window of $2w+1$ tokens.
+
+\textbf{2. Strided (Dilated)}
+\begin{equation}
+\mathcal{S}_{\text{strided}} = \{(i,j) : (i-j) \mod s = 0\}
+\end{equation}
+Attend to every $s$-th token.
+
+\textbf{3. Global Tokens}
+Designated tokens attend to all positions, all positions attend to them.
+
+\begin{example}[Longformer Attention Pattern]
+\label{ex:longformer}
+Combines local + global:
+\begin{itemize}
+    \item All tokens: Local attention (window $w = 512$)
+    \item Special tokens: Global attention (attend to all)
+\end{itemize}
+
+For $n = 4096$, $w = 512$:
+\begin{align}
+\text{Local connections:} \quad &n \times 2w = 4096 \times 1024 \approx 4M \\
+\text{vs Full:} \quad &n^2 = 4096^2 \approx 16M
+\end{align}
+
+4× reduction in attention computations!
+\end{example}
+
+\subsection{BigBird: Random + Window + Global}
+
+\begin{definition}[BigBird Attention]
+\label{def:bigbird}
+Three components:
+\begin{enumerate}
+    \item \textbf{Random:} Each query attends to $r$ random keys
+    \item \textbf{Window:} Local attention with window $w$
+    \item \textbf{Global:} $g$ global tokens
+\end{enumerate}
+
+Total connections per query: $w + r + g$
+\end{definition}
+
+\textbf{Theoretical result:} BigBird can approximate full attention with $O(n)$ complexity while maintaining theoretical expressiveness.
+
+\section{Linear Attention Methods}
+\label{sec:linear_attention}
+
+\subsection{Linformer}
+
+\begin{definition}[Linformer]
+\label{def:linformer}
+Project keys and values to lower dimension $k \ll n$:
+\begin{align}
+\bar{\mK} &= \mE \mK \quad \text{where } \mE \in \R^{k \times n} \\
+\bar{\mV} &= \mF \mV \quad \text{where } \mF \in \R^{k \times n}
+\end{align}
+
+Attention:
+\begin{equation}
+\text{Linformer}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \bar{\mK}\transpose}{\sqrt{d}}\right) \bar{\mV}
+\end{equation}
+\end{definition}
+
+\textbf{Complexity:}
+\begin{itemize}
+    \item $\mQ \bar{\mK}\transpose$: $O(nkd)$ instead of $O(n^2d)$
+    \item With $k = 256$, 16× reduction for $n=4096$
+\end{itemize}
+
+\textbf{Projection matrices:} Learned or fixed (e.g., random, max pooling)
+
+\subsection{Performer (Kernel-based)}
+
+\begin{definition}[Performer]
+\label{def:performer}
+Approximate attention using kernel feature maps:
+\begin{equation}
+\text{softmax}(\vq\transpose \vk) \approx \phi(\vq)\transpose \phi(\vk)
+\end{equation}
+where $\phi : \R^d \to \R^m$ is random feature map.
+
+Rewrite attention:
+\begin{equation}
+\text{Attention}(\mQ, \mK, \mV) \approx \frac{\phi(\mQ) (\phi(\mK)\transpose \mV)}{\phi(\mQ) (\phi(\mK)\transpose \mathbf{1})}
+\end{equation}
+\end{definition}
+
+\textbf{Key insight:} Compute $(\phi(\mK)\transpose \mV) \in \R^{m \times d_v}$ first!
+\begin{itemize}
+    \item Cost: $O(nm d_v)$ instead of $O(n^2 d_v)$
+    \item Linear in $n$!
+\end{itemize}
+
+\textbf{Random features:}
+\begin{equation}
+\phi(\vx)_i = \frac{1}{\sqrt{m}} \exp\left(\vw_i\transpose \vx - \frac{\|\vx\|^2}{2}\right)
+\end{equation}
+where $\vw_i \sim \mathcal{N}(0, \mI)$
+
+\section{Memory-Efficient Attention}
+\label{sec:memory_efficient}
+
+\subsection{Flash Attention}
+
+\begin{definition}[Flash Attention]
+\label{def:flash_attention}
+Compute exact attention without materializing $n \times n$ matrix:
+\begin{itemize}
+    \item Tile computation into blocks
+    \item Fuse operations (softmax, multiply)
+    \item Keep intermediate results in fast SRAM
+    \item Reduce HBM (slow memory) reads/writes
+\end{itemize}
+\end{definition}
+
+\textbf{Algorithm:}
+\begin{enumerate}
+    \item Divide $\mQ, \mK, \mV$ into blocks
+    \item Load blocks into SRAM
+    \item Compute attention for block, keep running softmax statistics
+    \item Write output, load next block
+\end{enumerate}
+
+\textbf{Benefits:}
+\begin{itemize}
+    \item \textbf{Memory:} $O(n)$ instead of $O(n^2)$
+    \item \textbf{Speed:} 2-4× faster (fewer memory accesses)
+    \item \textbf{Exact:} No approximation!
+\end{itemize}
+
+\begin{example}[Flash Attention Speedup]
+\label{ex:flash_speedup}
+For $n = 2048$, $d = 768$ on A100 GPU:
+
+\textbf{Standard attention:}
+\begin{itemize}
+    \item Memory: $2048^2 \times 4 = 16.8$ MB
+    \item Time: 12 ms
+\end{itemize}
+
+\textbf{Flash Attention:}
+\begin{itemize}
+    \item Memory: $O(n)$ (much less)
+    \item Time: 3.5 ms (3.4× speedup)
+\end{itemize}
+
+Enables $n = 8192$ on same GPU!
+\end{example}
+
+\subsection{Memory-Efficient Transformers}
+
+\textbf{Reversible Layers:} Recompute activations during backward pass (save memory)
+
+\textbf{Gradient Checkpointing:} Store subset of activations, recompute rest
+
+\textbf{Mixed Precision:} FP16 for forward/backward, FP32 for critical ops
+
+\section{Comparison of Efficient Methods}
+\label{sec:comparison}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Method} & \textbf{Complexity} & \textbf{Memory} & \textbf{Exact} & \textbf{Quality} \\
+\midrule
+Standard & $O(n^2d)$ & $O(n^2)$ & Yes & Best \\
+Sliding Window & $O(nwd)$ & $O(nw)$ & No & Good \\
+Linformer & $O(nkd)$ & $O(nk)$ & No & Good \\
+Performer & $O(nmd)$ & $O(nm)$ & Approx & Medium \\
+Flash Attention & $O(n^2d)$ & $O(n)$ & Yes & Best \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Trade-offs:}
+\begin{itemize}
+    \item \textbf{Sparse:} Fast, but may miss long-range dependencies
+    \item \textbf{Low-rank:} Linear complexity, but approximation quality varies
+    \item \textbf{Kernel:} Theoretically elegant, but overhead for small $n$
+    \item \textbf{Flash:} Exact and fast, but requires custom CUDA kernels
+\end{itemize}
+
+\section{Long-Context Models}
+\label{sec:long_context_models}
+
+\subsection{Longformer}
+
+Architecture for documents up to 4096 tokens:
+\begin{itemize}
+    \item Sliding window attention (512 tokens)
+    \item Task-specific global tokens
+    \item Pre-trained on long documents
+\end{itemize}
+
+\textbf{Performance:}
+\begin{itemize}
+    \item WikiHop, TriviaQA: State-of-art on long-context QA
+    \item Summarization: Better than truncating documents
+\end{itemize}
+
+\subsection{Reformer}
+
+\textbf{Two innovations:}
+
+\textbf{1. Locality-Sensitive Hashing (LSH) Attention}
+\begin{itemize}
+    \item Hash queries and keys
+    \item Attend only within same hash bucket
+    \item Reduces attention from $n \times n$ to $n \times (n/b)$ where $b$ is buckets
+\end{itemize}
+
+\textbf{2. Reversible Layers}
+\begin{itemize}
+    \item Compute activations from outputs during backprop
+    \item Memory: $O(nL)$ instead of $O(nL \times \text{layers})$
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Implement sliding window attention with $w=256$. For $n=1024$:
+\begin{enumerate}
+    \item Create attention mask
+    \item Compute attention
+    \item Compare FLOPs and memory vs full attention
+    \item Visualize attention pattern as heatmap
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Compare methods for $n=4096$, $d=768$:
+\begin{enumerate}
+    \item Standard attention: Calculate memory and FLOPs
+    \item Linformer ($k=256$): Calculate savings
+    \item Sliding window ($w=512$): Calculate savings
+    \item Which is better for: (a) accuracy, (b) speed, (c) memory?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement Performer random features. Use $m=256$ features for $d=64$:
+\begin{enumerate}
+    \item Generate random projection matrix
+    \item Compute $\phi(\mQ)$ and $\phi(\mK)$
+    \item Compare attention output to standard softmax attention
+    \item Measure approximation error
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Analyze BigBird pattern. For $n=4096$, $w=256$, $r=64$, $g=32$:
+\begin{enumerate}
+    \item How many attention connections per token?
+    \item What is sparsity percentage?
+    \item Estimate memory savings vs full attention
+\end{enumerate}
+\end{exercise}
+
