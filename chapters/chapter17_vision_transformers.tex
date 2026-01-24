@@ -121,30 +121,11 @@ y = \text{softmax}(\mW_{\text{head}} \vx_L^{\text{cls}} + \vb)
 
 \subsection{ViT Model Variants}
 
-\textbf{ViT-Base:}
-\begin{itemize}
-    \item Layers: $L = 12$
-    \item Hidden: $d = 768$
-    \item Heads: $h = 12$
-    \item Patch size: $P = 16$
-    \item Parameters: 86M
-\end{itemize}
+The Vision Transformer comes in three standard configurations that scale from moderate to extremely large models. ViT-Base uses 12 layers with hidden dimension $d = 768$ and 12 attention heads, resulting in 86 million parameters. This configuration is comparable in size to BERT-base and serves as the standard baseline for vision transformer research. The patch size is typically set to $P = 16$ for ImageNet-resolution images, producing 196 patches from a $224 \times 224$ input.
 
-\textbf{ViT-Large:}
-\begin{itemize}
-    \item Layers: $L = 24$
-    \item Hidden: $d = 1024$
-    \item Heads: $h = 16$
-    \item Parameters: 307M
-\end{itemize}
+ViT-Large scales up to 24 layers with $d = 1024$ and 16 attention heads, totaling 307 million parameters. This represents a roughly 3.5× increase in parameters compared to ViT-Base, with the additional capacity enabling stronger performance when sufficient training data is available. The larger hidden dimension increases both the expressiveness of each layer and the computational cost per token.
 
-\textbf{ViT-Huge:}
-\begin{itemize}
-    \item Layers: $L = 32$
-    \item Hidden: $d = 1280$
-    \item Heads: $h = 16$
-    \item Parameters: 632M
-\end{itemize}
+ViT-Huge pushes the architecture to 32 layers with $d = 1280$ and 16 heads, reaching 632 million parameters. This massive model requires enormous datasets like JFT-300M for effective training and demonstrates the scalability of the transformer architecture to vision tasks. However, the computational and memory requirements make ViT-Huge impractical for many applications, with inference on a single image requiring several gigabytes of GPU memory and hundreds of milliseconds even on modern accelerators.
 
 \begin{example}[ViT-Base Parameter Count]
 \label{ex:vit_params}
@@ -171,6 +152,56 @@ Configuration: $L=12$, $d=768$, $h=12$, $P=16$, ImageNet ($N=196$)
 \end{equation}
 
 \textbf{Total:} $\approx 86{,}527{,}000 \approx$ \textbf{86M parameters}
+\end{example}
+
+\subsection{Memory Requirements and Computational Analysis}
+
+The memory footprint of Vision Transformers scales with both the model size and the input image resolution. For ViT-Base with 86 million parameters, storing the model weights in FP32 requires $86 \times 10^6 \times 4 = 344$ MB. During training, we must also store optimizer states (momentum and variance for Adam), which doubles this to approximately 1 GB for the model alone. Additionally, activations must be stored for backpropagation, and their memory consumption depends critically on the sequence length.
+
+For a standard $224 \times 224$ image with patch size 16, the sequence length is 196 tokens (plus one CLS token for 197 total). The activation memory for a single layer includes the attention scores matrix of size $h \times n \times n$ where $h = 12$ heads and $n = 197$, requiring $12 \times 197^2 \times 4 = 1.86$ MB in FP32. Across 12 layers with batch size 32, attention matrices alone consume approximately 714 MB. The feed-forward network activations add another $32 \times 197 \times 768 \times 4 \times 12 = 2.3$ GB for intermediate representations. In total, training ViT-Base with batch size 32 on $224 \times 224$ images requires approximately 8-10 GB of GPU memory, comfortably fitting on modern GPUs like the NVIDIA RTX 3090 or A100.
+
+However, increasing the image resolution dramatically impacts memory requirements due to the quadratic scaling of attention. For $384 \times 384$ images with the same patch size of 16, the number of patches increases to $(384/16)^2 = 576$ tokens. The attention matrices now require $12 \times 577^2 \times 4 = 16.0$ MB per layer, or 6.1 GB across 12 layers with batch size 32. This represents an 8.5× increase in attention memory compared to $224 \times 224$ resolution. The total memory requirement grows to approximately 18-22 GB, necessitating high-end GPUs or gradient checkpointing techniques to fit in memory.
+
+\begin{example}[Image Resolution Impact]
+\label{ex:resolution_impact}
+Compare memory and computation for different resolutions with ViT-Base ($L=12$, $d=768$, $h=12$, $P=16$):
+
+\textbf{Resolution $224 \times 224$:}
+\begin{equation}
+n = \frac{224^2}{16^2} = 196 \text{ patches}
+\end{equation}
+Attention memory per layer: $12 \times 197^2 \times 4 = 1.86$ MB
+
+FLOPs per attention layer: $4n^2d = 4 \times 197^2 \times 768 = 119$ MFLOPs
+
+\textbf{Resolution $384 \times 384$:}
+\begin{equation}
+n = \frac{384^2}{16^2} = 576 \text{ patches}
+\end{equation}
+Attention memory per layer: $12 \times 577^2 \times 4 = 16.0$ MB (8.6× increase)
+
+FLOPs per attention layer: $4 \times 577^2 \times 768 = 1.03$ GFLOPs (8.6× increase)
+
+\textbf{Key insight:} Memory and computation scale quadratically with image resolution when patch size is fixed. Doubling resolution increases cost by approximately 4×.
+\end{example}
+
+The patch size provides another lever for controlling computational cost. Using larger patches reduces the sequence length, thereby decreasing both memory and computation. For a $224 \times 224$ image, patch size $P = 32$ produces only $(224/32)^2 = 49$ patches compared to 196 for $P = 16$. This 4× reduction in sequence length translates to a 16× reduction in attention memory and computation due to the quadratic scaling. However, larger patches also reduce the model's ability to capture fine-grained visual details, creating a fundamental trade-off between efficiency and representational capacity.
+
+\begin{example}[Patch Size Impact]
+\label{ex:patch_size_impact}
+For $224 \times 224$ images with ViT-Base:
+
+\textbf{Patch size $P = 16$:}
+\begin{equation}
+n = 196, \quad \text{Attention FLOPs} = 119 \text{ MFLOPs per layer}
+\end{equation}
+
+\textbf{Patch size $P = 32$:}
+\begin{equation}
+n = 49, \quad \text{Attention FLOPs} = 7.4 \text{ MFLOPs per layer}
+\end{equation}
+
+The 16× reduction in attention cost makes $P = 32$ attractive for efficiency, but the coarser granularity typically reduces accuracy by 2-3\% on ImageNet. The optimal patch size depends on the application: real-time systems may prefer $P = 32$, while accuracy-critical applications use $P = 16$ or even $P = 14$ for ViT-Huge.
 \end{example}
 
 \section{Training Vision Transformers}
@@ -281,66 +312,161 @@ BERT-style masking for images:
 \section{Hierarchical Vision Transformers}
 \label{sec:hierarchical_vit}
 
+\subsection{Motivation for Hierarchical Architectures}
+
+The original Vision Transformer processes images at a single scale, dividing the input into fixed-size patches and maintaining the same spatial resolution throughout all layers. While this uniform approach simplifies the architecture, it has significant limitations for computer vision tasks. Many vision problems benefit from multi-scale representations: low-level features like edges and textures are best captured at high resolution with small receptive fields, while high-level semantic concepts require large receptive fields that aggregate information across the entire image. CNNs naturally provide this hierarchical structure through pooling layers that progressively reduce spatial resolution while increasing channel capacity.
+
+Additionally, the quadratic complexity of self-attention with respect to sequence length makes standard ViT impractical for high-resolution images or dense prediction tasks like object detection and semantic segmentation. For a $512 \times 512$ image with patch size 16, the sequence length reaches 1,024 tokens, requiring attention matrices of size $1024 \times 1024$ per head. With 12 heads across 12 layers, this consumes over 600 MB just for attention weights in a single forward pass. The computational cost of $O(n^2d)$ attention becomes prohibitive, limiting ViT's applicability to tasks requiring fine-grained spatial reasoning.
+
+Hierarchical Vision Transformers address these limitations by introducing multi-scale processing and localized attention mechanisms. These architectures progressively reduce spatial resolution while increasing feature dimensions, mimicking the pyramid structure of CNNs while retaining the flexibility of transformer layers. By restricting attention to local windows rather than the full image, they achieve linear or near-linear complexity in the number of pixels, enabling efficient processing of high-resolution inputs.
+
 \subsection{Swin Transformer}
 
-\textbf{Problem with ViT:} Fixed patch size, no hierarchical features.
+The Swin Transformer (Shifted Window Transformer) introduces a hierarchical architecture with shifted window-based attention that achieves linear complexity while maintaining the ability to model long-range dependencies. The architecture consists of four stages, each operating at a different spatial resolution. The first stage processes the image at high resolution with small patches (typically $4 \times 4$), producing a large number of tokens. Subsequent stages merge adjacent patches to reduce the spatial dimensions by 2× while doubling the feature dimension, creating a pyramid structure similar to ResNet.
 
-\textbf{Swin solution:} Multi-scale with shifted windows.
+\begin{definition}[Swin Transformer Architecture]
+\label{def:swin_architecture}
+For input image $\mI \in \R^{H \times W \times 3}$:
 
-\begin{definition}[Swin Transformer]
-\label{def:swin}
-\textbf{Key innovations:}
+\textbf{Stage 1:} Patch size $4 \times 4$, dimension $C$
+\begin{equation}
+\text{Resolution: } \frac{H}{4} \times \frac{W}{4}, \quad \text{Channels: } C
+\end{equation}
 
-\textbf{1. Hierarchical architecture}
-\begin{itemize}
-    \item Stage 1: Small patches (4×4), many tokens
-    \item Stage 2: Merge patches, fewer tokens
-    \item Stage 3, 4: Further merging
-    \item Like CNN pyramid: high-res → low-res
-\end{itemize}
+\textbf{Stage 2:} Patch merging, dimension $2C$
+\begin{equation}
+\text{Resolution: } \frac{H}{8} \times \frac{W}{8}, \quad \text{Channels: } 2C
+\end{equation}
 
-\textbf{2. Shifted window attention}
-\begin{itemize}
-    \item Partition image into windows
-    \item Attention within window only
-    \item Shift windows between layers
-    \item Enables cross-window connections
-\end{itemize}
+\textbf{Stage 3:} Patch merging, dimension $4C$
+\begin{equation}
+\text{Resolution: } \frac{H}{16} \times \frac{W}{16}, \quad \text{Channels: } 4C
+\end{equation}
+
+\textbf{Stage 4:} Patch merging, dimension $8C$
+\begin{equation}
+\text{Resolution: } \frac{H}{32} \times \frac{W}{32}, \quad \text{Channels: } 8C
+\end{equation}
+
+For Swin-Base: $C = 128$, producing feature maps at resolutions $\frac{H}{4}, \frac{H}{8}, \frac{H}{16}, \frac{H}{32}$ with dimensions 128, 256, 512, 1024 respectively.
 \end{definition}
 
-\textbf{Complexity:} $O(MHW)$ instead of $O((HW)^2)$ where $M$ is window size.
+The key innovation of Swin Transformer is shifted window attention, which restricts self-attention to non-overlapping local windows while enabling cross-window connections through window shifting. In even-numbered layers, the image is partitioned into regular $M \times M$ windows (typically $M = 7$), and attention is computed independently within each window. In odd-numbered layers, the windows are shifted by $\lfloor M/2 \rfloor$ pixels in both horizontal and vertical directions, causing the windows to overlap with different regions than in the previous layer. This shifting mechanism allows information to flow between windows while maintaining the computational efficiency of local attention.
 
-\textbf{Performance:}
-\begin{itemize}
-    \item ImageNet: 87.3\% (Swin-Large)
-    \item COCO object detection: SOTA
-    \item Combines ViT flexibility with CNN efficiency
-\end{itemize}
+The computational complexity of window-based attention is $O(M^2 \cdot HW)$ where $M$ is the window size and $HW$ is the image resolution. For $M = 7$ and a $224 \times 224$ image at stage 1 resolution ($56 \times 56$ tokens), each window contains $7 \times 7 = 49$ tokens. The attention computation within a window requires $49^2 = 2,401$ operations per head, compared to $3,136^2 = 9.8$ million operations for global attention over all $56 \times 56$ tokens. This 4,000× reduction in attention complexity enables Swin Transformer to process high-resolution images efficiently while still capturing long-range dependencies through the hierarchical structure and window shifting.
 
-\subsection{Hybrid Models: CoAtNet}
+\begin{example}[Swin Transformer Complexity]
+\label{ex:swin_complexity}
+Compare attention complexity for $224 \times 224$ image at stage 1 ($56 \times 56$ tokens):
 
-Combine convolution and attention:
+\textbf{Global attention (standard ViT):}
+\begin{equation}
+\text{Complexity: } O(n^2d) = O(3136^2 \times 128) = 1.26 \text{ GFLOPs per layer}
+\end{equation}
 
-\textbf{Architecture:}
-\begin{enumerate}
-    \item \textbf{Stage 1-2:} Convolutional blocks (local features)
-    \item \textbf{Stage 3-4:} Transformer blocks (global features)
-    \item \textbf{Stage 5:} Attention pooling
-\end{enumerate}
+\textbf{Window attention (Swin, $M=7$):}
+\begin{equation}
+\text{Windows: } \frac{56}{7} \times \frac{56}{7} = 64 \text{ windows}
+\end{equation}
+\begin{equation}
+\text{Complexity: } O(M^2 \cdot HW \cdot d) = O(49 \times 3136 \times 128) = 19.7 \text{ MFLOPs per layer}
+\end{equation}
 
-\textbf{Benefits:}
-\begin{itemize}
-    \item CNN inductive bias early
-    \item Transformer global modeling late
-    \item Best of both worlds
-\end{itemize}
+The window-based approach reduces attention cost by 64×, making high-resolution processing practical. The shifted window mechanism ensures that information still propagates globally through the network depth.
+\end{example}
 
-\textbf{Result:} CoAtNet-7 achieves 90.88\% ImageNet (SOTA at release)
+Swin Transformer achieves state-of-the-art performance across multiple vision tasks while maintaining computational efficiency. On ImageNet classification, Swin-Base reaches 83.5\% top-1 accuracy with 88 million parameters and 15.4 GFLOPs—comparable to ViT-Base in parameters but with better accuracy due to the hierarchical structure. For object detection on COCO, Swin-Base achieves 51.9 box AP, surpassing previous transformer-based detectors by significant margins. The multi-scale feature maps produced by the hierarchical architecture are particularly well-suited for dense prediction tasks, making Swin Transformer a versatile backbone for various computer vision applications.
+
+\subsection{Pyramid Vision Transformer (PVT)}
+
+Pyramid Vision Transformer takes a different approach to hierarchical vision transformers by introducing spatial-reduction attention that progressively decreases the key and value sequence lengths. Unlike Swin's window-based attention, PVT maintains global attention but reduces computational cost by downsampling the keys and values before computing attention. This design preserves the ability to attend to the entire image while achieving sub-quadratic complexity.
+
+In PVT, each stage reduces the spatial resolution through patch merging, similar to Swin Transformer. However, within each stage, the attention mechanism uses a spatial reduction operation on keys and values. For a reduction ratio $R$, the keys and values are reshaped and downsampled by $R \times R$, reducing their sequence length by a factor of $R^2$. The queries maintain the original resolution, allowing each token to attend to a downsampled representation of the entire image. This approach reduces attention complexity from $O(n^2d)$ to $O(n^2d/R^2)$, providing a tunable trade-off between computational cost and attention granularity.
+
+The hierarchical structure of PVT produces feature maps at multiple scales, making it suitable as a backbone for dense prediction tasks. PVT-Medium with 44 million parameters achieves 82.0\% ImageNet accuracy while requiring only 6.7 GFLOPs—significantly more efficient than ViT-Base. For object detection, PVT-based detectors achieve competitive performance with CNN-based methods while offering the benefits of transformer architectures, including better transfer learning and attention-based interpretability.
+
+\subsection{Hybrid Architectures: CoAtNet}
+
+Hybrid architectures combine convolutional layers and transformer layers to leverage the complementary strengths of both approaches. Convolutional layers provide efficient local feature extraction with built-in translation equivariance, while transformer layers enable global reasoning and flexible attention patterns. CoAtNet (Convolution and Attention Network) systematically explores this design space, identifying an optimal combination that achieves state-of-the-art performance with improved efficiency.
+
+The CoAtNet architecture consists of five stages with progressively decreasing spatial resolution. The first two stages use convolutional blocks based on the MBConv (Mobile Inverted Bottleneck Convolution) design from EfficientNet, which efficiently extracts local features at high resolution. These convolutional stages capture low-level visual patterns like edges, textures, and simple shapes with strong inductive bias and minimal computational cost. The spatial resolution is reduced by 2× at each stage through strided convolutions.
+
+The final three stages employ transformer blocks with relative attention, enabling global reasoning over the extracted features. By this point in the network, the spatial resolution has been reduced by 8× or more, making global attention computationally feasible. The transformer stages learn high-level semantic representations and long-range dependencies that benefit from the flexibility of self-attention. The final stage uses attention pooling to aggregate spatial information into a global representation for classification.
+
+\begin{example}[CoAtNet Architecture]
+\label{ex:coatnet_architecture}
+CoAtNet-3 configuration for $224 \times 224$ input:
+
+\textbf{Stage 0 (Stem):} Convolution, $112 \times 112$ resolution, 64 channels
+
+\textbf{Stage 1:} MBConv blocks, $112 \times 112$ resolution, 96 channels
+
+\textbf{Stage 2:} MBConv blocks, $56 \times 56$ resolution, 192 channels
+
+\textbf{Stage 3:} Transformer blocks, $28 \times 28$ resolution, 384 channels
+
+\textbf{Stage 4:} Transformer blocks, $14 \times 14$ resolution, 768 channels
+
+\textbf{Stage 5:} Attention pooling, global representation
+
+Total parameters: 168M, FLOPs: 34.7G
+
+This hybrid design achieves 87.9\% ImageNet accuracy, outperforming pure CNN and pure transformer architectures of similar size.
+\end{example}
+
+The success of CoAtNet demonstrates that the choice between convolution and attention need not be binary. By using convolutions where they excel (local feature extraction at high resolution) and transformers where they excel (global reasoning at lower resolution), hybrid architectures achieve better accuracy-efficiency trade-offs than either approach alone. CoAtNet-7, the largest variant with 2.4 billion parameters, achieved 90.88\% ImageNet accuracy and state-of-the-art results on multiple vision benchmarks at the time of its release, validating the hybrid approach at scale.
 
 \section{ViT vs CNN Comparison}
 \label{sec:vit_vs_cnn}
 
-\begin{table}[h]
+\subsection{Parameter Efficiency}
+
+Vision Transformers and Convolutional Neural Networks differ fundamentally in their parameter efficiency and data requirements. ResNet-50, a standard CNN baseline, contains approximately 25 million parameters distributed across convolutional layers with small kernel sizes (typically $3 \times 3$ or $7 \times 7$). In contrast, ViT-Base requires 86 million parameters—more than 3× the size of ResNet-50—to achieve comparable performance. This parameter gap reflects the different inductive biases: CNNs build in locality and translation equivariance through their convolutional structure, while transformers must learn these properties from data through their flexible attention mechanism.
+
+The parameter distribution also differs significantly between the architectures. In ResNet-50, the majority of parameters reside in the later convolutional layers and the final fully-connected layer. For ViT-Base, the parameters are more evenly distributed across the 12 transformer layers, with each layer containing approximately 7 million parameters in the attention and feed-forward components. The patch embedding layer contributes only 590K parameters, while position embeddings add another 151K—both negligible compared to the transformer layers themselves.
+
+Despite having more parameters, ViT-Base is not necessarily slower than ResNet-50 for inference. The transformer's matrix multiplications are highly optimized on modern GPUs, and the lack of spatial convolutions can actually improve throughput. On an NVIDIA A100 GPU, ViT-Base processes approximately 1,200 images per second at $224 \times 224$ resolution with batch size 128, compared to 1,400 images per second for ResNet-50. The 15\% throughput difference is much smaller than the 3× parameter gap would suggest, demonstrating the efficiency of transformer operations on modern hardware.
+
+\subsection{Computational Complexity Analysis}
+
+The computational complexity of Vision Transformers scales differently than CNNs, leading to different performance characteristics across image resolutions. For a CNN like ResNet-50, the computational cost is approximately $O(C \times k^2 \times H \times W)$ where $C$ is the number of channels, $k$ is the kernel size, and $H \times W$ is the spatial resolution. This linear scaling in spatial dimensions means that doubling the image resolution increases computation by 4×. For ResNet-50 processing a $224 \times 224$ image, the total computation is approximately 4.1 GFLOPs.
+
+Vision Transformers have complexity $O(n^2d + nd^2)$ where $n = (H/P)^2$ is the number of patches and $d$ is the hidden dimension. The $n^2d$ term comes from attention, while $nd^2$ comes from the feed-forward network. For ViT-Base with $224 \times 224$ images and patch size 16, we have $n = 196$ and $d = 768$. The attention computation across 12 layers totals $12 \times 4 \times 196^2 \times 768 = 1.4$ GFLOPs, while the feed-forward network contributes $12 \times 2 \times 196 \times 768^2 = 2.8$ GFLOPs, for a total of approximately 4.2 GFLOPs—nearly identical to ResNet-50.
+
+However, the scaling behavior differs dramatically. When we increase resolution to $384 \times 384$ with the same patch size, the number of patches grows to $n = 576$, increasing by a factor of $(384/224)^2 = 2.94$. The attention cost grows quadratically to $12 \times 4 \times 576^2 \times 768 = 12.3$ GFLOPs (8.6× increase), while the feed-forward cost grows linearly to $12 \times 2 \times 576 \times 768^2 = 8.1$ GFLOPs (2.9× increase). The total ViT computation reaches 20.4 GFLOPs, compared to 12.0 GFLOPs for ResNet-50 at the same resolution. This crossover point illustrates why efficient attention mechanisms become critical for high-resolution vision tasks.
+
+\begin{example}[Computational Crossover Analysis]
+\label{ex:computational_crossover}
+Compare FLOPs for ResNet-50 and ViT-Base across resolutions:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Resolution} & \textbf{ResNet-50} & \textbf{ViT-Base} \\
+\midrule
+$224 \times 224$ & 4.1 GFLOPs & 4.2 GFLOPs \\
+$384 \times 384$ & 12.0 GFLOPs & 20.4 GFLOPs \\
+$512 \times 512$ & 21.3 GFLOPs & 48.7 GFLOPs \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+At standard ImageNet resolution, ViT and ResNet have similar computational cost. However, ViT's quadratic attention scaling makes it increasingly expensive at higher resolutions, motivating hierarchical architectures like Swin Transformer that reduce attention to local windows.
+\end{example}
+
+\subsection{Data Requirements and Inductive Bias}
+
+The most striking difference between Vision Transformers and CNNs lies in their data requirements, which stem from their different inductive biases. CNNs encode strong priors about images: locality (nearby pixels are related), translation equivariance (a cat is a cat regardless of position), and hierarchical structure (edges → textures → objects). These built-in assumptions allow CNNs to learn effectively from moderate-sized datasets like ImageNet with 1.3 million images. ResNet-50 trained only on ImageNet achieves 76.5\% top-1 accuracy, demonstrating that the convolutional structure provides useful inductive bias for natural images.
+
+Vision Transformers, by contrast, have minimal inductive bias. The self-attention mechanism can attend to any patch regardless of spatial distance, and the model must learn locality and translation properties from data. When trained only on ImageNet, ViT-Base achieves only 72.3\% accuracy—4.2 percentage points below ResNet-50 despite having 3× more parameters. This performance gap reveals that the flexibility of attention becomes a liability when training data is limited: the model has too much capacity and insufficient constraints to learn good representations.
+
+The situation reverses dramatically with large-scale pre-training. When ViT-Base is pre-trained on JFT-300M (300 million images with 18,000 classes) and then fine-tuned on ImageNet, it achieves 84.2\% accuracy, surpassing ResNet-50's 76.5\% by a substantial margin. The massive pre-training dataset provides enough examples for the transformer to learn the visual priors that CNNs encode by design. Moreover, the learned representations transfer better to downstream tasks: ViT-Base pre-trained on JFT-300M achieves higher accuracy than ResNet-50 on 19 out of 20 transfer learning benchmarks, with improvements ranging from 2-7 percentage points.
+
+This data-efficiency trade-off has important practical implications. For applications with limited training data or computational budgets, CNNs remain the better choice. For large-scale systems with access to massive datasets and compute, Vision Transformers offer superior performance and transfer learning capabilities. The development of data-efficient training methods like DeiT (Data-efficient Image Transformers) has partially bridged this gap, enabling ViT-Base to achieve 81.8\% on ImageNet without external data through aggressive augmentation and distillation techniques.
+
+\subsection{When to Use Each Architecture}
+
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lll}
 \toprule
@@ -348,7 +474,9 @@ Combine convolution and attention:
 \midrule
 Inductive bias & Strong (locality, translation) & Weak \\
 Data requirement & Moderate (ImageNet) & Large (JFT-300M) \\
-Computation & $O(HW)$ & $O((HW)^2)$ or hierarchical \\
+Parameters & 25M (ResNet-50) & 86M (ViT-Base) \\
+Computation & $O(HW)$ & $O((HW/P)^2)$ \\
+Memory & 5-7 GB training & 8-10 GB training \\
 Interpretability & Filter visualization & Attention maps \\
 Transfer & Good & Excellent (large-scale) \\
 Best use & Small/medium data & Large-scale pre-training \\
@@ -356,12 +484,9 @@ Best use & Small/medium data & Large-scale pre-training \\
 \end{tabular}
 \end{table}
 
-\textbf{When to use:}
-\begin{itemize}
-    \item \textbf{CNN:} Limited data, need efficiency, strong prior
-    \item \textbf{ViT:} Massive pre-training data, transfer learning, SOTA performance
-    \item \textbf{Hybrid:} Production systems balancing performance and efficiency
-\end{itemize}
+The choice between CNNs and Vision Transformers depends on the specific application constraints. CNNs are preferable when training data is limited (fewer than 10 million images), when computational efficiency is critical (mobile or edge deployment), or when strong spatial priors are known to be appropriate for the task. ResNet and EfficientNet variants remain the standard choice for many production computer vision systems due to their reliability and efficiency.
+
+Vision Transformers excel when massive pre-training data is available, when transfer learning to diverse downstream tasks is important, or when state-of-the-art performance justifies the additional computational cost. The superior scaling properties of transformers—both in terms of model size and dataset size—make them the architecture of choice for foundation models in vision. Hybrid architectures like CoAtNet attempt to combine the strengths of both approaches, using convolutional layers for early feature extraction and transformer layers for high-level reasoning.
 
 \section{Exercises}
 

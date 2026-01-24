@@ -1,4 +1,4 @@
-\documentclass[11pt,twoside,openright]{book}
+\documentclass[11pt,oneside]{book}
 
 % ============================================================================
 % PACKAGES
@@ -6,9 +6,9 @@
 
 % Math packages
 \usepackage{amsmath, amssymb, amsthm, mathtools}
-\usepackage{bm} % Bold math symbols
+\usepackage{bm}
 
-% Graphics and figures
+% Graphics
 \usepackage{graphicx}
 \usepackage{tikz}
 \usepackage{pgfplots}
@@ -43,7 +43,7 @@
     numberstyle=\tiny\color{gray}
 }
 
-% Hyperlinks and references
+% Hyperlinks
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
@@ -59,9 +59,9 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE]{\leftmark}
-\fancyhead[RO]{\rightmark}
-\fancyfoot[C]{\thepage}
+\fancyhead[RO,LE]{\thepage}
+\fancyhead[LO]{\leftmark}
+\fancyhead[RE]{\rightmark}
 
 % Typography
 \usepackage{microtype}
@@ -76,7 +76,7 @@
 \usepackage{makeidx}
 \makeindex
 
-% Custom theorem environments
+% Theorem environments
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[chapter]
 \newtheorem{example}{Example}[chapter]
@@ -106,6 +106,18 @@
 \newcommand{\vq}{\mathbf{q}}
 \newcommand{\vk}{\mathbf{k}}
 \newcommand{\vv}{\mathbf{v}}
+\newcommand{\va}{\mathbf{a}}
+\newcommand{\vc}{\mathbf{c}}
+\newcommand{\vf}{\mathbf{f}}
+\newcommand{\vi}{\mathbf{i}}
+\newcommand{\vo}{\mathbf{o}}
+\newcommand{\vr}{\mathbf{r}}
+\newcommand{\vt}{\mathbf{t}}
+\newcommand{\vu}{\mathbf{u}}
+\newcommand{\vp}{\mathbf{p}}
+\newcommand{\vg}{\mathbf{g}}
+\newcommand{\vn}{\mathbf{n}}
+\newcommand{\vs}{\mathbf{s}}
 \newcommand{\mA}{\mathbf{A}}
 \newcommand{\mB}{\mathbf{B}}
 \newcommand{\mC}{\mathbf{C}}
@@ -118,33 +130,44 @@
 \newcommand{\mH}{\mathbf{H}}
 \newcommand{\mI}{\mathbf{I}}
 \newcommand{\mU}{\mathbf{U}}
+\newcommand{\mJ}{\mathbf{J}}
+\newcommand{\mE}{\mathbf{E}}
+\newcommand{\mM}{\mathbf{M}}
+\newcommand{\mZ}{\mathbf{Z}}
+\newcommand{\mT}{\mathbf{T}}
+\newcommand{\mR}{\mathbf{R}}
+\newcommand{\mF}{\mathbf{F}}
+\newcommand{\mS}{\mathbf{S}}
+\newcommand{\mO}{\mathbf{O}}
+\newcommand{\mP}{\mathbf{P}}
 \newcommand{\transpose}{^\top}
 \newcommand{\norm}[1]{\left\|#1\right\|}
 \newcommand{\abs}[1]{\left|#1\right|}
 \newcommand{\dimof}[1]{\text{dim}(#1)}
 
 % Custom boxes
-\usepackage[most]{tcolorbox}
-\newtcolorbox{keypoint}{
-    colback=blue!5!white,
-    colframe=deepblue,
-    fonttitle=\bfseries,
-    title=Key Point
-}
+\usepackage{framed}
+\definecolor{keypoint-bg}{RGB}{227, 242, 253}
+\definecolor{impl-bg}{RGB}{232, 245, 233}
+\definecolor{caution-bg}{RGB}{255, 235, 238}
 
-\newtcolorbox{implementation}{
-    colback=green!5!white,
-    colframe=darkgreen,
-    fonttitle=\bfseries,
-    title=Implementation Note
-}
+\newenvironment{keypoint}{%
+  \def\FrameCommand{\fboxsep=8pt\colorbox{keypoint-bg}}%
+  \MakeFramed{\advance\hsize-\width\FrameRestore}%
+  \noindent\textbf{Key Point:}\par\vspace{4pt}%
+}{\endMakeFramed}
 
-\newtcolorbox{caution}{
-    colback=red!5!white,
-    colframe=darkred,
-    fonttitle=\bfseries,
-    title=Common Pitfall
-}
+\newenvironment{implementation}{%
+  \def\FrameCommand{\fboxsep=8pt\colorbox{impl-bg}}%
+  \MakeFramed{\advance\hsize-\width\FrameRestore}%
+  \noindent\textbf{Implementation:}\par\vspace{4pt}%
+}{\endMakeFramed}
+
+\newenvironment{caution}{%
+  \def\FrameCommand{\fboxsep=8pt\colorbox{caution-bg}}%
+  \MakeFramed{\advance\hsize-\width\FrameRestore}%
+  \noindent\textbf{Caution:}\par\vspace{4pt}%
+}{\endMakeFramed}
 
 % ============================================================================
 % DOCUMENT INFORMATION
@@ -177,15 +200,6 @@ First Edition\\[0.5cm]
 ISBN: [To be assigned]
 \end{center}
 \vspace*{\fill}
-\clearpage
-
-% Dedication (optional)
-\thispagestyle{empty}
-\vspace*{3cm}
-\begin{center}
-\textit{To all researchers, students, and practitioners\\
-advancing the field of artificial intelligence}
-\end{center}
 \clearpage
 
 % Table of Contents
@@ -269,7 +283,7 @@ advancing the field of artificial intelligence}
 \include{chapters/chapter17_vision_transformers}
 \include{chapters/chapter18_multimodal_transformers}
 \include{chapters/chapter19_long_context}
-\include{chapters/chapter20_pretraining_transfer}
+\include{chapters/chapter20_pretraining_strategies}
 
 % ============================================================================
 % PART VII: PRACTICAL IMPLEMENTATION
@@ -277,21 +291,14 @@ advancing the field of artificial intelligence}
 \part{Practical Implementation}
 \label{part:implementation}
 
-\include{chapters/chapter21_implementation}
-\include{chapters/chapter22_hardware_systems}
-\include{chapters/chapter23_production_deployment}
+\include{chapters/chapter21_pytorch_implementation}
+\include{chapters/chapter22_hardware_optimization}
+\include{chapters/chapter23_best_practices}
 
 % ============================================================================
 % BACK MATTER
 % ============================================================================
 \backmatter
-
-% Appendices
-\appendix
-\include{chapters/appendix_a_notation}
-\include{chapters/appendix_b_datasets}
-\include{chapters/appendix_c_code}
-\include{chapters/appendix_d_reading}
 
 % Bibliography
 \printbibliography[heading=bibintoc]

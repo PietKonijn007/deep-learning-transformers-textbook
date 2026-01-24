@@ -18,69 +18,266 @@ Understanding computational requirements is crucial for deploying transformers. 
 \section{Computational Complexity}
 \label{sec:computational_complexity}
 
+Understanding the computational complexity of transformers is essential for making informed decisions about model architecture, hardware requirements, and deployment strategies. The transformer's computational profile differs fundamentally from recurrent architectures, trading sequential dependencies for quadratic memory scaling—a trade-off that profoundly impacts both training and inference.
+
 \subsection{Self-Attention Complexity}
 
-For sequence length $n$ and model dimension $d$:
+Self-attention is the defining operation of transformers, and its computational characteristics determine much of the model's behavior. For a sequence of length $n$ with model dimension $d_{\text{model}}$, we analyze each component of the attention mechanism in detail.
 
-\textbf{QKV Projections:}
+\textbf{QKV Projections:} The first step projects the input $\mX \in \R^{n \times d_{\text{model}}}$ into query, key, and value spaces. Each projection is a matrix multiplication:
 \begin{equation}
-3nd^2 \text{ FLOPs} \quad (\text{three matrix multiplications } \mX \mW^{Q/K/V})
+\mQ = \mX \mW^Q, \quad \mK = \mX \mW^K, \quad \mV = \mX \mW^V
+\end{equation}
+where $\mW^Q, \mW^K, \mW^V \in \R^{d_{\text{model}} \times d_k}$ (typically $d_k = d_{\text{model}}/h$ for $h$ heads).
+
+Each matrix multiplication $\mX \mW$ requires $2nd_{\text{model}}d_k$ floating-point operations (FLOPs): for each of $n \times d_k$ output elements, we perform $d_{\text{model}}$ multiply-add operations. With three projections:
+\begin{equation}
+\text{QKV FLOPs} = 3 \times 2nd_{\text{model}}d_k = 6nd_{\text{model}}d_k
 \end{equation}
 
-\textbf{Attention Scores:}
+For the common case where $d_k = d_{\text{model}}$ (single-head or considering all heads together):
 \begin{equation}
-\mQ \mK\transpose: \quad 2n^2d \text{ FLOPs}
+\text{QKV FLOPs} = 6nd_{\text{model}}^2
 \end{equation}
 
-\textbf{Attention Output:}
+\textbf{Why this matters for hardware:} These are dense matrix multiplications, which achieve high utilization on modern GPUs. NVIDIA A100 GPUs can perform up to 312 TFLOPS (FP16 with Tensor Cores), meaning these projections are typically compute-bound rather than memory-bound. However, for small batch sizes or short sequences, the operations may become memory-bandwidth limited, achieving only 10-20\% of peak FLOPS.
+
+\textbf{Attention Score Computation:} Computing $\mS = \mQ \mK\transpose$ involves multiplying $\mQ \in \R^{n \times d_k}$ by $\mK\transpose \in \R^{d_k \times n}$, producing $\mS \in \R^{n \times n}$:
 \begin{equation}
-\mA \mV: \quad 2n^2d \text{ FLOPs}
+\text{Score FLOPs} = 2n^2d_k
 \end{equation}
 
-\textbf{Output Projection:}
-\begin{equation}
-nd^2 \text{ FLOPs}
-\end{equation}
+The attention matrix $\mS$ has $n^2$ elements, and computing each requires $d_k$ multiply-add operations. This quadratic scaling in sequence length is the fundamental bottleneck for long-context transformers.
 
-\textbf{Total self-attention:}
-\begin{equation}
-4nd^2 + 4n^2d \text{ FLOPs}
-\end{equation}
-
-\subsection{Feed-Forward Complexity}
-
-For FFN with dimension $d_{ff} = 4d$:
+\textbf{Dimension tracking example:} For BERT-base with $n=512$, $d_k=64$ (per head), and $h=12$ heads:
 \begin{align}
-\text{First projection:} \quad &2nd \cdot d_{ff} = 8nd^2 \\
-\text{Second projection:} \quad &2nd_{ff} \cdot d = 8nd^2 \\
-\text{Total:} \quad &16nd^2 \text{ FLOPs}
+\mQ^{(i)} &\in \R^{512 \times 64} \quad \text{(one head)} \\
+\mK^{(i)\transpose} &\in \R^{64 \times 512} \\
+\mS^{(i)} &= \mQ^{(i)} \mK^{(i)\transpose} \in \R^{512 \times 512} \quad \text{(262,144 elements!)}
 \end{align}
 
-\subsection{Per-Layer Total}
-
+Across 12 heads, we compute 12 separate $512 \times 512$ attention matrices, requiring:
 \begin{equation}
-\text{Transformer layer} = (4nd^2 + 4n^2d) + 16nd^2 = 20nd^2 + 4n^2d \text{ FLOPs}
+12 \times 2 \times 512^2 \times 64 = 402{,}653{,}184 \text{ FLOPs} \approx 403 \text{ MFLOPs}
 \end{equation}
 
-\begin{example}[BERT-base Single Layer]
+\textbf{Hardware implications:} The attention matrix requires $n^2$ memory per head. For $n=512$ and 12 heads with FP32:
+\begin{equation}
+12 \times 512^2 \times 4\text{ bytes} = 12{,}582{,}912\text{ bytes} \approx 12\text{ MB}
+\end{equation}
+
+This seems modest, but for $n=2048$ (GPT-2): $12 \times 2048^2 \times 4 = 201\text{ MB}$ per sequence. With batch size 32: $6.4\text{ GB}$ just for attention matrices! This is why long-context models require substantial GPU memory.
+
+\textbf{Softmax and Scaling:} Applying softmax to each row of $\mS$ requires $O(n^2)$ operations (exponentials and normalization), which is negligible compared to the matrix multiplications but can become significant for very long sequences due to memory access patterns.
+
+\textbf{Attention Output:} Computing $\mO = \mA \mV$ multiplies the attention weights $\mA \in \R^{n \times n}$ by values $\mV \in \R^{n \times d_v}$:
+\begin{equation}
+\text{Output FLOPs} = 2n^2d_v
+\end{equation}
+
+Again, this scales quadratically with sequence length. For $d_v = d_k$:
+\begin{equation}
+\text{Attention output FLOPs} = 2n^2d_k
+\end{equation}
+
+\textbf{Output Projection:} Finally, concatenated head outputs are projected back to model dimension:
+\begin{equation}
+\text{Output projection FLOPs} = 2n(hd_k)d_{\text{model}} = 2nd_{\text{model}}^2
+\end{equation}
+(assuming $hd_k = d_{\text{model}}$).
+
+\textbf{Total Self-Attention FLOPs:}
+\begin{equation}
+\text{Total} = 6nd_{\text{model}}^2 + 2n^2d_k h + 2n^2d_v h + 2nd_{\text{model}}^2 = 8nd_{\text{model}}^2 + 4n^2d_{\text{model}}
+\end{equation}
+
+For typical configurations where $d_k = d_v = d_{\text{model}}/h$:
+\begin{equation}
+\boxed{\text{Self-Attention FLOPs} = 8nd_{\text{model}}^2 + 4n^2d_{\text{model}}}
+\end{equation}
+
+\textbf{Complexity regime analysis:} The relative importance of the two terms depends on the ratio $n/d_{\text{model}}$:
+\begin{itemize}
+    \item \textbf{Short sequences} ($n \ll d_{\text{model}}$): The $8nd_{\text{model}}^2$ term dominates. For BERT-base with $n=128$, $d=768$: $8 \times 128 \times 768^2 \approx 603\text{M}$ vs $4 \times 128^2 \times 768 \approx 50\text{M}$. The projections dominate.
+    
+    \item \textbf{Long sequences} ($n \gg d_{\text{model}}$): The $4n^2d_{\text{model}}$ term dominates. For $n=8192$, $d=768$: $8 \times 8192 \times 768^2 \approx 38.7\text{G}$ vs $4 \times 8192^2 \times 768 \approx 206\text{G}$. The attention computation dominates.
+    
+    \item \textbf{Crossover point}: When $8nd_{\text{model}}^2 \approx 4n^2d_{\text{model}}$, solving gives $n \approx 2d_{\text{model}}$. For $d=768$, this occurs around $n \approx 1536$.
+\end{itemize}
+
+This analysis explains why efficient attention mechanisms (Chapter 16) focus on reducing the $O(n^2)$ term for long-context applications.
+
+\subsection{Feed-Forward Network Complexity}
+
+The position-wise feed-forward network (FFN) in each transformer layer typically expands the representation to a higher dimension before projecting back. This two-layer network with GELU or ReLU activation is applied independently to each position in the sequence.
+
+\textbf{Architecture:} For input $\mX \in \R^{n \times d_{\text{model}}}$:
+\begin{align}
+\mH &= \text{GELU}(\mX \mW_1 + \vb_1) \quad &\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}, \quad \mH \in \R^{n \times d_{ff}} \\
+\mY &= \mH \mW_2 + \vb_2 \quad &\mW_2 \in \R^{d_{ff} \times d_{\text{model}}}, \quad \mY \in \R^{n \times d_{\text{model}}}
+\end{align}
+
+The intermediate dimension $d_{ff}$ is typically $4d_{\text{model}}$ in standard transformers (BERT, GPT), though some models use different ratios. This expansion allows the network to learn complex non-linear transformations.
+
+\textbf{First Projection FLOPs:} Computing $\mX \mW_1$ requires:
+\begin{equation}
+\text{First projection} = 2n \cdot d_{\text{model}} \cdot d_{ff}
+\end{equation}
+
+For $d_{ff} = 4d_{\text{model}}$:
+\begin{equation}
+\text{First projection} = 2n \cdot d_{\text{model}} \cdot 4d_{\text{model}} = 8nd_{\text{model}}^2
+\end{equation}
+
+\textbf{Second Projection FLOPs:} Computing $\mH \mW_2$ requires:
+\begin{equation}
+\text{Second projection} = 2n \cdot d_{ff} \cdot d_{\text{model}} = 8nd_{\text{model}}^2
+\end{equation}
+
+\textbf{Total FFN FLOPs:}
+\begin{equation}
+\boxed{\text{FFN FLOPs} = 16nd_{\text{model}}^2 \quad \text{(for } d_{ff} = 4d_{\text{model}}\text{)}}
+\end{equation}
+
+\textbf{Activation function:} GELU requires additional operations (exponentials, multiplications) but these are $O(nd_{ff})$, negligible compared to the matrix multiplications.
+
+\textbf{Why FFN dominates computation:} Comparing FFN to self-attention:
+\begin{align}
+\text{FFN:} \quad &16nd_{\text{model}}^2 \\
+\text{Attention:} \quad &8nd_{\text{model}}^2 + 4n^2d_{\text{model}}
+\end{align}
+
+For typical sequence lengths where $n < 2d_{\text{model}}$, the FFN requires roughly twice the FLOPs of attention! This is why some efficient transformer variants (e.g., mixture-of-experts) focus on making the FFN more efficient.
+
+\textbf{Memory and bandwidth considerations:} The FFN intermediate activations $\mH \in \R^{n \times d_{ff}}$ must be stored for backpropagation. For BERT-base with $n=512$, $d_{ff}=3072$:
+\begin{equation}
+512 \times 3072 \times 4\text{ bytes} = 6{,}291{,}456\text{ bytes} \approx 6\text{ MB per layer}
+\end{equation}
+
+With 12 layers and batch size 32: $6 \times 12 \times 32 = 2.3\text{ GB}$ just for FFN intermediate activations. This is a significant portion of training memory.
+
+\textbf{Hardware utilization:} FFN matrix multiplications are highly regular and achieve excellent GPU utilization (often 70-90\% of peak FLOPS on modern GPUs). The operations are:
+\begin{itemize}
+    \item \textbf{Compute-bound} for reasonable batch sizes and sequence lengths
+    \item \textbf{Well-suited for Tensor Cores} on NVIDIA GPUs (FP16/BF16 operations)
+    \item \textbf{Easily parallelizable} across the sequence dimension
+\end{itemize}
+
+On an NVIDIA A100 GPU (312 TFLOPS FP16), computing the FFN for BERT-base with batch size 32 and $n=512$:
+\begin{equation}
+\text{FLOPs} = 32 \times 16 \times 512 \times 768^2 \approx 154\text{ GFLOPS}
+\end{equation}
+\begin{equation}
+\text{Time} \approx \frac{154\text{ GFLOPS}}{312 \times 0.8 \text{ TFLOPS}} \approx 0.62\text{ ms}
+\end{equation}
+(assuming 80\% utilization).
+
+\subsection{Per-Layer Total Complexity}
+
+Combining self-attention and FFN, a complete transformer layer requires:
+\begin{equation}
+\boxed{\text{Transformer layer} = (8nd_{\text{model}}^2 + 4n^2d_{\text{model}}) + 16nd_{\text{model}}^2 = 24nd_{\text{model}}^2 + 4n^2d_{\text{model}} \text{ FLOPs}}
+\end{equation}
+
+\textbf{Additional operations:} Layer normalization, residual connections, and dropout add $O(nd_{\text{model}})$ operations, which are negligible compared to the matrix multiplications.
+
+\textbf{Breakdown by component:}
+\begin{itemize}
+    \item \textbf{FFN:} $16nd_{\text{model}}^2$ (typically 60-70\% of layer FLOPs for short sequences)
+    \item \textbf{Attention projections:} $8nd_{\text{model}}^2$ (typically 25-35\%)
+    \item \textbf{Attention computation:} $4n^2d_{\text{model}}$ (grows with sequence length)
+\end{itemize}
+
+This breakdown is crucial for optimization: for short sequences, optimizing FFN yields the largest gains; for long sequences, efficient attention mechanisms become critical.
+
+\begin{example}[BERT-base Single Layer: Detailed Analysis]
 \label{ex:bert_flops}
-Parameters: $n = 512$, $d = 768$
+BERT-base parameters: $n = 512$, $d_{\text{model}} = 768$, $h = 12$, $d_k = d_v = 64$, $d_{ff} = 3072$
 
-\textbf{Self-attention:}
-\begin{align}
-&4 \times 512 \times 768^2 + 4 \times 512^2 \times 768 \\
-&= 1{,}207{,}959{,}552 + 805{,}306{,}368 \\
-&= 2{,}013{,}265{,}920 \approx 2.0 \text{ GFLOPs}
-\end{align}
+\textbf{Self-Attention Computation:}
 
-\textbf{Feed-forward:}
+\textit{QKV Projections (all heads):}
 \begin{equation}
-16 \times 512 \times 768^2 = 4{,}831{,}838{,}208 \approx 4.8 \text{ GFLOPs}
+3 \times 2 \times 512 \times 768 \times 768 = 1{,}811{,}939{,}328 \approx 1.81\text{ GFLOPs}
 \end{equation}
 
-\textbf{Total per layer:} $\approx 6.8$ GFLOPs
+\textit{Attention scores} ($\mQ \mK\transpose$ for 12 heads):
+\begin{equation}
+12 \times 2 \times 512^2 \times 64 = 402{,}653{,}184 \approx 403\text{ MFLOPs}
+\end{equation}
 
-\textbf{Full 12-layer BERT-base:} $12 \times 6.8 \approx 82$ GFLOPs per forward pass
+\textit{Attention output} ($\mA \mV$ for 12 heads):
+\begin{equation}
+12 \times 2 \times 512^2 \times 64 = 402{,}653{,}184 \approx 403\text{ MFLOPs}
+\end{equation}
+
+\textit{Output projection:}
+\begin{equation}
+2 \times 512 \times 768 \times 768 = 603{,}979{,}776 \approx 604\text{ MFLOPs}
+\end{equation}
+
+\textit{Total self-attention:}
+\begin{equation}
+1.81 + 0.40 + 0.40 + 0.60 = 3.21\text{ GFLOPs}
+\end{equation}
+
+\textbf{Feed-Forward Network:}
+
+\textit{First projection} ($\mX \mW_1$, where $\mW_1 \in \R^{768 \times 3072}$):
+\begin{equation}
+2 \times 512 \times 768 \times 3072 = 2{,}415{,}919{,}104 \approx 2.42\text{ GFLOPs}
+\end{equation}
+
+\textit{Second projection} ($\mH \mW_2$, where $\mW_2 \in \R^{3072 \times 768}$):
+\begin{equation}
+2 \times 512 \times 3072 \times 768 = 2{,}415{,}919{,}104 \approx 2.42\text{ GFLOPs}
+\end{equation}
+
+\textit{Total FFN:}
+\begin{equation}
+2.42 + 2.42 = 4.84\text{ GFLOPs}
+\end{equation}
+
+\textbf{Complete Layer:}
+\begin{equation}
+3.21 + 4.84 = 8.05\text{ GFLOPs per layer}
+\end{equation}
+
+\textbf{Full 12-Layer BERT-base:}
+\begin{equation}
+12 \times 8.05 = 96.6\text{ GFLOPs per forward pass}
+\end{equation}
+
+\textbf{Training (forward + backward):} Backward pass requires approximately $2\times$ the FLOPs of forward pass:
+\begin{equation}
+\text{Training step} \approx 3 \times 96.6 = 290\text{ GFLOPs}
+\end{equation}
+
+\textbf{Hardware timing on NVIDIA A100 (312 TFLOPS FP16):}
+
+Assuming 70\% utilization (realistic for mixed operations):
+\begin{equation}
+\text{Forward pass time} \approx \frac{96.6\text{ GFLOPS}}{312 \times 0.7\text{ TFLOPS}} \approx 0.44\text{ ms}
+\end{equation}
+
+For batch size 32:
+\begin{equation}
+\text{Batch forward time} \approx 32 \times 0.44 = 14\text{ ms}
+\end{equation}
+
+\textbf{Training throughput:} With batch size 32, sequence length 512:
+\begin{equation}
+\text{Tokens per second} = \frac{32 \times 512}{14\text{ ms} \times 3} \approx 390{,}000\text{ tokens/sec}
+\end{equation}
+
+This analysis shows why BERT-base training is feasible on single GPUs, while larger models require distributed training.
+
+\textbf{Memory bandwidth considerations:} The A100 has 1.6 TB/s memory bandwidth. Loading model parameters (110M $\times$ 4 bytes = 440 MB) takes:
+\begin{equation}
+\text{Parameter load time} = \frac{440\text{ MB}}{1600\text{ GB/s}} \approx 0.28\text{ ms}
+\end{equation}
+
+This is comparable to compute time, indicating that for small batch sizes, the model can become memory-bandwidth bound rather than compute-bound. Larger batch sizes amortize parameter loading across more computation, improving utilization.
 \end{example}
 
 \subsection{Complexity Analysis}
@@ -109,117 +306,536 @@ For $L$ layers, sequence length $n$, dimension $d$:
 \section{Memory Requirements}
 \label{sec:memory_requirements}
 
+Memory is often the limiting factor in training and deploying large transformer models. Understanding memory requirements at a granular level enables informed decisions about model architecture, batch sizes, and hardware selection. We analyze memory consumption across four categories: model parameters, gradients, optimizer states, and activations.
+
 \subsection{Model Parameters}
 
-For BERT-base:
-\begin{align}
-\text{Token embeddings:} \quad &30000 \times 768 \times 4\text{ bytes} = 92.2\text{ MB} \\
-\text{Position embeddings:} \quad &512 \times 768 \times 4 = 1.6\text{ MB} \\
-\text{Transformer layers:} \quad &85M \times 4 = 340\text{ MB} \\
-\text{Total:} \quad &\approx 434\text{ MB (float32)}
-\end{align}
+Model parameters must be stored in GPU memory during both training and inference. The memory footprint depends on the numerical precision used.
 
-With FP16: $434 / 2 \approx 217$ MB
-
-\subsection{Activations}
-
-For single sequence, activations stored for backprop:
-
-\textbf{Per layer:}
+\textbf{Precision options:}
 \begin{itemize}
-    \item Query, Key, Value: $3 \times (n \times d)$
-    \item Attention matrix: $h \times (n \times n)$ (for $h$ heads)
-    \item Attention output: $n \times d$
-    \item FFN intermediate: $n \times d_{ff}$
+    \item \textbf{FP32 (float32):} 4 bytes per parameter, standard precision
+    \item \textbf{FP16 (float16):} 2 bytes per parameter, half precision
+    \item \textbf{BF16 (bfloat16):} 2 bytes per parameter, better range than FP16
+    \item \textbf{INT8:} 1 byte per parameter, quantized inference
 \end{itemize}
 
-\textbf{Total per layer:}
-\begin{equation}
-\text{Memory} \approx (5nd + hn^2 + nd_{ff}) \times 4\text{ bytes}
-\end{equation}
-
-\begin{example}[GPT-2 Activation Memory]
-\label{ex:gpt2_activation_memory}
-GPT-2 (small): $L=12$, $d=768$, $h=12$, $n=1024$
-
-\textbf{Per layer:}
+For BERT-base with 110 million parameters:
 \begin{align}
-&(5 \times 1024 \times 768 + 12 \times 1024^2 + 1024 \times 3072) \times 4 \\
-&\approx (3{,}932{,}160 + 12{,}582{,}912 + 3{,}145{,}728) \times 4 \\
-&\approx 78.6\text{ MB per layer}
+\text{FP32:} \quad &110{,}000{,}000 \times 4 = 440{,}000{,}000\text{ bytes} = 440\text{ MB} \\
+\text{FP16/BF16:} \quad &110{,}000{,}000 \times 2 = 220{,}000{,}000\text{ bytes} = 220\text{ MB} \\
+\text{INT8:} \quad &110{,}000{,}000 \times 1 = 110{,}000{,}000\text{ bytes} = 110\text{ MB}
 \end{align}
 
-\textbf{12 layers:} $78.6 \times 12 \approx 943$ MB
+\textbf{Parameter breakdown for BERT-base:}
+\begin{align}
+\text{Token embeddings:} \quad &V \times d_{\text{model}} = 30{,}000 \times 768 = 23{,}040{,}000 \text{ params} \\
+\text{Position embeddings:} \quad &n_{\max} \times d_{\text{model}} = 512 \times 768 = 393{,}216 \text{ params} \\
+\text{Segment embeddings:} \quad &2 \times d_{\text{model}} = 2 \times 768 = 1{,}536 \text{ params}
+\end{align}
 
-\textbf{Batch size 32:} $943 \times 32 \approx 30$ GB!
+\textit{Per transformer layer:}
+\begin{align}
+\text{Self-attention:} \quad &4 \times d_{\text{model}}^2 = 4 \times 768^2 = 2{,}359{,}296 \text{ params} \\
+\text{FFN:} \quad &2 \times d_{\text{model}} \times d_{ff} = 2 \times 768 \times 3072 = 4{,}718{,}592 \text{ params} \\
+\text{Layer norms:} \quad &4 \times d_{\text{model}} = 4 \times 768 = 3{,}072 \text{ params} \\
+\text{Total per layer:} \quad &7{,}080{,}960 \text{ params}
+\end{align}
 
-This is why large batch sizes require multiple GPUs.
+\textit{12 layers:}
+\begin{equation}
+12 \times 7{,}080{,}960 = 84{,}971{,}520 \text{ params}
+\end{equation}
+
+\textit{Total BERT-base:}
+\begin{equation}
+23{,}040{,}000 + 393{,}216 + 1{,}536 + 84{,}971{,}520 = 108{,}406{,}272 \approx 110\text{M params}
+\end{equation}
+
+In FP32: $110\text{M} \times 4 = 440\text{ MB}$
+
+\textbf{Larger models scale dramatically:}
+\begin{align}
+\text{GPT-2 (1.5B):} \quad &1{,}500{,}000{,}000 \times 4 = 6{,}000\text{ MB} = 6\text{ GB (FP32)} \\
+\text{GPT-3 (175B):} \quad &175{,}000{,}000{,}000 \times 4 = 700{,}000\text{ MB} = 700\text{ GB (FP32)}
+\end{align}
+
+GPT-3 in FP32 requires 700 GB just for parameters—far exceeding single GPU memory (A100 has 80 GB). This necessitates:
+\begin{itemize}
+    \item \textbf{Model parallelism:} Split model across multiple GPUs
+    \item \textbf{Mixed precision:} Use FP16/BF16 (350 GB for GPT-3)
+    \item \textbf{Quantization:} INT8 inference (175 GB for GPT-3)
+\end{itemize}
+
+\subsection{Activation Memory}
+
+During training, intermediate activations must be stored for backpropagation. Activation memory scales with batch size and sequence length, often dominating memory consumption.
+
+\textbf{Activations per transformer layer:}
+\begin{itemize}
+    \item \textbf{Input to layer:} $B \times n \times d_{\text{model}}$
+    \item \textbf{Query, Key, Value:} $3 \times B \times n \times d_{\text{model}}$
+    \item \textbf{Attention scores:} $B \times h \times n \times n$ (quadratic in sequence length!)
+    \item \textbf{Attention output:} $B \times n \times d_{\text{model}}$
+    \item \textbf{FFN intermediate:} $B \times n \times d_{ff}$
+    \item \textbf{Layer norm activations:} $2 \times B \times n \times d_{\text{model}}$
+\end{itemize}
+
+\textbf{Total activation memory per layer (approximate):}
+\begin{equation}
+\text{Memory} \approx B \times n \times (8d_{\text{model}} + d_{ff}) + B \times h \times n^2
+\end{equation}
+
+For BERT-base ($B=32$, $n=512$, $d_{\text{model}}=768$, $h=12$, $d_{ff}=3072$):
+\begin{align}
+\text{Linear terms:} \quad &32 \times 512 \times (8 \times 768 + 3072) \times 4\text{ bytes} \\
+&= 32 \times 512 \times 9{,}216 \times 4 = 603{,}979{,}776\text{ bytes} \approx 604\text{ MB} \\
+\text{Attention matrices:} \quad &32 \times 12 \times 512^2 \times 4 = 402{,}653{,}184\text{ bytes} \approx 403\text{ MB} \\
+\text{Total per layer:} \quad &\approx 1{,}007\text{ MB} \approx 1\text{ GB}
+\end{align}
+
+\textbf{For 12 layers:} $12 \times 1\text{ GB} = 12\text{ GB}$ just for activations!
+
+\textbf{Impact of sequence length:} The attention matrix term $B \times h \times n^2$ grows quadratically. For $n=2048$ (4× longer):
+\begin{equation}
+32 \times 12 \times 2048^2 \times 4 = 6{,}442{,}450{,}944\text{ bytes} \approx 6.4\text{ GB per layer}
+\end{equation}
+
+For 12 layers: $77\text{ GB}$ just for attention matrices—nearly filling an A100 GPU!
+
+This quadratic scaling is why:
+\begin{itemize}
+    \item Long-context models require gradient checkpointing (recompute activations during backward pass)
+    \item Efficient attention mechanisms (sparse, linear) are crucial for long sequences
+    \item Batch sizes must be reduced for longer sequences
+\end{itemize}
+
+\textbf{Gradient checkpointing trade-off:} Recomputing activations during backward pass:
+\begin{itemize}
+    \item \textbf{Memory savings:} Reduce activation memory by $\sim$80\%
+    \item \textbf{Compute cost:} Increase training time by $\sim$20-30\%
+    \item \textbf{When to use:} When memory-constrained, especially for long sequences
+\end{itemize}
+
+\begin{example}[GPT-2 Activation Memory: Complete Analysis]
+\label{ex:gpt2_activation_memory}
+GPT-2 (small): $L=12$, $d_{\text{model}}=768$, $h=12$, $d_k=64$, $d_{ff}=3072$, $n=1024$
+
+\textbf{Per-layer activation breakdown (batch size $B=1$):}
+
+\textit{QKV projections:}
+\begin{equation}
+3 \times 1024 \times 768 \times 4 = 9{,}437{,}184\text{ bytes} \approx 9.4\text{ MB}
+\end{equation}
+
+\textit{Attention matrices (12 heads):}
+\begin{equation}
+12 \times 1024^2 \times 4 = 50{,}331{,}648\text{ bytes} \approx 50.3\text{ MB}
+\end{equation}
+
+This is the dominant term! For $n=2048$: $12 \times 2048^2 \times 4 = 201\text{ MB}$ (4× larger).
+
+\textit{Attention output:}
+\begin{equation}
+1024 \times 768 \times 4 = 3{,}145{,}728\text{ bytes} \approx 3.1\text{ MB}
+\end{equation}
+
+\textit{FFN intermediate:}
+\begin{equation}
+1024 \times 3072 \times 4 = 12{,}582{,}912\text{ bytes} \approx 12.6\text{ MB}
+\end{equation}
+
+\textit{Layer norm and residuals:}
+\begin{equation}
+3 \times 1024 \times 768 \times 4 = 9{,}437{,}184\text{ bytes} \approx 9.4\text{ MB}
+\end{equation}
+
+\textit{Total per layer:}
+\begin{equation}
+9.4 + 50.3 + 3.1 + 12.6 + 9.4 = 84.8\text{ MB}
+\end{equation}
+
+\textbf{12 layers:} $12 \times 84.8 = 1{,}018\text{ MB} \approx 1\text{ GB}$ for single sequence
+
+\textbf{Batch size scaling:}
+\begin{align}
+B=8: \quad &8\text{ GB} \\
+B=16: \quad &16\text{ GB} \\
+B=32: \quad &32\text{ GB} \\
+B=64: \quad &64\text{ GB}
+\end{align}
+
+\textbf{Hardware implications:}
+\begin{itemize}
+    \item \textbf{NVIDIA V100 (16 GB):} Maximum batch size $\approx 12-14$ (accounting for parameters and optimizer states)
+    \item \textbf{NVIDIA A100 (40 GB):} Maximum batch size $\approx 30-35$
+    \item \textbf{NVIDIA A100 (80 GB):} Maximum batch size $\approx 70-75$
+\end{itemize}
+
+\textbf{Gradient checkpointing impact:} With checkpointing, only store activations at layer boundaries, recompute within layers during backward pass:
+\begin{equation}
+\text{Memory reduction} \approx 80\% \Rightarrow 1\text{ GB} \to 200\text{ MB per sequence}
+\end{equation}
+
+This allows batch size 64 on V100 (16 GB), but increases training time by $\sim$25\%.
+
+\textbf{Mixed precision training:} Using FP16 for activations (FP32 for parameters):
+\begin{equation}
+\text{Activation memory} \to 1\text{ GB} / 2 = 500\text{ MB per sequence}
+\end{equation}
+
+Combined with gradient checkpointing: $500 \times 0.2 = 100\text{ MB per sequence}$, enabling very large batch sizes.
 \end{example}
 
 \subsection{Training Memory Budget}
 
+Training requires memory for parameters, gradients, optimizer states, and activations. Understanding this breakdown is essential for selecting hardware and configuring training.
+
 \textbf{Total training memory:}
 \begin{equation}
-\text{Memory} = \text{Model} + \text{Gradients} + \text{Optimizer States} + \text{Activations}
+\text{Memory}_{\text{total}} = \text{Parameters} + \text{Gradients} + \text{Optimizer States} + \text{Activations}
 \end{equation}
 
-For AdamW:
+\textbf{For AdamW optimizer (most common for transformers):}
 \begin{itemize}
-    \item Model parameters: $P$ bytes
-    \item Gradients: $P$ bytes
-    \item First moment: $P$ bytes
-    \item Second moment: $P$ bytes
-    \item Activations: $A$ bytes (depends on batch size)
+    \item \textbf{Model parameters:} $P$ parameters $\times$ 4 bytes (FP32) = $4P$ bytes
+    \item \textbf{Gradients:} $P$ parameters $\times$ 4 bytes = $4P$ bytes
+    \item \textbf{First moment (momentum):} $P$ parameters $\times$ 4 bytes = $4P$ bytes
+    \item \textbf{Second moment (variance):} $P$ parameters $\times$ 4 bytes = $4P$ bytes
+    \item \textbf{Activations:} $A$ bytes (depends on batch size, sequence length, model depth)
 \end{itemize}
 
-\textbf{Total:} $4P + A$
+\textbf{Total:} $16P + A$ bytes
 
-\begin{example}[BERT-base Training Memory]
+\textbf{Mixed precision training (FP16/BF16 with FP32 master weights):}
+\begin{itemize}
+    \item \textbf{FP16 parameters (forward/backward):} $2P$ bytes
+    \item \textbf{FP32 master parameters:} $4P$ bytes
+    \item \textbf{FP32 gradients:} $4P$ bytes
+    \item \textbf{FP32 optimizer states:} $8P$ bytes
+    \item \textbf{FP16 activations:} $A/2$ bytes
+\end{itemize}
+
+\textbf{Total:} $18P + A/2$ bytes
+
+Surprisingly, mixed precision uses slightly MORE memory for parameters/optimizer (18P vs 16P) but saves significantly on activations ($A/2$ vs $A$). Since activations often dominate, mixed precision typically reduces total memory.
+
+\begin{example}[BERT-base Training Memory Budget]
 \label{ex:bert_training_memory}
-Model: 110M parameters
+BERT-base: 110M parameters, batch size 32, sequence length 512
 
-\textbf{Float32:}
+\textbf{FP32 training:}
 \begin{align}
-\text{Parameters:} \quad &110M \times 4 = 440\text{ MB} \\
-\text{Gradients:} \quad &440\text{ MB} \\
-\text{Adam states:} \quad &2 \times 440 = 880\text{ MB} \\
-\text{Activations (batch 32):} \quad &\approx 8\text{ GB} \\
-\text{Total:} \quad &\approx 9.7\text{ GB}
+\text{Parameters:} \quad &110\text{M} \times 4 = 440\text{ MB} \\
+\text{Gradients:} \quad &110\text{M} \times 4 = 440\text{ MB} \\
+\text{Adam states (2×):} \quad &2 \times 110\text{M} \times 4 = 880\text{ MB} \\
+\text{Activations:} \quad &32 \times 12 \times 1\text{ GB} = 12\text{ GB} \\
+\text{Total:} \quad &440 + 440 + 880 + 12{,}000 = 13{,}760\text{ MB} \approx 13.8\text{ GB}
 \end{align}
 
-Fits on single GPU with 16GB memory!
+\textbf{Fits on:} NVIDIA V100 (16 GB), A100 (40/80 GB), RTX 3090 (24 GB)
+
+\textbf{Mixed precision training:}
+\begin{align}
+\text{FP16 parameters:} \quad &110\text{M} \times 2 = 220\text{ MB} \\
+\text{FP32 master + gradients + Adam:} \quad &110\text{M} \times 16 = 1{,}760\text{ MB} \\
+\text{FP16 activations:} \quad &12{,}000 / 2 = 6{,}000\text{ MB} \\
+\text{Total:} \quad &220 + 1{,}760 + 6{,}000 = 7{,}980\text{ MB} \approx 8\text{ GB}
+\end{align}
+
+\textbf{Mixed precision saves:} $13.8 - 8 = 5.8\text{ GB}$ (42\% reduction)
+
+\textbf{With gradient checkpointing:} Activations reduced by 80\%:
+\begin{equation}
+220 + 1{,}760 + 1{,}200 = 3{,}180\text{ MB} \approx 3.2\text{ GB}
+\end{equation}
+
+This enables batch size 128 on V100 (16 GB)!
 \end{example}
+
+\begin{example}[GPT-3 Training Memory Requirements]
+\label{ex:gpt3_training_memory}
+GPT-3: 175B parameters, sequence length 2048
+
+\textbf{Parameters and optimizer (FP32):}
+\begin{equation}
+175\text{B} \times 16 = 2{,}800\text{ GB}
+\end{equation}
+
+\textbf{Activations (batch size 1, single sequence):}
+\begin{align}
+\text{Per layer:} \quad &\approx 2048 \times (8 \times 12{,}288 + 4 \times 12{,}288) + 96 \times 2048^2 \\
+&\approx 2048 \times 147{,}456 + 402{,}653{,}184 \\
+&\approx 704\text{ MB per layer}
+\end{align}
+
+\textbf{96 layers:} $96 \times 704\text{ MB} \approx 68\text{ GB per sequence}$
+
+\textbf{Total for batch size 1:} $2{,}800 + 68 = 2{,}868\text{ GB}$
+
+\textbf{Hardware requirements:}
+\begin{itemize}
+    \item \textbf{Single A100 (80 GB):} Impossible—need 36 GPUs just for parameters!
+    \item \textbf{Model parallelism:} Split across 8 GPUs: $2{,}868 / 8 = 359\text{ GB per GPU}$—still too large!
+    \item \textbf{Mixed precision + model parallelism:} $\approx 1{,}500\text{ GB total} / 8 = 188\text{ GB per GPU}$—still too large!
+    \item \textbf{Mixed precision + model parallelism + gradient checkpointing:} $\approx 800\text{ GB} / 8 = 100\text{ GB per GPU}$—still exceeds A100!
+\end{itemize}
+
+\textbf{Actual GPT-3 training:} Used ZeRO optimizer (shards optimizer states across GPUs) + model parallelism + pipeline parallelism across thousands of GPUs.
+
+This example illustrates why training models beyond $\sim$10B parameters requires sophisticated distributed training strategies.
+\end{example}
+
+\subsection{Hardware Selection Guide}
+
+\textbf{GPU memory requirements by model size (mixed precision + gradient checkpointing):}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Model Size} & \textbf{Parameters} & \textbf{Min GPU Memory} & \textbf{Recommended GPU} \\
+\midrule
+Small & 100M & 8 GB & RTX 3070, V100 \\
+Base & 300M & 12 GB & RTX 3080, V100 \\
+Large & 1B & 24 GB & RTX 3090, A5000 \\
+XL & 3B & 40 GB & A100 (40 GB) \\
+XXL & 10B & 80 GB & A100 (80 GB) \\
+175B (GPT-3) & 175B & 8× A100 (80 GB) & Multi-node cluster \\
+\bottomrule
+\end{tabular}
+\caption{GPU memory requirements for training transformer models (batch size 8-16, sequence length 512-1024)}
+\end{table}
+
+\textbf{Inference memory requirements (FP16):}
+\begin{itemize}
+    \item \textbf{Parameters only:} $2P$ bytes
+    \item \textbf{KV cache (autoregressive):} $2 \times L \times h \times n_{\max} \times d_k \times B$ bytes
+    \item \textbf{Activations (single forward pass):} Minimal compared to training
+\end{itemize}
+
+For GPT-2 (117M params) inference:
+\begin{equation}
+\text{Parameters:} \quad 117\text{M} \times 2 = 234\text{ MB}
+\end{equation}
+\begin{equation}
+\text{KV cache (batch 1, } n=1024\text{):} \quad 2 \times 12 \times 12 \times 1024 \times 64 \times 2 = 38\text{ MB}
+\end{equation}
+\begin{equation}
+\text{Total:} \quad \approx 300\text{ MB}
+\end{equation}
+
+GPT-2 inference easily fits on consumer GPUs or even CPUs!
 
 \section{Inference Optimization}
 \label{sec:inference_optimization}
 
+Inference optimization is critical for deploying transformers in production. Unlike training, which prioritizes throughput (tokens/second across large batches), inference prioritizes latency (time to generate a single response) while maintaining reasonable throughput. We analyze key optimization techniques and their trade-offs.
+
 \subsection{KV Caching for Autoregressive Decoding}
 
-Problem: Generating token $t$ requires computing attention over all previous tokens $1, \ldots, t-1$.
+Autoregressive generation (used in GPT, decoder-only models) generates tokens sequentially, where each new token attends to all previous tokens. Naive implementation recomputes attention for all previous positions at each step—highly inefficient.
 
-Solution: Cache key and value projections from previous steps.
+\textbf{Problem analysis:} Generating sequence of length $T$ tokens:
+\begin{itemize}
+    \item \textbf{Step 1:} Compute attention for position 1 (attends to position 1)
+    \item \textbf{Step 2:} Compute attention for position 2 (attends to positions 1-2)
+    \item \textbf{Step 3:} Compute attention for position 3 (attends to positions 1-3)
+    \item \textbf{Step $T$:} Compute attention for position $T$ (attends to positions 1-$T$)
+\end{itemize}
 
-\textbf{Without caching:} Generate 1000 tokens requires $\sum_{t=1}^{1000} t \approx 500{,}000$ attention computations
+\textbf{Total attention computations:} $\sum_{t=1}^{T} t = \frac{T(T+1)}{2} \approx \frac{T^2}{2}$
 
-\textbf{With caching:} Generate 1000 tokens requires $1000$ attention computations (500× speedup!)
+For $T=1000$ tokens: $\approx 500{,}000$ attention computations!
 
-\textbf{Memory cost:} Store $\mK, \mV$ for all previous positions:
+\textbf{KV Caching solution:} Key and value projections depend only on input tokens, not on the query position. Cache $\mK$ and $\mV$ from previous steps:
+
+\begin{algorithm}[H]
+\caption{Autoregressive Generation with KV Caching}
+\label{alg:kv_caching}
+\KwIn{Prompt tokens $\vx_1, \ldots, \vx_p$, max length $T$}
+\KwOut{Generated sequence $\vx_1, \ldots, \vx_T$}
+
+\tcp{Initialize cache}
+$\text{cache}_K = []$, $\text{cache}_V = []$ \\
+
+\tcp{Process prompt}
+\For{$t = 1$ \KwTo $p$}{
+    $\vk_t = \mW^K \vx_t$, $\vv_t = \mW^V \vx_t$ \\
+    Append $\vk_t$ to $\text{cache}_K$, $\vv_t$ to $\text{cache}_V$ \\
+    $\vq_t = \mW^Q \vx_t$ \\
+    Compute attention using $\vq_t$ and all cached keys/values \\
+    Generate $\vh_t$
+}
+
+\tcp{Generate new tokens}
+\For{$t = p+1$ \KwTo $T$}{
+    Sample $\vx_t$ from $\vh_{t-1}$ \\
+    $\vk_t = \mW^K \vx_t$, $\vv_t = \mW^V \vx_t$ \\
+    Append $\vk_t$ to $\text{cache}_K$, $\vv_t$ to $\text{cache}_V$ \\
+    $\vq_t = \mW^Q \vx_t$ \\
+    Compute attention: $\text{Attention}(\vq_t, \text{cache}_K, \text{cache}_V)$ \\
+    Generate $\vh_t$
+}
+\end{algorithm}
+
+\textbf{Computational savings:} With caching, each step computes attention once (not recomputing previous positions):
 \begin{equation}
-2 \times L \times h \times n \times d_k \text{ values}
+\text{Total computations} = T \quad \text{(vs. } \frac{T^2}{2} \text{ without caching)}
 \end{equation}
 
-For GPT-2: $2 \times 12 \times 12 \times 1024 \times 64 \times 4\text{ bytes} \approx 75$ MB per sequence
+\textbf{Speedup:} For $T=1000$: $\frac{500{,}000}{1{,}000} = 500\times$ faster!
+
+\textbf{Memory cost:} Store keys and values for all positions and layers:
+\begin{equation}
+\text{KV cache size} = 2 \times L \times h \times T \times d_k \times \text{sizeof(float)}
+\end{equation}
+
+For GPT-2 ($L=12$, $h=12$, $d_k=64$, FP16):
+\begin{equation}
+2 \times 12 \times 12 \times T \times 64 \times 2 = 36{,}864 \times T \text{ bytes}
+\end{equation}
+
+\textbf{Memory scaling with sequence length:}
+\begin{align}
+T=512: \quad &36{,}864 \times 512 = 18{,}874{,}368\text{ bytes} \approx 19\text{ MB} \\
+T=1024: \quad &36{,}864 \times 1024 = 37{,}748{,}736\text{ bytes} \approx 38\text{ MB} \\
+T=2048: \quad &36{,}864 \times 2048 = 75{,}497{,}472\text{ bytes} \approx 75\text{ MB} \\
+T=4096: \quad &36{,}864 \times 4096 = 150{,}994{,}944\text{ bytes} \approx 151\text{ MB}
+\end{align}
+
+For GPT-3 ($L=96$, $h=96$, $d_k=128$, $T=2048$, FP16):
+\begin{equation}
+2 \times 96 \times 96 \times 2048 \times 128 \times 2 = 9{,}663{,}676{,}416\text{ bytes} \approx 9.7\text{ GB per sequence}
+\end{equation}
+
+\textbf{Batch inference with KV cache:} For batch size $B$:
+\begin{equation}
+\text{Total KV cache} = B \times 2 \times L \times h \times T \times d_k \times \text{sizeof(float)}
+\end{equation}
+
+For GPT-3 with $B=8$: $8 \times 9.7\text{ GB} = 77.6\text{ GB}$—nearly filling an A100 (80 GB)!
+
+This is why large-scale inference services:
+\begin{itemize}
+    \item Use smaller batch sizes for long contexts
+    \item Implement dynamic batching (group requests of similar lengths)
+    \item Use quantization (INT8) to reduce cache size by 2-4×
+\end{itemize}
 
 \subsection{Batched Inference}
 
-Process multiple sequences simultaneously:
+Processing multiple sequences simultaneously increases GPU utilization and throughput.
+
+\textbf{Single sequence inference:} For GPT-2 generating 100 tokens:
 \begin{itemize}
-    \item Single sequence: Underutilizes GPU (low parallelism)
-    \item Batched: Higher throughput
-    \item Trade-off: Latency vs throughput
+    \item \textbf{Compute:} $\approx 100 \times 8\text{ GFLOPs} = 800\text{ GFLOPs}$
+    \item \textbf{Time on A100:} $\frac{800\text{ GFLOPS}}{312\text{ TFLOPS} \times 0.3} \approx 8.5\text{ ms}$
+    \item \textbf{GPU utilization:} $\approx 30\%$ (memory-bound, not compute-bound)
 \end{itemize}
 
-\textbf{Padding challenge:} Different sequence lengths require padding to batch, wasting computation.
+\textbf{Batched inference (batch size 32):}
+\begin{itemize}
+    \item \textbf{Compute:} $32 \times 800\text{ GFLOPs} = 25{,}600\text{ GFLOPs}$
+    \item \textbf{Time on A100:} $\frac{25{,}600\text{ GFLOPS}}{312\text{ TFLOPS} \times 0.7} \approx 117\text{ ms}$
+    \item \textbf{GPU utilization:} $\approx 70\%$ (much better!)
+    \item \textbf{Throughput:} $\frac{32 \times 100}{117\text{ ms}} \approx 27{,}350\text{ tokens/sec}$
+\end{itemize}
+
+\textbf{Latency vs. throughput trade-off:}
+\begin{itemize}
+    \item \textbf{Batch size 1:} Latency = 8.5 ms, throughput = 11,765 tokens/sec
+    \item \textbf{Batch size 32:} Latency = 117 ms (13.8× worse), throughput = 27,350 tokens/sec (2.3× better)
+\end{itemize}
+
+\textbf{Padding challenge:} Sequences in a batch must have the same length. Shorter sequences are padded, wasting computation:
+\begin{itemize}
+    \item Sequence lengths: [512, 256, 128, 64]
+    \item Padded to: [512, 512, 512, 512]
+    \item Wasted computation: $(512-256) + (512-128) + (512-64) = 1024$ positions (50\%!)
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{itemize}
+    \item \textbf{Dynamic batching:} Group sequences of similar lengths
+    \item \textbf{Bucket batching:} Pre-defined length buckets (128, 256, 512, 1024)
+    \item \textbf{Packed sequences:} Concatenate sequences without padding (requires careful attention masking)
+\end{itemize}
+
+\subsection{Quantization for Inference}
+
+Quantization reduces memory and increases throughput by using lower-precision arithmetic.
+
+\textbf{Precision options:}
+\begin{itemize}
+    \item \textbf{FP32:} 4 bytes, full precision
+    \item \textbf{FP16/BF16:} 2 bytes, half precision (1.5-2× speedup)
+    \item \textbf{INT8:} 1 byte, 8-bit integer (2-4× speedup, 4× memory reduction)
+    \item \textbf{INT4:} 0.5 bytes, 4-bit integer (4-8× speedup, 8× memory reduction)
+\end{itemize}
+
+\textbf{INT8 quantization:} Map FP32 weights $w \in [-w_{\max}, w_{\max}]$ to INT8 $w_q \in [-128, 127]$:
+\begin{equation}
+w_q = \text{round}\left(\frac{w}{w_{\max}} \times 127\right)
+\end{equation}
+
+Dequantize during computation:
+\begin{equation}
+w \approx \frac{w_q \times w_{\max}}{127}
+\end{equation}
+
+\textbf{Quantization impact on GPT-2:}
+\begin{align}
+\text{FP32:} \quad &117\text{M} \times 4 = 468\text{ MB} \\
+\text{FP16:} \quad &117\text{M} \times 2 = 234\text{ MB} \quad (2\times \text{ reduction}) \\
+\text{INT8:} \quad &117\text{M} \times 1 = 117\text{ MB} \quad (4\times \text{ reduction}) \\
+\text{INT4:} \quad &117\text{M} \times 0.5 = 58.5\text{ MB} \quad (8\times \text{ reduction})
+\end{align}
+
+\textbf{Accuracy trade-offs:}
+\begin{itemize}
+    \item \textbf{FP16/BF16:} Negligible accuracy loss (<0.1\% perplexity increase)
+    \item \textbf{INT8:} Small accuracy loss (0.5-2\% perplexity increase) with calibration
+    \item \textbf{INT4:} Moderate accuracy loss (2-5\% perplexity increase), requires careful quantization
+\end{itemize}
+
+\textbf{Hardware support:}
+\begin{itemize}
+    \item \textbf{NVIDIA Tensor Cores:} Accelerate FP16/BF16 (up to 2× speedup)
+    \item \textbf{NVIDIA INT8 Tensor Cores:} Accelerate INT8 (up to 4× speedup)
+    \item \textbf{CPU AVX-512 VNNI:} Accelerate INT8 on CPUs
+\end{itemize}
+
+\subsection{Model Distillation}
+
+Train smaller "student" model to mimic larger "teacher" model:
+\begin{itemize}
+    \item \textbf{DistilBERT:} 66M params (vs. BERT-base 110M), 97\% performance, 2× faster
+    \item \textbf{TinyBERT:} 14M params, 96\% performance, 7× faster
+\end{itemize}
+
+Distillation enables deployment on resource-constrained devices (mobile, edge).
+
+\subsection{Inference Optimization Summary}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Technique} & \textbf{Speedup} & \textbf{Memory Reduction} & \textbf{Accuracy Impact} \\
+\midrule
+KV Caching & 100-500× & -50\% (cache overhead) & None \\
+Batching (32×) & 2-3× throughput & None & None \\
+FP16/BF16 & 1.5-2× & 2× & Negligible \\
+INT8 Quantization & 2-4× & 4× & Small (0.5-2\%) \\
+INT4 Quantization & 4-8× & 8× & Moderate (2-5\%) \\
+Distillation & 2-7× & 2-8× & Small (3-4\%) \\
+\bottomrule
+\end{tabular}
+\caption{Inference optimization techniques and their trade-offs}
+\end{table}
+
+\textbf{Combined optimizations:} KV caching + FP16 + batching + INT8 can achieve 1000× speedup with minimal accuracy loss!
 
 \section{Scaling Laws}
 \label{sec:scaling_laws}

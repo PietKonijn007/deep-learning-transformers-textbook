@@ -21,6 +21,12 @@ T5 (Text-to-Text Transfer Transformer) and BART (Bidirectional and Auto-Regressi
 
 \subsection{Unified Text-to-Text Framework}
 
+T5 introduces a conceptually elegant framework that reformulates every NLP task as text-to-text transformation. Rather than designing task-specific architectures with classification heads, span prediction layers, or other specialized output structures, T5 treats all tasks uniformly: the model receives text as input and produces text as output. This unification enables a single model architecture and training objective to handle diverse tasks ranging from translation and summarization to classification and question answering.
+
+The text-to-text framework operates by prepending task-specific prefixes to the input text. For translation, the input becomes "translate English to German: That is good", and the model generates "Das ist gut". For summarization, the input is "summarize: [article text]", and the model produces a concise summary. Even classification tasks, which traditionally output discrete labels, are reformulated as text generation: "sst2 sentence: This movie is great" produces the text "positive" rather than a class index. Question answering similarly becomes "question: What is the capital of France? context: Paris is the capital and largest city of France..." with the model generating "Paris" as output.
+
+This unification provides several compelling advantages. First, a single model can handle all tasks without architectural modifications, simplifying deployment and maintenance. Second, the same pre-training objective and fine-tuning procedure apply across tasks, eliminating the need for task-specific training strategies. Third, the framework enables natural transfer learning across tasks—knowledge learned from translation can potentially benefit summarization, and vice versa. Fourth, evaluation becomes consistent across tasks, as all outputs are text sequences that can be compared using standard metrics. The text-to-text framework represents a philosophical shift toward treating language understanding and generation as a unified capability rather than separate skills requiring different architectures.
+
 \begin{definition}[Text-to-Text Format]
 \label{def:text_to_text}
 All tasks formulated as: text input $\to$ text output
@@ -32,48 +38,41 @@ All tasks formulated as: text input $\to$ text output
 \end{itemize}
 \end{definition}
 
-\textbf{Benefits:}
-\begin{itemize}
-    \item Single model for all tasks
-    \item Same architecture and objective
-    \item Transfer learning across tasks
-    \item Consistent evaluation framework
-\end{itemize}
-
 \subsection{T5 Architecture}
 
-\textbf{Standard encoder-decoder transformer with modifications:}
+T5 employs a standard encoder-decoder transformer architecture with several important modifications that distinguish it from the original transformer design. The architecture combines the bidirectional encoding capabilities of BERT with the autoregressive generation capabilities of GPT, creating a model that excels at both understanding input context and generating coherent output sequences.
 
-\textbf{Encoder:}
-\begin{itemize}
-    \item Fully-visible self-attention (like BERT)
-    \item No causal masking
-    \item Processes input text
-\end{itemize}
+The encoder processes the input text using fully-visible self-attention, identical to BERT's architecture. Each token in the encoder can attend to all other tokens in the input sequence without any causal masking, enabling the model to build rich bidirectional representations that capture both left and right context. This bidirectional attention is crucial for understanding tasks where the meaning of each token depends on the entire input context. The encoder consists of a stack of transformer layers, each containing multi-head self-attention followed by a position-wise feed-forward network, with residual connections and layer normalization applied in the pre-norm configuration for improved training stability.
 
-\textbf{Decoder:}
-\begin{itemize}
-    \item Causal self-attention (like GPT)
-    \item Cross-attention to encoder
-    \item Generates output text autoregressively
-\end{itemize}
+The decoder generates the output text autoregressively using causal self-attention, similar to GPT's architecture. Each position in the decoder can only attend to previous positions in the output sequence, ensuring that the model cannot "cheat" by looking at future tokens during generation. Critically, the decoder also includes cross-attention layers that attend to the encoder's output representations. This cross-attention mechanism allows the decoder to focus on relevant parts of the input sequence while generating each output token, enabling the model to perform sequence-to-sequence transformations like translation and summarization where the output depends heavily on specific input content.
 
-\textbf{Positional Encodings:}
+T5's most distinctive architectural innovation is its use of relative positional encodings rather than the absolute sinusoidal or learned positional embeddings used in BERT and GPT. Instead of adding position-specific embeddings to the input, T5 computes position-dependent biases that are added to the attention scores. These biases depend only on the relative distance between query and key positions, not their absolute positions in the sequence. The relative position biases are learned during training and shared across all layers, reducing the number of parameters while providing the model with flexible position information. The biases use a bucketing scheme where nearby positions have unique biases but distant positions share biases, reflecting the intuition that precise relative position matters more for nearby tokens than distant ones.
+
+\begin{definition}[T5 Architecture]
+\label{def:t5_architecture}
+T5 uses encoder-decoder transformer with:
 \begin{itemize}
-    \item Relative position bias (not absolute sinusoidal)
-    \item Shared across all layers
-    \item Learned bucket-based distances
+    \item \textbf{Encoder:} Fully-visible self-attention (like BERT), no causal masking
+    \item \textbf{Decoder:} Causal self-attention (like GPT) plus cross-attention to encoder
+    \item \textbf{Positional encoding:} Relative position bias, shared across layers, learned bucket-based distances
+    \item \textbf{Normalization:} Pre-norm (layer norm before sub-layers)
 \end{itemize}
+\end{definition}
 
 \begin{example}[T5-Base Architecture]
 \label{ex:t5_base}
-Configuration:
+Understanding T5-base's parameter distribution reveals how encoder-decoder architectures allocate capacity between understanding and generation. The model uses 12 encoder layers and 12 decoder layers, each with hidden dimension $d = 768$, 12 attention heads, and feed-forward dimension $d_{ff} = 3072$. The vocabulary contains 32,000 tokens using SentencePiece tokenization, which provides better multilingual coverage and handles rare words more gracefully than WordPiece.
+
+The parameter breakdown shows that the decoder contains more parameters than the encoder despite having the same number of layers and hidden dimensions. This asymmetry arises from the cross-attention mechanism in the decoder, which requires additional weight matrices to project encoder outputs into key and value spaces. Each encoder layer contains approximately 7.1 million parameters: 2.36 million in the self-attention mechanism (four projection matrices of dimension $768 \times 768$) and 4.72 million in the feed-forward network (two projections: $768 \to 3072$ and $3072 \to 768$). Multiplying by 12 layers yields 85.2 million parameters in the encoder stack.
+
+Each decoder layer contains approximately 9.4 million parameters due to the additional cross-attention mechanism. The causal self-attention contributes 2.36 million parameters, identical to the encoder's self-attention. The cross-attention layer adds another 2.36 million parameters for its query, key, value, and output projections. The feed-forward network contributes 4.72 million parameters, same as the encoder. Multiplying by 12 decoder layers yields 112.8 million parameters in the decoder stack. The token embeddings add 24.6 million parameters ($32{,}000 \times 768$), bringing the total to approximately 220 million parameters.
+
+The memory requirements for T5-base depend on the numerical precision used. In FP32, the 220 million parameters occupy $220{,}000{,}000 \times 4 = 880$ MB. Mixed precision training with FP16 activations and FP32 master weights reduces the working memory to approximately 440 MB for the model parameters during forward and backward passes, though the optimizer maintains FP32 copies. For inference, pure FP16 weights require only 440 MB, enabling T5-base to run comfortably on GPUs with 8-16 GB of memory. The encoder-decoder architecture requires more memory than encoder-only (BERT) or decoder-only (GPT) models of similar capacity, but the additional cross-attention capability justifies this cost for sequence-to-sequence tasks.
+
+\textbf{Configuration:}
 \begin{itemize}
-    \item Encoder layers: $L_{\text{enc}} = 12$
-    \item Decoder layers: $L_{\text{dec}} = 12$
-    \item Hidden size: $d = 768$
-    \item Attention heads: $h = 12$
-    \item FFN dimension: $d_{ff} = 3072$
+    \item Encoder layers: $L_{\text{enc}} = 12$, Decoder layers: $L_{\text{dec}} = 12$
+    \item Hidden size: $d = 768$, Attention heads: $h = 12$, FFN dimension: $d_{ff} = 3072$
     \item Vocabulary: $V = 32{,}000$ (SentencePiece)
     \item Parameters: $\approx 220$M
 \end{itemize}
@@ -86,19 +85,37 @@ Configuration:
 \text{Total:} \quad &\approx 220\text{M}
 \end{align}
 
+\textbf{Memory requirements:}
+\begin{itemize}
+    \item FP32: 880 MB (model parameters only)
+    \item FP16: 440 MB (inference)
+    \item Training (mixed precision, batch size 128, sequence length 512): $\approx$ 12 GB
+\end{itemize}
+
 Decoder has more parameters due to cross-attention layer.
 \end{example}
 
 \subsection{Pre-Training Objective: Span Corruption}
 
+T5 introduces span corruption as its primary pre-training objective, a more sophisticated variant of masked language modeling that better aligns with sequence-to-sequence tasks. Rather than masking individual tokens independently as in BERT, span corruption masks contiguous sequences of tokens and trains the model to predict the entire masked span. This objective encourages the model to learn longer-range dependencies and develop stronger generation capabilities, as the decoder must produce multi-token sequences rather than single tokens.
+
+The span corruption procedure begins by sampling span lengths from a Poisson distribution with parameter $\lambda = 3$, yielding an average span length of 3 tokens. The algorithm then selects spans to mask such that approximately 15\% of tokens in the sequence are corrupted, matching BERT's masking rate for fair comparison. Each masked span is replaced with a unique sentinel token (denoted \texttt{<X>}, \texttt{<Y>}, \texttt{<Z>}, etc.), which serves as a placeholder indicating that tokens have been removed at this position. The model must predict the original content of each masked span in the correct order, identified by the sentinel tokens.
+
+The training format differs significantly from BERT's masked language modeling. The encoder receives the corrupted input sequence with sentinel tokens replacing the masked spans. The decoder must generate a sequence containing the sentinel tokens followed by the original content of each span. For example, if the original text is "Thank you for inviting me to your party last week" and spans at positions 3-4 and 8-9 are masked, the encoder input becomes "Thank you \texttt{<X>} inviting me to your \texttt{<Y>} week". The decoder target is "\texttt{<X>} for \texttt{<Y>} party last \texttt{<Z>}", where \texttt{<Z>} marks the end of the sequence. This format trains the decoder to produce structured output with clear delimiters, a skill that transfers well to downstream generation tasks.
+
+The computational efficiency of span corruption is notable. By masking spans rather than individual tokens, the number of prediction targets decreases while maintaining the same fraction of corrupted tokens. If 15\% of tokens are masked in spans of average length 3, only 5\% of positions contain sentinel tokens that trigger predictions. This reduces the decoder's generation length compared to predicting every masked token individually, accelerating training. However, the decoder must still generate all the masked tokens, so the total number of tokens predicted remains approximately 15\% of the input length. The efficiency gain comes from the reduced number of sentinel tokens that must be processed by the encoder.
+
+The span corruption objective provides several advantages over BERT's masked language modeling for encoder-decoder models. First, it trains the decoder to generate multi-token sequences, developing the autoregressive generation capabilities needed for downstream tasks like summarization and translation. Second, it encourages the model to learn longer-range dependencies, as predicting a span requires understanding the broader context rather than just neighboring tokens. Third, it creates a more challenging task that prevents the model from relying on simple local patterns, forcing it to develop deeper semantic understanding. Fourth, the sentinel token mechanism provides a natural way to structure the decoder's output, which transfers to tasks requiring structured generation.
+
 \begin{definition}[Span Corruption]
 \label{def:span_corruption}
 Corrupt spans of consecutive tokens, predict them:
 \begin{enumerate}
-    \item Sample span lengths from Poisson($\lambda = 3$)
-    \item Mask 15\% of tokens in spans
+    \item Sample span lengths from Poisson($\lambda = 3$), average span length 3 tokens
+    \item Mask 15\% of tokens in spans (same total masking rate as BERT)
     \item Replace each span with sentinel token \texttt{<X>}, \texttt{<Y>}, etc.
-    \item Predict original spans
+    \item Encoder processes corrupted input with sentinels
+    \item Decoder predicts original spans in order, delimited by sentinels
 \end{enumerate}
 \end{definition}
 
@@ -106,81 +123,199 @@ Corrupt spans of consecutive tokens, predict them:
 \label{ex:span_corruption}
 \textbf{Original:} "Thank you for inviting me to your party last week"
 
-\textbf{Step 1:} Select spans (15\% total): positions [3-4], [8-9]
+\textbf{Step 1:} Select spans (15\% total): positions [3-4] ("for inviting"), [8-9] ("party last")
 
-\textbf{Corrupted input:}
+\textbf{Step 2:} Replace spans with sentinels
+
+\textbf{Corrupted input (encoder):}
 \begin{verbatim}
-Thank you <X> inviting me to your <Y> week
+Thank you <X> me to your <Y> week
 \end{verbatim}
 
-\textbf{Target output:}
+\textbf{Target output (decoder):}
 \begin{verbatim}
-<X> for <Y> party last <Z>
+<X> for inviting <Y> party last <Z>
 \end{verbatim}
 
-Model must predict masked content and sentinel order.
+The encoder processes the corrupted sequence, building bidirectional representations that capture the context around each sentinel token. The decoder must generate the sentinel tokens in order, followed by the original content of each span. The \texttt{<Z>} token marks the end of the sequence, training the model to recognize when generation is complete. This structured prediction task requires the model to maintain coherent state across multiple spans, developing the sequential generation capabilities needed for downstream tasks.
+
+Model must predict masked content and sentinel order, requiring understanding of both local context (what words fit in each span) and global structure (the order of spans in the original sequence).
 \end{example}
 
-\textbf{Why span corruption vs MLM?}
-\begin{itemize}
-    \item More challenging: Predict multiple tokens
-    \item Better for generation: Decoder learns to produce sequences
-    \item Efficient: Fewer prediction targets than MLM
-\end{itemize}
+\subsection{T5 Model Sizes and Scaling}
 
-\subsection{T5 Variants}
+T5 was released in five different sizes to accommodate different computational budgets and performance requirements. This range of model sizes enables practitioners to choose the appropriate trade-off between accuracy and computational cost for their specific use case. The scaling behavior across these sizes provides valuable insights into how encoder-decoder architectures benefit from increased capacity.
+
+T5-Small contains only 60 million parameters with 6 encoder and 6 decoder layers, hidden dimension $d = 512$, and 8 attention heads. This compact model requires approximately 240 MB in FP32 or 120 MB in FP16, making it suitable for deployment on resource-constrained devices or for applications where inference latency is critical. Despite its small size, T5-Small achieves reasonable performance on many tasks, demonstrating that the text-to-text framework and pre-training objective provide strong inductive biases even with limited capacity. Training T5-Small requires approximately 2-3 days on 8 GPUs, making it accessible for academic research and smaller organizations.
+
+T5-Base, with 220 million parameters as detailed previously, represents the standard configuration that balances performance and computational cost. This size is comparable to BERT-base and GPT-2 Small, enabling direct comparisons across architectural paradigms. T5-Base training requires approximately 1 week on 64 TPU cores or equivalent GPU clusters, with an estimated cost of \$10,000-\$15,000 using cloud computing resources. The model achieves strong performance across diverse tasks, often matching or exceeding BERT-large despite having fewer parameters, demonstrating the effectiveness of the encoder-decoder architecture for many applications.
+
+T5-Large scales to 770 million parameters with 24 encoder and 24 decoder layers, hidden dimension $d = 1024$, and 16 attention heads. The parameter count increases by 3.5× compared to T5-Base, requiring approximately 3 GB in FP32 or 1.5 GB in FP16. Training T5-Large demands approximately 2-3 weeks on 256 TPU cores, with estimated costs of \$50,000-\$75,000. The performance improvements over T5-Base are substantial, particularly on challenging tasks requiring deep reasoning or long-range dependencies. However, the inference latency also increases proportionally, making T5-Large more suitable for offline processing or applications where accuracy is paramount.
+
+T5-3B pushes to 3 billion parameters with 24 encoder and 24 decoder layers, hidden dimension $d = 1024$, and 32 attention heads. The increased head count (compared to T5-Large's 16 heads) allows for more diverse attention patterns without increasing the per-head dimension. The model requires approximately 12 GB in FP32 or 6 GB in FP16, necessitating high-memory GPUs like the A100 (40-80 GB) for training. Training T5-3B takes approximately 1 month on 512 TPU cores, with estimated costs exceeding \$200,000. The performance gains over T5-Large are more modest, suggesting diminishing returns as model size increases, though T5-3B still achieves state-of-the-art results on several benchmarks.
+
+T5-11B represents the largest variant with 11 billion parameters, using 24 encoder and 24 decoder layers, hidden dimension $d = 1024$, and 128 attention heads. The massive increase in attention heads (from 32 to 128) enables extremely fine-grained attention patterns, though each head operates on a smaller dimension ($d_k = 1024 / 128 = 8$). The model requires approximately 44 GB in FP32 or 22 GB in FP16, necessitating model parallelism across multiple GPUs even for inference. Training T5-11B demands approximately 2-3 months on 1024 TPU cores, with estimated costs exceeding \$1 million. The model achieves the best performance across virtually all tasks, setting new state-of-the-art results on GLUE, SuperGLUE, and SQuAD at the time of release. However, the computational requirements limit its practical deployment to scenarios where maximum accuracy justifies the cost.
 
 \textbf{T5 Model Sizes:}
 \begin{itemize}
-    \item T5-Small: 60M parameters
-    \item T5-Base: 220M parameters
-    \item T5-Large: 770M parameters
-    \item T5-3B: 3 billion parameters
-    \item T5-11B: 11 billion parameters
+    \item \textbf{T5-Small:} 60M parameters, 6 enc + 6 dec layers, $d=512$, 8 heads
+    \begin{itemize}
+        \item Memory: 240 MB (FP32), 120 MB (FP16)
+        \item Training: 2-3 days on 8 GPUs, cost $\approx$ \$2,000
+    \end{itemize}
+    \item \textbf{T5-Base:} 220M parameters, 12 enc + 12 dec layers, $d=768$, 12 heads
+    \begin{itemize}
+        \item Memory: 880 MB (FP32), 440 MB (FP16)
+        \item Training: 1 week on 64 TPU cores, cost $\approx$ \$10,000-\$15,000
+    \end{itemize}
+    \item \textbf{T5-Large:} 770M parameters, 24 enc + 24 dec layers, $d=1024$, 16 heads
+    \begin{itemize}
+        \item Memory: 3 GB (FP32), 1.5 GB (FP16)
+        \item Training: 2-3 weeks on 256 TPU cores, cost $\approx$ \$50,000-\$75,000
+    \end{itemize}
+    \item \textbf{T5-3B:} 3 billion parameters, 24 enc + 24 dec layers, $d=1024$, 32 heads
+    \begin{itemize}
+        \item Memory: 12 GB (FP32), 6 GB (FP16)
+        \item Training: 1 month on 512 TPU cores, cost $>$ \$200,000
+    \end{itemize}
+    \item \textbf{T5-11B:} 11 billion parameters, 24 enc + 24 dec layers, $d=1024$, 128 heads
+    \begin{itemize}
+        \item Memory: 44 GB (FP32), 22 GB (FP16)
+        \item Training: 2-3 months on 1024 TPU cores, cost $>$ \$1,000,000
+    \end{itemize}
 \end{itemize}
 
-\textbf{T5.1.1:} Improved version with:
+The scaling behavior reveals important insights about encoder-decoder architectures. Performance improves consistently with model size, but the rate of improvement decreases at larger scales. The cost per percentage point of accuracy improvement increases dramatically beyond T5-3B, suggesting that for most practical applications, T5-Base or T5-Large provide the best trade-off between performance and computational cost. The largest models are primarily valuable for research into scaling laws and for applications where even small accuracy improvements justify substantial computational investment.
+
+\subsection{T5 Training Details}
+
+T5's pre-training represents a massive computational undertaking that required careful optimization of hardware utilization and training procedures. The model was trained on the Colossal Clean Crawled Corpus (C4), a dataset of approximately 750 GB of cleaned English text extracted from Common Crawl. The C4 dataset underwent extensive filtering to remove low-quality content, including deduplication, language identification to retain only English text, removal of placeholder text and profanity, and filtering of sentences without terminal punctuation. This cleaning process reduced the raw Common Crawl data by approximately 90\%, but the resulting corpus provided much higher quality training signal.
+
+The training infrastructure for T5-11B, the largest variant, required 1024 TPU v3 cores running continuously for approximately 2-3 months. Each TPU v3 core provides roughly 123 TFLOPS of bfloat16 performance, yielding a combined peak performance of approximately 126 PFLOPS for the full training cluster. The training used a batch size of 2048 sequences, each of maximum length 512 tokens, for a total of 1,048,576 tokens per batch. This enormous batch size enabled efficient utilization of the TPU hardware and provided stable gradient estimates despite the model's scale. The learning rate schedule employed a linear warmup over 10,000 steps to a peak learning rate of $10^{-2}$, followed by inverse square root decay. The high peak learning rate, much larger than typical for transformer training, was enabled by the large batch size and careful gradient clipping.
+
+The computational cost of T5-11B training is staggering. With 11 billion parameters and processing approximately 1 trillion tokens during training (the C4 dataset seen roughly 1.3 times), the total computation exceeds $10^{24}$ FLOPs. At an effective compute rate of 50 PFLOPS (assuming 40\% utilization of the 126 PFLOPS peak), the training requires approximately $10^{24} / (50 \times 10^{15}) = 20$ million seconds, or roughly 230 days of continuous computation. The reported 2-3 month training time suggests either higher utilization rates or more efficient training procedures than this conservative estimate. The estimated cost exceeds \$1 million using cloud TPU pricing, making T5-11B one of the most expensive models trained at the time of its release in 2019.
+
+T5-Base training is far more accessible, requiring approximately 1 week on 64 TPU v3 cores (128 TPU cores total). The batch size is reduced to 128 sequences of 512 tokens, totaling 65,536 tokens per batch. The training processes approximately 34 billion tokens (the C4 dataset seen once), requiring roughly $10^{21}$ FLOPs total. At an effective compute rate of 2 PFLOPS, the training takes approximately 5-7 days, matching the reported training time. The estimated cost is \$10,000-\$15,000, making T5-Base training feasible for well-funded academic labs and smaller companies. The more modest computational requirements have enabled widespread experimentation with the T5 architecture and training approach.
+
+The memory requirements during training are substantial due to the encoder-decoder architecture. For T5-11B with batch size 2048 and sequence length 512, the activations alone consume approximately 200-300 GB of memory. The model parameters require 44 GB in FP32, and the optimizer states (Adam maintains first and second moment estimates) require an additional 88 GB. The total memory footprint exceeds 400 GB, necessitating model parallelism across multiple TPU cores. The training employed a combination of data parallelism (different sequences on different cores) and model parallelism (different layers on different cores) to distribute the memory and computation efficiently. The cross-attention mechanism in the decoder requires storing encoder outputs for all sequences in the batch, adding significant memory overhead compared to encoder-only or decoder-only architectures.
+
+\textbf{T5-11B Training Configuration:}
 \begin{itemize}
-    \item GEGLU activation instead of ReLU
-    \item No dropout in pre-training
-    \item Trained on C4 + additional data
+    \item Hardware: 1024 TPU v3 cores ($\approx$ 126 PFLOPS peak)
+    \item Training time: 2-3 months continuous
+    \item Dataset: C4 (750 GB cleaned text, $\approx$ 1 trillion tokens)
+    \item Batch size: 2048 sequences $\times$ 512 tokens = 1,048,576 tokens/batch
+    \item Learning rate: $10^{-2}$ peak with inverse square root decay
+    \item Total computation: $> 10^{24}$ FLOPs
+    \item Estimated cost: $>$ \$1,000,000
+    \item Memory: $>$ 400 GB (requires model parallelism)
 \end{itemize}
+
+\textbf{T5-Base Training Configuration:}
+\begin{itemize}
+    \item Hardware: 64 TPU v3 chips (128 cores, $\approx$ 15 PFLOPS peak)
+    \item Training time: 5-7 days
+    \item Dataset: C4 (750 GB, single pass $\approx$ 34 billion tokens)
+    \item Batch size: 128 sequences $\times$ 512 tokens = 65,536 tokens/batch
+    \item Learning rate: $10^{-2}$ peak with inverse square root decay
+    \item Total computation: $\approx 10^{21}$ FLOPs
+    \item Estimated cost: \$10,000-\$15,000
+    \item Memory: $\approx$ 20-30 GB (fits on single GPU with gradient accumulation)
+\end{itemize}
+
+The training procedures incorporated several optimizations to improve efficiency and stability. Mixed precision training with bfloat16 reduced memory consumption and accelerated computation on TPU hardware. Gradient clipping prevented instability from occasional large gradients. Dropout was applied with rate 0.1 during pre-training to prevent overfitting, though later work (T5.1.1) found that removing dropout during pre-training improved performance. The relative position biases were initialized to small random values and learned during training, converging to patterns that emphasized nearby positions while maintaining some attention to distant positions.
 
 \section{BART: Denoising Autoencoder}
 \label{sec:bart}
 
-\subsection{BART Architecture}
+\subsection{BART Architecture and Design Philosophy}
+
+BART (Bidirectional and Auto-Regressive Transformers) represents Facebook AI Research's approach to combining the strengths of BERT and GPT through a denoising autoencoder framework. While T5 focuses on the text-to-text paradigm with task-specific prefixes, BART emphasizes learning robust representations through diverse corruption strategies during pre-training. The model architecture is conceptually similar to T5—an encoder-decoder transformer—but the pre-training approach and design philosophy differ significantly.
+
+The BART encoder employs fully bidirectional attention identical to BERT, allowing each token to attend to all other tokens in the input sequence. This bidirectional processing enables the encoder to build rich contextual representations that capture dependencies in both directions. The encoder processes corrupted input text, where corruption can take many forms including token masking, deletion, infilling, sentence permutation, or document rotation. The diversity of corruption strategies forces the encoder to learn robust representations that can handle various types of noise and structural perturbations.
+
+The BART decoder uses causal self-attention like GPT, generating output tokens autoregressively from left to right. Each position in the decoder can only attend to previous positions in the output sequence, maintaining the autoregressive property essential for text generation. The decoder also includes cross-attention layers that attend to the encoder's output representations, enabling it to focus on relevant parts of the corrupted input while reconstructing the original text. This cross-attention mechanism is crucial for tasks like summarization and translation where the output must be grounded in specific input content.
+
+BART-large, the primary configuration, uses 12 encoder layers and 12 decoder layers with hidden dimension $d = 1024$ and 16 attention heads. This configuration is comparable to BERT-large in terms of depth and width, but the encoder-decoder architecture results in more total parameters. The model uses learned absolute positional embeddings rather than T5's relative position biases or the original transformer's sinusoidal encodings. The vocabulary contains approximately 50,000 tokens using byte-pair encoding (BPE), providing finer-grained tokenization than T5's 32,000-token SentencePiece vocabulary.
 
 \begin{definition}[BART]
 \label{def:bart}
 Bidirectional And Auto-Regressive Transformers:
 \begin{itemize}
-    \item Encoder: Bidirectional (like BERT)
-    \item Decoder: Autoregressive (like GPT)
-    \item Pre-training: Reconstruct original text from corrupted input
+    \item Encoder: Bidirectional self-attention (like BERT), processes corrupted input
+    \item Decoder: Autoregressive causal attention (like GPT) plus cross-attention to encoder
+    \item Pre-training: Reconstruct original text from diversely corrupted input
+    \item Position encoding: Learned absolute positional embeddings
 \end{itemize}
 \end{definition}
 
-\textbf{Configuration (BART-large):}
+\subsection{BART Parameter Breakdown and Memory Requirements}
+
+Understanding BART-large's parameter distribution reveals how the model allocates capacity across its components. Each encoder layer contains approximately 12.6 million parameters. The self-attention mechanism requires four projection matrices ($\mW^Q$, $\mW^K$, $\mW^V$, $\mW^O$), each of dimension $1024 \times 1024$, contributing $4 \times 1024^2 = 4{,}194{,}304$ parameters. The feed-forward network uses expansion factor 4, projecting from 1024 to 4096 dimensions and back, contributing $2 \times 1024 \times 4096 = 8{,}388{,}608$ parameters. Layer normalization adds minimal parameters. Multiplying by 12 encoder layers yields approximately 151 million parameters in the encoder stack.
+
+Each decoder layer contains approximately 16.8 million parameters due to the additional cross-attention mechanism. The causal self-attention contributes 4.2 million parameters, identical to the encoder's self-attention. The cross-attention layer adds another 4.2 million parameters for its query, key, value, and output projections. The feed-forward network contributes 8.4 million parameters, same as the encoder. Multiplying by 12 decoder layers yields approximately 202 million parameters in the decoder stack. The token embeddings add $50{,}000 \times 1024 = 51{,}200{,}000$ parameters, and positional embeddings for sequences up to 1024 tokens add another $1024 \times 1024 = 1{,}048{,}576$ parameters. The total reaches approximately 406 million parameters.
+
+The memory requirements for BART-large are substantial. In FP32, the 406 million parameters occupy $406{,}000{,}000 \times 4 = 1{,}624$ MB, or approximately 1.6 GB. Mixed precision training with FP16 activations and FP32 master weights reduces the working memory to approximately 812 MB for the model parameters during forward and backward passes. For inference, pure FP16 weights require only 812 MB, enabling BART-large to run on GPUs with 12-16 GB of memory with reasonable batch sizes. Training with batch size 32 and sequence length 512 requires approximately 20-25 GB of GPU memory, necessitating high-memory GPUs like the V100 (32 GB) or A100 (40-80 GB).
+
+\textbf{BART-large Configuration:}
 \begin{itemize}
-    \item Encoder: 12 layers
-    \item Decoder: 12 layers
-    \item Hidden: $d = 1024$
-    \item Heads: $h = 16$
-    \item Parameters: $\approx 400$M
+    \item Encoder: 12 layers, Decoder: 12 layers
+    \item Hidden: $d = 1024$, Heads: $h = 16$, FFN: $d_{ff} = 4096$
+    \item Vocabulary: $V \approx 50{,}000$ (BPE)
+    \item Parameters: $\approx 406$M
 \end{itemize}
 
-\subsection{Denoising Objectives}
+\textbf{Parameter breakdown:}
+\begin{align}
+\text{Embeddings:} \quad &50{,}000 \times 1024 + 1024 \times 1024 = 52.2\text{M} \\
+\text{Encoder (12 layers):} \quad &12 \times 12.6\text{M} = 151.2\text{M} \\
+\text{Decoder (12 layers):} \quad &12 \times 16.8\text{M} = 201.6\text{M} \\
+\text{Total:} \quad &\approx 406\text{M}
+\end{align}
 
-BART explores multiple corruption strategies:
+\textbf{Memory requirements:}
+\begin{itemize}
+    \item FP32: 1.6 GB (model parameters only)
+    \item FP16: 812 MB (inference)
+    \item Training (mixed precision, batch size 32, sequence length 512): $\approx$ 20-25 GB
+\end{itemize}
+
+\subsection{Denoising Objectives and Corruption Strategies}
+
+BART's key innovation lies in exploring multiple corruption strategies during pre-training, systematically evaluating which types of noise lead to the most robust and transferable representations. Unlike BERT's single masking strategy or T5's span corruption, BART experiments with five different corruption approaches and combinations thereof. This exploration revealed that the choice of corruption strategy significantly impacts downstream task performance, with different strategies providing complementary benefits.
+
+Token masking, borrowed directly from BERT, replaces random tokens with a special \texttt{[MASK]} token. Approximately 15\% of tokens are selected and replaced, forcing the model to predict the original tokens based on surrounding context. This strategy is familiar and well-understood, providing a baseline for comparison with other corruption approaches. However, token masking has limitations: the \texttt{[MASK]} token never appears during fine-tuning, creating a train-test mismatch, and the independent masking of tokens doesn't encourage the model to learn longer-range dependencies or sequential generation capabilities.
+
+Token deletion removes random tokens entirely from the input sequence, forcing the model to determine which positions are missing and what content should fill them. Unlike masking, which provides explicit markers indicating where tokens were removed, deletion requires the model to infer the locations of missing content from the remaining context. This creates a more challenging task that encourages the model to develop robust positional understanding and the ability to detect gaps in the input. For example, deleting "B" and "D" from "A B C D E" yields "A C E", and the model must reconstruct the full sequence "A B C D E" without explicit indicators of where tokens were removed.
+
+Text infilling represents a more sophisticated corruption strategy that combines aspects of span masking and deletion. Spans of text are sampled (with lengths drawn from a Poisson distribution with $\lambda = 3$, similar to T5), but instead of replacing each span with a unique sentinel token, all spans are replaced with a single \texttt{[MASK]} token. This forces the decoder to determine how many tokens to generate for each masked span based on context alone. For example, replacing "B C D E" in "A B C D E F" with a single \texttt{[MASK]} yields "A \texttt{[MASK]} F", and the model must generate "B C D E" without knowing in advance that four tokens are needed. This uncertainty makes text infilling substantially more challenging than T5's span corruption with explicit sentinel tokens.
+
+Sentence permutation shuffles the order of sentences within a document, requiring the model to reconstruct the original sentence order. This corruption strategy targets document-level structure rather than token-level content, encouraging the model to learn discourse coherence and inter-sentence dependencies. For example, a document with sentences [S1, S2, S3, S4] might be permuted to [S3, S1, S4, S2], and the model must generate the original order [S1, S2, S3, S4]. This task is particularly relevant for summarization and document understanding, where maintaining coherent structure is crucial.
+
+Document rotation selects a random token as the new start of the document and rotates the entire sequence accordingly. The model must identify the true start of the document and generate the original sequence. For example, rotating "A B C D E" at position 3 yields "D E A B C", and the model must recognize that "A" is the true start and generate "A B C D E". This task encourages the model to learn document-level structure and identify natural boundaries, though it proved less effective than other corruption strategies in practice.
+
+The BART paper systematically evaluated these corruption strategies individually and in combination, finding that text infilling combined with sentence permutation provided the best performance across downstream tasks. This combination balances token-level and document-level corruption, encouraging the model to learn both local language patterns and global document structure. The text infilling component develops strong generation capabilities by forcing the model to produce variable-length spans, while sentence permutation develops discourse understanding by requiring the model to reason about inter-sentence relationships.
+
+\textbf{BART Corruption Strategies:}
 
 \textbf{1. Token Masking:} Replace tokens with \texttt{[MASK]} (like BERT)
+\begin{itemize}
+    \item 15\% of tokens replaced with \texttt{[MASK]}
+    \item Provides explicit markers for missing content
+    \item Baseline strategy for comparison
+\end{itemize}
 
-\textbf{2. Token Deletion:} Remove random tokens
+\textbf{2. Token Deletion:} Remove random tokens entirely
 \begin{verbatim}
 Original: A B C D E
 Corrupted: A C E
+Target: A B C D E
 \end{verbatim}
+\begin{itemize}
+    \item Model must infer locations of missing tokens
+    \item More challenging than masking
+    \item Encourages robust positional understanding
+\end{itemize}
 
 \textbf{3. Text Infilling:} Replace spans with single \texttt{[MASK]}
 \begin{verbatim}
@@ -188,12 +323,31 @@ Original: A B C D E F
 Corrupted: A [MASK] F
 Target: B C D E
 \end{verbatim}
+\begin{itemize}
+    \item Span lengths sampled from Poisson($\lambda=3$)
+    \item Model must determine span length from context
+    \item More challenging than T5's sentinel-based span corruption
+\end{itemize}
 
 \textbf{4. Sentence Permutation:} Shuffle sentence order
+\begin{itemize}
+    \item Targets document-level structure
+    \item Encourages learning of discourse coherence
+    \item Particularly beneficial for summarization
+\end{itemize}
 
 \textbf{5. Document Rotation:} Rotate document, model finds start
+\begin{itemize}
+    \item Less effective than other strategies
+    \item Encourages learning of document boundaries
+\end{itemize}
 
 \textbf{Best combination (BART's final):} Text infilling + sentence permutation
+\begin{itemize}
+    \item Balances token-level and document-level corruption
+    \item Develops both generation and discourse understanding
+    \item Achieves best performance across diverse downstream tasks
+\end{itemize}
 
 \begin{example}[BART Pre-training]
 \label{ex:bart_pretraining}
@@ -213,34 +367,114 @@ The [MASK] comfortable.
 
 \textbf{Decoder target:} Original complete text
 
-Model learns to:
-\begin{itemize}
-    \item Reconstruct missing spans
-    \item Reorder sentences
-    \item Generate coherent output
-\end{itemize}
+The model must reconstruct the missing span "cat sat on the mat. It was very" and reorder the sentences to match the original document structure. This combined corruption strategy forces the model to develop both local generation capabilities (filling in missing text) and global discourse understanding (recognizing proper sentence order).
 \end{example}
 
-\subsection{Fine-tuning BART}
+\subsection{BART Training Details}
 
-\textbf{Sequence Classification:}
+BART-large was trained on a combination of datasets totaling approximately 160 GB of text, including BooksCorpus, English Wikipedia, CC-News, OpenWebText, and Stories. This diverse training corpus provides broad coverage of topics and writing styles, enabling the model to learn robust representations that transfer well to downstream tasks. The training used 256 NVIDIA V100 GPUs for approximately 2 weeks, with an estimated cost of \$50,000-\$75,000 using cloud computing resources.
+
+The training configuration employed a batch size of 128 sequences with maximum length 1024 tokens, totaling 131,072 tokens per batch. This large batch size enabled stable training with the Adam optimizer and efficient GPU utilization. The learning rate schedule used a polynomial decay from a peak learning rate of $3 \times 10^{-4}$ with 500 warmup steps. The training processed approximately 50 billion tokens total, seeing the training corpus roughly once. Mixed precision training with FP16 reduced memory consumption and accelerated computation on the V100 GPUs.
+
+The memory requirements during training are substantial due to the encoder-decoder architecture and large batch size. With batch size 128 and sequence length 1024, the activations consume approximately 40-50 GB of memory. The model parameters require 1.6 GB in FP32, and the Adam optimizer states require an additional 3.2 GB. The total memory footprint reaches approximately 50-60 GB, necessitating data parallelism across multiple GPUs. Each GPU processes a subset of the batch, with gradients synchronized across GPUs after each backward pass.
+
+\textbf{BART-large Training Configuration:}
 \begin{itemize}
-    \item Feed input through encoder and decoder
-    \item Use final decoder token for classification
-    \item Same input to encoder and decoder
+    \item Hardware: 256 NVIDIA V100 GPUs (32 GB each)
+    \item Training time: $\approx$ 2 weeks
+    \item Dataset: 160 GB text (BooksCorpus, Wikipedia, CC-News, OpenWebText, Stories)
+    \item Batch size: 128 sequences $\times$ 1024 tokens = 131,072 tokens/batch
+    \item Learning rate: $3 \times 10^{-4}$ peak with polynomial decay
+    \item Total tokens: $\approx$ 50 billion
+    \item Estimated cost: \$50,000-\$75,000
+    \item Memory per GPU: $\approx$ 25-30 GB (data parallelism across GPUs)
 \end{itemize}
 
-\textbf{Generation Tasks (Summarization, Translation):}
+\section{Encoder-Decoder Efficiency Analysis}
+\label{sec:encoder_decoder_efficiency}
+
+\subsection{Computational Cost of Cross-Attention}
+
+Understanding the computational and memory costs of encoder-decoder architectures compared to encoder-only (BERT) or decoder-only (GPT) models is essential for choosing the appropriate architecture for a given task. The key difference lies in the cross-attention mechanism, which enables the decoder to attend to encoder outputs but introduces additional computational and memory overhead.
+
+The cross-attention mechanism in each decoder layer requires computing attention between decoder queries and encoder keys/values. For a decoder sequence of length $n_{\text{dec}}$ and encoder sequence of length $n_{\text{enc}}$, the cross-attention computation involves three main steps. First, the decoder hidden states are projected to queries $\mQ \in \R^{n_{\text{dec}} \times d}$ using weight matrix $\mW^Q \in \R^{d \times d}$, requiring $n_{\text{dec}} \times d^2$ FLOPs. Second, the encoder outputs are projected to keys $\mK \in \R^{n_{\text{enc}} \times d}$ and values $\mV \in \R^{n_{\text{enc}} \times d}$ using weight matrices $\mW^K, \mW^V \in \R^{d \times d}$, requiring $2 \times n_{\text{enc}} \times d^2$ FLOPs. Third, the attention scores $\mS = \mQ \mK\transpose$ are computed, requiring $n_{\text{dec}} \times n_{\text{enc}} \times d$ FLOPs, followed by softmax and multiplication with values, requiring another $n_{\text{dec}} \times n_{\text{enc}} \times d$ FLOPs.
+
+The total computational cost of cross-attention per layer is approximately $n_{\text{dec}} \times d^2 + 2 \times n_{\text{enc}} \times d^2 + 2 \times n_{\text{dec}} \times n_{\text{enc}} \times d$ FLOPs. For typical sequence lengths where $n_{\text{dec}} \approx n_{\text{enc}} = n$, this simplifies to $3nd^2 + 2n^2d$ FLOPs. Comparing to self-attention, which requires $4nd^2 + 2n^2d$ FLOPs, cross-attention adds approximately 75\% of the cost of self-attention per layer. With $L_{\text{dec}}$ decoder layers, the total cross-attention cost is $L_{\text{dec}} \times (3nd^2 + 2n^2d)$ FLOPs.
+
+For T5-Base with 12 decoder layers, $d = 768$, and $n = 512$, the cross-attention computation requires approximately $12 \times (3 \times 512 \times 768^2 + 2 \times 512^2 \times 768) \approx 12 \times (9.1 + 4.0) \times 10^8 = 1.57 \times 10^{11}$ FLOPs per forward pass. This represents approximately 15-20\% of the total forward pass computation, a significant but not dominant fraction. The cross-attention cost scales linearly with the number of decoder layers and quadratically with sequence length, making it increasingly expensive for long sequences.
+
+The memory requirements for cross-attention are equally important. The encoder outputs must be stored in memory for all decoder layers to access during cross-attention. For batch size $B$, encoder sequence length $n_{\text{enc}}$, and hidden dimension $d$, the encoder outputs require $B \times n_{\text{enc}} \times d$ values. For T5-Base with batch size 32, sequence length 512, and dimension 768, this amounts to $32 \times 512 \times 768 = 12{,}582{,}912$ values, or approximately 50 MB in FP32 or 25 MB in FP16. While modest compared to model parameters, this memory scales linearly with batch size and sequence length, becoming significant for large batches or long sequences.
+
+Additionally, the cross-attention mechanism requires storing attention weights $\mA \in \R^{n_{\text{dec}} \times n_{\text{enc}}}$ for each head in each layer during training (for backpropagation). With $h$ attention heads and $L_{\text{dec}}$ decoder layers, the total attention weight memory is $B \times L_{\text{dec}} \times h \times n_{\text{dec}} \times n_{\text{enc}}$ values. For T5-Base with batch size 32, 12 decoder layers, 12 heads, and sequence length 512, this amounts to $32 \times 12 \times 12 \times 512 \times 512 = 1{,}207{,}959{,}552$ values, or approximately 4.8 GB in FP32 or 2.4 GB in FP16. This memory requirement can become a bottleneck for training with large batch sizes or long sequences.
+
+\textbf{Cross-attention computational cost per layer:}
+\begin{equation}
+\text{FLOPs}_{\text{cross-attn}} = n_{\text{dec}} \times d^2 + 2 \times n_{\text{enc}} \times d^2 + 2 \times n_{\text{dec}} \times n_{\text{enc}} \times d
+\end{equation}
+
+For $n_{\text{dec}} = n_{\text{enc}} = n$:
+\begin{equation}
+\text{FLOPs}_{\text{cross-attn}} \approx 3nd^2 + 2n^2d
+\end{equation}
+
+\textbf{Memory requirements:}
 \begin{itemize}
-    \item Encoder: Source text
-    \item Decoder: Generate target autoregressively
-    \item Standard seq2seq fine-tuning
+    \item Encoder outputs: $B \times n_{\text{enc}} \times d$ values (must be stored for all decoder layers)
+    \item Cross-attention weights (training): $B \times L_{\text{dec}} \times h \times n_{\text{dec}} \times n_{\text{enc}}$ values
+\end{itemize}
+
+\textbf{Example: T5-Base (batch size 32, sequence length 512):}
+\begin{itemize}
+    \item Cross-attention FLOPs per layer: $\approx 1.3 \times 10^{10}$ FLOPs
+    \item Total cross-attention (12 layers): $\approx 1.6 \times 10^{11}$ FLOPs (15-20\% of forward pass)
+    \item Encoder output memory: 50 MB (FP32) or 25 MB (FP16)
+    \item Cross-attention weight memory: 4.8 GB (FP32) or 2.4 GB (FP16)
+\end{itemize}
+
+\subsection{Comparison: Encoder-Decoder vs Decoder-Only}
+
+The choice between encoder-decoder architectures (T5, BART) and decoder-only architectures (GPT) involves fundamental trade-offs in computational efficiency, memory usage, and task suitability. Understanding these trade-offs is essential for practitioners deciding which architecture to use for their specific application.
+
+Decoder-only models like GPT use only causal self-attention, processing sequences autoregressively from left to right. For a sequence of length $n$, a decoder-only model with $L$ layers requires approximately $L \times (4nd^2 + 2n^2d)$ FLOPs for the forward pass. The memory requirements include model parameters, activations, and KV cache for generation. For GPT-2 with 12 layers, $d = 768$, and $n = 512$, the forward pass requires approximately $12 \times (4 \times 512 \times 768^2 + 2 \times 512^2 \times 768) \approx 1.2 \times 10^{12}$ FLOPs. The KV cache for generation requires $2 \times L \times n \times d$ values, or approximately 75 MB in FP32 for GPT-2 with sequence length 1024.
+
+Encoder-decoder models like T5 and BART use separate encoder and decoder stacks with cross-attention connecting them. For input sequence length $n_{\text{enc}}$ and output sequence length $n_{\text{dec}}$, the encoder requires $L_{\text{enc}} \times (4n_{\text{enc}}d^2 + 2n_{\text{enc}}^2d)$ FLOPs, and the decoder requires $L_{\text{dec}} \times (4n_{\text{dec}}d^2 + 2n_{\text{dec}}^2d + 3n_{\text{dec}}d^2 + 2n_{\text{dec}}n_{\text{enc}}d)$ FLOPs. For T5-Base with $n_{\text{enc}} = n_{\text{dec}} = 512$, the total forward pass requires approximately $2.1 \times 10^{12}$ FLOPs, roughly 1.75× more than GPT-2 of similar size. The memory requirements include encoder outputs ($B \times n_{\text{enc}} \times d$) and cross-attention weights, adding 25-50 MB beyond decoder-only models.
+
+The parameter count comparison reveals that encoder-decoder models require more parameters than decoder-only models of similar capacity. T5-Base with 220 million parameters has 12 encoder layers (85M parameters) and 12 decoder layers (113M parameters including cross-attention). GPT-2 with 12 layers and the same hidden dimension contains only 117 million parameters, as it lacks the encoder stack and cross-attention mechanisms. This means encoder-decoder models require approximately 1.9× more parameters than decoder-only models with the same number of layers and hidden dimension.
+
+However, the computational comparison depends critically on the task. For generation tasks where the input is short and the output is long (e.g., generating a long document from a short prompt), decoder-only models can be more efficient. The encoder-decoder model processes the short input once through the encoder, then generates the long output through the decoder with cross-attention. The decoder-only model must process the entire sequence (input plus generated output) autoregressively, with each new token requiring attention over all previous tokens. For input length $n_{\text{in}}$ and output length $n_{\text{out}}$, the decoder-only model requires $\sum_{t=1}^{n_{\text{out}}} (n_{\text{in}} + t) \approx n_{\text{out}} \times n_{\text{in}} + n_{\text{out}}^2/2$ attention operations, while the encoder-decoder model requires $n_{\text{in}}^2$ (encoder) plus $n_{\text{out}}^2$ (decoder self-attention) plus $n_{\text{out}} \times n_{\text{in}}$ (cross-attention). When $n_{\text{out}} \gg n_{\text{in}}$, the encoder-decoder model is more efficient.
+
+For tasks where the input is long and the output is short (e.g., classification or extractive question answering), decoder-only models can be more efficient. The encoder-decoder model must process the long input through the encoder, then generate the short output through the decoder. The decoder-only model processes the input once, then generates the short output. However, encoder-only models like BERT are typically most efficient for these tasks, as they avoid the decoder entirely and use a simple classification head.
+
+The memory efficiency comparison favors decoder-only models for inference, as they avoid storing encoder outputs and cross-attention weights. However, for training with large batch sizes, the difference is less significant, as both architectures require substantial memory for activations and gradients. The KV cache for decoder-only models grows with the total sequence length (input plus output), while encoder-decoder models cache only decoder states, potentially providing memory advantages for long input sequences.
+
+\textbf{When to use encoder-decoder (T5, BART):}
+\begin{itemize}
+    \item Sequence-to-sequence tasks: translation, summarization, question answering with generation
+    \item Tasks requiring bidirectional understanding of input: the encoder can attend to the full input context
+    \item Tasks with long input and short output: encoder processes input once, decoder generates short output
+    \item Multi-task learning: text-to-text framework enables unified training across diverse tasks
+\end{itemize}
+
+\textbf{When to use decoder-only (GPT):}
+\begin{itemize}
+    \item Pure generation tasks: story generation, dialogue, code generation
+    \item Tasks with short input and long output: decoder-only can be more efficient
+    \item In-context learning: decoder-only models excel at few-shot learning from examples in the prompt
+    \item Simplicity: decoder-only architecture is simpler to implement and deploy
+\end{itemize}
+
+\textbf{Computational comparison (similar capacity):}
+\begin{itemize}
+    \item Parameters: Encoder-decoder $\approx$ 1.9× decoder-only (due to encoder stack and cross-attention)
+    \item FLOPs per forward pass: Encoder-decoder $\approx$ 1.5-2× decoder-only (depends on sequence lengths)
+    \item Memory (inference): Decoder-only more efficient (no encoder outputs or cross-attention weights)
+    \item Memory (training): Similar for both architectures with large batch sizes
 \end{itemize}
 
 \section{Comparing T5 and BART}
 \label{sec:t5_bart_comparison}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \begin{tabular}{lll}
 \toprule

@@ -259,9 +259,123 @@ c_{2,2} &= 3(6) + 4(8) = 50
 <p>Therefore: $\mC = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix}$
 </div>
 
+<h3>Computational Complexity of Matrix Operations</h3>
+
+<p>Understanding the computational cost of matrix operations is essential for designing efficient deep learning systems.</p>
+
+<div class="theorem"><strong>Theorem:</strong> 
+Computing $\mC = \mA\mB$ where $\mA \in \R^{m \times n}$ and $\mB \in \R^{n \times p}$ requires:
+<div class="equation">
+$$
+\text{FLOPs} = 2mnp
+$$
+</div>
+floating-point operations (multiply-accumulate operations count as 2 FLOPs each).
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In transformer self-attention, we compute $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in \R^{n \times d_k}$ (sequence length $n$, key dimension $d_k$).
+
+<p>Dimensions: $\underbrace{\mQ}_{\R^{n \times d_k}} \underbrace{\mK\transpose}_{\R^{d_k \times n}} = \underbrace{\mA}_{\R^{n \times n}}$</p>
+
+<p>Computational cost: $2n \cdot d_k \cdot n = 2n^2 d_k$ FLOPs</p>
+
+<p>For GPT-3 with $n = 2048$ tokens and $d_k = 128$:
+<div class="equation">
+$$
+\text{FLOPs} = 2 \times (2048)^2 \times 128 = 1{,}073{,}741{,}824 \approx 1.07 \text{ GFLOPs}
+$$
+</div>
+
+<p>This quadratic scaling in sequence length ($O(n^2)$) is why long-context transformers are computationally expensive.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+A transformer feed-forward network applies two linear transformations:
+<div class="equation">
+$$\begin{align}
+\vh &= \mW_1 \vx + \vb_1 \quad \text{where } \mW_1 \in \R^{d_{ff} \times d_{\text{model}}} \\
+\vy &= \mW_2 \vh + \vb_2 \quad \text{where } \mW_2 \in \R^{d_{\text{model}} \times d_{ff}}
+\end{align}$$
+</div>
+
+<p>For a batch of $B$ sequences of length $n$, input is $\mX \in \R^{B \times n \times d_{\text{model}}}$.</p>
+
+<p>First transformation: $2 \cdot (Bn) \cdot d_{\text{model}} \cdot d_{ff}$ FLOPs</p>
+
+<p>Second transformation: $2 \cdot (Bn) \cdot d_{ff} \cdot d_{\text{model}}$ FLOPs</p>
+
+<p>Total: $4Bn \cdot d_{\text{model}} \cdot d_{ff}$ FLOPs</p>
+
+<p>For BERT-base ($d_{\text{model}} = 768$, $d_{ff} = 3072$, $n = 512$, $B = 32$):
+<div class="equation">
+$$
+\text{FLOPs} = 4 \times 32 \times 512 \times 768 \times 3072 = 154{,}618{,}822{,}656 \approx 154.6 \text{ GFLOPs}
+$$
+</div>
+</div>
+
+<h3>Batch Matrix Multiplication</h3>
+
+<p>Modern deep learning frameworks process multiple examples simultaneously using batched operations.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For tensors $\mA \in \R^{B \times m \times n}$ and $\mB \in \R^{B \times n \times p}$, batch matrix multiplication produces $\mC \in \R^{B \times m \times p}$ where:
+<div class="equation">
+$$
+\mC[b] = \mA[b] \mB[b] \quad \text{for } b = 1, \ldots, B
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In multi-head attention with $h = 12$ heads, batch size $B = 32$, sequence length $n = 512$, and head dimension $d_k = 64$:
+
+<p>Query tensor: $\mQ \in \R^{B \times h \times n \times d_k} = \R^{32 \times 12 \times 512 \times 64}$</p>
+
+<p>Key tensor: $\mK \in \R^{B \times h \times n \times d_k} = \R^{32 \times 12 \times 512 \times 64}$</p>
+
+<p>Attention scores: $\mA = \mQ\mK\transpose \in \R^{32 \times 12 \times 512 \times 512}$</p>
+
+<p>This requires $B \times h \times 2n^2d_k = 32 \times 12 \times 2 \times 512^2 \times 64 = 12{,}884{,}901{,}888 \approx 12.9$ GFLOPs.
+</div>
+
+<div class="keypoint">
+<strong>Broadcasting in PyTorch/NumPy:</strong> When dimensions don't match, broadcasting rules automatically expand dimensions by aligning them from the right, stretching size-1 dimensions to match, and adding missing dimensions as size-1. For example, adding a bias vector $\R^{768}$ to a tensor $\R^{32 \times 512 \times 768}$ broadcasts the bias across batch and sequence dimensions, effectively treating it as $\R^{1 \times 1 \times 768}$ and expanding it to match the full shape.
+</div>
+
 <h3>Transpose</h3>
 
-<div class="definition"><strong>Definition:</strong>
+<div class="definition"><strong>Definition:</strong> 
+NVIDIA GPUs use specialized Tensor Cores for accelerated matrix multiplication, achieving dramatically higher throughput than standard CUDA cores. The A100 GPU delivers 312 TFLOPS peak performance for FP16 operations with Tensor Cores, has 1.6 TB/s memory bandwidth, and includes 40 MB of L2 cache to reduce memory access latency.
+
+<p>For matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{4096 \times 4096}$, we need $2 \times 4096^3 = 137{,}438{,}953{,}472 \approx 137.4$ GFLOPs of computation and must transfer $3 \times 4096^2 \times 4 = 201{,}326{,}592 \approx 192$ MB of data (three matrices at 4 bytes per float). On an A100, this takes approximately $\frac{137.4 \text{ GFLOPS}}{312{,}000 \text{ GFLOPS}} \approx 0.44$ ms, making it compute-bound since the computation time exceeds the memory transfer time of $\frac{192 \text{ MB}}{1{,}600{,}000 \text{ MB/s}} \approx 0.12$ ms.
+</div>
+
+<h4>Compute-Bound vs Memory-Bound Operations</h4>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>Arithmetic intensity</strong> measures the ratio of computation to memory access:
+<div class="equation">
+$$
+\text{Arithmetic Intensity} = \frac{\text{FLOPs}}{\text{Bytes Transferred}}
+$$
+</div>
+
+<p>Operations with high arithmetic intensity are <strong>compute-bound</strong>, meaning they are limited by computational throughput, while operations with low arithmetic intensity are <strong>memory-bound</strong>, meaning they are limited by memory bandwidth.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Element-wise operations like ReLU, which computes $\vy = \max(0, \vx)$, perform $n$ comparisons while transferring $2n$ elements at 4 bytes each for a total of $8n$ bytes, yielding an arithmetic intensity of only $\frac{n}{8n} = 0.125$ FLOP/byte. This makes element-wise operations memory-bound, as the GPU spends more time waiting for data than computing.
+
+<p>In contrast, matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{n \times n}$ performs $2n^3$ FLOPs while transferring $3n^2 \times 4 = 12n^2$ bytes, yielding an arithmetic intensity of $\frac{2n^3}{12n^2} = \frac{n}{6}$ FLOP/byte. For $n = 1024$, this gives 170.7 FLOP/byte, making the operation compute-bound and well-suited for GPU acceleration. For smaller matrices with $n = 64$, the arithmetic intensity drops to 10.7 FLOP/byte, placing it in a transitional regime where both compute and memory bandwidth matter.
+</div>
+
+<div class="keypoint">
+<strong>Matrix Blocking for Cache Efficiency:</strong> Large matrix multiplications are broken into smaller blocks that fit in cache, computing $\mC_{ij} = \sum_{k} \mA_{ik} \mB_{kj}$ where each block is typically $32 \times 32$ or $64 \times 64$ elements. This blocking strategy reduces cache misses from $O(n^3)$ to $O(n^3/\sqrt{M})$ where $M$ is the cache size, dramatically improving performance by ensuring that frequently accessed data remains in fast cache memory rather than requiring slow main memory accesses.
+</div>
+
+<h2>Dot Products and Similarity</h2>
 
 <div class="definition"><strong>Definition:</strong> 
 For vectors $\vx, \vy \in \R^n$, the <strong>dot product</strong> is:
@@ -360,30 +474,112 @@ $$
 \mA = \mU \boldsymbol{\Sigma} \mV\transpose
 $$
 </div>
-where:
-<ul>
-    <li>$\mU \in \R^{m \times m}$ is orthogonal (left singular vectors)
-    <li>$\boldsymbol{\Sigma} \in \R^{m \times n}$ is diagonal with singular values $\sigma_1 \geq \sigma_2 \geq \cdots \geq 0$
-    <li>$\mV \in \R^{n \times n}$ is orthogonal (right singular vectors)
-</ul>
+where $\mU \in \R^{m \times m}$ is an orthogonal matrix of left singular vectors, $\boldsymbol{\Sigma} \in \R^{m \times n}$ is a diagonal matrix with singular values $\sigma_1 \geq \sigma_2 \geq \cdots \geq 0$, and $\mV \in \R^{n \times n}$ is an orthogonal matrix of right singular vectors.
 </div>
 
 <div class="keypoint">
 SVD always exists for any matrix, unlike eigendecomposition which requires special conditions.
 </div>
 
-<div class="example"><strong>Example:</strong> 
-Consider weight matrix $\mW \in \R^{512 \times 2048}$ containing $1{,}048{,}576$ parameters.
+<h4>Low-Rank Approximation and Model Compression</h4>
 
-<p>Using rank-$k=64$ SVD approximation:
+<p>SVD enables efficient model compression by approximating matrices with lower-rank factorizations.</p>
+
+<div class="theorem"><strong>Theorem:</strong> 
+The best rank-$k$ approximation to $\mA$ in Frobenius norm is:
 <div class="equation">
 $$
-\mW \approx \mW_1 \mW_2
+\mA_k = \sum_{i=1}^{k} \sigma_i \vu_i \vv_i\transpose
 $$
 </div>
-where $\mW_1 \in \R^{512 \times 64}$ (32,768 parameters) and $\mW_2 \in \R^{64 \times 2048}$ (131,072 parameters).</p>
+where $\sigma_i$ are the $k$ largest singular values with corresponding singular vectors $\vu_i, \vv_i$.
 
-<p>Total: 163,840 parameters $\Rightarrow$ <strong>84\% compression!</strong>
+<p>The approximation error is:
+<div class="equation">
+$$
+\norm{\mA - \mA_k}_F = \sqrt{\sum_{i=k+1}^{r} \sigma_i^2}
+$$
+</div>
+where $r = \min(m, n)$ is the rank of $\mA$.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Consider weight matrix $\mW \in \R^{512 \times 2048}$ containing $1{,}048{,}576$ parameters. The full SVD gives $\mW = \mU \boldsymbol{\Sigma} \mV\transpose$ where $\mU \in \R^{512 \times 512}$, $\boldsymbol{\Sigma} \in \R^{512 \times 2048}$, and $\mV \in \R^{2048 \times 2048}$.
+
+<p>For a rank-$k$ approximation, we keep only the top $k$ singular values to obtain $\mW \approx \mW_1 \mW_2 = \mU_k \boldsymbol{\Sigma}_k \mV_k\transpose$ where $\mU_k \in \R^{512 \times k}$, $\boldsymbol{\Sigma}_k \in \R^{k \times k}$, and $\mV_k \in \R^{k \times 2048}$. We can absorb the diagonal matrix $\boldsymbol{\Sigma}_k$ into either factor, giving $\mW_1 = \mU_k \boldsymbol{\Sigma}_k \in \R^{512 \times k}$ and $\mW_2 = \mV_k\transpose \in \R^{k \times 2048}$.</p>
+
+<p>The original matrix has $512 \times 2048 = 1{,}048{,}576$ parameters, while the compressed form has $512k + 2048k = 2560k$ parameters, yielding a compression ratio of $\frac{2560k}{1{,}048{,}576} = \frac{k}{409.6}$. For $k = 64$, we have $2560 \times 64 = 163{,}840$ parameters, achieving 84.4\% compression. For $k = 128$, we have $327{,}680$ parameters, achieving 68.8\% compression.</p>
+
+<p>In terms of memory savings with 32-bit floats, the original matrix requires $1{,}048{,}576 \times 4 = 4{,}194{,}304$ bytes or approximately 4.0 MB. The compressed version with $k=64$ requires only $163{,}840 \times 4 = 655{,}360$ bytes or approximately 0.625 MB, saving 3.375 MB per layer. For a model with 100 such layers, this yields a total savings of 337.5 MB, significantly reducing memory footprint and enabling deployment on resource-constrained devices.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Consider a weight matrix with singular values that decay exponentially:
+<div class="equation">
+$$
+\sigma_i = \sigma_1 \cdot e^{-\alpha i}
+$$
+</div>
+
+<p>The relative approximation error for rank-$k$ approximation is:
+<div class="equation">
+$$
+\frac{\norm{\mW - \mW_k}_F}{\norm{\mW}_F} = \sqrt{\frac{\sum_{i=k+1}^{r} \sigma_i^2}{\sum_{i=1}^{r} \sigma_i^2}}
+$$
+</div>
+
+<p><strong>Typical results for transformer feed-forward layers:</strong>
+\begin{center}
+\begin{tabular}{cccc}
+\hline
+Rank $k$ & Compression & Relative Error & Accuracy Drop \\
+\hline
+256 & 50\% & 0.05 & $<$0.1\% \\
+128 & 75\% & 0.12 & 0.3\% \\
+64 & 87.5\% & 0.25 & 1.2\% \\
+32 & 93.75\% & 0.45 & 3.5\% \\
+\hline
+\end{tabular}
+\end{center}</p>
+
+<p>Sweet spot: 50-75\% compression with minimal accuracy loss.
+</div>
+
+<h4>SVD in Modern Architectures</h4>
+
+<div class="keypoint">
+<strong>LoRA (Low-Rank Adaptation):</strong> Instead of fine-tuning all parameters in a pre-trained model, LoRA adds low-rank updates through the decomposition $\mW' = \mW + \Delta \mW = \mW + \mB\mA$, where the original weights $\mW \in \R^{d \times k}$ remain frozen, and only the low-rank factors $\mB \in \R^{d \times r}$ and $\mA \in \R^{r \times k}$ with $r \ll \min(d, k)$ are trained. For a layer with $d = 4096$ and $k = 4096$, full fine-tuning requires updating $16{,}777{,}216$ parameters, while LoRA with rank $r = 8$ requires only $8 \times (4096 + 4096) = 65{,}536$ trainable parameters, achieving a 99.6\% parameter reduction while maintaining comparable performance.
+</div>
+
+<div class="implementation">
+Computing SVD and low-rank approximation in PyTorch:
+<pre><code>import torch
+
+<p># Original weight matrix
+W = torch.randn(512, 2048)</p>
+
+<p># Compute SVD
+U, S, Vt = torch.linalg.svd(W, full_matrices=False)</p>
+
+<p># Rank-k approximation
+k = 64
+W_compressed = U[:, :k] @ torch.diag(S[:k]) @ Vt[:k, :]</p>
+
+<p># Factored form for efficient computation
+W1 = U[:, :k] @ torch.diag(S[:k])  # 512 x 64
+W2 = Vt[:k, :]                       # 64 x 2048</p>
+
+<p># Verify approximation
+error = torch.norm(W - W_compressed, p='fro')
+relative_error = error / torch.norm(W, p='fro')
+print(f"Relative error: {relative_error:.4f}")</p>
+
+<p># Memory comparison
+original_params = W.numel()
+compressed_params = W1.numel() + W2.numel()
+compression_ratio = compressed_params / original_params
+print(f"Compression: {(1-compression_ratio)*100:.1f}
+</code></pre>
 </div>
 
 <h2>Norms and Distance Metrics</h2>
@@ -425,6 +621,64 @@ frob_norm = torch.norm(W, p='fro')
 </code></pre>
 </div>
 
+<h2>Practical Deep Learning Examples</h2>
+
+<h3>Embedding Layers and Memory Requirements</h3>
+
+<div class="example"><strong>Example:</strong> 
+Large language models use embedding layers to map discrete tokens to continuous vector representations. For GPT-3, the vocabulary contains $V = 50{,}257$ tokens, each mapped to a vector of dimension $d_{\text{model}} = 12{,}288$, requiring an embedding matrix $\mE \in \R^{50257 \times 12288}$ with $50{,}257 \times 12{,}288 = 617{,}558{,}016$ parameters. Storing these embeddings in 32-bit floating-point format requires $617{,}558{,}016 \times 4 = 2{,}470{,}232{,}064$ bytes or approximately 2.3 GB of memory, while 16-bit format reduces this to approximately 1.15 GB.
+
+<p>For a batch of $B = 32$ sequences of length $n = 2048$, the input consists of integer token IDs in $\R^{32 \times 2048}$, which the embedding layer transforms into dense representations in $\R^{32 \times 2048 \times 12288}$, requiring $32 \times 2048 \times 12288 \times 4 = 3{,}221{,}225{,}472$ bytes or approximately 3.0 GB of memory. This demonstrates why large batch sizes and long sequences quickly exhaust GPU memory, necessitating techniques like gradient checkpointing and mixed-precision training.
+</div>
+
+<h3>Complete Transformer Layer Analysis</h3>
+
+<div class="example"><strong>Example:</strong> 
+Consider a single transformer layer with $d_{\text{model}} = 768$, $h = 12$ attention heads, $d_k = d_v = 64$ per head, and feed-forward dimension $d_{ff} = 3072$. The multi-head attention mechanism requires four weight matrices: $\mW_Q, \mW_K, \mW_V \in \R^{768 \times 768}$ for projecting to queries, keys, and values, plus $\mW_O \in \R^{768 \times 768}$ for the output projection, totaling $4 \times 768^2 = 2{,}359{,}296$ parameters. The feed-forward network uses $\mW_1 \in \R^{3072 \times 768}$ with bias $\vb_1 \in \R^{3072}$ for the expansion, and $\mW_2 \in \R^{768 \times 3072}$ with bias $\vb_2 \in \R^{768}$ for the projection back, totaling $2 \times (768 \times 3072) + 3072 + 768 = 4{,}722{,}432$ parameters. Two layer normalization operations add $2 \times 2 \times 768 = 3{,}072$ parameters (scale and shift for each), bringing the total per layer to $2{,}359{,}296 + 4{,}722{,}432 + 3{,}072 = 7{,}084{,}800$ parameters.
+
+<p>For BERT-base with 12 such layers, the transformer stack contains $12 \times 7{,}084{,}800 = 85{,}017{,}600$ parameters (excluding embeddings), requiring $85{,}017{,}600 \times 4 = 340{,}070{,}400$ bytes or approximately 324 MB of memory for 32-bit weights. The computational cost for processing a batch of $B=32$ sequences of length $n=512$ includes approximately 154.6 GFLOPs for attention (from $4Bnd_{\text{model}}^2 + 2Bn^2d_{\text{model}}$) and 154.6 GFLOPs for the feed-forward network (from $4Bnd_{\text{model}}d_{ff}$), totaling approximately 309 GFLOPs per layer or 3.7 TFLOPs for all 12 layers. On an NVIDIA A100 GPU with 312 TFLOPS peak performance, a forward pass takes approximately 12 ms, though actual performance depends on memory bandwidth, kernel launch overhead, and other factors.
+</div>
+
+<h3>Common Dimension Errors and Debugging</h3>
+
+<div class="keypoint">
+<strong>Dimension Mismatch Errors:</strong> The most common bugs in deep learning involve incompatible tensor dimensions. When debugging dimension errors, start by printing tensor shapes using <code>print(x.shape)</code> to verify actual dimensions against expected values. Check whether the batch dimension is present (is it $\R^{B \times \ldots}$ or just $\R^{\ldots}$?), verify the sequence length dimension (is it $\R^{B \times n \times d}$ or $\R^{B \times d \times n}$?), confirm that matrix multiplication has compatible inner dimensions, and watch for unintentional broadcasting that may hide shape mismatches. These systematic checks quickly identify the source of dimension errors and guide appropriate fixes.
+</div>
+
+<div class="implementation">
+Common dimension fixes in PyTorch:
+<pre><code>import torch
+
+<p># Problem: Shape mismatch in matrix multiplication
+Q = torch.randn(32, 512, 768)  # [batch, seq_len, d_model]
+K = torch.randn(32, 512, 768)</p>
+
+<p># Wrong: Q @ K gives error (768 != 512)
+# scores = Q @ K  # Error!</p>
+
+<p># Correct: Transpose last two dimensions of K
+scores = Q @ K.transpose(-2, -1)  # [32, 512, 512]</p>
+
+<p># Problem: Missing batch dimension
+x = torch.randn(512, 768)  # Missing batch dimension
+W = torch.randn(768, 3072)</p>
+
+<p># Add batch dimension
+x = x.unsqueeze(0)  # [1, 512, 768]
+output = x @ W      # [1, 512, 3072]</p>
+
+<p># Problem: Broadcasting confusion
+x = torch.randn(32, 512, 768)
+bias = torch.randn(768)</p>
+
+<p># This works due to broadcasting
+output = x + bias  # bias broadcasts to [32, 512, 768]</p>
+
+<p># Explicit broadcasting (clearer)
+output = x + bias.view(1, 1, 768)
+</code></pre>
+</div>
+
 <h2>Exercises</h2>
 
 <div class="exercise"><strong>Exercise:</strong> 
@@ -455,6 +709,46 @@ A weight matrix $\mW \in \R^{1024 \times 4096}$ is approximated using SVD with r
     <li>Express the number of parameters as a function of $r$
     <li>What value of $r$ achieves 75\% compression?
     <li>What is the memory savings in MB (assuming 32-bit floats)?
+</ol>
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> 
+Consider computing attention scores $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in \R^{B \times n \times d_k}$ with $B = 16$, $n = 1024$, $d_k = 64$.
+<ol>
+    <li>What are the dimensions of the output $\mA$?
+    <li>Calculate the total FLOPs required
+    <li>Compute the arithmetic intensity (FLOPs per byte transferred, assuming 32-bit floats)
+    <li>Is this operation compute-bound or memory-bound on a GPU with 312 TFLOPS and 1.6 TB/s bandwidth?
+</ol>
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> 
+An embedding layer has vocabulary size $V = 32{,}000$ and embedding dimension $d = 512$.
+<ol>
+    <li>How many parameters does the embedding matrix contain?
+    <li>What is the memory requirement in MB for 32-bit floats?
+    <li>For a batch of $B = 64$ sequences of length $n = 256$, what is the memory required for the embedded representations?
+    <li>If we use LoRA with rank $r = 16$ to adapt the embeddings, how many trainable parameters are needed?
+</ol>
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> 
+Compare the computational cost of two equivalent operations:
+<ol>
+    <li>Computing $(\mA\mB)\vx$ where $\mA \in \R^{m \times n}$, $\mB \in \R^{n \times p}$, $\vx \in \R^p$
+    <li>Computing $\mA(\mB\vx)$
+</ol>
+For $m = 512$, $n = 2048$, $p = 512$, which order is more efficient and by what factor?
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> 
+A matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$ is performed on a GPU.
+<ol>
+    <li>Calculate the total FLOPs
+    <li>Calculate the memory transferred (assuming matrices are read once and result written once)
+    <li>Compute the arithmetic intensity
+    <li>If the GPU has 100 TFLOPS compute and 900 GB/s memory bandwidth, what is the theoretical execution time assuming perfect utilization?
+    <li>Which resource (compute or memory) is the bottleneck?
 </ol>
 </div>
         

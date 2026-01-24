@@ -72,6 +72,20 @@
         <a href="chapter07_attention_fundamentals.html">Ch 7</a>
         <a href="chapter08_self_attention.html">Ch 8</a>
         <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
     </nav>
 
     <main>
@@ -355,6 +369,146 @@ Initialize $\mathbf{m}_0 = \mathbf{0}$ (first moment), $\mathbf{v}_0 = \mathbf{0
 
 <p>Adam is the most commonly used optimizer for training transformers and large language models.</p>
 
+<h2>Gradient Computation Complexity</h2>
+
+<p>Understanding the computational and memory costs of gradient computation is essential for training large models efficiently.</p>
+
+<h3>FLOPs for Gradient Computation</h3>
+
+<div class="keypoint">
+Computing gradients via backpropagation requires approximately 2× the FLOPs of the forward pass: 1× for the backward pass itself, plus the original 1× forward pass.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base (110M parameters, 12 layers, $d_{\text{model}} = 768$) processing sequence length $n = 512$:
+
+<p><strong>Forward pass:</strong>
+<ul>
+    <li>Self-attention: $12 \times 4n^2d = 12 \times 4(512)^2(768) \approx 48$ GFLOPs
+    <li>Feed-forward: $12 \times 2nd(4d) = 12 \times 2(512)(768)(3072) \approx 36$ GFLOPs
+    <li>Other operations: $\approx 12$ GFLOPs
+    <li><strong>Total forward: $\approx 96$ GFLOPs</strong>
+</ul>
+
+<p><strong>Backward pass:</strong>
+<ul>
+    <li>Gradient computation through each layer: $\approx 96$ GFLOPs
+    <li>Gradient accumulation for weight updates: $\approx 97$ GFLOPs
+    <li><strong>Total backward: $\approx 193$ GFLOPs</strong>
+</ul>
+
+<p><strong>Total per training step: $\approx 289$ GFLOPs</strong></p>
+
+<p>For batch size $B = 32$: $289 \times 32 \approx 9.2$ TFLOPs per batch.
+</div>
+
+<h3>Memory Requirements for Activations</h3>
+
+<p>During backpropagation, intermediate activations must be stored for gradient computation.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For a network with $L$ layers processing batch size $B$, activation memory is:
+<div class="equation">
+$$
+M_{\text{act}} = B \sum_{\ell=1}^L d_\ell
+$$
+</div>
+where $d_\ell$ is the dimension of layer $\ell$'s output.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base with batch size $B = 32$, sequence length $n = 512$, $d = 768$:
+
+<p><strong>Per transformer layer:</strong>
+<ul>
+    <li>Query, Key, Value projections: $3 \times Bnd = 3 \times 32 \times 512 \times 768 \times 4 \text{ bytes} \approx 113$ MB
+    <li>Attention scores: $B \times h \times n \times n = 32 \times 12 \times 512 \times 512 \times 4 \text{ bytes} \approx 402$ MB
+    <li>Attention output: $Bnd \approx 38$ MB
+    <li>Feed-forward intermediate: $B \times n \times 4d \approx 151$ MB
+    <li><strong>Per layer total: $\approx 704$ MB</strong>
+</ul>
+
+<p><strong>For 12 layers: $704 \times 12 \approx 8.4$ GB</strong></p>
+
+<p>This excludes gradients and optimizer states!
+</div>
+
+<h3>Automatic Differentiation: Forward vs Reverse Mode</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Forward mode computes derivatives by propagating tangent vectors forward through the computational graph. For function $f: \R^n \to \R^m$, computing $\nabla f$ requires $n$ forward passes.
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+Reverse mode (backpropagation) computes derivatives by propagating adjoints backward. Computing $\nabla f$ requires 1 forward pass + 1 backward pass, regardless of $n$.
+</div>
+
+<div class="keypoint">
+For neural networks where $n \gg m$ (millions of parameters, one loss), reverse mode is vastly more efficient: $O(1)$ passes vs $O(n)$ passes.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For a network with $n = 10^8$ parameters (100M) and scalar loss ($m = 1$):
+
+<p><strong>Forward mode:</strong>
+<ul>
+    <li>Requires $10^8$ forward passes
+    <li>Each pass: $\approx 100$ GFLOPs
+    <li>Total: $10^{10}$ GFLOPs $\approx 10$ PFLOPs
+    <li>Time on A100 GPU (312 TFLOPS): $\approx 32,000$ seconds $\approx 9$ hours
+</ul>
+
+<p><strong>Reverse mode (backpropagation):</strong>
+<ul>
+    <li>Requires 1 forward + 1 backward pass
+    <li>Total: $\approx 300$ GFLOPs
+    <li>Time on A100 GPU: $\approx 0.001$ seconds
+    <li><strong>Speedup: $\approx 32$ million×</strong>
+</ul>
+</div>
+
+<h3>Gradient Checkpointing</h3>
+
+<p>Gradient checkpointing trades computation for memory by recomputing activations during the backward pass.</p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Checkpointing</div>
+\KwIn{Network with $L$ layers, checkpoint every $k$ layers}
+\tcp{Forward Pass}
+\For{$\ell = 1$ \KwTo $L$}{
+    Compute $\vh^{(\ell)} = f^{(\ell)}(\vh^{(\ell-1)})$ \\
+    \If{$\ell \bmod k = 0$}{
+        Save $\vh^{(\ell)}$ to memory (checkpoint)
+    }
+}
+
+<p>\tcp{Backward Pass}
+\For{$\ell = L$ \KwTo $1$}{
+    \If{$\vh^{(\ell)}$ not in memory}{
+        Recompute forward from last checkpoint to layer $\ell$
+    }
+    Compute gradient $\nabla_{\vh^{(\ell-1)}} L$ using $\vh^{(\ell)}$
+}
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base (12 layers) with checkpointing every 3 layers:
+
+<p><strong>Without checkpointing:</strong>
+<ul>
+    <li>Memory: $8.4$ GB (all activations)
+    <li>Computation: $289$ GFLOPs (1 forward + 1 backward)
+</ul>
+
+<p><strong>With checkpointing (every 3 layers):</strong>
+<ul>
+    <li>Memory: $8.4 / 3 \approx 2.8$ GB (only checkpoints)
+    <li>Computation: $96 + 193 + 72 = 361$ GFLOPs (1 forward + 1 backward + 0.75 forward recompute)
+    <li><strong>Memory reduction: 3×, Computation increase: 1.25×</strong>
+</ul>
+
+<p>For GPT-3 (175B parameters), checkpointing is essential to fit in GPU memory.
+</div>
+
 <h2>Backpropagation</h2>
 
 <p>Backpropagation efficiently computes gradients in neural networks using the chain rule.</p>
@@ -419,9 +573,235 @@ $\boldsymbol{\delta}^{(L)} = \nabla_{\vh^{(L)}} L \odot \sigma'^{(L)}(\vz^{(L)})
 Backpropagation computes gradients in $O(n)$ time where $n$ is the number of parameters, compared to $O(n^2)$ for naive methods. This efficiency enables training of billion-parameter models.
 </div>
 
+<h3>Why Backpropagation is $O(n)$ Not $O(n^2)$</h3>
+
+<div class="theorem"><strong>Theorem:</strong> 
+For a neural network with $n$ parameters and $m$ operations, backpropagation computes all gradients in $O(m)$ time, where typically $m = O(n)$.
+</div>
+
+<p>\begin{proof}[Intuition]
+Each operation in the forward pass corresponds to one gradient computation in the backward pass. The chain rule allows us to reuse intermediate gradients:
+<div class="equation">
+$$
+\frac{\partial L}{\partial w_i} = \frac{\partial L}{\partial z_j} \cdot \frac{\partial z_j}{\partial w_i}
+$$
+</div>
+
+<p>We compute $\frac{\partial L}{\partial z_j}$ once and reuse it for all parameters that affect $z_j$. This sharing prevents the $O(n^2)$ cost of computing each gradient independently.
+\end{proof}</p>
+
+<div class="example"><strong>Example:</strong> 
+For a network with $n = 10^8$ parameters:
+
+<p><strong>Naive finite differences:</strong>
+<div class="equation">
+$$
+\frac{\partial L}{\partial w_i} \approx \frac{L(w_i + \epsilon) - L(w_i)}{\epsilon}
+$$
+</div>
+Requires $n$ forward passes: $O(n \cdot m) = O(n^2)$ operations.</p>
+
+<p><strong>Backpropagation:</strong>
+<ul>
+    <li>Forward pass: $O(m) = O(n)$ operations
+    <li>Backward pass: $O(m) = O(n)$ operations
+    <li>Total: $O(n)$ operations
+</ul>
+
+<p><strong>Speedup: $O(n) = 10^8$×</strong>
+</div>
+
+<h2>Optimizer Memory Requirements</h2>
+
+<p>Different optimizers have vastly different memory requirements, which becomes critical for large models.</p>
+
+<h3>Memory Comparison by Optimizer</h3>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+<strong>Optimizer</strong> & <strong>Memory per Parameter</strong> & <strong>Total Memory Factor</strong> \\
+\midrule
+SGD (no momentum) & 4 bytes (fp32) & 1× \\
+SGD with momentum & 8 bytes (param + velocity) & 2× \\
+Adam & 16 bytes (param + 2 moments) & 4× \\
+Adam (mixed precision) & 10 bytes (fp16 param + fp32 master + 2 moments) & 2.5× \\
+\bottomrule
+\end{tabular}
+\caption{Memory requirements per parameter for different optimizers}</p>
+
+<p>\end{table}</p>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base with 110M parameters:
+
+<p><strong>Model parameters:</strong>
+<ul>
+    <li>FP32: $110 \times 10^6 \times 4 \text{ bytes} = 440$ MB
+    <li>FP16: $110 \times 10^6 \times 2 \text{ bytes} = 220$ MB
+</ul>
+
+<p><strong>SGD with momentum:</strong>
+<ul>
+    <li>Parameters: 440 MB
+    <li>Momentum buffer: 440 MB
+    <li><strong>Total: 880 MB</strong>
+</ul>
+
+<p><strong>Adam optimizer:</strong>
+<ul>
+    <li>Parameters: 440 MB
+    <li>First moment ($\mathbf{m}$): 440 MB
+    <li>Second moment ($\mathbf{v}$): 440 MB
+    <li>Gradients: 440 MB
+    <li><strong>Total: 1,760 MB $\approx 1.7$ GB</strong>
+</ul>
+
+<p><strong>Adam with mixed precision:</strong>
+<ul>
+    <li>FP16 parameters: 220 MB
+    <li>FP32 master copy: 440 MB
+    <li>FP32 first moment: 440 MB
+    <li>FP32 second moment: 440 MB
+    <li>FP16 gradients: 220 MB
+    <li><strong>Total: 1,760 MB $\approx 1.7$ GB</strong>
+</ul>
+
+<p>Note: Mixed precision doesn't reduce optimizer memory, but enables larger batch sizes.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For GPT-3 (175B parameters) with Adam optimizer:
+
+<p><strong>Model + optimizer states:</strong>
+<ul>
+    <li>Parameters (FP16): $175 \times 10^9 \times 2 = 350$ GB
+    <li>Master copy (FP32): $175 \times 10^9 \times 4 = 700$ GB
+    <li>First moment (FP32): 700 GB
+    <li>Second moment (FP32): 700 GB
+    <li>Gradients (FP16): 350 GB
+    <li><strong>Total: 2,800 GB $\approx 2.8$ TB</strong>
+</ul>
+
+<p>This requires distributed training across multiple GPUs. With 8× A100 GPUs (80 GB each = 640 GB total), we need model parallelism and optimizer state sharding (e.g., ZeRO optimizer).
+</div>
+
+<h3>Impact on GPU Memory Budget</h3>
+
+<div class="keypoint">
+For large models, optimizer states often consume more memory than the model itself. Adam uses 4× parameter memory, leaving less room for batch size and activations.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Training BERT-base on A100 GPU (80 GB memory):
+
+<p><strong>Memory allocation:</strong>
+<ul>
+    <li>Model parameters: 0.44 GB
+    <li>Optimizer states (Adam): 1.32 GB
+    <li>Activations (batch size 32): 8.4 GB
+    <li>Gradients: 0.44 GB
+    <li>Framework overhead: $\approx 2$ GB
+    <li><strong>Total: $\approx 12.6$ GB</strong>
+</ul>
+
+<p><strong>Remaining: 67.4 GB</strong> available for larger batch sizes or longer sequences.</p>
+
+<p>With batch size 256: Activations $\approx 67$ GB, total $\approx 71$ GB (fits comfortably).
+</div>
+
 <h2>Learning Rate Schedules</h2>
 
 <p>Learning rate schedules adjust $\eta$ during training to improve convergence.</p>
+
+<h3>Learning Rate Impact on Convergence and GPU Utilization</h3>
+
+<div class="keypoint">
+Learning rate affects both convergence speed and hardware efficiency. Larger learning rates enable larger batch sizes, improving GPU utilization.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Training BERT-base on 1M examples:
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{cccc}
+\toprule
+<strong>Learning Rate</strong> & <strong>Steps to Converge</strong> & <strong>Wall Time</strong> & <strong>Final Loss</strong> \\
+\midrule
+$1 \times 10^{-5}$ & 100,000 & 12 hours & 1.85 \\
+$1 \times 10^{-4}$ & 30,000 & 3.6 hours & 1.82 \\
+$5 \times 10^{-4}$ & 15,000 & 1.8 hours & 1.81 \\
+$1 \times 10^{-3}$ & 20,000 & 2.4 hours & 1.83 \\
+$5 \times 10^{-3}$ & Diverges & - & - \\
+\bottomrule
+\end{tabular}
+\caption{Learning rate impact on BERT-base training}
+\end{table}</p>
+
+<p>Optimal learning rate ($5 \times 10^{-4}$) achieves 6.7× faster convergence than conservative rate.
+</div>
+
+<h3>Learning Rate Scaling with Batch Size</h3>
+
+<div class="theorem"><strong>Theorem:</strong> 
+When increasing batch size by factor $k$, scale learning rate by $k$ to maintain convergence behavior:
+<div class="equation">
+$$
+\eta_{\text{new}} = k \cdot \eta_{\text{base}}
+$$
+</div>
+
+<p>This holds approximately for $k \leq 8$. For larger $k$, use gradual warmup.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Training BERT-base with different batch sizes:
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+<strong>Batch Size</strong> & <strong>Learning Rate</strong> & <strong>GPU Util.</strong> & <strong>Steps/sec</strong> & <strong>Samples/sec</strong> \\
+\midrule
+32 & $5 \times 10^{-4}$ & 45\% & 2.1 & 67 \\
+64 & $1 \times 10^{-3}$ & 68\% & 1.8 & 115 \\
+128 & $2 \times 10^{-3}$ & 85\% & 1.4 & 179 \\
+256 & $4 \times 10^{-3}$ & 92\% & 1.0 & 256 \\
+512 & $8 \times 10^{-3}$ & 95\% & 0.6 & 307 \\
+\bottomrule
+\end{tabular}
+\caption{Batch size impact on GPU utilization (A100 GPU)}
+\end{table}</p>
+
+<p>Larger batches improve GPU utilization but require proportionally larger learning rates. Throughput increases 4.6× from batch 32 to 512.
+</div>
+
+<h3>Practical Learning Rates for Transformers</h3>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+<strong>Model</strong> & <strong>Batch Size</strong> & <strong>Peak Learning Rate</strong> \\
+\midrule
+BERT-base & 256 & $1 \times 10^{-4}$ \\
+BERT-large & 256 & $5 \times 10^{-5}$ \\
+GPT-2 (117M) & 512 & $2.5 \times 10^{-4}$ \\
+GPT-2 (1.5B) & 512 & $1.5 \times 10^{-4}$ \\
+GPT-3 (175B) & 3.2M & $6 \times 10^{-5}$ \\
+T5-base & 128 & $1 \times 10^{-4}$ \\
+T5-11B & 2048 & $1 \times 10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\caption{Typical learning rates for transformer models}</p>
+
+<p>\end{table}</p>
+
+<div class="keypoint">
+Larger models generally require smaller learning rates for stability. GPT-3 uses $6 \times 10^{-5}$ despite massive batch size of 3.2M tokens.
+</div>
 
 <h3>Common Schedules</h3>
 
@@ -456,6 +836,159 @@ $$
 
 <p>The warmup phase prevents instability in early training of transformers.</p>
 
+<h2>Hardware Considerations for Gradient Computation</h2>
+
+<p>Modern deep learning relies on specialized hardware for efficient gradient computation.</p>
+
+<h3>Gradient Computation on GPUs</h3>
+
+<p>GPUs excel at gradient computation due to massive parallelism in matrix operations.</p>
+
+<div class="example"><strong>Example:</strong> 
+Computing gradients for BERT-base (110M parameters) on one training batch:
+
+<p><strong>NVIDIA A100 GPU:</strong>
+<ul>
+    <li>Forward pass: 0.31 ms (96 GFLOPs ÷ 312 TFLOPS)
+    <li>Backward pass: 0.62 ms (193 GFLOPs ÷ 312 TFLOPS)
+    <li><strong>Total: 0.93 ms per batch</strong>
+    <li>Throughput: 1,075 batches/second
+</ul>
+
+<p><strong>Intel Xeon CPU (32 cores):</strong>
+<ul>
+    <li>Forward pass: 45 ms (96 GFLOPs ÷ 2.1 TFLOPS)
+    <li>Backward pass: 90 ms (193 GFLOPs ÷ 2.1 TFLOPS)
+    <li><strong>Total: 135 ms per batch</strong>
+    <li>Throughput: 7.4 batches/second
+</ul>
+
+<p><strong>GPU speedup: 145×</strong>
+</div>
+
+<h3>Mixed Precision Training</h3>
+
+<p>Mixed precision uses FP16 for computation and FP32 for accumulation, reducing memory and increasing speed.</p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Mixed Precision Training</div>
+\KwIn{Model parameters $\vw$ (FP32 master copy)}
+\For{each training step}{
+    Convert $\vw$ to FP16: $\vw_{16} = \text{FP16}(\vw)$ \\
+    Forward pass in FP16: $\hat{y} = f(\vx; \vw_{16})$ \\
+    Compute loss: $L = \text{Loss}(y, \hat{y})$ \\
+    Scale loss: $L_{\text{scaled}} = s \cdot L$ (prevent underflow) \\
+    Backward pass in FP16: $\mathbf{g}_{16} = \nabla_{\vw_{16}} L_{\text{scaled}}$ \\
+    Unscale gradients: $\mathbf{g}_{16} = \mathbf{g}_{16} / s$ \\
+    Convert to FP32: $\mathbf{g} = \text{FP32}(\mathbf{g}_{16})$ \\
+    Update FP32 master: $\vw \leftarrow \vw - \eta \mathbf{g}$
+}
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Training BERT-base on A100 GPU:
+
+<p><strong>FP32 training:</strong>
+<ul>
+    <li>Forward + backward: 0.93 ms
+    <li>Memory: 12.6 GB
+    <li>Max batch size: 32
+    <li>Throughput: 34,400 samples/sec
+</ul>
+
+<p><strong>Mixed precision (FP16) training:</strong>
+<ul>
+    <li>Forward + backward: 0.48 ms (1.94× faster)
+    <li>Memory: 8.2 GB (35\% reduction)
+    <li>Max batch size: 64
+    <li>Throughput: 133,300 samples/sec (3.87× faster)
+</ul>
+
+<p>Mixed precision provides 1.94× computational speedup and enables 2× larger batches, yielding 3.87× total throughput improvement.
+</div>
+
+<h3>Gradient Accumulation</h3>
+
+<p>Gradient accumulation simulates large batch sizes by accumulating gradients over multiple forward-backward passes.</p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Accumulation</div>
+\KwIn{Desired batch size $B$, physical batch size $b$, accumulation steps $k = B/b$}
+Initialize gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$ \\
+\For{$i = 1$ \KwTo $k$}{
+    Sample mini-batch $\mathcal{B}_i$ of size $b$ \\
+    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
+    Backward pass: $\mathbf{g}_i = \nabla L_i$ \\
+    Accumulate: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} + \mathbf{g}_i$
+}
+Average: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} / k$ \\
+Update parameters: $\vw \leftarrow \vw - \eta \mathbf{g}_{\text{acc}}$ \\
+Clear gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Training GPT-2 (1.5B parameters) on single A100 GPU (80 GB):
+
+<p><strong>Without accumulation:</strong>
+<ul>
+    <li>Max batch size: 4 (memory limit)
+    <li>Update frequency: every 4 samples
+    <li>Training unstable (batch too small)
+</ul>
+
+<p><strong>With gradient accumulation (32 steps):</strong>
+<ul>
+    <li>Physical batch size: 4
+    <li>Effective batch size: $4 \times 32 = 128$
+    <li>Update frequency: every 128 samples
+    <li>Memory: same as batch size 4
+    <li>Training stable and efficient
+</ul>
+
+<p>Trade-off: 32× more forward-backward passes per update, but enables training large models on limited hardware.
+</div>
+
+<h3>Distributed Gradient Synchronization</h3>
+
+<p>For multi-GPU training, gradients must be synchronized across devices.</p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Data Parallel Training with Gradient Synchronization</div>
+\KwIn{$N$ GPUs, global batch size $B$, local batch size $b = B/N$}
+\For{each GPU $i = 1, \ldots, N$ in parallel}{
+    Sample local mini-batch $\mathcal{B}_i$ of size $b$ \\
+    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
+    Backward pass: $\mathbf{g}_i = \nabla L_i$
+}
+All-reduce gradients: $\mathbf{g} = \frac{1}{N} \sum_{i=1}^N \mathbf{g}_i$ \\
+\For{each GPU $i = 1, \ldots, N$ in parallel}{
+    Update local parameters: $\vw_i \leftarrow \vw_i - \eta \mathbf{g}$
+}
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Training BERT-base on 8× A100 GPUs with NVLink:
+
+<p><strong>Single GPU baseline:</strong>
+<ul>
+    <li>Batch size: 32
+    <li>Time per step: 0.93 ms
+    <li>Throughput: 34,400 samples/sec
+</ul>
+
+<p><strong>8 GPUs (data parallel):</strong>
+<ul>
+    <li>Global batch size: 256
+    <li>Time per step: 0.93 ms (computation) + 0.12 ms (communication)
+    <li>Total: 1.05 ms
+    <li>Throughput: 243,800 samples/sec
+    <li><strong>Scaling efficiency: 243,800 / (8 × 34,400) = 88.6\%</strong>
+</ul>
+
+<p>Communication overhead is 11.4\% due to gradient all-reduce. NVLink (600 GB/s) enables efficient synchronization.
+</div>
+
+<div class="keypoint">
+For large models, gradient synchronization can become a bottleneck. Techniques like gradient compression, ZeRO optimizer, and pipeline parallelism reduce communication overhead.
+</div>
+
 <h2>Exercises</h2>
 
 <p>\begin{exercise}
@@ -481,6 +1014,57 @@ A transformer is trained with learning rate warmup over 4000 steps, then inverse
     <li>Plot the learning rate schedule for 100,000 steps
     <li>What is the learning rate at step 1, 4000, and 10,000?
     <li>Why is warmup beneficial for transformer training?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Calculate the memory requirements for training GPT-2 (1.5B parameters) with Adam optimizer:
+<ol>
+    <li>Model parameters in FP16
+    <li>Optimizer states (FP32 master copy + 2 moments)
+    <li>Gradients in FP16
+    <li>Total memory for model + optimizer
+    <li>How many A100 GPUs (80 GB each) are needed?
+</ol>
+</div>
+
+<p>\begin{exercise}
+For BERT-base processing sequence length 512 with batch size 64:
+<ol>
+    <li>Calculate total FLOPs for one training step (forward + backward)
+    <li>Estimate time per step on A100 GPU (312 TFLOPS)
+    <li>How does mixed precision (FP16) affect throughput?
+    <li>What is the maximum batch size that fits in 80 GB memory?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Compare gradient computation methods for a network with $10^7$ parameters:
+<ol>
+    <li>How many forward passes does finite differences require?
+    <li>How many passes does backpropagation require?
+    <li>If one forward pass takes 10 ms, compare total time
+    <li>Why is reverse mode AD preferred over forward mode?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement gradient checkpointing for a 24-layer transformer:
+<ol>
+    <li>Without checkpointing, how much activation memory is needed?
+    <li>With checkpointing every 6 layers, what is the memory reduction?
+    <li>What is the computational overhead (extra forward passes)?
+    <li>At what model size does checkpointing become necessary?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Analyze distributed training efficiency for 8 GPUs:
+<ol>
+    <li>If gradient all-reduce takes 15 ms and computation takes 100 ms, what is the scaling efficiency?
+    <li>How does batch size affect communication overhead?
+    <li>Compare ring all-reduce vs tree all-reduce for 64 GPUs
+    <li>When does gradient compression become beneficial?
 </ol>
 </div>
         

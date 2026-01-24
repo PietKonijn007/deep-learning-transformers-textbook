@@ -112,61 +112,66 @@
 
 <h3>RNN Encoder-Decoder Architecture</h3>
 
-<p><strong>Problem setup:</strong> Translate input sequence $\vx_1, \ldots, \vx_n$ to output sequence $\vy_1, \ldots, \vy_m$</p>
+<p>The sequence-to-sequence (seq2seq) problem requires mapping an input sequence $\vx_1, \ldots, \vx_n$ to an output sequence $\vy_1, \ldots, \vy_m$ of potentially different length. This formulation encompasses machine translation, text summarization, question answering, and many other natural language processing tasks. Before attention mechanisms, the standard approach used recurrent neural networks in an encoder-decoder architecture that suffered from a fundamental information bottleneck.</p>
 
-<p><strong>Standard approach (pre-attention):</strong>
-<ol>
-    <li><strong>Encoder RNN:</strong> Process input, produce final hidden state $\mathbf{c}$ (context vector)
-    <div class="equation">
+<p>The encoder RNN processes the input sequence sequentially, updating its hidden state at each time step:
+<div class="equation">
 $$
-    \vh_t^{\text{enc}} = \text{RNN}(\vx_t, \vh_{t-1}^{\text{enc}}), \quad \mathbf{c} = \vh_n^{\text{enc}}
-    $$
-</div>
-
-<p><li><strong>Decoder RNN:</strong> Generate output conditioned on $\mathbf{c}$
-    <div class="equation">
+\vh_t^{\text{enc}} = \text{RNN}(\vx_t, \vh_{t-1}^{\text{enc}})
 $$
-    \vh_t^{\text{dec}} = \text{RNN}([\vy_{t-1}, \mathbf{c}], \vh_{t-1}^{\text{dec}})
-    $$
 </div>
-</ol>
+After processing all $n$ input tokens, the final hidden state $\mathbf{c} = \vh_n^{\text{enc}}$ serves as the context vector—a fixed-size representation intended to capture the entire input sequence. This context vector, typically 512 or 1024 dimensions for LSTM-based systems, must encode all relevant information from the source sequence regardless of its length.</p>
 
-<p><strong>Bottleneck:</strong> Entire input sequence compressed into single fixed-size vector $\mathbf{c}$! 
-<ul>
-    <li>Long sequences: information loss
-    <li>All input words contribute equally
-    <li>Performance degrades with sequence length
-</ul>
+<p>The decoder RNN then generates the output sequence conditioned on this context vector:
+<div class="equation">
+$$
+\vh_t^{\text{dec}} = \text{RNN}([\vy_{t-1}, \mathbf{c}], \vh_{t-1}^{\text{dec}})
+$$
+</div>
+where $[\vy_{t-1}, \mathbf{c}]$ denotes concatenation of the previous output token embedding and the context vector. The decoder must rely on this single fixed-size vector throughout the entire generation process, accessing the same $\mathbf{c}$ when producing the first output word and the last.</p>
+
+<p><strong>The Information Bottleneck:</strong> Compressing an entire input sequence into a single fixed-size vector creates severe information loss, particularly for long sequences. Consider translating a 50-word English sentence to French. The encoder must compress 50 words of semantic content, syntactic structure, and contextual relationships into a 512-dimensional vector. This is fundamentally insufficient—the context vector becomes an information bottleneck that limits the model's capacity to handle complex or lengthy inputs.</p>
+
+<p>Empirical evidence from early neural machine translation systems demonstrated this limitation quantitatively. For English-French translation using LSTM encoder-decoders with 1000-dimensional hidden states, translation quality (measured by BLEU score) remained stable for source sentences up to 20-25 words but degraded significantly beyond this length. Sentences of 30-40 words showed BLEU score drops of 5-10 points compared to shorter sentences, and sentences exceeding 50 words often produced nearly incomprehensible translations. The fixed-size context vector simply could not retain sufficient information about long, complex source sentences.</p>
+
+<p><strong>Memory and Computational Characteristics:</strong> The RNN encoder-decoder architecture requires $O(n+m)$ memory for storing hidden states during the forward pass, where $n$ is the source length and $m$ is the target length. For a typical translation task with $n=50$, $m=50$, and hidden dimension $d_h=1024$, this amounts to $(50+50) \times 1024 \times 4 = 400$ KB per sequence in FP32. However, the sequential nature of RNN processing prevents parallelization across time steps. Each hidden state $\vh_t$ depends on $\vh_{t-1}$, forcing strictly sequential computation. On a GPU capable of processing thousands of operations in parallel, this sequential constraint severely limits throughput.</p>
+
+<p>For a batch of 32 sequences, the encoder processes $32 \times 50 = 1600$ time steps sequentially, even though the GPU could theoretically process all 1600 in parallel if the operations were independent. This sequential bottleneck means RNN encoder-decoders achieve only 5-10\% of peak GPU utilization during training, wasting the majority of available compute capacity.</p>
 
 <h3>Attention Solution</h3>
 
-<p><strong>Key insight:</strong> When generating output word $\vy_t$, different input words have different relevance.</p>
+<p>Attention mechanisms solve the information bottleneck by allowing the decoder to access all encoder hidden states directly, rather than relying on a single compressed representation. The key insight is that when generating each output word $\vy_t$, different input words have different relevance. When translating "The cat sat on the mat" to French, generating "chat" (cat) should focus primarily on the input word "cat," while generating "assis" (sat) should focus on "sat." The decoder's information needs change dynamically throughout generation.</p>
 
-<p><strong>Attention mechanism:</strong>
-<ul>
-    <li>Compute <strong>context vector</strong> $\mathbf{c}_t$ for each output position $t$
-    <li>$\mathbf{c}_t$ is weighted sum of all encoder hidden states
-    <li>Weights reflect relevance of each input to current output
-</ul>
+<p>Rather than computing a single context vector $\mathbf{c}$ for the entire sequence, attention computes a different context vector $\mathbf{c}_t$ for each output position $t$. This context vector is a weighted sum of all encoder hidden states:
+<div class="equation">
+$$
+\mathbf{c}_t = \sum_{i=1}^{n} \alpha_{t,i} \vh_i^{\text{enc}}
+$$
+</div>
+where the attention weights $\alpha_{t,i}$ indicate how much the decoder should focus on input position $i$ when generating output position $t$. These weights form a probability distribution: $\alpha_{t,i} \geq 0$ and $\sum_{i=1}^n \alpha_{t,i} = 1$.</p>
+
+<p>The attention weights are computed dynamically based on the current decoder state $\mathbf{s}_t$ and each encoder hidden state $\vh_i$. This allows the model to learn which input positions are relevant for each output position, adapting the context vector to the decoder's current needs. When generating the first word of a translation, the attention might focus on the beginning of the source sentence. When generating the last word, attention shifts to the end of the source.</p>
+
+<p><strong>Memory Trade-off:</strong> Attention increases memory requirements from $O(n+m)$ to $O(nm)$ because we must store attention weights $\alpha_{t,i}$ for all pairs of input and output positions. For translation with $n=50$ and $m=50$, this requires storing a $50 \times 50 = 2500$ element attention matrix. At 4 bytes per element (FP32), this is 10 KB per sequence—modest compared to the benefits. However, this quadratic scaling becomes significant for very long sequences. For document-level translation with $n=1000$ and $m=1000$, the attention matrix requires $1000^2 \times 4 = 4$ MB per sequence, or 128 MB for batch size 32.</p>
+
+<p><strong>Parallelization Benefit:</strong> The crucial advantage is that attention enables parallelization. Unlike RNN hidden states that must be computed sequentially, attention weights for all output positions can be computed simultaneously during training when the target sequence is known. This transforms the sequential $O(m)$ decoder steps into a single parallel operation, dramatically improving GPU utilization from 5-10\% to 60-80\% in practice.</p>
 
 <div class="example"><strong>Example:</strong> 
-Translate "The cat sat on the mat" to "Le chat était assis sur le tapis"
+Consider translating the English sentence "The cat sat on the mat" to French: "Le chat était assis sur le tapis." Without attention, the encoder compresses all six English words into a single 512-dimensional context vector, which the decoder uses to generate all seven French words. The context vector must simultaneously encode that "cat" translates to "chat," "sat" translates to "était assis," and "mat" translates to "tapis"—a challenging compression task.
 
-<p>When generating "chat" (cat), attention should focus on "cat" in input.</p>
+<p>With attention, when generating "chat" (cat), the attention mechanism computes weights that heavily favor the input position containing "cat." The attention distribution might be $[0.05, 0.82, 0.03, 0.02, 0.03, 0.05]$, placing 82\% of the weight on position 2 (the word "cat"). The context vector $\mathbf{c}_2$ is then dominated by the encoder hidden state for "cat," providing the decoder with direct access to the relevant input information.</p>
 
-<p>When generating "assis" (sat), attention should focus on "sat".</p>
+<p>When generating "assis" (sat), the attention distribution shifts to $[0.03, 0.08, 0.75, 0.04, 0.05, 0.05]$, now focusing 75\% on position 3 (the word "sat"). The context vector $\mathbf{c}_4$ adapts to provide information about "sat" rather than "cat." This dynamic reweighting allows the decoder to access different parts of the input as needed, eliminating the information bottleneck of the fixed context vector.</p>
 
-<p>Attention weights adapt dynamically based on what decoder is generating!
+<p>Empirically, attention-based translation systems improved BLEU scores by 3-5 points on standard benchmarks and maintained consistent quality even for sentences exceeding 50 words—a regime where RNN encoder-decoders failed catastrophically.
 </div>
 
 <h2>Additive Attention (Bahdanau)</h2>
 
+<p>Bahdanau attention, introduced in 2015 for neural machine translation, was the first widely successful attention mechanism. It computes attention weights using an additive scoring function that combines the decoder state and encoder hidden states through learned transformations. While later superseded by more efficient mechanisms, understanding Bahdanau attention provides crucial insights into attention design and the evolution toward modern transformers.</p>
+
 <div class="definition"><strong>Definition:</strong> 
-Given:
-<ul>
-    <li>Encoder hidden states: $\vh_1, \ldots, \vh_n \in \R^{d_h}$
-    <li>Decoder hidden state at time $t$: $\mathbf{s}_t \in \R^{d_s}$
-</ul>
+Given encoder hidden states $\vh_1, \ldots, \vh_n \in \R^{d_h}$ and decoder hidden state $\mathbf{s}_t \in \R^{d_s}$ at time $t$, Bahdanau attention computes a context vector through four steps:
 
 <p><strong>Step 1: Compute alignment scores</strong>
 <div class="equation">
@@ -174,7 +179,7 @@ $$
 e_{t,i} = \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_t + \mW_2 \vh_i)
 $$
 </div>
-where $\mW_1 \in \R^{d_a \times d_s}$, $\mW_2 \in \R^{d_a \times d_h}$, $\mathbf{v} \in \R^{d_a}$, and $d_a$ is attention dimension.</p>
+where $\mW_1 \in \R^{d_a \times d_s}$, $\mW_2 \in \R^{d_a \times d_h}$, $\mathbf{v} \in \R^{d_a}$, and $d_a$ is the attention dimension (typically 256-512).</p>
 
 <p><strong>Step 2: Compute attention weights (softmax)</strong>
 <div class="equation">
@@ -198,55 +203,123 @@ $$
 </div>
 </div>
 
+<p><strong>Computational Cost Analysis:</strong> The additive scoring function in Step 1 requires substantial computation for each query-key pair. For a single alignment score $e_{t,i}$, we must:
+<ol>
+    <li>Compute $\mW_1 \mathbf{s}_t$: $2d_a d_s$ FLOPs (matrix-vector multiplication)
+    <li>Compute $\mW_2 \vh_i$: $2d_a d_h$ FLOPs
+    <li>Add the results: $d_a$ FLOPs
+    <li>Apply $\tanh$: $\approx 3d_a$ FLOPs (exponentials and divisions)
+    <li>Compute $\mathbf{v}\transpose (\cdot)$: $2d_a$ FLOPs
+</ol>
+
+<p>Total per alignment score: approximately $2d_a(d_s + d_h + 3)$ FLOPs. For a translation task with source length $n$ and target length $m$, we compute $nm$ alignment scores, requiring:
+<div class="equation">
+$$
+\text{Bahdanau alignment FLOPs} \approx 2nmd_a(d_s + d_h + 3)
+$$
+</div>
+
+<p>For typical dimensions $n=50$, $m=50$, $d_a=256$, $d_s=d_h=512$:
+<div class="equation">
+$$
+2 \times 50 \times 50 \times 256 \times (512 + 512 + 3) \approx 1.3 \text{ billion FLOPs}
+$$
+</div>
+
+<p>This is substantial, but the more critical issue is that these operations do not map efficiently to GPU hardware. The additive scoring function involves element-wise operations ($\tanh$), vector additions, and small matrix-vector products that achieve poor utilization on GPUs optimized for large matrix multiplications. In practice, Bahdanau attention achieves only 15-25\% of peak GPU throughput.</p>
+
+<p><strong>Memory Requirements:</strong> The attention mechanism requires storing:
+<ul>
+    <li>Encoder hidden states: $n \times d_h$ elements
+    <li>Alignment scores: $m \times n$ elements (for all decoder positions during training)
+    <li>Attention weights: $m \times n$ elements
+    <li>Intermediate activations: $m \times n \times d_a$ elements for the $\tanh$ layer
+</ul>
+
+<p>For $n=50$, $m=50$, $d_h=512$, $d_a=256$ in FP32:
+<div class="equation">
+$$\begin{align}
+\text{Encoder states:} \quad &50 \times 512 \times 4 = 102 \text{ KB} \\
+\text{Alignment scores:} \quad &50 \times 50 \times 4 = 10 \text{ KB} \\
+\text{Attention weights:} \quad &50 \times 50 \times 4 = 10 \text{ KB} \\
+\text{Intermediate:} \quad &50 \times 50 \times 256 \times 4 = 2.5 \text{ MB}
+\end{align}$$
+</div>
+
+<p>The intermediate activations dominate memory usage, requiring 2.5 MB per sequence or 80 MB for batch size 32. This is manageable for short sequences but scales poorly to longer contexts.</p>
+
+<p><strong>Parameter Count:</strong> Bahdanau attention introduces $O(d_a(d_s + d_h))$ parameters:
+<div class="equation">
+$$\begin{align}
+\mW_1 &\in \R^{d_a \times d_s}: \quad d_a d_s \text{ parameters} \\
+\mW_2 &\in \R^{d_a \times d_h}: \quad d_a d_h \text{ parameters} \\
+\mathbf{v} &\in \R^{d_a}: \quad d_a \text{ parameters}
+\end{align}$$
+</div>
+
+<p>For $d_a=256$, $d_s=d_h=512$: $(256 \times 512) + (256 \times 512) + 256 = 262{,}400$ parameters. While not enormous, these parameters must be learned specifically for the attention mechanism, adding to the model's overall capacity requirements.</p>
+
 <div class="keypoint">
-Attention weights $\alpha_{t,i}$ form probability distribution: $\alpha_{t,i} \geq 0$ and $\sum_{i=1}^n \alpha_{t,i} = 1$.
-Context vector $\mathbf{c}_t$ is weighted average of encoder states.
+Attention weights $\alpha_{t,i}$ form a probability distribution: $\alpha_{t,i} \geq 0$ and $\sum_{i=1}^n \alpha_{t,i} = 1$. This ensures the context vector $\mathbf{c}_t$ is a convex combination of encoder states, interpolating between them rather than extrapolating. The softmax normalization is crucial for training stability—without it, attention weights could grow unbounded, causing gradient explosion.
 </div>
 
 <div class="example"><strong>Example:</strong> 
-Setup:
-<ul>
-    <li>Encoder hidden states: $\vh_1, \vh_2, \vh_3 \in \R^{4}$
-    <li>Decoder state: $\mathbf{s}_2 \in \R^{4}$
-    <li>Attention dimension: $d_a = 3$
-</ul>
+Consider a small example with encoder hidden states $\vh_1, \vh_2, \vh_3 \in \R^{4}$, decoder state $\mathbf{s}_2 \in \R^{4}$, and attention dimension $d_a = 3$. We compute attention for the second decoder position.
 
-<p><strong>Step 1:</strong> Compute scores for each encoder position
+<p><strong>Step 1:</strong> Compute alignment scores for each encoder position. Suppose after applying $\mW_1 \mathbf{s}_2 + \mW_2 \vh_i$ and passing through $\tanh$ and $\mathbf{v}\transpose$, we obtain:
 <div class="equation">
 $$\begin{align}
-e_{2,1} &= \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_2 + \mW_2 \vh_1) \in \R \\
-e_{2,2} &= \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_2 + \mW_2 \vh_2) \in \R \\
-e_{2,3} &= \mathbf{v}\transpose \tanh(\mW_1 \mathbf{s}_2 + \mW_2 \vh_3) \in \R
+e_{2,1} &= 0.8 \\
+e_{2,2} &= 2.1 \\
+e_{2,3} &= 0.5
 \end{align}$$
 </div>
 
-<p>Suppose: $e_{2,1} = 0.8$, $e_{2,2} = 2.1$, $e_{2,3} = 0.5$</p>
+<p>These raw scores indicate that encoder position 2 has the highest compatibility with the current decoder state, but the scores are not yet normalized.</p>
 
-<p><strong>Step 2:</strong> Softmax to get weights
+<p><strong>Step 2:</strong> Apply softmax to convert scores to a probability distribution:
 <div class="equation">
 $$\begin{align}
 \sum_j \exp(e_{2,j}) &= \exp(0.8) + \exp(2.1) + \exp(0.5) \\
-&\approx 2.23 + 8.17 + 1.65 = 12.05 \\
-\alpha_{2,1} &= \frac{2.23}{12.05} \approx 0.185 \\
-\alpha_{2,2} &= \frac{8.17}{12.05} \approx 0.678 \\
-\alpha_{2,3} &= \frac{1.65}{12.05} \approx 0.137
+&\approx 2.23 + 8.17 + 1.65 = 12.05
 \end{align}$$
 </div>
 
-<p>Most attention (67.8\%) on position 2!</p>
+<p>Computing each attention weight:
+<div class="equation">
+$$\begin{align}
+\alpha_{2,1} &= \frac{\exp(0.8)}{12.05} = \frac{2.23}{12.05} \approx 0.185 \\
+\alpha_{2,2} &= \frac{\exp(2.1)}{12.05} = \frac{8.17}{12.05} \approx 0.678 \\
+\alpha_{2,3} &= \frac{\exp(0.5)}{12.05} = \frac{1.65}{12.05} \approx 0.137
+\end{align}$$
+</div>
 
-<p><strong>Step 3:</strong> Compute context
+<p>The decoder places 67.8\% of its attention on encoder position 2, with the remaining attention distributed between positions 1 and 3. This sharp distribution indicates high confidence about which input position is relevant.</p>
+
+<p><strong>Step 3:</strong> Compute the context vector as a weighted sum:
 <div class="equation">
 $$
 \mathbf{c}_2 = 0.185 \vh_1 + 0.678 \vh_2 + 0.137 \vh_3 \in \R^{4}
 $$
 </div>
+
+<p>If $\vh_1 = [1.0, 0.5, -0.3, 0.8]\transpose$, $\vh_2 = [0.3, 0.9, 0.6, -0.2]\transpose$, $\vh_3 = [-0.4, 0.2, 0.7, 0.5]\transpose$:
+<div class="equation">
+$$\begin{align}
+\mathbf{c}_2 &= 0.185 \begin{bmatrix} 1.0 \\ 0.5 \\ -0.3 \\ 0.8 \end{bmatrix} + 0.678 \begin{bmatrix} 0.3 \\ 0.9 \\ 0.6 \\ -0.2 \end{bmatrix} + 0.137 \begin{bmatrix} -0.4 \\ 0.2 \\ 0.7 \\ 0.5 \end{bmatrix} \\
+&= \begin{bmatrix} 0.185 + 0.203 - 0.055 \\ 0.093 + 0.610 + 0.027 \\ -0.056 + 0.407 + 0.096 \\ 0.148 - 0.136 + 0.069 \end{bmatrix} = \begin{bmatrix} 0.333 \\ 0.730 \\ 0.447 \\ 0.081 \end{bmatrix}
+\end{align}$$
+</div>
+
+<p>The context vector is dominated by $\vh_2$ due to the high attention weight $\alpha_{2,2} = 0.678$, but includes contributions from the other encoder states proportional to their attention weights.
 </div>
 
 <h2>Scaled Dot-Product Attention</h2>
 
+<p>Scaled dot-product attention, introduced in the "Attention is All You Need" paper, represents a fundamental simplification and improvement over additive attention. By replacing the learned additive scoring function with a simple scaled dot product, this mechanism achieves superior computational efficiency while maintaining or improving model performance. This design choice enabled the transformer architecture to scale to billions of parameters and become the foundation of modern large language models.</p>
+
 <div class="definition"><strong>Definition:</strong> 
-Given queries $\mQ \in \R^{m \times d_k}$, keys $\mK \in \R^{n \times d_k}$, values $\mV \in \R^{n \times d_v}$:
+Given queries $\mQ \in \R^{m \times d_k}$, keys $\mK \in \R^{n \times d_k}$, and values $\mV \in \R^{n \times d_v}$, scaled dot-product attention computes:
 
 <p><strong>Step 1: Compute attention scores</strong>
 <div class="equation">
@@ -254,7 +327,7 @@ $$
 \mE = \mQ \mK\transpose \in \R^{m \times n}
 $$
 </div>
-Score $e_{i,j}$ measures compatibility of query $i$ with key $j$.</p>
+where entry $e_{i,j} = \vq_i\transpose \vk_j$ measures the compatibility of query $i$ with key $j$.</p>
 
 <p><strong>Step 2: Scale by $\sqrt{d_k</strong>$}
 <div class="equation">
@@ -276,32 +349,142 @@ $$
 \text{Attention}(\mQ, \mK, \mV) = \mA \mV \in \R^{m \times d_v}
 $$
 </div>
-</div>
 
-<p><strong>Complete formula:</strong>
+<p>The complete formula in one line:
 <div class="equation">
 $$
 \text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
 $$
 </div>
+</div>
 
-<div class="keypoint">
-<strong>Why scale by $\sqrt{d_k</strong>$?}
+<h3>Why Scaling Matters: Variance Analysis</h3>
 
-<p>For large $d_k$, dot products grow large in magnitude, pushing softmax into regions with tiny gradients. Scaling keeps values moderate, maintaining good gradient flow.</p>
+<p>The scaling factor $1/\sqrt{d_k}$ is not merely a normalization convenience—it is essential for maintaining stable gradients during training. To understand why, we analyze the variance of dot products between queries and keys.</p>
 
-<p>If $\mQ$ and $\mK$ have unit variance elements:
+<p>Assume query and key vectors have independent elements with zero mean and unit variance: $\mathbb{E}[\vq_i] = \mathbb{E}[\vk_i] = 0$ and $\text{Var}(\vq_i) = \text{Var}(\vk_i) = 1$. The dot product between a query and key is:
 <div class="equation">
 $$
-\text{Var}(\vq\transpose \vk) = d_k \quad \Rightarrow \quad \text{Var}\left(\frac{\vq\transpose \vk}{\sqrt{d_k}}\right) = 1
+\vq\transpose \vk = \sum_{i=1}^{d_k} q_i k_i
 $$
 </div>
+
+<p>Since the elements are independent, the variance of the sum equals the sum of variances:
+<div class="equation">
+$$
+\text{Var}(\vq\transpose \vk) = \sum_{i=1}^{d_k} \text{Var}(q_i k_i) = \sum_{i=1}^{d_k} \mathbb{E}[q_i^2] \mathbb{E}[k_i^2] = \sum_{i=1}^{d_k} 1 \cdot 1 = d_k
+$$
 </div>
 
-<div class="example"><strong>Example:</strong> 
-Query-key-value dimensions: $d_k = 4$, $d_v = 5$
+<p>Without scaling, the dot product has variance $d_k$, which grows linearly with the key dimension. For $d_k = 64$, typical dot products have standard deviation $\sqrt{64} = 8$. For $d_k = 512$, the standard deviation grows to $\sqrt{512} \approx 22.6$. These large magnitudes cause severe problems for the softmax function.</p>
 
-<p>Single query attending to 3 keys:
+<p><strong>Softmax Saturation Problem:</strong> The softmax function is defined as:
+<div class="equation">
+$$
+\text{softmax}(\vz)_i = \frac{\exp(z_i)}{\sum_j \exp(z_j)}
+$$
+</div>
+
+<p>When input magnitudes are large, softmax saturates—one element dominates and receives nearly all the probability mass, while others receive exponentially small probabilities. Consider a simple example with two elements:
+<div class="equation">
+$$
+\text{softmax}([z, 0]) = \left[\frac{\exp(z)}{\exp(z) + 1}, \frac{1}{\exp(z) + 1}\right]
+$$
+</div>
+
+<p>For $z = 10$: $\text{softmax}([10, 0]) \approx [0.9999, 0.0001]$. For $z = 20$: $\text{softmax}([20, 0]) \approx [1.0, 2 \times 10^{-9}]$. The distribution becomes a hard selection rather than a soft weighting.</p>
+
+<p><strong>Gradient Flow Analysis:</strong> The gradient of softmax with respect to its input is:
+<div class="equation">
+$$
+\frac{\partial \text{softmax}(\vz)_i}{\partial z_j} = \text{softmax}(\vz)_i (\delta_{ij} - \text{softmax}(\vz)_j)
+$$
+</div>
+
+<p>When softmax saturates with one element near 1 and others near 0, these gradients become tiny. For the dominant element $i$ where $\text{softmax}(\vz)_i \approx 1$:
+<div class="equation">
+$$
+\frac{\partial \text{softmax}(\vz)_i}{\partial z_i} \approx 1 \cdot (1 - 1) = 0
+$$
+</div>
+
+<p>For non-dominant elements where $\text{softmax}(\vz)_j \approx 0$:
+<div class="equation">
+$$
+\frac{\partial \text{softmax}(\vz)_i}{\partial z_j} \approx 1 \cdot (0 - 0) = 0
+$$
+</div>
+
+<p>All gradients vanish, preventing the model from learning. This is analogous to the vanishing gradient problem in deep networks, but occurring within a single attention layer.</p>
+
+<p><strong>Scaling Solution:</strong> Dividing by $\sqrt{d_k}$ normalizes the variance:
+<div class="equation">
+$$
+\text{Var}\left(\frac{\vq\transpose \vk}{\sqrt{d_k}}\right) = \frac{1}{d_k} \text{Var}(\vq\transpose \vk) = \frac{1}{d_k} \cdot d_k = 1
+$$
+</div>
+
+<p>With unit variance, dot products typically range from $-3$ to $+3$ (within three standard deviations), keeping softmax in its sensitive region where gradients are substantial. This maintains effective gradient flow throughout training.</p>
+
+<p><strong>Numerical Example:</strong> Consider $d_k = 64$ versus $d_k = 512$ with random unit-variance queries and keys. Without scaling, for $d_k = 64$, a typical attention score might be $\vq\transpose \vk = 12.3$. After softmax over 10 keys with similar magnitudes, the distribution might be $[0.45, 0.18, 0.12, 0.08, 0.06, 0.04, 0.03, 0.02, 0.01, 0.01]$—reasonably distributed. The gradient of the top element is approximately $0.45 \times (1 - 0.45) = 0.248$, which is healthy.</p>
+
+<p>For $d_k = 512$ without scaling, the same query-key pair might produce $\vq\transpose \vk = 35.2$. After softmax, the distribution becomes $[0.9997, 0.0001, 0.0001, 0.0001, \ldots]$—completely saturated. The gradient is approximately $0.9997 \times (1 - 0.9997) = 0.0003$, which is 800 times smaller. Over many layers, these tiny gradients compound, making training extremely difficult or impossible.</p>
+
+<p>With scaling by $\sqrt{512} \approx 22.6$, the score becomes $35.2 / 22.6 \approx 1.56$, producing a softmax distribution like $[0.38, 0.15, 0.12, 0.10, \ldots]$ with gradient $0.38 \times (1 - 0.38) = 0.236$—similar to the $d_k = 64$ case. The scaling makes attention behavior independent of the key dimension, enabling stable training across different model sizes.</p>
+
+<h3>Computational Efficiency</h3>
+
+<p>Scaled dot-product attention achieves dramatically better computational efficiency than additive attention, both in raw FLOP count and in hardware utilization. This efficiency difference is why transformers can scale to billions of parameters while additive attention models remained limited to hundreds of millions.</p>
+
+<p><strong>FLOP Count Comparison:</strong> For $m$ queries and $n$ keys with dimension $d_k$:</p>
+
+<p><em>Scaled dot-product attention:</em>
+<div class="equation">
+$$\begin{align}
+\mQ \mK\transpose &: \quad 2mnd_k \text{ FLOPs} \\
+\text{Scaling} &: \quad mn \text{ FLOPs (division)} \\
+\text{Softmax} &: \quad \approx 5mn \text{ FLOPs (exp, sum, divide)} \\
+\mA \mV &: \quad 2mnd_v \text{ FLOPs} \\
+\text{Total} &: \quad 2mn(d_k + d_v) + 6mn \approx 2mn(d_k + d_v)
+\end{align}$$
+</div>
+
+<p>For $d_k = d_v = 64$, $m = n = 512$:
+<div class="equation">
+$$
+2 \times 512 \times 512 \times (64 + 64) = 67{,}108{,}864 \text{ FLOPs} \approx 67 \text{ MFLOPs}
+$$
+</div>
+
+<p><em>Bahdanau attention:</em> As computed earlier, for $d_a = 256$, $d_s = d_h = 512$, $m = n = 512$:
+<div class="equation">
+$$
+2 \times 512 \times 512 \times 256 \times (512 + 512 + 3) \approx 69 \text{ billion FLOPs}
+$$
+</div>
+
+<p>Scaled dot-product attention requires approximately 1000× fewer FLOPs than Bahdanau attention for this configuration! The difference grows with sequence length since Bahdanau's cost scales with the attention dimension $d_a$ while scaled dot-product depends only on $d_k$.</p>
+
+<p><strong>Hardware Efficiency:</strong> Beyond raw FLOP count, scaled dot-product attention maps naturally to highly optimized GPU operations. The core computation $\mQ \mK\transpose$ is a dense matrix multiplication (GEMM), which is the most optimized operation on modern GPUs. NVIDIA's cuBLAS library and Tensor Cores are specifically designed for GEMM, achieving 80-90\% of theoretical peak performance.</p>
+
+<p>In contrast, Bahdanau attention requires element-wise operations ($\tanh$), vector additions, and many small matrix-vector products. These operations achieve only 15-25\% of peak GPU performance due to memory bandwidth limitations and poor parallelization. The $\tanh$ activation requires computing exponentials for each element, which is slow compared to the fused multiply-add operations in GEMM.</p>
+
+<p><strong>Memory Bandwidth Considerations:</strong> Modern GPUs are often memory-bandwidth limited rather than compute-limited. The NVIDIA A100 has 312 TFLOPS of FP16 compute but only 1.5 TB/s memory bandwidth. For operations to be compute-bound, they must perform many FLOPs per byte loaded from memory.</p>
+
+<p>Matrix multiplication $\mQ \mK\transpose$ for $\mQ, \mK \in \R^{512 \times 64}$ loads $2 \times 512 \times 64 \times 2 = 131$ KB (FP16) and performs $2 \times 512 \times 512 \times 64 = 67$ MFLOPs, achieving $67{,}000{,}000 / 131{,}072 \approx 511$ FLOPs per byte. This high arithmetic intensity keeps the GPU compute units busy.</p>
+
+<p>Bahdanau's element-wise operations load data, perform a few operations, and store results—achieving only 1-5 FLOPs per byte. The GPU spends most of its time waiting for memory rather than computing, wasting the available compute capacity.</p>
+
+<p><strong>Practical Performance:</strong> On an NVIDIA A100 GPU, computing attention for a batch of 32 sequences with $n = 512$ and $d_k = 64$:
+<ul>
+    <li>Scaled dot-product attention: $\approx 0.8$ ms (achieving 250 TFLOPS, 80\% of peak)
+    <li>Bahdanau attention: $\approx 15$ ms (achieving 15 TFLOPS, 5\% of peak)
+</ul>
+
+<p>The 19× speedup from scaled dot-product attention is what enables training GPT-3 scale models (175B parameters) in reasonable time. With Bahdanau attention, training would take 19× longer, making such models economically infeasible.</p>
+
+<div class="example"><strong>Example:</strong> 
+Consider a single query attending to 3 keys with $d_k = 4$ and $d_v = 5$:
 <div class="equation">
 $$
 \vq = \begin{bmatrix} 1.0 \\ 0.5 \\ -0.3 \\ 0.8 \end{bmatrix}, \quad
@@ -313,64 +496,171 @@ $$
 $$
 </div>
 
-<p><strong>Step 1:</strong> Compute dot products
+<p><strong>Step 1:</strong> Compute dot products between the query and each key:
 <div class="equation">
 $$\begin{align}
-\vq\transpose \vk_1 &= 1.0(0.8) + 0.5(0.2) + (-0.3)(-0.1) + 0.8(0.5) = 1.33 \\
-\vq\transpose \vk_2 &= 1.0(0.3) + 0.5(0.7) + (-0.3)(0.4) + 0.8(-0.2) = 0.43 \\
-\vq\transpose \vk_3 &= 1.0(-0.5) + 0.5(0.1) + (-0.3)(0.9) + 0.8(0.6) = -0.22
+\vq\transpose \vk_1 &= 1.0(0.8) + 0.5(0.2) + (-0.3)(-0.1) + 0.8(0.5) \\
+&= 0.8 + 0.1 + 0.03 + 0.4 = 1.33 \\
+\vq\transpose \vk_2 &= 1.0(0.3) + 0.5(0.7) + (-0.3)(0.4) + 0.8(-0.2) \\
+&= 0.3 + 0.35 - 0.12 - 0.16 = 0.37 \\
+\vq\transpose \vk_3 &= 1.0(-0.5) + 0.5(0.1) + (-0.3)(0.9) + 0.8(0.6) \\
+&= -0.5 + 0.05 - 0.27 + 0.48 = -0.24
 \end{align}$$
 </div>
 
-<p><strong>Step 2:</strong> Scale by $\sqrt{d_k} = \sqrt{4} = 2$
+<p><strong>Step 2:</strong> Scale by $\sqrt{d_k} = \sqrt{4} = 2$:
 <div class="equation">
 $$
-\text{scores} = [0.665, 0.215, -0.110]
+\text{scaled scores} = \left[\frac{1.33}{2}, \frac{0.37}{2}, \frac{-0.24}{2}\right] = [0.665, 0.185, -0.120]
 $$
 </div>
 
-<p><strong>Step 3:</strong> Softmax
+<p>Without scaling, the scores would be $[1.33, 0.37, -0.24]$. For this small example with $d_k = 4$, the difference is modest. But for $d_k = 64$, unscaled scores would be $\sqrt{64/4} = 4$ times larger, and for $d_k = 512$, they would be $\sqrt{512/4} \approx 11.3$ times larger, causing severe softmax saturation.</p>
+
+<p><strong>Step 3:</strong> Apply softmax to obtain attention weights:
 <div class="equation">
-$$
-\sum_j \exp(\text{score}_j) \approx 1.95 + 1.24 + 0.90 = 4.09
-$$
+$$\begin{align}
+\sum_j \exp(\text{score}_j) &= \exp(0.665) + \exp(0.185) + \exp(-0.120) \\
+&\approx 1.945 + 1.203 + 0.887 = 4.035
+\end{align}$$
 </div>
+
+<p>Computing each weight:
+<div class="equation">
+$$\begin{align}
+\alpha_1 &= \frac{1.945}{4.035} \approx 0.482 \\
+\alpha_2 &= \frac{1.203}{4.035} \approx 0.298 \\
+\alpha_3 &= \frac{0.887}{4.035} \approx 0.220
+\end{align}$$
+</div>
+
+<p>The attention is distributed across all three keys, with the highest weight on key 1 (48.2\%) but substantial attention to keys 2 and 3 as well. This soft distribution allows the model to incorporate information from multiple positions.</p>
+
+<p><strong>Step 4:</strong> Apply attention weights to values. Suppose:
 <div class="equation">
 $$
-\boldsymbol{\alpha} = [0.477, 0.303, 0.220]
+\mV = \begin{bmatrix}
+0.5 & 0.8 & -0.2 & 0.6 & 0.3 \\
+0.2 & -0.4 & 0.7 & 0.1 & 0.9 \\
+-0.3 & 0.5 & 0.4 & -0.6 & 0.2
+\end{bmatrix} \in \R^{3 \times 5}
 $$
 </div>
 
-<p><strong>Step 4:</strong> Apply to values (suppose $\mV \in \R^{3 \times 5}$)
+<p>The output is:
+<div class="equation">
+$$\begin{align}
+\text{output} &= 0.482 \vv_1 + 0.298 \vv_2 + 0.220 \vv_3 \\
+&= 0.482 \begin{bmatrix} 0.5 \\ 0.8 \\ -0.2 \\ 0.6 \\ 0.3 \end{bmatrix} + 0.298 \begin{bmatrix} 0.2 \\ -0.4 \\ 0.7 \\ 0.1 \\ 0.9 \end{bmatrix} + 0.220 \begin{bmatrix} -0.3 \\ 0.5 \\ 0.4 \\ -0.6 \\ 0.2 \end{bmatrix} \\
+&= \begin{bmatrix} 0.241 + 0.060 - 0.066 \\ 0.386 - 0.119 + 0.110 \\ -0.096 + 0.209 + 0.088 \\ 0.289 + 0.030 - 0.132 \\ 0.145 + 0.268 + 0.044 \end{bmatrix} = \begin{bmatrix} 0.235 \\ 0.377 \\ 0.201 \\ 0.187 \\ 0.457 \end{bmatrix} \in \R^5
+\end{align}$$
+</div>
+
+<p>The output vector is a weighted combination of the value vectors, with weights determined by the query-key similarities. This output can then be used by subsequent layers in the transformer.
+</div>
+
+<h2>Attention Score Computation Methods</h2>
+
+<p>The evolution of attention mechanisms reflects a progression toward greater computational efficiency and hardware compatibility. Understanding the trade-offs between different scoring functions illuminates why scaled dot-product attention became the standard for transformers, despite the apparent simplicity of alternatives.</p>
+
+<h3>Taxonomy of Attention Mechanisms</h3>
+
+<p>Attention mechanisms differ primarily in how they compute the compatibility score between a query and a key. This scoring function determines both the computational cost and the expressiveness of the attention mechanism. We examine four major variants that represent key points in the design space.</p>
+
+<p><strong>Additive Attention (Bahdanau):</strong> Introduced in 2015 for neural machine translation, additive attention computes scores through a learned feedforward network:
 <div class="equation">
 $$
-\text{output} = 0.477 \vv_1 + 0.303 \vv_2 + 0.220 \vv_3 \in \R^{5}
+\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
 $$
 </div>
+
+<p>This approach projects the query and key into a shared space of dimension $d_a$, applies a nonlinearity, and projects to a scalar. The nonlinearity allows the model to learn complex, non-linear compatibility functions. However, this flexibility comes at substantial computational cost: each score requires $O(d_a(d_q + d_k))$ operations and introduces $O(d_a(d_q + d_k))$ learnable parameters.</p>
+
+<p>For typical dimensions $d_q = d_k = 512$ and $d_a = 256$, computing one score requires approximately $2 \times 256 \times (512 + 512) = 524{,}288$ FLOPs. For a sequence of length 512 attending to itself, this amounts to $512^2 \times 524{,}288 \approx 137$ billion FLOPs just for score computation. The $\tanh$ nonlinearity and multiple matrix-vector products prevent efficient GPU utilization, achieving only 15-25\% of peak performance.</p>
+
+<p><strong>Dot-Product Attention:</strong> The simplest scoring function is the unscaled dot product:
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \vq\transpose \vk
+$$
 </div>
+
+<p>This requires only $2d_k$ FLOPs (one multiply-add per dimension) and introduces zero parameters. The computation maps perfectly to GPU hardware through matrix multiplication: computing all scores $\mQ \mK\transpose$ is a single GEMM operation achieving 80-90\% of peak performance.</p>
+
+<p>However, unscaled dot-product attention suffers from the variance problem discussed earlier. For $d_k = 512$, dot products have standard deviation $\sqrt{512} \approx 22.6$, causing softmax saturation and vanishing gradients. This instability makes unscaled dot-product attention impractical for training deep networks, despite its computational advantages.</p>
+
+<p><strong>Scaled Dot-Product Attention:</strong> Adding the scaling factor $1/\sqrt{d_k}$ solves the variance problem while preserving computational efficiency:
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
+$$
+</div>
+
+<p>The scaling adds negligible computational cost (one division per score, or $n^2$ operations for an $n \times n$ attention matrix) but stabilizes training by maintaining unit variance. This mechanism achieves the best of both worlds: the computational efficiency of dot-product attention with the training stability of additive attention. For $n = 512$ and $d_k = 64$, computing all scores requires $2 \times 512^2 \times 64 = 33.5$ million FLOPs—250× fewer than additive attention.</p>
+
+<p><strong>General Attention (Luong):</strong> Luong attention introduces a learned transformation matrix:
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \vq\transpose \mW \vk
+$$
+</div>
+
+<p>where $\mW \in \R^{d_q \times d_k}$ is a learned parameter matrix. This allows the model to learn a task-specific similarity metric rather than using raw dot products. The transformation can project queries and keys into a shared space where their dot product is more meaningful.</p>
+
+<p>Computing one score requires $2d_q d_k$ FLOPs (matrix-vector product $\mW \vk$, then dot product with $\vq$), and the mechanism introduces $d_q d_k$ parameters. For $d_q = d_k = 512$, this is 262,144 parameters—substantial but manageable. The computational cost is $2 \times 512 \times 512 = 524{,}288$ FLOPs per score, similar to additive attention but without the nonlinearity.</p>
+
+<p>General attention achieves better GPU utilization than additive attention because the core operation $\mQ \mW \mK\transpose$ can be computed as two matrix multiplications. However, it still requires more computation than scaled dot-product attention and introduces parameters that must be learned.</p>
+
+<h3>Comparative Analysis</h3>
+
+<p>The following table summarizes the key characteristics of each attention mechanism:</p>
+
+<p>\begin{center}
+\begin{tabular}{lcccc}
+\hline
+<strong>Method</strong> & <strong>Computation</strong> & <strong>Parameters</strong> & <strong>GPU Util.</strong> & <strong>Used In</strong> \\
+\hline
+Additive (Bahdanau) & $\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$ & $O(d_a(d_q + d_k))$ & 15-25\% & Early seq2seq \\
+Dot-product & $\vq\transpose\vk$ & 0 & 80-90\% & Not used \\
+Scaled dot-product & $\vq\transpose\vk/\sqrt{d_k}$ & 0 & 80-90\% & Transformers \\
+General (Luong) & $\vq\transpose\mW\vk$ & $O(d_q d_k)$ & 50-70\% & Some seq2seq \\
+\hline
+\end{tabular}
+\end{center}</p>
+
+<p><strong>Why Scaled Dot-Product Won:</strong> The dominance of scaled dot-product attention in modern transformers reflects several factors beyond raw computational efficiency. First, the parameter-free nature means the model's capacity is concentrated in the QKV projection matrices and feed-forward networks rather than the scoring function. This architectural choice scales better to very large models—GPT-3 with 175 billion parameters would require even more parameters if using additive or general attention.</p>
+
+<p>Second, the simplicity of scaled dot-product attention makes it easier to optimize and implement efficiently. Hardware vendors can optimize specifically for the $\mQ \mK\transpose$ operation, and software frameworks can apply specialized kernels. FlashAttention and other efficient attention implementations focus on scaled dot-product attention because its regular structure enables aggressive optimization.</p>
+
+<p>Third, empirical results show that scaled dot-product attention performs as well as or better than more complex alternatives on most tasks. The learned transformations in additive or general attention provide little benefit in practice, suggesting that the model can learn appropriate representations through the QKV projections rather than the scoring function itself.</p>
+
+<p><strong>Memory Bandwidth Analysis:</strong> Modern GPUs are often memory-bandwidth limited, meaning performance depends on how efficiently data is moved between memory and compute units. Scaled dot-product attention achieves high arithmetic intensity—many FLOPs per byte loaded—because the matrix multiplication $\mQ \mK\transpose$ reuses each element of $\mQ$ and $\mK$ multiple times.</p>
+
+<p>For $\mQ, \mK \in \R^{512 \times 64}$ in FP16, we load $2 \times 512 \times 64 \times 2 = 131$ KB and perform $2 \times 512^2 \times 64 = 33.5$ million FLOPs, achieving $33{,}500{,}000 / 131{,}072 \approx 256$ FLOPs per byte. This high intensity keeps compute units busy rather than waiting for memory.</p>
+
+<p>Additive attention achieves only 5-20 FLOPs per byte because element-wise operations and small matrix-vector products provide little data reuse. The GPU spends most of its time waiting for memory transfers, wasting compute capacity. This fundamental difference in memory access patterns explains much of the performance gap between attention mechanisms.</p>
 
 <h2>Query-Key-Value Paradigm</h2>
 
 <h3>Intuition</h3>
 
-<p><strong>Analogy:</strong> Information retrieval system
-<ul>
-    <li><strong>Query ($\vq$):</strong> What I'm looking for
-    <li><strong>Keys ($\vk_i$):</strong> Indexed content descriptions
-    <li><strong>Values ($\vv_i$):</strong> Actual content to retrieve
-</ul>
+<p>The query-key-value (QKV) framework provides an elegant abstraction for understanding attention mechanisms through the lens of information retrieval. This paradigm, borrowed from database systems and search engines, offers intuitive explanations for attention's behavior while precisely defining its mathematical operations.</p>
 
-<p><strong>Process:</strong>
-<ol>
-    <li>Compare query to all keys (compute similarity)
-    <li>Convert similarities to weights (softmax)
-    <li>Retrieve weighted combination of values
-</ol>
+<p>Consider a database system where you want to retrieve relevant information. You provide a query describing what you're looking for, the system compares your query against keys (indexed descriptions of stored content), and returns the values (actual content) associated with the most relevant keys. Attention mechanisms operate identically: queries represent "what I'm looking for," keys represent "what information is available," and values represent "the actual information to retrieve."</p>
+
+<p>In the context of neural networks, these three components serve distinct roles. The query $\vq$ encodes the current position's information needs—what aspects of the input are relevant for processing this position. The keys $\vk_i$ encode what information each input position offers—what content is available at that position. The values $\vv_i$ encode the actual information to be retrieved—the representations that will be combined to form the output.</p>
+
+<p>This separation of concerns is crucial. By decoupling "what to look for" (queries) from "what is available" (keys) and "what to retrieve" (values), the attention mechanism gains flexibility. The same input can be queried in different ways by different positions, and the retrieved information can differ from the indexing representation. This three-way separation enables the model to learn rich, task-specific attention patterns.</p>
+
+<p><strong>Concrete Example:</strong> In machine translation, when generating the French word "chat" (cat) from the English sentence "The cat sat on the mat," the decoder's query encodes "I need information about the subject noun." The keys encode what each English word represents: "the" offers determiner information, "cat" offers subject noun information, "sat" offers verb information, etc. The attention mechanism computes high similarity between the query and the key for "cat," then retrieves the value associated with "cat"—a rich representation encoding its meaning, grammatical role, and context.</p>
+
+<p>Importantly, the key and value for "cat" can differ. The key might emphasize grammatical features (noun, singular, animate) that help match queries, while the value emphasizes semantic features (animal, feline, pet) that are useful for generation. This separation allows the attention mechanism to index on one set of features while retrieving another.</p>
 
 <h3>Projecting to QKV</h3>
 
-<p>In transformers, $\mQ$, $\mK$, $\mV$ are computed from inputs via learned projections:</p>
+<p>In transformers, queries, keys, and values are not provided directly but are computed from the input through learned linear projections. This design choice allows the model to learn task-specific representations for each role rather than using the raw input embeddings.</p>
 
+<p>Given input $\mX \in \R^{n \times d_{\text{model}}}$ where $n$ is the sequence length and $d_{\text{model}}$ is the model dimension, we compute:
 <div class="equation">
 $$\begin{align}
 \mQ &= \mX \mW^Q && \mW^Q \in \R^{d_{\text{model}} \times d_k} \\
@@ -379,17 +669,53 @@ $$\begin{align}
 \end{align}$$
 </div>
 
-<p>where $\mX \in \R^{n \times d_{\text{model}}}$ is the input.</p>
+<p>Each projection matrix is a learned parameter that transforms the input into the appropriate representation space. The query and key projections map to the same dimension $d_k$ (typically $d_{\text{model}}/h$ where $h$ is the number of attention heads) because they must be compatible for dot products. The value projection maps to dimension $d_v$, which is often equal to $d_k$ but can differ.</p>
+
+<p><strong>Why Learn Separate Projections?</strong> One might ask: why not use the input $\mX$ directly as queries, keys, and values? The answer lies in representation learning. The raw input embeddings encode general semantic and syntactic information, but attention requires specialized representations. The query projection learns to emphasize features relevant for determining what to attend to. The key projection learns to emphasize features relevant for being attended to. The value projection learns to emphasize features relevant for the output representation.</p>
+
+<p>These three projections can learn different aspects of the input. For example, in a language model, the query projection might emphasize the current word's part of speech and semantic category to determine what context is needed. The key projection might emphasize each word's grammatical role and position to help queries find relevant context. The value projection might emphasize semantic content and relationships to provide useful information for prediction.</p>
+
+<p><strong>Computational Cost:</strong> Each projection is a matrix multiplication requiring $2nd_{\text{model}}d_k$ FLOPs (for queries and keys) or $2nd_{\text{model}}d_v$ FLOPs (for values). With three projections and $d_k = d_v$:
+<div class="equation">
+$$
+\text{QKV projection FLOPs} = 3 \times 2nd_{\text{model}}d_k = 6nd_{\text{model}}d_k
+$$
+</div>
+
+<p>For typical transformer configurations where $d_k = d_{\text{model}}/h$ and we consider all $h$ heads together (so $hd_k = d_{\text{model}}$):
+<div class="equation">
+$$
+\text{QKV projection FLOPs} = 6nd_{\text{model}}^2
+$$
+</div>
+
+<p>For BERT-base with $n = 512$ and $d_{\text{model}} = 768$:
+<div class="equation">
+$$
+6 \times 512 \times 768^2 = 1{,}811{,}939{,}328 \text{ FLOPs} \approx 1.8 \text{ GFLOPs}
+$$
+</div>
+
+<p>This is substantial but represents only about 20\% of the total attention computation for typical sequence lengths. The attention score computation ($\mQ \mK\transpose$) and output computation ($\mA \mV$) dominate for longer sequences.</p>
+
+<p><strong>Parameter Count:</strong> The three projection matrices introduce $d_{\text{model}}(2d_k + d_v)$ parameters per attention head. For $h$ heads with $d_k = d_v = d_{\text{model}}/h$:
+<div class="equation">
+$$
+\text{QKV parameters} = h \times d_{\text{model}} \times 3 \times \frac{d_{\text{model}}}{h} = 3d_{\text{model}}^2
+$$
+</div>
+
+<p>For BERT-base with $d_{\text{model}} = 768$: $3 \times 768^2 = 1{,}769{,}472$ parameters per attention layer. With 12 layers, the QKV projections account for $12 \times 1.77 = 21.2$ million parameters out of BERT's total 110 million—about 19\% of the model.</p>
 
 <div class="example"><strong>Example:</strong> 
-Input: Sequence of 5 tokens, each $d_{\text{model}} = 512$ dimensions
+Consider a sequence of 5 tokens, each represented by a $d_{\text{model}} = 512$ dimensional vector:
 <div class="equation">
 $$
 \mX \in \R^{5 \times 512}
 $$
 </div>
 
-<p>Project to $d_k = d_v = 64$:
+<p>We project to $d_k = d_v = 64$ (as in a single attention head of a model with $h = 8$ heads):
 <div class="equation">
 $$\begin{align}
 \mQ &= \mX \mW^Q \in \R^{5 \times 64} \quad (\mW^Q \in \R^{512 \times 64}) \\
@@ -398,15 +724,120 @@ $$\begin{align}
 \end{align}$$
 </div>
 
-<p><strong>Attention computation:</strong>
+<p>Each projection matrix has $512 \times 64 = 32{,}768$ parameters. Computing each projection requires $2 \times 5 \times 512 \times 64 = 327{,}680$ FLOPs, for a total of $3 \times 327{,}680 = 983{,}040$ FLOPs across all three projections.</p>
+
+<p><strong>Attention computation:</strong> After projection, we compute attention:
 <div class="equation">
 $$
-\underbrace{\text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{64}}\right)}_{\R^{5 \times 5}} \underbrace{\mV}_{\R^{5 \times 64}} = \underbrace{\text{Output}}_{\R^{5 \times 64}}
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{64}}\right) \mV
 $$
 </div>
 
-<p>Attention matrix $\mA \in \R^{5 \times 5}$: entry $(i,j)$ is attention from position $i$ to position $j$.
+<p>The attention matrix $\mA = \text{softmax}(\mQ \mK\transpose / \sqrt{64}) \in \R^{5 \times 5}$ has entry $a_{ij}$ representing how much position $i$ attends to position $j$. For example:
+<div class="equation">
+$$
+\mA = \begin{bmatrix}
+0.45 & 0.25 & 0.15 & 0.10 & 0.05 \\
+0.10 & 0.50 & 0.25 & 0.10 & 0.05 \\
+0.05 & 0.15 & 0.40 & 0.30 & 0.10 \\
+0.05 & 0.10 & 0.20 & 0.50 & 0.15 \\
+0.05 & 0.05 & 0.10 & 0.25 & 0.55
+\end{bmatrix}
+$$
 </div>
+
+<p>Position 1 attends most strongly to itself (45\%) and position 2 (25\%). Position 5 attends most strongly to itself (55\%) and position 4 (25\%). This pattern might emerge in a language model where each position attends to nearby context, with stronger attention to the current position and recent tokens.</p>
+
+<p>The output $\mA \mV \in \R^{5 \times 64}$ provides an attended representation for each position, combining information from all positions according to the attention weights. This output can then be processed by subsequent layers.
+</div>
+
+<h2>Hardware Implications of Attention</h2>
+
+<p>The shift from RNN-based sequence models to attention-based transformers represents not just an algorithmic change but a fundamental realignment with modern hardware capabilities. Understanding why attention enables effective GPU utilization illuminates both the success of transformers and the design principles for future architectures.</p>
+
+<h3>Parallelization: RNNs vs Attention</h3>
+
+<p>Recurrent neural networks process sequences sequentially by design. Each hidden state $\vh_t$ depends on the previous hidden state $\vh_{t-1}$:
+<div class="equation">
+$$
+\vh_t = \text{RNN}(\vx_t, \vh_{t-1})
+$$
+</div>
+
+<p>This recurrence creates a data dependency chain: we cannot compute $\vh_t$ until $\vh_{t-1}$ is available, which requires $\vh_{t-2}$, and so on back to $\vh_0$. For a sequence of length $n$, we must perform $n$ sequential operations, even if we have thousands of parallel compute units available.</p>
+
+<p>Modern GPUs contain thousands of CUDA cores (NVIDIA A100 has 6912 cores) capable of executing operations simultaneously. When processing a batch of 32 sequences of length 512, we have $32 \times 512 = 16{,}384$ positions to process. An RNN must process these sequentially in 512 time steps, using only 32 parallel threads (one per sequence in the batch). This achieves only $32 / 6912 \approx 0.5\%$ of the GPU's parallel capacity.</p>
+
+<p>Attention mechanisms eliminate this sequential bottleneck. The attention computation for position $i$ depends only on the input sequence, not on previous attention computations:
+<div class="equation">
+$$
+\text{output}_i = \sum_{j=1}^{n} \alpha_{ij} \vv_j
+$$
+</div>
+
+<p>All attention weights $\alpha_{ij}$ can be computed simultaneously because they depend only on the queries and keys, which are computed from the input via matrix multiplication. During training, when the entire target sequence is known, we can compute attention for all positions in parallel. For 32 sequences of length 512, we can utilize all 16,384 positions simultaneously, achieving near-full GPU utilization.</p>
+
+<p><strong>Practical Impact:</strong> On an NVIDIA A100 GPU, processing a batch of 32 sequences of length 512 with hidden dimension 768:
+<ul>
+    <li>LSTM encoder: $\approx 45$ ms (sequential processing, 5\% GPU utilization)
+    <li>Transformer encoder: $\approx 3$ ms (parallel processing, 75\% GPU utilization)
+</ul>
+
+<p>The 15× speedup from parallelization is what makes training large transformers feasible. GPT-3 with 175 billion parameters was trained on 300 billion tokens—a task that would be impractical with sequential RNN processing.</p>
+
+<h3>Memory Bandwidth vs Compute</h3>
+
+<p>Modern GPUs have enormous compute capacity but limited memory bandwidth. The NVIDIA A100 provides 312 TFLOPS (FP16 with Tensor Cores) but only 1.5 TB/s memory bandwidth. This means the GPU can perform $312 \times 10^{12} / (1.5 \times 10^{12}) \approx 208$ FLOPs for every byte loaded from memory. Operations must achieve high arithmetic intensity (FLOPs per byte) to be compute-bound rather than memory-bound.</p>
+
+<p>Attention's core operation $\mQ \mK\transpose$ is a matrix multiplication, which achieves high arithmetic intensity through data reuse. For $\mQ, \mK \in \R^{512 \times 64}$:
+<ul>
+    <li>Data loaded: $2 \times 512 \times 64 \times 2 = 131$ KB (FP16)
+    <li>FLOPs performed: $2 \times 512^2 \times 64 = 33.5$ million
+    <li>Arithmetic intensity: $33{,}500{,}000 / 131{,}072 \approx 256$ FLOPs/byte
+</ul>
+
+<p>This high intensity means the GPU's compute units stay busy rather than waiting for memory. The operation is compute-bound, achieving 80-90\% of peak FLOPS.</p>
+
+<p>In contrast, RNN operations like element-wise activations and small matrix-vector products achieve only 1-10 FLOPs per byte. The GPU spends most of its time waiting for memory transfers, achieving only 5-15\% of peak FLOPS. This fundamental difference in memory access patterns explains much of the performance gap between RNNs and transformers.</p>
+
+<p><strong>Memory Requirements:</strong> Attention does require more memory than RNNs due to storing the attention matrix. For a sequence of length $n$ with batch size $b$ and $h$ heads:
+<div class="equation">
+$$
+\text{Attention matrix memory} = b \times h \times n^2 \times 4 \text{ bytes (FP32)}
+$$
+</div>
+
+<p>For BERT-base with $b = 32$, $h = 12$, $n = 512$:
+<div class="equation">
+$$
+32 \times 12 \times 512^2 \times 4 = 402{,}653{,}184 \text{ bytes} \approx 403 \text{ MB}
+$$
+</div>
+
+<p>This is substantial but manageable on modern GPUs with 40-80 GB of memory. The memory cost is the price paid for parallelization—we trade memory for speed.</p>
+
+<h3>Batch Processing Efficiency</h3>
+
+<p>Attention mechanisms benefit dramatically from batching because matrix multiplications become more efficient with larger matrices. For small matrices, memory transfer overhead dominates. For large matrices, the compute units stay busy and achieve high utilization.</p>
+
+<p>Consider computing $\mQ \mK\transpose$ for a single sequence ($b = 1$) versus a batch ($b = 32$):
+<ul>
+    <li>Single sequence: $\mQ, \mK \in \R^{512 \times 64}$, output $\in \R^{512 \times 512}$
+    <ul>
+        <li>FLOPs: $2 \times 512^2 \times 64 = 33.5$ million
+        <li>Time on A100: $\approx 0.15$ ms (achieves 30\% peak, memory-bound)
+    </ul>
+    
+    <li>Batch of 32: $\mQ, \mK \in \R^{16384 \times 64}$, output $\in \R^{16384 \times 16384}$
+    <ul>
+        <li>FLOPs: $2 \times 16384^2 \times 64 = 34.4$ billion
+        <li>Time on A100: $\approx 120$ ms (achieves 85\% peak, compute-bound)
+    </ul>
+</ul>
+
+<p>The batched computation achieves $34.4 / 33.5 = 1024$ times more FLOPs in $120 / 0.15 = 800$ times more time, demonstrating the efficiency gain from batching. Per-sequence processing time drops from 0.15 ms to $120 / 32 = 3.75$ ms, but the throughput increases from $1 / 0.15 = 6.7$ sequences/ms to $32 / 120 = 0.27$ sequences/ms... wait, that's wrong. Let me recalculate: throughput increases from $1 / 0.15 \approx 6.7$ sequences/second to $32 / 120 \approx 267$ sequences/second—a 40× improvement in throughput.</p>
+
+<p>This batching efficiency is crucial for both training (where large batches improve gradient estimates and enable higher learning rates) and inference (where serving multiple requests simultaneously improves throughput). Attention's regular structure makes it particularly amenable to batching, unlike RNNs where variable-length sequences complicate batch processing.</p>
 
 <h2>Attention Variants</h2>
 
