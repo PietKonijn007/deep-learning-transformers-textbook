@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 8: Self-Attention and Multi-Head Attention - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+    </nav>
+
+    <main>
+        <h1>Self-Attention and Multi-Head Attention</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Self-attention is the core innovation enabling transformers. This chapter develops self-attention from first principles, then introduces multi-head attention—the mechanism that allows transformers to attend to multiple types of relationships simultaneously.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand self-attention and its advantages over RNNs
+    <li>Implement multi-head attention from scratch
+    <li>Compute output dimensions and parameter counts
+    <li>Understand positional encodings for sequence order
+    <li>Analyze computational complexity of attention
+    <li>Apply masking for causal (autoregressive) attention
+</ol>
+
+<h2>Self-Attention Mechanism</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+For input sequence $\mX \in \R^{n \times d}$, self-attention computes output where each position attends to all positions:
+<div class="equation">
+$$\begin{align}
+\mQ &= \mX \mW^Q, \quad \mK = \mX \mW^K, \quad \mV = \mX \mW^V \\
+\text{SelfAttn}(\mX) &= \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+\end{align}$$
+</div>
+where $\mW^Q, \mW^K \in \R^{d \times d_k}$ and $\mW^V \in \R^{d \times d_v}$.
+</div>
+
+<p><strong>Key properties:</strong>
+<ul>
+    <li><strong>Permutation equivariant:</strong> If input order changes, output changes correspondingly
+    <li><strong>All-to-all connections:</strong> Every position attends to every other position
+    <li><strong>Parallel computation:</strong> No sequential dependency (unlike RNN)
+    <li><strong>Long-range dependencies:</strong> Direct paths between all positions
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+Input: 3 word embeddings, each $d=4$ dimensional
+<div class="equation">
+$$
+\mX = \begin{bmatrix}
+1.0 & 0.5 & 0.2 & 0.8 \\
+0.3 & 1.2 & 0.7 & 0.4 \\
+0.6 & 0.9 & 1.1 & 0.3
+\end{bmatrix} \in \R^{3 \times 4}
+$$
+</div>
+
+<p>Projection matrices with $d_k = d_v = 3$:
+<div class="equation">
+$$
+\mW^Q, \mW^K, \mW^V \in \R^{4 \times 3}
+$$
+</div>
+
+<p><strong>Step 1:</strong> Project to QKV
+<div class="equation">
+$$\begin{align}
+\mQ &= \mX \mW^Q \in \R^{3 \times 3} \\
+\mK &= \mX \mW^K \in \R^{3 \times 3} \\
+\mV &= \mX \mW^V \in \R^{3 \times 3}
+\end{align}$$
+</div>
+
+<p><strong>Step 2:</strong> Compute attention scores
+<div class="equation">
+$$
+\mQ \mK\transpose \in \R^{3 \times 3}
+$$
+</div>
+
+<p>Entry $(i,j)$ measures how much position $i$ attends to position $j$.</p>
+
+<p><strong>Step 3:</strong> Scale and softmax
+<div class="equation">
+$$
+\mA = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{3}}\right) \in \R^{3 \times 3}
+$$
+</div>
+
+<p>Each row sums to 1 (probability distribution over positions to attend to).</p>
+
+<p><strong>Step 4:</strong> Apply to values
+<div class="equation">
+$$
+\text{Output} = \mA \mV \in \R^{3 \times 3}
+$$
+</div>
+
+<p>Each output position is weighted combination of all input value vectors.
+</div>
+
+<h2>Multi-Head Attention</h2>
+
+<p><strong>Motivation:</strong> Single attention might miss different types of relationships (syntactic, semantic, positional). Multiple heads allow attending to different aspects simultaneously.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+With $h$ attention heads, each with dimension $d_k = d_v = d_{\text{model}}/h$:
+
+<p><strong>For each head $i = 1, \ldots, h$:</strong>
+<div class="equation">
+$$\begin{align}
+\mQ^{(i)} &= \mX \mW^{Q(i)}, \quad \mK^{(i)} = \mX \mW^{K(i)}, \quad \mV^{(i)} = \mX \mW^{V(i)} \\
+\text{head}_i &= \text{Attention}(\mQ^{(i)}, \mK^{(i)}, \mV^{(i)})
+\end{align}$$
+</div>
+
+<p><strong>Concatenate and project:</strong>
+<div class="equation">
+$$
+\text{MultiHead}(\mX) = [\text{head}_1; \ldots; \text{head}_h] \mW^O
+$$
+</div>
+
+<p>where $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)} \in \R^{d_{\text{model}} \times d_k}$ and $\mW^O \in \R^{hd_k \times d_{\text{model}}}$.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+BERT-base parameters:
+<ul>
+    <li>Model dimension: $d_{\text{model}} = 768$
+    <li>Number of heads: $h = 12$
+    <li>Dimension per head: $d_k = d_v = 768/12 = 64$
+    <li>Sequence length: $n = 512$ (maximum)
+</ul>
+
+<p><strong>For single head:</strong>
+<div class="equation">
+$$\begin{align}
+\mQ^{(i)} &= \mX \mW^{Q(i)} \in \R^{512 \times 64} \quad (\mW^{Q(i)} \in \R^{768 \times 64}) \\
+\mK^{(i)} &= \mX \mW^{K(i)} \in \R^{512 \times 64} \\
+\mV^{(i)} &= \mX \mW^{V(i)} \in \R^{512 \times 64}
+\end{align}$$
+</div>
+
+<p>Attention matrix: $\mA^{(i)} \in \R^{512 \times 512}$ (huge!)</p>
+
+<p><strong>Concatenate all 12 heads:</strong>
+<div class="equation">
+$$
+[\text{head}_1; \ldots; \text{head}_{12}] \in \R^{512 \times 768}
+$$
+</div>
+
+<p><strong>Output projection:</strong>
+<div class="equation">
+$$
+\text{Output} = [\text{head}_1; \ldots; \text{head}_{12}] \mW^O \in \R^{512 \times 768}
+$$
+</div>
+where $\mW^O \in \R^{768 \times 768}$.</p>
+
+<p><strong>Parameter count:</strong>
+<div class="equation">
+$$\begin{align}
+\text{QKV projections:} \quad &3h \cdot d_{\text{model}} \cdot d_k = 3 \times 12 \times 768 \times 64 = 1{,}769{,}472 \\
+\text{Output projection:} \quad &d_{\text{model}}^2 = 768^2 = 589{,}824 \\
+\text{Total:} \quad &2{,}359{,}296 \text{ parameters per attention layer}
+\end{align}$$
+</div>
+</div>
+
+<div class="keypoint">
+Multi-head attention allows the model to jointly attend to information from different representation subspaces. Different heads learn different types of relationships (e.g., syntactic vs semantic).
+</div>
+
+<h2>Positional Encoding</h2>
+
+<p><strong>Problem:</strong> Self-attention is permutation equivariant—it ignores sequence order! Shuffle input tokens, output shuffles correspondingly.</p>
+
+<p><strong>Solution:</strong> Add positional information to input embeddings.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For position $\text{pos}$ and dimension $i$:
+<div class="equation">
+$$\begin{align}
+\text{PE}_{(\text{pos}, 2i)} &= \sin\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right) \\
+\text{PE}_{(\text{pos}, 2i+1)} &= \cos\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right)
+\end{align}$$
+</div>
+</div>
+
+<p><strong>Properties:</strong>
+<ul>
+    <li>Unique encoding for each position
+    <li>Periodic functions allow extrapolation to longer sequences
+    <li>Different frequencies for different dimensions
+    <li>Relative positions have fixed linear transformation
+</ul>
+
+<p><strong>Usage:</strong>
+<div class="equation">
+$$
+\mX_{\text{input}} = \mX_{\text{embed}} + \text{PE}
+$$
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For $d_{\text{model}} = 512$:
+
+<p><strong>Position 0:</strong>
+<div class="equation">
+$$\begin{align}
+\text{PE}_{(0,0)} &= \sin(0) = 0 \\
+\text{PE}_{(0,1)} &= \cos(0) = 1 \\
+&\vdots \\
+\text{PE}_{(0,510)} &= \sin(0) = 0 \\
+\text{PE}_{(0,511)} &= \cos(0) = 1
+\end{align}$$
+</div>
+
+<p><strong>Position 1:</strong>
+<div class="equation">
+$$\begin{align}
+\text{PE}_{(1,0)} &= \sin\left(\frac{1}{10000^{0/512}}\right) = \sin(1) \approx 0.841 \\
+\text{PE}_{(1,1)} &= \cos\left(\frac{1}{10000^{0/512}}\right) = \cos(1) \approx 0.540
+\end{align}$$
+</div>
+
+<p>Higher dimension indices have lower frequencies (longer periods).
+</div>
+
+<h2>Computational Complexity</h2>
+
+<h3>Self-Attention Complexity</h3>
+
+<p><strong>Memory:</strong> Attention matrix $\mA \in \R^{n \times n}$ requires $O(n^2)$ memory.</p>
+
+<p><strong>Computation:</strong>
+<ol>
+    <li>$\mQ \mK\transpose$: $O(n^2 d_k)$ FLOPs
+    <li>Softmax: $O(n^2)$ FLOPs
+    <li>$\mA \mV$: $O(n^2 d_v)$ FLOPs
+</ol>
+
+<p>Total: $O(n^2 d)$ time and $O(n^2)$ memory</p>
+
+<p><strong>Comparison with RNN:</strong>
+<ul>
+    <li>RNN: $O(nd^2)$ time, $O(nd)$ memory, but sequential (no parallelism)
+    <li>Transformer: $O(n^2d)$ time, $O(n^2)$ memory, fully parallel
+</ul>
+
+<p>For $n < d$ (typical in NLP), transformer is faster when parallelized!</p>
+
+<p>But for very long sequences ($n \gg d$), quadratic scaling problematic.</p>
+
+<h3>Efficient Attention Variants</h3>
+
+<p>For long sequences, various approximations reduce complexity:
+<ul>
+    <li><strong>Sparse attention:</strong> Attend to subset of positions
+    <li><strong>Linear attention:</strong> Approximate attention in $O(nd^2)$
+    <li><strong>Sliding window:</strong> Local attention within window
+    <li><strong>Random/learned patterns:</strong> Structured sparsity
+</ul>
+
+<p>We cover these in Chapter 16 (Efficient Transformers).</p>
+
+<h2>Causal (Masked) Self-Attention</h2>
+
+<p>For autoregressive models (GPT), prevent attending to future:</p>
+
+<div class="definition"><strong>Definition:</strong> 
+Create mask matrix $\mM \in \R^{n \times n}$:
+<div class="equation">
+$$
+M_{ij} = \begin{cases}
+0 & \text{if } j \leq i \\
+-\infty & \text{if } j > i
+\end{cases}
+$$
+</div>
+
+<p>Apply before softmax:
+<div class="equation">
+$$
+\mA = \text{softmax}\left(\frac{\mQ \mK\transpose + \mM}{\sqrt{d_k}}\right)
+$$
+</div>
+</div>
+
+<p>After softmax, $\exp(-\infty) = 0$, so position $i$ cannot attend to positions $j > i$.</p>
+
+<div class="example"><strong>Example:</strong> 
+<div class="equation">
+$$
+\mM = \begin{bmatrix}
+0 & -\infty & -\infty & -\infty \\
+0 & 0 & -\infty & -\infty \\
+0 & 0 & 0 & -\infty \\
+0 & 0 & 0 & 0
+\end{bmatrix}
+$$
+</div>
+
+<p>Position 0 attends only to itself.
+Position 1 attends to positions 0, 1.
+Position 3 attends to all positions 0, 1, 2, 3.</p>
+
+<p>This ensures autoregressive property for language modeling.
+</div>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+For GPT-2 ($d_{\text{model}} = 1024$, $h = 16$, $n = 1024$): (1) Compute attention matrix memory in MB (float32), (2) Count parameters in one multi-head attention layer, (3) Estimate FLOPs for single forward pass.
+</div>
+
+<p>\begin{exercise}
+Implement multi-head attention in PyTorch. Test with batch size 32, sequence length 20, $d_{\text{model}} = 128$, 4 heads. Verify output shape and parameter count.
+</div>
+
+<p>\begin{exercise}
+Show that sinusoidal positional encoding allows computing $\text{PE}_{\text{pos}+k}$ as linear function of $\text{PE}_{\text{pos}}$ for any offset $k$.
+</div>
+
+<p>\begin{exercise}
+Compare attention weights with and without positional encoding. Show numerically how word order affects attention without PE.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter07_attention_fundamentals.html">← Chapter 7: Attention Mechanisms: Fundamentals</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter09_attention_variants.html">Chapter 9: Attention Variants and Mechanisms →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 3: Probability and Information Theory - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+    </nav>
+
+    <main>
+        <h1>Probability and Information Theory</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Deep learning is fundamentally a probabilistic framework. Neural networks learn probability distributions over data, make predictions with uncertainty, and are trained using probabilistic objectives. This chapter develops the probability theory and information theory necessary to understand these probabilistic aspects of deep learning.</p>
+
+<p>We cover probability distributions, conditional probability, expectation, and variance—the building blocks for understanding neural network outputs as probabilistic models. We then introduce information theory concepts like entropy, cross-entropy, and KL divergence, which form the basis for loss functions used in training.</p>
+
+<h3>Learning Objectives</h3>
+
+<p>After completing this chapter, you will be able to:</p>
+
+<ol>
+    <li>Work with probability distributions and compute expectations
+    <li>Apply Bayes' theorem to understand conditional probabilities
+    <li>Understand entropy as a measure of uncertainty
+    <li>Derive and apply cross-entropy loss for classification
+    <li>Use KL divergence to measure distribution differences
+    <li>Interpret neural network outputs as probability distributions
+</ol>
+
+<h2>Probability Fundamentals</h2>
+
+<h3>Random Variables and Distributions</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+A <strong>random variable</strong> $X$ is a function that maps outcomes from a sample space to real numbers. We distinguish between:
+<ul>
+    <li><strong>Discrete random variables</strong>: Take countable values (e.g., class labels)
+    <li><strong>Continuous random variables</strong>: Take values in continuous ranges
+</ul>
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+For discrete random variable $X$, the <strong>probability mass function</strong> is:
+<div class="equation">
+$$
+P(X = x) = p(x)
+$$
+</div>
+satisfying: (1) $0 \leq p(x) \leq 1$ for all $x$, and (2) $\sum_x p(x) = 1$
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In image classification with 10 classes (digits 0-9), a neural network outputs a probability distribution using softmax:
+<div class="equation">
+$$
+P(Y = k | \vx) = \frac{\exp(z_k)}{\sum_{j=1}^{10} \exp(z_j)}
+$$
+</div>
+
+<p>For logits $\vz = [2.1, 0.5, -1.2, 3.4, 0.8, -0.5, 1.1, -2.0, 0.3, 1.8]$, the model predicts class 3 with highest probability $\approx 68.9\%$.
+</div>
+
+<h3>Conditional Probability and Bayes' Theorem</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+The probability of event $A$ given event $B$:
+<div class="equation">
+$$
+P(A|B) = \frac{P(A \cap B)}{P(B)} \quad \text{if } P(B) > 0
+$$
+</div>
+</div>
+
+<div class="theorem"><strong>Theorem:</strong> 
+For events $A$ and $B$ with $P(B) > 0$:
+<div class="equation">
+$$
+P(A|B) = \frac{P(B|A) P(A)}{P(B)}
+$$
+</div>
+where $P(A|B)$ is the posterior, $P(B|A)$ is the likelihood, $P(A)$ is the prior, and $P(B)$ is the evidence.
+</div>
+
+<h2>Information Theory</h2>
+
+<h3>Entropy</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+For discrete random variable $X$ with PMF $p(x)$:
+<div class="equation">
+$$
+H(X) = -\sum_x p(x) \ln p(x) = \mathbb{E}[-\ln P(X)]
+$$
+</div>
+</div>
+
+<p>Entropy measures average uncertainty. Higher entropy means more uncertainty.</p>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Fair coin:</strong> $P(\text{heads}) = P(\text{tails}) = 0.5$
+<div class="equation">
+$$
+H = -[0.5 \log_2(0.5) + 0.5 \log_2(0.5)] = 1 \text{ bit (maximum)}
+$$
+</div>
+
+<p><strong>Biased coin:</strong> $P(\text{heads}) = 0.9$, $P(\text{tails}) = 0.1$
+<div class="equation">
+$$
+H \approx 0.469 \text{ bits (lower, more predictable)}
+$$
+</div>
+</div>
+
+<h3>Cross-Entropy</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+For true distribution $p$ and predicted distribution $q$:
+<div class="equation">
+$$
+H(p, q) = -\sum_x p(x) \log q(x) = \mathbb{E}_{x \sim p}[-\log q(x)]
+$$
+</div>
+</div>
+
+<div class="theorem"><strong>Theorem:</strong> 
+For true label $y$ and predicted probabilities $\hat{\mathbf{p}}$:
+<div class="equation">
+$$
+L = -\log \hat{p}_y
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For 3-class classification with true label $y=2$:
+<ul>
+    <li>Predicted: $\hat{\mathbf{p}} = [0.2, 0.6, 0.2]$ $\Rightarrow$ $L = -\log(0.6) \approx 0.511$
+    <li>More confident: $\hat{\mathbf{p}} = [0.1, 0.8, 0.1]$ $\Rightarrow$ $L = -\log(0.8) \approx 0.223$ (better)
+    <li>Wrong prediction: $\hat{\mathbf{p}} = [0.7, 0.2, 0.1]$ $\Rightarrow$ $L = -\log(0.2) \approx 1.609$ (bad)
+</ul>
+</div>
+
+<div class="implementation">
+PyTorch cross-entropy loss:
+<pre><code>import torch
+import torch.nn as nn
+
+<p># Logits: shape (batch_size, num_classes)
+logits = torch.tensor([[2.0, 1.0, 0.1],
+                       [0.5, 2.5, 1.0]])
+labels = torch.tensor([0, 1])</p>
+
+<p># CrossEntropyLoss applies softmax internally
+criterion = nn.CrossEntropyLoss()
+loss = criterion(logits, labels)
+print(f"Loss: {loss.item():.4f}")
+</code></pre>
+</div>
+
+<h3>Kullback-Leibler Divergence</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+The KL divergence from distribution $q$ to $p$:
+<div class="equation">
+$$
+D_{\text{KL}}(p \| q) = \sum_x p(x) \log \frac{p(x)}{q(x)} = H(p, q) - H(p)
+$$
+</div>
+</div>
+
+<p>Properties: (1) $D_{\text{KL}}(p \| q) \geq 0$ with equality iff $p = q$, (2) Not symmetric: $D_{\text{KL}}(p \| q) \neq D_{\text{KL}}(q \| p)$</p>
+
+<div class="keypoint">
+Minimizing KL divergence is equivalent to minimizing cross-entropy when $p$ is fixed. Training neural networks with cross-entropy loss is maximum likelihood estimation.
+</div>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+A neural network outputs $\hat{\mathbf{p}} = [0.15, 0.60, 0.20, 0.05]$ for 4 classes. Compute: (1) entropy $H(\hat{\mathbf{p}})$, (2) cross-entropy loss if true label is class 2, (3) optimal output distribution.
+</div>
+
+<p>\begin{exercise}
+Show that $H(p, q) = H(p) + D_{\text{KL}}(p \| q)$, proving cross-entropy minimization equals KL divergence minimization when $p$ is fixed.
+</div>
+
+<p>\begin{exercise}
+For binary classifier with $\hat{p} = 0.8$ and true label class 1: (1) Compute binary cross-entropy loss, (2) Find $\frac{\partial L}{\partial \hat{p}}$, (3) Compare loss for $\hat{p} \in \{0.99, 0.2\}$.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter02_calculus_optimization.html">← Chapter 2: Calculus and Optimization</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter04_feedforward_networks.html">Chapter 4: Feed-Forward Neural Networks →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

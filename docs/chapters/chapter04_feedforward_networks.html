@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Feed-Forward Neural Networks - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+    </nav>
+
+    <main>
+        <h1>Feed-Forward Neural Networks</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Feed-forward neural networks are the foundation of deep learning. These networks transform inputs through sequences of linear and nonlinear operations to produce outputs. This chapter develops the architecture, training, and theory of feed-forward networks, establishing concepts that extend to all modern deep learning models including transformers.</p>
+
+<h3>Learning Objectives</h3>
+
+<p>After completing this chapter, you will be able to:</p>
+
+<ol>
+    <li>Understand the architecture of feed-forward neural networks
+    <li>Implement forward and backward passes through MLPs
+    <li>Apply appropriate activation functions and understand their properties
+    <li>Initialize network weights properly to enable training
+    <li>Apply regularization techniques to prevent overfitting
+    <li>Understand the universal approximation theorem
+</ol>
+
+<h2>From Linear Models to Neural Networks</h2>
+
+<h3>The Perceptron</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+The perceptron is a binary classifier:
+<div class="equation">
+$$
+\hat{y} = \text{sign}(\vw\transpose \vx + b) = \begin{cases}
++1 & \text{if } \vw\transpose \vx + b > 0 \\
+-1 & \text{otherwise}
+\end{cases}
+$$
+</div>
+where $\vw \in \R^n$ are weights, $b \in \R$ is bias, $\vx \in \R^n$ is input.
+</div>
+
+<h3>Multi-Class Classification: Softmax Regression</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+For logits $\vz = [z_1, \ldots, z_C]\transpose \in \R^C$:
+<div class="equation">
+$$
+\text{softmax}(\vz)_k = \frac{\exp(z_k)}{\sum_{j=1}^C \exp(z_j)}
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For logits $\vz = [2.0, 1.0, 0.1]$: Sum of exponentials $= 11.212$, giving probabilities $[0.659, 0.242, 0.099]$. The model predicts class 1 with 65.9 percent confidence.
+</div>
+
+<h2>Multi-Layer Perceptrons</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+An L-layer MLP transforms input through layers:
+<div class="equation">
+$$\begin{align}
+\vz^{(\ell)} &= \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)} \\
+\vh^{(\ell)} &= \sigma^{(\ell)}(\vz^{(\ell)})
+\end{align}$$
+</div>
+where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and $\sigma^{(\ell)}$ is the activation function.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Architecture for MNIST digit classification:
+<ul>
+    <li>Input: $\vx \in \R^{784}$ (flattened $28 \times 28$ image)
+    <li>Hidden 1: $\vh^{(1)} \in \R^{256}$ with ReLU
+    <li>Hidden 2: $\vh^{(2)} \in \R^{128}$ with ReLU
+    <li>Output: $\vz^{(3)} \in \R^{10}$ with softmax
+</ul>
+
+<p>Parameter count: $200{,}960 + 32{,}896 + 1{,}290 = 235{,}146$ parameters.
+</div>
+
+<h3>Why Depth Matters</h3>
+
+<p>Without nonlinear activations, multiple layers collapse to single linear transformation. With nonlinearities, deep networks learn complex functions efficiently.</p>
+
+<h2>Activation Functions</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+<div class="equation">
+$$
+\text{ReLU}(z) = \max(0, z)
+$$
+</div>
+Derivative: $\text{ReLU}'(z) = \mathbb{1}[z > 0]$
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+Gaussian Error Linear Unit (default in transformers):
+<div class="equation">
+$$
+\text{GELU}(z) = z \cdot \Phi(z)
+$$
+</div>
+where $\Phi$ is standard normal CDF. Approximation:
+<div class="equation">
+$$
+\text{GELU}(z) \approx 0.5z \left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}(z + 0.044715z^3)\right]\right)
+$$
+</div>
+</div>
+
+<div class="keypoint">
+Transformer models use GELU (BERT, GPT) or variants like Swish for feed-forward networks.
+</div>
+
+<h2>Universal Approximation Theorem</h2>
+
+<div class="theorem"><strong>Theorem:</strong> 
+A single-hidden-layer neural network with nonlinear activation can approximate any continuous function on compact domain to arbitrary precision, given sufficient hidden units.
+</div>
+
+<p>Caveat: The theorem says nothing about how many units needed, how to find weights, or generalization. Deep networks often more efficient than wide networks.</p>
+
+<h2>Weight Initialization</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+For layer with $n_{\text{in}}$ inputs and $n_{\text{out}}$ outputs:
+<div class="equation">
+$$
+w_{ij} \sim \mathcal{N}\left(0, \frac{2}{n_{\text{in}} + n_{\text{out}}}\right)
+$$
+</div>
+Best for tanh and sigmoid activations.
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+For ReLU networks:
+<div class="equation">
+$$
+w_{ij} \sim \mathcal{N}\left(0, \frac{2}{n_{\text{in}}}\right)
+$$
+</div>
+Accounts for ReLU zeroing half the activations.
+</div>
+
+<h2>Regularization</h2>
+
+<h3>L2 Regularization</h3>
+
+<p>Add penalty to loss:
+<div class="equation">
+$$
+L_{\text{total}} = L_{\text{data}} + \frac{\lambda}{2} \sum_{\ell} \norm{\mW^{(\ell)}}_F^2
+$$
+</div>
+
+<h3>Dropout</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+During training, randomly set activations to zero with probability p. During inference, scale by $(1-p)$.
+</div>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Design 3-layer MLP for binary classification of 100-dimensional inputs. Specify layer dimensions, activations, and parameter count.
+</div>
+
+<p>\begin{exercise}
+Compute forward pass through 2-layer network with given weights and ReLU activation.
+</div>
+
+<p>\begin{exercise}
+For layer with 512 inputs and 256 outputs using ReLU: (1) What is He initialization variance? (2) Why different from Xavier? (3) What happens with zero initialization?
+</div>
+
+<p>\begin{exercise}
+Prove that without nonlinear activations, L-layer network equivalent to single layer.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter03_probability_information.html">← Chapter 3: Probability and Information Theory</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter05_convolutional_networks.html">Chapter 5: Convolutional Neural Networks →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

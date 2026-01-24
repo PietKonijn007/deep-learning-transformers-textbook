@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notation and Conventions - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+    </nav>
+
+    <main>
+        <h1>Notation and Conventions</h1>
+
+<p>This book adopts consistent notation throughout to enhance readability and comprehension.</p>
+
+<h2>General Mathematical Notation</h2>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{cl}
+\toprule
+<strong>Symbol</strong> & <strong>Meaning</strong> \\
+\midrule
+$a, b, c$ & Scalars (lowercase italic) \\
+$n, m, d$ & Integer scalars (dimensions, indices) \\
+$\vx, \vy, \vz$ & Vectors (lowercase bold) \\
+$\mA, \mB, \mC$ & Matrices (uppercase bold) \\
+$\mathcal{X}, \mathcal{D}$ & Sets (uppercase calligraphic) \\
+$f, g, h$ & Functions (lowercase italic) \\
+$\R, \N, \Z, \C$ & Number sets (blackboard bold) \\
+\bottomrule
+\end{tabular}
+\caption{General mathematical notation conventions}
+\end{table}</p>
+
+<h2>Linear Algebra</h2>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{cl}
+\toprule
+<strong>Symbol</strong> & <strong>Meaning</strong> \\
+\midrule
+$\vx \in \R^n$ & Vector $\vx$ with $n$ components \\
+$\mA \in \R^{m \times n}$ & Matrix $\mA$ with $m$ rows and $n$ columns \\
+$a_{i,j}$ or $[\mA]_{i,j}$ & Element in row $i$, column $j$ of matrix $\mA$ \\
+$\mA\transpose$ & Transpose of matrix $\mA$ \\
+$\mA^{-1}$ & Inverse of matrix $\mA$ \\
+$\mA \mB$ & Matrix multiplication \\
+$\mA \odot \mB$ & Element-wise (Hadamard) product \\
+$\vx \transpose \vy$ & Dot product of vectors $\vx$ and $\vy$ \\
+$\norm{\vx}_2$ & Euclidean (L2) norm \\
+$\norm{\vx}_1$ & L1 norm \\
+$\norm{\mA}_F$ & Frobenius norm of matrix $\mA$ \\
+$\text{tr}(\mA)$ & Trace of matrix $\mA$ \\
+$\det(\mA)$ & Determinant of matrix $\mA$ \\
+$\mI$ or $\mI_n$ & Identity matrix \\
+\bottomrule
+\end{tabular}
+\caption{Linear algebra notation}
+\end{table}</p>
+
+<h2>Deep Learning Specific</h2>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{cl}
+\toprule
+<strong>Symbol</strong> & <strong>Meaning</strong> \\
+\midrule
+$\vx^{(i)}$ & $i$-th training example \\
+$\vx_t$ & Input at time step $t$ \\
+$\vh^{(\ell)}$ & Hidden state at layer $\ell$ \\
+$\mW^{(\ell)}$ & Weight matrix at layer $\ell$ \\
+$\vb^{(\ell)}$ & Bias vector at layer $\ell$ \\
+$\sigma(\cdot)$ & Activation function (generic) \\
+$\text{ReLU}(x)$ & Rectified Linear Unit: $\max(0, x)$ \\
+$\text{softmax}(\vx)$ & Softmax function \\
+$N$ or $B$ & Batch size \\
+$d_{\text{model}}$ & Model dimension \\
+$d_k, d_v$ & Dimension of keys and values \\
+$h$ & Number of attention heads \\
+$L$ & Number of layers \\
+$V$ & Vocabulary size \\
+$n$ or $T$ & Sequence length \\
+$\eta$ & Learning rate \\
+\bottomrule
+\end{tabular}
+\caption{Deep learning notation}
+\end{table}</p>
+
+<h2>Dimension Conventions</h2>
+
+<p>Throughout this book, we explicitly annotate dimensions:
+<ul>
+    <li>For $\mW \in \R^{m \times n}$: $m$ rows, $n$ columns
+    <li>Batch dimensions listed first: $\mX \in \R^{B \times n \times d}$
+    <li>Superscripts for layer indices: $\vh^{(\ell)}$
+    <li>Subscripts for time/position indices: $\vx_t$
+</ul>
+        
+        <div class="chapter-nav">
+  <a href="preface.html">← Preface</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter01_linear_algebra.html">Chapter 1: Linear Algebra for Deep Learning →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
