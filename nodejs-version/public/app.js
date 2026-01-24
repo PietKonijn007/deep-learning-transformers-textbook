@@ -9,6 +9,7 @@ const state = {
 const elements = {
     sidebar: document.getElementById('sidebar'),
     sidebarToggle: document.getElementById('sidebar-toggle'),
+    mobileMenuBtn: document.getElementById('mobile-menu-btn'),
     chapterList: document.getElementById('chapter-list'),
     chapterContent: document.getElementById('chapter-content'),
     searchInput: document.getElementById('search'),
@@ -183,12 +184,18 @@ function setupEventListeners() {
         elements.sidebar.classList.toggle('open');
     });
     
+    // Mobile menu button
+    elements.mobileMenuBtn.addEventListener('click', () => {
+        elements.sidebar.classList.toggle('open');
+    });
+    
     // Close sidebar when clicking outside on mobile
     document.addEventListener('click', (e) => {
         if (window.innerWidth <= 768 && 
             elements.sidebar.classList.contains('open') &&
             !elements.sidebar.contains(e.target) &&
-            !elements.sidebarToggle.contains(e.target)) {
+            !elements.sidebarToggle.contains(e.target) &&
+            !elements.mobileMenuBtn.contains(e.target)) {
             elements.sidebar.classList.remove('open');
         }
     });
