@@ -1,46 +1,116 @@
 <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background gradient -->
   <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#003366;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#0066cc;stop-opacity:1" />
+    <!-- Vibrant gradient background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
     </linearGradient>
+    
+    <!-- Glow effect -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   
   <!-- Background -->
-  <rect width="1200" height="630" fill="url(#grad1)"/>
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
   
-  <!-- Decorative elements -->
-  <circle cx="100" cy="100" r="60" fill="rgba(255,255,255,0.1)"/>
-  <circle cx="1100" cy="530" r="80" fill="rgba(255,255,255,0.1)"/>
-  <circle cx="200" cy="500" r="40" fill="rgba(255,255,255,0.05)"/>
-  <circle cx="1000" cy="150" r="50" fill="rgba(255,255,255,0.05)"/>
+  <!-- Neural network visualization -->
+  <!-- Layer 1 nodes -->
+  <circle cx="150" cy="150" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="150" cy="250" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="150" cy="350" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="150" cy="450" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
   
-  <!-- Main content box -->
-  <rect x="80" y="120" width="1040" height="390" rx="20" fill="rgba(255,255,255,0.95)"/>
+  <!-- Layer 2 nodes -->
+  <circle cx="300" cy="200" r="12" fill="#4ade80" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="300" cy="315" r="12" fill="#4ade80" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="300" cy="430" r="12" fill="#4ade80" opacity="0.9" filter="url(#glow)"/>
   
-  <!-- Title -->
-  <text x="600" y="220" font-family="Arial, sans-serif" font-size="64" font-weight="bold" fill="#003366" text-anchor="middle">
-    Deep Learning &amp; Transformers
+  <!-- Layer 3 nodes -->
+  <circle cx="450" cy="250" r="12" fill="#fbbf24" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="450" cy="380" r="12" fill="#fbbf24" opacity="0.9" filter="url(#glow)"/>
+  
+  <!-- Connections -->
+  <line x1="150" y1="150" x2="300" y2="200" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <line x1="150" y1="250" x2="300" y2="315" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <line x1="150" y1="350" x2="300" y2="315" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <line x1="300" y1="200" x2="450" y2="250" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <line x1="300" y1="315" x2="450" y2="380" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Right side neural network -->
+  <circle cx="1050" cy="180" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="1050" cy="280" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="1050" cy="380" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  <circle cx="1050" cy="480" r="12" fill="#fff" opacity="0.8" filter="url(#glow)"/>
+  
+  <circle cx="900" cy="230" r="12" fill="#f472b6" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="900" cy="345" r="12" fill="#f472b6" opacity="0.9" filter="url(#glow)"/>
+  <circle cx="900" cy="460" r="12" fill="#f472b6" opacity="0.9" filter="url(#glow)"/>
+  
+  <line x1="1050" y1="180" x2="900" y2="230" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <line x1="1050" y1="280" x2="900" y2="345" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  <line x1="1050" y1="380" x2="900" y2="345" stroke="#fff" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Floating particles -->
+  <circle cx="250" cy="100" r="6" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="950" cy="120" r="8" fill="#4ade80" opacity="0.6"/>
+  <circle cx="600" cy="80" r="5" fill="#f472b6" opacity="0.6"/>
+  <circle cx="800" cy="550" r="7" fill="#60a5fa" opacity="0.6"/>
+  <circle cx="400" cy="570" r="6" fill="#a78bfa" opacity="0.6"/>
+  
+  <!-- Main content card with glassmorphism effect -->
+  <rect x="480" y="180" width="700" height="320" rx="24" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  <rect x="480" y="180" width="700" height="320" rx="24" fill="url(#cardGrad)" opacity="0.1"/>
+  
+  <defs>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.05" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Title with shadow -->
+  <text x="830" y="260" font-family="Arial, sans-serif" font-size="56" font-weight="900" fill="#000" text-anchor="middle" opacity="0.1">
+    DEEP LEARNING
   </text>
+  <text x="830" y="258" font-family="Arial, sans-serif" font-size="56" font-weight="900" fill="#fff" text-anchor="middle" filter="url(#glow)">
+    DEEP LEARNING
+  </text>
+  
+  <text x="830" y="320" font-family="Arial, sans-serif" font-size="48" font-weight="900" fill="#000" text-anchor="middle" opacity="0.1">
+    &amp; TRANSFORMERS
+  </text>
+  <text x="830" y="318" font-family="Arial, sans-serif" font-size="48" font-weight="900" fill="#fbbf24" text-anchor="middle" filter="url(#glow)">
+    &amp; TRANSFORMERS
+  </text>
+  
+  <!-- Accent line -->
+  <rect x="580" y="340" width="500" height="4" rx="2" fill="#4ade80" opacity="0.8"/>
   
   <!-- Subtitle -->
-  <text x="600" y="280" font-family="Arial, sans-serif" font-size="36" fill="#0066cc" text-anchor="middle">
-    Interactive Graduate-Level Textbook
+  <text x="830" y="385" font-family="Arial, sans-serif" font-size="28" font-weight="600" fill="#fff" text-anchor="middle" opacity="0.95">
+    Master Modern AI Architecture
   </text>
   
-  <!-- Features -->
-  <text x="600" y="350" font-family="Arial, sans-serif" font-size="28" fill="#333333" text-anchor="middle">
-    📐 Mathematical Rigor  •  💻 Practical Implementation  •  🚀 Modern Architecture
+  <!-- Stats badges -->
+  <rect x="580" y="410" width="140" height="50" rx="25" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+  <text x="650" y="443" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">
+    25 Chapters
   </text>
   
-  <!-- Bottom text -->
-  <text x="600" y="430" font-family="Arial, sans-serif" font-size="32" font-weight="600" fill="#003366" text-anchor="middle">
-    25 Comprehensive Chapters
+  <rect x="740" y="410" width="180" height="50" rx="25" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+  <text x="830" y="443" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">
+    Graduate Level
   </text>
   
-  <!-- URL -->
-  <text x="600" y="480" font-family="Arial, sans-serif" font-size="24" fill="#666666" text-anchor="middle">
-    deeplearning.hofkensvermeulen.be
+  <rect x="940" y="410" width="140" height="50" rx="25" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+  <text x="1010" y="443" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#fff" text-anchor="middle">
+    Free Access
   </text>
 </svg>
