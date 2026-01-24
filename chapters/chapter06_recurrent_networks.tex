@@ -1,0 +1,230 @@
+\chapter{Recurrent Neural Networks}
+\label{chap:recurrent_networks}
+
+\section*{Chapter Overview}
+
+Recurrent Neural Networks (RNNs) process sequential data by maintaining hidden states that capture information from previous time steps. This chapter develops RNNs from basic recurrence to modern architectures like LSTMs and GRUs, establishing foundations for understanding transformers.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand recurrent architectures for sequential data
+    \item Implement vanilla RNNs, LSTMs, and GRUs
+    \item Understand vanishing/exploding gradient problems
+    \item Apply RNNs to sequence modeling tasks
+    \item Understand bidirectional and multi-layer RNNs
+\end{enumerate}
+
+\section{Vanilla RNNs}
+\label{sec:vanilla_rnn}
+
+\begin{definition}[Recurrent Neural Network]
+\label{def:rnn}
+An RNN processes sequence $\vx_1, \vx_2, \ldots, \vx_T$ by maintaining hidden state $\vh_t \in \R^h$:
+\begin{align}
+\vh_t &= \tanh(\mW_{hh} \vh_{t-1} + \mW_{xh} \vx_t + \vb_h) \\
+\vy_t &= \mW_{hy} \vh_t + \vb_y
+\end{align}
+where:
+\begin{itemize}
+    \item $\mW_{hh} \in \R^{h \times h}$: hidden-to-hidden weights
+    \item $\mW_{xh} \in \R^{h \times d}$: input-to-hidden weights
+    \item $\mW_{hy} \in \R^{k \times h}$: hidden-to-output weights
+    \item $\vh_0$ initialized (often zeros)
+\end{itemize}
+\end{definition}
+
+\begin{example}[RNN Forward Pass]
+\label{ex:rnn_forward}
+Character-level language model with vocabulary size $V=5$, hidden size $h=3$.
+
+Input sequence: "hello" encoded as one-hot vectors $\vx_1, \ldots, \vx_5 \in \R^5$
+
+Initialize: $\vh_0 = [0, 0, 0]\transpose$
+
+\textbf{Time step 1:} Process 'h'
+\begin{align}
+\vh_1 &= \tanh(\mW_{hh}\vh_0 + \mW_{xh}\vx_1 + \vb_h) \in \R^3 \\
+\vy_1 &= \mW_{hy}\vh_1 + \vb_y \in \R^5 \\
+\hat{\mathbf{p}}_1 &= \text{softmax}(\vy_1) \quad \text{(predict next character)}
+\end{align}
+
+\textbf{Time step 2:} Process 'e' using $\vh_1$
+\begin{equation}
+\vh_2 = \tanh(\mW_{hh}\vh_1 + \mW_{xh}\vx_2 + \vb_h)
+\end{equation}
+
+Hidden state $\vh_t$ carries information from all previous time steps.
+\end{example}
+
+\subsection{Backpropagation Through Time (BPTT)}
+
+\begin{algorithm}[H]
+\caption{Backpropagation Through Time}
+\label{alg:bptt}
+\KwIn{Sequence $\{\vx_1, \ldots, \vx_T\}$, targets $\{\vy_1, \ldots, \vy_T\}$}
+\KwOut{Gradients for all parameters}
+
+\tcp{Forward Pass}
+\For{$t = 1$ \KwTo $T$}{
+    $\vh_t = \tanh(\mW_{hh}\vh_{t-1} + \mW_{xh}\vx_t + \vb_h)$ \\
+    $\vy_t = \mW_{hy}\vh_t + \vb_y$ \\
+    $L_t = \text{Loss}(\vy_t, \text{target}_t)$
+}
+
+\tcp{Backward Pass}
+Initialize $\frac{\partial L}{\partial \vh_{T+1}} = \mathbf{0}$ \\
+\For{$t = T$ \KwTo $1$}{
+    Compute $\frac{\partial L}{\partial \vh_t}$ (includes gradient from $t+1$) \\
+    Accumulate $\frac{\partial L}{\partial \mW_{hh}}, \frac{\partial L}{\partial \mW_{xh}}, \frac{\partial L}{\partial \mW_{hy}}$
+}
+\end{algorithm}
+
+\subsection{Vanishing and Exploding Gradients}
+
+Gradient of loss with respect to $\vh_0$ involves product:
+\begin{equation}
+\frac{\partial \vh_T}{\partial \vh_0} = \prod_{t=1}^{T} \frac{\partial \vh_t}{\partial \vh_{t-1}} = \prod_{t=1}^{T} \mW_{hh}\transpose \text{diag}(\tanh'(\cdot))
+\end{equation}
+
+\textbf{Problem:} Long sequences cause:
+\begin{itemize}
+    \item \textbf{Vanishing gradients:} If $\norm{\mW_{hh}} < 1$, gradients $\to 0$ exponentially
+    \item \textbf{Exploding gradients:} If $\norm{\mW_{hh}} > 1$, gradients $\to \infty$ exponentially
+\end{itemize}
+
+\textbf{Solutions:}
+\begin{itemize}
+    \item Gradient clipping (for exploding)
+    \item Better architectures: LSTM, GRU
+    \item Eventually: Transformers with attention (no sequential bottleneck)
+\end{itemize}
+
+\section{Long Short-Term Memory (LSTM)}
+\label{sec:lstm}
+
+\begin{definition}[LSTM Cell]
+\label{def:lstm}
+LSTM uses gating mechanisms to control information flow:
+\begin{align}
+\vf_t &= \sigma(\mW_f[\vh_{t-1}, \vx_t] + \vb_f) && \text{(forget gate)} \\
+\vi_t &= \sigma(\mW_i[\vh_{t-1}, \vx_t] + \vb_i) && \text{(input gate)} \\
+\tilde{\mathbf{c}}_t &= \tanh(\mW_c[\vh_{t-1}, \vx_t] + \vb_c) && \text{(candidate cell)} \\
+\mathbf{c}_t &= \vf_t \odot \mathbf{c}_{t-1} + \vi_t \odot \tilde{\mathbf{c}}_t && \text{(cell state)} \\
+\vo_t &= \sigma(\mW_o[\vh_{t-1}, \vx_t] + \vb_o) && \text{(output gate)} \\
+\vh_t &= \vo_t \odot \tanh(\mathbf{c}_t) && \text{(hidden state)}
+\end{align}
+where $\sigma$ is sigmoid, $\odot$ is element-wise multiplication, and $[\cdot, \cdot]$ is concatenation.
+\end{definition}
+
+\textbf{Key components:}
+\begin{itemize}
+    \item \textbf{Cell state $\mathbf{c}_t$:} Long-term memory, flows with minimal modification
+    \item \textbf{Forget gate $\vf_t$:} What to remove from cell state
+    \item \textbf{Input gate $\vi_t$:} What new information to store
+    \item \textbf{Output gate $\vo_t$:} What to output from cell state
+\end{itemize}
+
+\begin{example}[LSTM Parameter Count]
+\label{ex:lstm_params}
+For input dimension $d=512$ and hidden dimension $h=1024$:
+
+Each gate has weight matrix for $[\vh_{t-1}, \vx_t] \in \R^{h+d}$:
+\begin{align}
+\text{Single gate:} \quad &(h+d) \times h + h = (1024 + 512) \times 1024 + 1024 \\
+&= 1{,}572{,}864 + 1{,}024 = 1{,}573{,}888
+\end{align}
+
+LSTM has 4 gates (forget, input, cell, output):
+\begin{equation}
+\text{Total:} \quad 4 \times 1{,}573{,}888 = 6{,}295{,}552 \text{ parameters}
+\end{equation}
+
+Compare to transformer attention with same dimensions: often fewer parameters and better parallelization!
+\end{example}
+
+\section{Gated Recurrent Unit (GRU)}
+\label{sec:gru}
+
+\begin{definition}[GRU Cell]
+\label{def:gru}
+GRU simplifies LSTM by merging cell and hidden states:
+\begin{align}
+\vz_t &= \sigma(\mW_z[\vh_{t-1}, \vx_t] + \vb_z) && \text{(update gate)} \\
+\vr_t &= \sigma(\mW_r[\vh_{t-1}, \vx_t] + \vb_r) && \text{(reset gate)} \\
+\tilde{\vh}_t &= \tanh(\mW_h[\vr_t \odot \vh_{t-1}, \vx_t] + \vb_h) && \text{(candidate)} \\
+\vh_t &= (1 - \vz_t) \odot \vh_{t-1} + \vz_t \odot \tilde{\vh}_t && \text{(hidden state)}
+\end{align}
+\end{definition}
+
+\textbf{Advantages over LSTM:}
+\begin{itemize}
+    \item Fewer parameters (3 gates vs 4)
+    \item Simpler architecture
+    \item Often similar performance
+    \item Faster training
+\end{itemize}
+
+\section{Bidirectional RNNs}
+\label{sec:bidirectional}
+
+\begin{definition}[Bidirectional RNN]
+\label{def:bidirectional_rnn}
+Process sequence in both directions:
+\begin{align}
+\overrightarrow{\vh}_t &= \text{RNN}_{\text{forward}}(\vx_t, \overrightarrow{\vh}_{t-1}) \\
+\overleftarrow{\vh}_t &= \text{RNN}_{\text{backward}}(\vx_t, \overleftarrow{\vh}_{t+1}) \\
+\vh_t &= [\overrightarrow{\vh}_t; \overleftarrow{\vh}_t]
+\end{align}
+\end{definition}
+
+Bidirectional RNNs capture context from both past and future, useful when entire sequence is available (not for online/causal tasks).
+
+\textbf{Example:} BERT uses bidirectional transformers (attention, not RNN), capturing full context.
+
+\section{RNN Applications}
+\label{sec:rnn_applications}
+
+\textbf{Sequence-to-Sequence:}
+\begin{itemize}
+    \item Machine translation: Encoder RNN $\to$ Decoder RNN
+    \item Text summarization
+    \item Speech recognition
+\end{itemize}
+
+\textbf{Sequence Labeling:}
+\begin{itemize}
+    \item Part-of-speech tagging
+    \item Named entity recognition
+    \item Output at each time step
+\end{itemize}
+
+\textbf{Sequence Generation:}
+\begin{itemize}
+    \item Language modeling
+    \item Music generation
+    \item Sample from output distribution
+\end{itemize}
+
+\begin{keypoint}
+While RNNs were dominant for sequences, transformers now excel in most NLP tasks due to: (1) Better parallelization, (2) Direct long-range dependencies via attention, (3) No vanishing gradients. RNNs still useful for online/streaming tasks.
+\end{keypoint}
+
+\section{Exercises}
+
+\begin{exercise}
+For vanilla RNN with input dim $d=128$, hidden dim $h=256$: (1) Count total parameters, (2) Compute hidden state dimensions after processing sequence length $T=50$, (3) Why can't RNNs process batches of different length sequences efficiently?
+\end{exercise}
+
+\begin{exercise}
+Derive gradient $\frac{\partial L}{\partial \mW_{hh}}$ for 3-step sequence. Show how gradient involves products of Jacobians and explain vanishing gradient problem.
+\end{exercise}
+
+\begin{exercise}
+Compare parameter counts for: (1) LSTM with $h=512$, (2) GRU with $h=512$, (3) Transformer attention layer with $d_{\text{model}}=512$, $d_k=64$, $h=8$ heads. Which is most parameter-efficient?
+\end{exercise}
+
+\begin{exercise}
+Implement bidirectional LSTM in PyTorch. Process sequence "The cat sat on the mat" with vocabulary size 10, embedding dim 16, hidden dim 32. Show output dimensions.
+\end{exercise}
+

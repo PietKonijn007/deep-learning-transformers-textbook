@@ -1,0 +1,395 @@
+\chapter{Calculus and Optimization}
+\label{chap:calculus_optimization}
+
+\section*{Chapter Overview}
+
+Training deep learning models requires optimizing complex, high-dimensional functions. This chapter develops the calculus and optimization theory necessary to understand how neural networks learn from data. We cover multivariable calculus, gradient computation, and the optimization algorithms that power modern deep learning.
+
+The centerpiece of this chapter is backpropagation, the algorithm that efficiently computes gradients in neural networks. We derive backpropagation from first principles, showing how the chain rule enables gradient computation through arbitrarily deep computational graphs. We then explore gradient descent and its variants, which use these gradients to iteratively improve model parameters.
+
+\subsection*{Learning Objectives}
+
+After completing this chapter, you will be able to:
+
+\begin{enumerate}
+    \item Compute gradients and Jacobians for multivariable functions
+    \item Apply the chain rule to composite functions
+    \item Understand and implement the backpropagation algorithm
+    \item Implement gradient descent and its variants (SGD, momentum, Adam)
+    \item Analyze convergence properties of optimization algorithms
+    \item Apply learning rate schedules and regularization techniques
+\end{enumerate}
+
+\section{Multivariable Calculus}
+\label{sec:multivariable_calculus}
+
+\subsection{Partial Derivatives}
+
+\begin{definition}[Partial Derivative]
+\label{def:partial_derivative}
+For function $f: \R^n \to \R$, the \textbf{partial derivative} with respect to $x_i$ is:
+\begin{equation}
+\frac{\partial f}{\partial x_i} = \lim_{h \to 0} \frac{f(x_1, \ldots, x_i + h, \ldots, x_n) - f(x_1, \ldots, x_i, \ldots, x_n)}{h}
+\end{equation}
+\end{definition}
+
+\begin{example}[Computing Partial Derivatives]
+\label{ex:partial_derivatives}
+For $f(x_1, x_2) = x_1^2 + 3x_1 x_2 + x_2^2$:
+\begin{align}
+\frac{\partial f}{\partial x_1} &= 2x_1 + 3x_2 \\
+\frac{\partial f}{\partial x_2} &= 3x_1 + 2x_2
+\end{align}
+
+At point $(x_1, x_2) = (1, 2)$:
+\begin{align}
+\frac{\partial f}{\partial x_1}\bigg|_{(1,2)} &= 2(1) + 3(2) = 8 \\
+\frac{\partial f}{\partial x_2}\bigg|_{(1,2)} &= 3(1) + 2(2) = 7
+\end{align}
+\end{example}
+
+\subsection{Gradients}
+
+\begin{definition}[Gradient]
+\label{def:gradient}
+For function $f: \R^n \to \R$, the \textbf{gradient} is the vector of partial derivatives:
+\begin{equation}
+\nabla f(\vx) = \begin{bmatrix} 
+\frac{\partial f}{\partial x_1} \\
+\frac{\partial f}{\partial x_2} \\
+\vdots \\
+\frac{\partial f}{\partial x_n}
+\end{bmatrix} \in \R^n
+\end{equation}
+\end{definition}
+
+The gradient points in the direction of steepest ascent of the function.
+
+\begin{example}[Gradient of Loss Function]
+\label{ex:loss_gradient}
+For mean squared error loss:
+\begin{equation}
+L(\vw) = \frac{1}{N} \sum_{i=1}^N (y_i - \vw\transpose \vx^{(i)})^2
+\end{equation}
+
+The gradient with respect to $\vw$ is:
+\begin{equation}
+\nabla_{\vw} L = -\frac{2}{N} \sum_{i=1}^N (y_i - \vw\transpose \vx^{(i)}) \vx^{(i)}
+\end{equation}
+
+For $N=1$, $\vw = [w_1, w_2]\transpose$, $\vx = [1, 2]\transpose$, $y = 5$, and current prediction $\hat{y} = \vw\transpose \vx = 3$:
+\begin{equation}
+\nabla_{\vw} L = -2(5 - 3) \begin{bmatrix} 1 \\ 2 \end{bmatrix} = \begin{bmatrix} -4 \\ -8 \end{bmatrix}
+\end{equation}
+
+The negative gradient $-\nabla_{\vw} L = [4, 8]\transpose$ points toward better parameters.
+\end{example}
+
+\subsection{The Chain Rule}
+
+\begin{theorem}[Chain Rule for Functions]
+\label{thm:chain_rule}
+For composite function $h(\vx) = f(g(\vx))$ where $g: \R^n \to \R^m$ and $f: \R^m \to \R$:
+\begin{equation}
+\frac{\partial h}{\partial x_i} = \sum_{j=1}^m \frac{\partial f}{\partial g_j} \frac{\partial g_j}{\partial x_i}
+\end{equation}
+
+In vector form:
+\begin{equation}
+\nabla_{\vx} h = \mJ_g\transpose \nabla_{\vz} f
+\end{equation}
+where $\vz = g(\vx)$ and $\mJ_g \in \R^{m \times n}$ is the Jacobian of $g$.
+\end{theorem}
+
+\begin{example}[Chain Rule Application]
+\label{ex:chain_rule}
+For neural network layer: $\vy = \sigma(\mW\vx + \vb)$ where $\sigma$ is applied element-wise.
+
+Let $\vz = \mW\vx + \vb$ (pre-activation). Then:
+\begin{equation}
+\frac{\partial L}{\partial \vx} = \mW\transpose \left( \frac{\partial L}{\partial \vy} \odot \sigma'(\vz) \right)
+\end{equation}
+
+where $\odot$ denotes element-wise multiplication.
+
+\textbf{Concrete example:} For ReLU activation $\sigma(z) = \max(0, z)$:
+\begin{equation}
+\sigma'(z) = \begin{cases} 1 & \text{if } z > 0 \\ 0 & \text{if } z \leq 0 \end{cases}
+\end{equation}
+
+If $\vz = [2.0, -1.0, 0.5]\transpose$, then $\sigma'(\vz) = [1, 0, 1]\transpose$.
+\end{example}
+
+\subsection{Jacobian and Hessian Matrices}
+
+\begin{definition}[Jacobian Matrix]
+\label{def:jacobian}
+For function $\mathbf{f}: \R^n \to \R^m$, the \textbf{Jacobian matrix} is:
+\begin{equation}
+\mJ_{\mathbf{f}}(\vx) = \begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} & \frac{\partial f_1}{\partial x_2} & \cdots & \frac{\partial f_1}{\partial x_n} \\
+\frac{\partial f_2}{\partial x_1} & \frac{\partial f_2}{\partial x_2} & \cdots & \frac{\partial f_2}{\partial x_n} \\
+\vdots & \vdots & \ddots & \vdots \\
+\frac{\partial f_m}{\partial x_1} & \frac{\partial f_m}{\partial x_2} & \cdots & \frac{\partial f_m}{\partial x_n}
+\end{bmatrix} \in \R^{m \times n}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Hessian Matrix]
+\label{def:hessian}
+For function $f: \R^n \to \R$, the \textbf{Hessian matrix} contains second derivatives:
+\begin{equation}
+\mH_f(\vx) = \begin{bmatrix}
+\frac{\partial^2 f}{\partial x_1^2} & \frac{\partial^2 f}{\partial x_1 \partial x_2} & \cdots \\
+\frac{\partial^2 f}{\partial x_2 \partial x_1} & \frac{\partial^2 f}{\partial x_2^2} & \cdots \\
+\vdots & \vdots & \ddots
+\end{bmatrix} \in \R^{n \times n}
+\end{equation}
+\end{definition}
+
+The Hessian describes the local curvature of the function. For smooth functions, $\mH$ is symmetric.
+
+\section{Gradient Descent}
+\label{sec:gradient_descent}
+
+\subsection{The Gradient Descent Algorithm}
+
+Gradient descent iteratively moves parameters in the direction opposite to the gradient:
+
+\begin{algorithm}[H]
+\caption{Gradient Descent}
+\label{alg:gradient_descent}
+\KwIn{Objective function $f(\vw)$, initial parameters $\vw^{(0)}$, learning rate $\eta$, iterations $T$}
+\KwOut{Optimized parameters $\vw^{(T)}$}
+\For{$t = 0$ \KwTo $T-1$}{
+    Compute gradient: $\mathbf{g}^{(t)} = \nabla f(\vw^{(t)})$ \\
+    Update parameters: $\vw^{(t+1)} = \vw^{(t)} - \eta \mathbf{g}^{(t)}$
+}
+\Return{$\vw^{(T)}$}
+\end{algorithm}
+
+\begin{keypoint}
+The learning rate $\eta$ controls the step size. Too large: divergence. Too small: slow convergence.
+\end{keypoint}
+
+\begin{example}[Gradient Descent on Quadratic]
+\label{ex:gd_quadratic}
+Minimize $f(w) = w^2$ starting from $w^{(0)} = 3$ with $\eta = 0.1$:
+\begin{align}
+t=0:& \quad w^{(0)} = 3, \quad g^{(0)} = 2w^{(0)} = 6, \quad w^{(1)} = 3 - 0.1(6) = 2.4 \\
+t=1:& \quad w^{(1)} = 2.4, \quad g^{(1)} = 4.8, \quad w^{(2)} = 2.4 - 0.1(4.8) = 1.92 \\
+t=2:& \quad w^{(2)} = 1.92, \quad g^{(2)} = 3.84, \quad w^{(3)} = 1.92 - 0.1(3.84) = 1.536
+\end{align}
+
+The parameters converge to $w^* = 0$ (the minimum).
+\end{example}
+
+\subsection{Stochastic Gradient Descent (SGD)}
+
+For large datasets, computing the full gradient is expensive. SGD approximates the gradient using mini-batches.
+
+\begin{algorithm}[H]
+\caption{Stochastic Gradient Descent (SGD)}
+\label{alg:sgd}
+\KwIn{Dataset $\mathcal{D} = \{(\vx^{(i)}, y^{(i)})\}_{i=1}^N$, batch size $B$, learning rate $\eta$, epochs $E$}
+\KwOut{Optimized parameters $\vw$}
+Initialize $\vw$ randomly \\
+\For{epoch $e = 1$ \KwTo $E$}{
+    Shuffle dataset $\mathcal{D}$ \\
+    \For{each mini-batch $\mathcal{B} \subset \mathcal{D}$ of size $B$}{
+        Compute mini-batch gradient: $\mathbf{g} = \frac{1}{B} \sum_{(\vx, y) \in \mathcal{B}} \nabla_{\vw} L(\vw; \vx, y)$ \\
+        Update: $\vw \leftarrow \vw - \eta \mathbf{g}$
+    }
+}
+\Return{$\vw$}
+\end{algorithm}
+
+\begin{implementation}
+PyTorch SGD implementation:
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+# Model and loss
+model = nn.Linear(10, 1)
+criterion = nn.MSELoss()
+
+# SGD optimizer
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+# Training loop
+for epoch in range(100):
+    for x_batch, y_batch in dataloader:
+        # Forward pass
+        y_pred = model(x_batch)
+        loss = criterion(y_pred, y_batch)
+
+        # Backward pass
+        optimizer.zero_grad()  # Clear previous gradients
+        loss.backward()         # Compute gradients
+        optimizer.step()        # Update parameters
+\end{lstlisting}
+\end{implementation}
+
+\subsection{Momentum}
+
+Momentum accelerates SGD by accumulating a velocity vector:
+
+\begin{algorithm}[H]
+\caption{SGD with Momentum}
+\label{alg:momentum}
+\KwIn{Learning rate $\eta$, momentum coefficient $\beta$ (typically 0.9)}
+Initialize velocity $\mathbf{v} = \mathbf{0}$ \\
+\For{each iteration}{
+    Compute gradient $\mathbf{g} = \nabla_{\vw} L(\vw)$ \\
+    Update velocity: $\mathbf{v} \leftarrow \beta \mathbf{v} + \mathbf{g}$ \\
+    Update parameters: $\vw \leftarrow \vw - \eta \mathbf{v}$
+}
+\end{algorithm}
+
+Momentum helps navigate ravines and accelerates convergence in relevant directions.
+
+\subsection{Adam Optimizer}
+
+Adam (Adaptive Moment Estimation) combines momentum with adaptive learning rates:
+
+\begin{algorithm}[H]
+\caption{Adam Optimizer}
+\label{alg:adam}
+\KwIn{Learning rate $\alpha$ (default 0.001), $\beta_1$ = 0.9, $\beta_2$ = 0.999, $\epsilon$ = $10^{-8}$}
+Initialize $\mathbf{m}_0 = \mathbf{0}$ (first moment), $\mathbf{v}_0 = \mathbf{0}$ (second moment), $t = 0$ \\
+\While{not converged}{
+    $t \leftarrow t + 1$ \\
+    Compute gradient: $\mathbf{g}_t = \nabla_{\vw} L(\vw_{t-1})$ \\
+    Update biased first moment: $\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t$ \\
+    Update biased second moment: $\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2$ \\
+    Bias-corrected first moment: $\hat{\mathbf{m}}_t = \mathbf{m}_t / (1 - \beta_1^t)$ \\
+    Bias-corrected second moment: $\hat{\mathbf{v}}_t = \mathbf{v}_t / (1 - \beta_2^t)$ \\
+    Update parameters: $\vw_t = \vw_{t-1} - \alpha \hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$
+}
+\end{algorithm}
+
+Adam is the most commonly used optimizer for training transformers and large language models.
+
+\section{Backpropagation}
+\label{sec:backpropagation}
+
+Backpropagation efficiently computes gradients in neural networks using the chain rule.
+
+\subsection{Computational Graphs}
+
+A computational graph represents the sequence of operations in a neural network. Each node is an operation, and edges carry values/gradients.
+
+\begin{example}[Simple Computational Graph]
+\label{ex:comp_graph}
+For $L = (y - \hat{y})^2$ where $\hat{y} = w_2 \sigma(w_1 x + b_1) + b_2$:
+
+\textbf{Forward pass:}
+\begin{align}
+z_1 &= w_1 x + b_1 = 2.0(1.0) + 0.5 = 2.5 \\
+a_1 &= \sigma(z_1) = \sigma(2.5) = 0.924 \quad \text{(sigmoid)} \\
+z_2 &= w_2 a_1 + b_2 = 1.5(0.924) + 0.3 = 1.686 \\
+L &= (y - z_2)^2 = (3.0 - 1.686)^2 = 1.726
+\end{align}
+
+\textbf{Backward pass:}
+\begin{align}
+\frac{\partial L}{\partial z_2} &= 2(z_2 - y) = 2(1.686 - 3.0) = -2.628 \\
+\frac{\partial L}{\partial w_2} &= \frac{\partial L}{\partial z_2} \cdot a_1 = -2.628(0.924) = -2.428 \\
+\frac{\partial L}{\partial a_1} &= \frac{\partial L}{\partial z_2} \cdot w_2 = -2.628(1.5) = -3.942 \\
+\frac{\partial L}{\partial z_1} &= \frac{\partial L}{\partial a_1} \cdot \sigma'(z_1) = -3.942(0.070) = -0.276 \\
+\frac{\partial L}{\partial w_1} &= \frac{\partial L}{\partial z_1} \cdot x = -0.276(1.0) = -0.276
+\end{align}
+\end{example}
+
+\subsection{Backpropagation Algorithm}
+
+\begin{algorithm}[H]
+\caption{Backpropagation}
+\label{alg:backprop}
+\KwIn{Training example $(\vx, y)$, network with $L$ layers}
+\KwOut{Gradients $\{\nabla_{\mW^{(\ell)}} L, \nabla_{\vb^{(\ell)}} L\}_{\ell=1}^L$}
+
+\tcp{Forward Pass}
+$\vh^{(0)} = \vx$ \\
+\For{$\ell = 1$ \KwTo $L$}{
+    $\vz^{(\ell)} = \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)}$ \\
+    $\vh^{(\ell)} = \sigma^{(\ell)}(\vz^{(\ell)})$
+}
+$\hat{y} = \vh^{(L)}$ \\
+Compute loss: $L = \text{Loss}(y, \hat{y})$
+
+\tcp{Backward Pass}
+$\boldsymbol{\delta}^{(L)} = \nabla_{\vh^{(L)}} L \odot \sigma'^{(L)}(\vz^{(L)})$ \\
+\For{$\ell = L$ \KwTo $1$}{
+    $\nabla_{\mW^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)} (\vh^{(\ell-1)})\transpose$ \\
+    $\nabla_{\vb^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)}$ \\
+    \If{$\ell > 1$}{
+        $\boldsymbol{\delta}^{(\ell-1)} = (\mW^{(\ell)})\transpose \boldsymbol{\delta}^{(\ell)} \odot \sigma'^{(\ell-1)}(\vz^{(\ell-1)})$
+    }
+}
+\Return{All gradients}
+\end{algorithm}
+
+\begin{keypoint}
+Backpropagation computes gradients in $O(n)$ time where $n$ is the number of parameters, compared to $O(n^2)$ for naive methods. This efficiency enables training of billion-parameter models.
+\end{keypoint}
+
+\section{Learning Rate Schedules}
+\label{sec:lr_schedules}
+
+Learning rate schedules adjust $\eta$ during training to improve convergence.
+
+\subsection{Common Schedules}
+
+\textbf{Step Decay:}
+\begin{equation}
+\eta_t = \eta_0 \gamma^{\lfloor t/s \rfloor}
+\end{equation}
+where $\gamma < 1$ (e.g., 0.1) and $s$ is step size (e.g., every 10 epochs).
+
+\textbf{Exponential Decay:}
+\begin{equation}
+\eta_t = \eta_0 e^{-\lambda t}
+\end{equation}
+
+\textbf{Cosine Annealing:}
+\begin{equation}
+\eta_t = \eta_{\min} + \frac{1}{2}(\eta_{\max} - \eta_{\min})\left(1 + \cos\left(\frac{t\pi}{T}\right)\right)
+\end{equation}
+
+\textbf{Warmup + Decay (Transformers):}
+\begin{equation}
+\eta_t = \frac{d_{\text{model}}^{-0.5}}{\max(t, \text{warmup\_steps}^{-0.5})} \cdot \min(t^{-0.5}, t \cdot \text{warmup\_steps}^{-1.5})
+\end{equation}
+
+The warmup phase prevents instability in early training of transformers.
+
+\section{Exercises}
+
+\begin{exercise}
+Compute the gradient of $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA \in \R^{n \times n}$ is symmetric, $\vw, \vb \in \R^n$, and $c \in \R$.
+\end{exercise}
+
+\begin{exercise}
+Implement backpropagation for a 2-layer network with ReLU activation. Given input $\vx = [1.0, 0.5]\transpose$, weights $\mW^{(1)} \in \R^{3 \times 2}$, $\mW^{(2)} \in \R^{1 \times 3}$, and target $y = 2.0$, compute all gradients.
+\end{exercise}
+
+\begin{exercise}
+For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
+\begin{enumerate}
+    \item Why is bias correction necessary?
+    \item What are the effective learning rates after steps $t = 1, 10, 100, 1000$?
+    \item How does Adam handle sparse gradients compared to SGD?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+A transformer is trained with learning rate warmup over 4000 steps, then inverse square root decay. If $d_{\text{model}} = 512$:
+\begin{enumerate}
+    \item Plot the learning rate schedule for 100,000 steps
+    \item What is the learning rate at step 1, 4000, and 10,000?
+    \item Why is warmup beneficial for transformer training?
+\end{enumerate}
+\end{exercise}
+

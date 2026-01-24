@@ -1,0 +1,135 @@
+\chapter{Convolutional Neural Networks}
+\label{chap:convolutional_networks}
+
+\section*{Chapter Overview}
+
+Convolutional Neural Networks (CNNs) revolutionized computer vision by exploiting spatial structure. This chapter develops convolution operations, pooling, and modern CNN architectures including ResNet.
+
+\subsection*{Learning Objectives}
+
+\begin{enumerate}
+    \item Understand convolution operations and compute output dimensions
+    \item Design CNN architectures with appropriate pooling and stride
+    \item Understand translation equivariance
+    \item Implement modern CNN architectures (ResNet, VGG)
+\end{enumerate}
+
+\section{Convolution Operation}
+\label{sec:convolution_operation}
+
+\begin{definition}[2D Convolution]
+\label{def:2d_convolution}
+For input $\mX \in \R^{H \times W}$ and kernel $\mK \in \R^{k_h \times k_w}$:
+\begin{equation}
+(\mX \star \mK)_{i,j} = \sum_{m=0}^{k_h-1} \sum_{n=0}^{k_w-1} \mX_{i+m, j+n} \cdot \mK_{m,n}
+\end{equation}
+\end{definition}
+
+\begin{example}[3x3 Convolution]
+\label{ex:3x3_conv}
+Input $4\times4$, kernel $3\times3$ (edge detector), output $2\times2$. Computing first position: sum of element-wise products gives edge response.
+\end{example}
+
+\subsection{Output Dimensions}
+
+\begin{theorem}[Output Size]
+\label{thm:conv_output_size}
+For input size $H \times W$, kernel $k_h \times k_w$, padding $p$, stride $s$:
+\begin{equation}
+H_{\text{out}} = \left\lfloor \frac{H + 2p - k_h}{s} \right\rfloor + 1
+\end{equation}
+\end{theorem}
+
+\section{Multi-Channel Convolutions}
+\label{sec:multi_channel}
+
+\begin{definition}[Convolutional Layer]
+\label{def:conv_layer}
+For input $\mathbf{X} \in \R^{C_{\text{in}} \times H \times W}$ with $C_{\text{out}}$ output channels:
+\begin{equation}
+\mathbf{Y}^{(i)} = \sum_{c=1}^{C_{\text{in}}} \mathbf{X}^{(c)} \star \mathbf{K}^{(i,c)} + b^{(i)}
+\end{equation}
+\end{definition}
+
+\begin{example}[RGB Convolution]
+\label{ex:rgb_conv}
+Input: $\mathbf{X} \in \R^{3 \times 224 \times 224}$. Conv layer: 64 filters $3\times3$, stride 1, padding 1.
+
+Parameters: $64 \times 3 \times 3 \times 3 + 64 = 1{,}792$
+
+Output: $\mathbf{Y} \in \R^{64 \times 224 \times 224}$
+
+Compare to fully-connected: $\approx 483$ billion parameters!
+\end{example}
+
+\begin{keypoint}
+Convolution provides: (1) Parameter sharing, (2) Local connectivity, (3) Translation equivariance. Massive parameter reduction compared to fully-connected layers.
+\end{keypoint}
+
+\section{Pooling Layers}
+\label{sec:pooling}
+
+\begin{definition}[Max Pooling]
+\label{def:max_pooling}
+For window $k \times k$ and stride $s$:
+\begin{equation}
+\text{MaxPool}(\mathbf{X})_{i,j} = \max_{m,n \in \text{window}} \mathbf{X}_{si+m, sj+n}
+\end{equation}
+\end{definition}
+
+Pooling reduces spatial dimensions, increases receptive field, and provides translation invariance.
+
+\section{Classic Architectures}
+\label{sec:classic_architectures}
+
+\subsection{VGG-16 (2014)}
+
+Deep network with small $3\times3$ filters. Pattern: $[\text{Conv}3\times3]^n \to \text{MaxPool} \to \text{Double channels}$
+
+Total: 138 million parameters
+
+\subsection{ResNet (2015)}
+
+\begin{definition}[Residual Block]
+\label{def:residual_block}
+Learn residual:
+\begin{equation}
+\mathbf{y} = \mathcal{F}(\mathbf{x}) + \mathbf{x}
+\end{equation}
+\end{definition}
+
+ResNet-50: 25.6M parameters, enables training 100+ layer networks.
+
+\begin{keypoint}
+Residual connections enable extremely deep networks by allowing gradients to flow through skip connections. Analogous to skip connections in transformers.
+\end{keypoint}
+
+\section{Batch Normalization}
+\label{sec:batch_norm}
+
+\begin{definition}[Batch Normalization]
+\label{def:batch_norm}
+For mini-batch, normalize each feature:
+\begin{align}
+\hat{\mathbf{x}}_i &= \frac{\mathbf{x}_i - \mu_{\mathcal{B}}}{\sqrt{\sigma^2_{\mathcal{B}} + \epsilon}} \\
+\mathbf{y}_i &= \gamma \hat{\mathbf{x}}_i + \beta
+\end{align}
+where $\gamma, \beta$ are learnable.
+\end{definition}
+
+Benefits: Reduces covariate shift, allows higher learning rates, acts as regularization.
+
+\section{Exercises}
+
+\begin{exercise}
+For $32\times32\times3$ input, compute dimensions after: Conv(64, $5\times5$, s=1, p=2), MaxPool($2\times2$, s=2), Conv(128, $3\times3$, s=1, p=1), MaxPool($2\times2$, s=2). Count parameters.
+\end{exercise}
+
+\begin{exercise}
+Show two $3\times3$ convolutions equal one $5\times5$ receptive field. Compare parameter counts.
+\end{exercise}
+
+\begin{exercise}
+Design CNN for CIFAR-10 with 3 blocks, channels [64, 128, 256]. Calculate total parameters.
+\end{exercise}
+

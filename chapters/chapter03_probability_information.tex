@@ -1,0 +1,178 @@
+\chapter{Probability and Information Theory}
+\label{chap:probability_information}
+
+\section*{Chapter Overview}
+
+Deep learning is fundamentally a probabilistic framework. Neural networks learn probability distributions over data, make predictions with uncertainty, and are trained using probabilistic objectives. This chapter develops the probability theory and information theory necessary to understand these probabilistic aspects of deep learning.
+
+We cover probability distributions, conditional probability, expectation, and variance—the building blocks for understanding neural network outputs as probabilistic models. We then introduce information theory concepts like entropy, cross-entropy, and KL divergence, which form the basis for loss functions used in training.
+
+\subsection*{Learning Objectives}
+
+After completing this chapter, you will be able to:
+
+\begin{enumerate}
+    \item Work with probability distributions and compute expectations
+    \item Apply Bayes' theorem to understand conditional probabilities
+    \item Understand entropy as a measure of uncertainty
+    \item Derive and apply cross-entropy loss for classification
+    \item Use KL divergence to measure distribution differences
+    \item Interpret neural network outputs as probability distributions
+\end{enumerate}
+
+\section{Probability Fundamentals}
+\label{sec:probability_fundamentals}
+
+\subsection{Random Variables and Distributions}
+
+\begin{definition}[Random Variable]
+\label{def:random_variable}
+A \textbf{random variable} $X$ is a function that maps outcomes from a sample space to real numbers. We distinguish between:
+\begin{itemize}
+    \item \textbf{Discrete random variables}: Take countable values (e.g., class labels)
+    \item \textbf{Continuous random variables}: Take values in continuous ranges
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Probability Mass Function (PMF)]
+\label{def:pmf}
+For discrete random variable $X$, the \textbf{probability mass function} is:
+\begin{equation}
+P(X = x) = p(x)
+\end{equation}
+satisfying: (1) $0 \leq p(x) \leq 1$ for all $x$, and (2) $\sum_x p(x) = 1$
+\end{definition}
+
+\begin{example}[Classification as Discrete Distribution]
+\label{ex:classification_dist}
+In image classification with 10 classes (digits 0-9), a neural network outputs a probability distribution using softmax:
+\begin{equation}
+P(Y = k | \vx) = \frac{\exp(z_k)}{\sum_{j=1}^{10} \exp(z_j)}
+\end{equation}
+
+For logits $\vz = [2.1, 0.5, -1.2, 3.4, 0.8, -0.5, 1.1, -2.0, 0.3, 1.8]$, the model predicts class 3 with highest probability $\approx 68.9\%$.
+\end{example}
+
+\subsection{Conditional Probability and Bayes' Theorem}
+
+\begin{definition}[Conditional Probability]
+\label{def:conditional_prob}
+The probability of event $A$ given event $B$:
+\begin{equation}
+P(A|B) = \frac{P(A \cap B)}{P(B)} \quad \text{if } P(B) > 0
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Bayes' Theorem]
+\label{thm:bayes}
+For events $A$ and $B$ with $P(B) > 0$:
+\begin{equation}
+P(A|B) = \frac{P(B|A) P(A)}{P(B)}
+\end{equation}
+where $P(A|B)$ is the posterior, $P(B|A)$ is the likelihood, $P(A)$ is the prior, and $P(B)$ is the evidence.
+\end{theorem}
+
+\section{Information Theory}
+\label{sec:information_theory}
+
+\subsection{Entropy}
+
+\begin{definition}[Shannon Entropy]
+\label{def:entropy}
+For discrete random variable $X$ with PMF $p(x)$:
+\begin{equation}
+H(X) = -\sum_x p(x) \ln p(x) = \mathbb{E}[-\ln P(X)]
+\end{equation}
+\end{definition}
+
+Entropy measures average uncertainty. Higher entropy means more uncertainty.
+
+\begin{example}[Computing Entropy]
+\label{ex:entropy_computation}
+\textbf{Fair coin:} $P(\text{heads}) = P(\text{tails}) = 0.5$
+\begin{equation}
+H = -[0.5 \log_2(0.5) + 0.5 \log_2(0.5)] = 1 \text{ bit (maximum)}
+\end{equation}
+
+\textbf{Biased coin:} $P(\text{heads}) = 0.9$, $P(\text{tails}) = 0.1$
+\begin{equation}
+H \approx 0.469 \text{ bits (lower, more predictable)}
+\end{equation}
+\end{example}
+
+\subsection{Cross-Entropy}
+
+\begin{definition}[Cross-Entropy]
+\label{def:cross_entropy}
+For true distribution $p$ and predicted distribution $q$:
+\begin{equation}
+H(p, q) = -\sum_x p(x) \log q(x) = \mathbb{E}_{x \sim p}[-\log q(x)]
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Cross-Entropy Loss for Classification]
+\label{thm:cross_entropy_loss}
+For true label $y$ and predicted probabilities $\hat{\mathbf{p}}$:
+\begin{equation}
+L = -\log \hat{p}_y
+\end{equation}
+\end{theorem}
+
+\begin{example}[Cross-Entropy Loss Calculation]
+\label{ex:cross_entropy_loss}
+For 3-class classification with true label $y=2$:
+\begin{itemize}
+    \item Predicted: $\hat{\mathbf{p}} = [0.2, 0.6, 0.2]$ $\Rightarrow$ $L = -\log(0.6) \approx 0.511$
+    \item More confident: $\hat{\mathbf{p}} = [0.1, 0.8, 0.1]$ $\Rightarrow$ $L = -\log(0.8) \approx 0.223$ (better)
+    \item Wrong prediction: $\hat{\mathbf{p}} = [0.7, 0.2, 0.1]$ $\Rightarrow$ $L = -\log(0.2) \approx 1.609$ (bad)
+\end{itemize}
+\end{example}
+
+\begin{implementation}
+PyTorch cross-entropy loss:
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+# Logits: shape (batch_size, num_classes)
+logits = torch.tensor([[2.0, 1.0, 0.1],
+                       [0.5, 2.5, 1.0]])
+labels = torch.tensor([0, 1])
+
+# CrossEntropyLoss applies softmax internally
+criterion = nn.CrossEntropyLoss()
+loss = criterion(logits, labels)
+print(f"Loss: {loss.item():.4f}")
+\end{lstlisting}
+\end{implementation}
+
+\subsection{Kullback-Leibler Divergence}
+
+\begin{definition}[KL Divergence]
+\label{def:kl_divergence}
+The KL divergence from distribution $q$ to $p$:
+\begin{equation}
+D_{\text{KL}}(p \| q) = \sum_x p(x) \log \frac{p(x)}{q(x)} = H(p, q) - H(p)
+\end{equation}
+\end{definition}
+
+Properties: (1) $D_{\text{KL}}(p \| q) \geq 0$ with equality iff $p = q$, (2) Not symmetric: $D_{\text{KL}}(p \| q) \neq D_{\text{KL}}(q \| p)$
+
+\begin{keypoint}
+Minimizing KL divergence is equivalent to minimizing cross-entropy when $p$ is fixed. Training neural networks with cross-entropy loss is maximum likelihood estimation.
+\end{keypoint}
+
+\section{Exercises}
+
+\begin{exercise}
+A neural network outputs $\hat{\mathbf{p}} = [0.15, 0.60, 0.20, 0.05]$ for 4 classes. Compute: (1) entropy $H(\hat{\mathbf{p}})$, (2) cross-entropy loss if true label is class 2, (3) optimal output distribution.
+\end{exercise}
+
+\begin{exercise}
+Show that $H(p, q) = H(p) + D_{\text{KL}}(p \| q)$, proving cross-entropy minimization equals KL divergence minimization when $p$ is fixed.
+\end{exercise}
+
+\begin{exercise}
+For binary classifier with $\hat{p} = 0.8$ and true label class 1: (1) Compute binary cross-entropy loss, (2) Find $\frac{\partial L}{\partial \hat{p}}$, (3) Compare loss for $\hat{p} \in \{0.99, 0.2\}$.
+\end{exercise}
+

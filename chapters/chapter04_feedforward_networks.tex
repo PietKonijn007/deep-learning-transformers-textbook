@@ -1,0 +1,175 @@
+\chapter{Feed-Forward Neural Networks}
+\label{chap:feedforward_networks}
+
+\section*{Chapter Overview}
+
+Feed-forward neural networks are the foundation of deep learning. These networks transform inputs through sequences of linear and nonlinear operations to produce outputs. This chapter develops the architecture, training, and theory of feed-forward networks, establishing concepts that extend to all modern deep learning models including transformers.
+
+\subsection*{Learning Objectives}
+
+After completing this chapter, you will be able to:
+
+\begin{enumerate}
+    \item Understand the architecture of feed-forward neural networks
+    \item Implement forward and backward passes through MLPs
+    \item Apply appropriate activation functions and understand their properties
+    \item Initialize network weights properly to enable training
+    \item Apply regularization techniques to prevent overfitting
+    \item Understand the universal approximation theorem
+\end{enumerate}
+
+\section{From Linear Models to Neural Networks}
+\label{sec:linear_to_neural}
+
+\subsection{The Perceptron}
+
+\begin{definition}[Perceptron]
+\label{def:perceptron}
+The perceptron is a binary classifier:
+\begin{equation}
+\hat{y} = \text{sign}(\vw\transpose \vx + b) = \begin{cases}
++1 & \text{if } \vw\transpose \vx + b > 0 \\
+-1 & \text{otherwise}
+\end{cases}
+\end{equation}
+where $\vw \in \R^n$ are weights, $b \in \R$ is bias, $\vx \in \R^n$ is input.
+\end{definition}
+
+\subsection{Multi-Class Classification: Softmax Regression}
+
+\begin{definition}[Softmax Function]
+\label{def:softmax}
+For logits $\vz = [z_1, \ldots, z_C]\transpose \in \R^C$:
+\begin{equation}
+\text{softmax}(\vz)_k = \frac{\exp(z_k)}{\sum_{j=1}^C \exp(z_j)}
+\end{equation}
+\end{definition}
+
+\begin{example}[Softmax Computation]
+\label{ex:softmax_computation}
+For logits $\vz = [2.0, 1.0, 0.1]$: Sum of exponentials $= 11.212$, giving probabilities $[0.659, 0.242, 0.099]$. The model predicts class 1 with 65.9 percent confidence.
+\end{example}
+
+\section{Multi-Layer Perceptrons}
+\label{sec:mlp}
+
+\begin{definition}[Multi-Layer Perceptron]
+\label{def:mlp}
+An L-layer MLP transforms input through layers:
+\begin{align}
+\vz^{(\ell)} &= \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)} \\
+\vh^{(\ell)} &= \sigma^{(\ell)}(\vz^{(\ell)})
+\end{align}
+where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and $\sigma^{(\ell)}$ is the activation function.
+\end{definition}
+
+\begin{example}[3-Layer MLP for MNIST]
+\label{ex:mnist_mlp}
+Architecture for MNIST digit classification:
+\begin{itemize}
+    \item Input: $\vx \in \R^{784}$ (flattened $28 \times 28$ image)
+    \item Hidden 1: $\vh^{(1)} \in \R^{256}$ with ReLU
+    \item Hidden 2: $\vh^{(2)} \in \R^{128}$ with ReLU
+    \item Output: $\vz^{(3)} \in \R^{10}$ with softmax
+\end{itemize}
+
+Parameter count: $200{,}960 + 32{,}896 + 1{,}290 = 235{,}146$ parameters.
+\end{example}
+
+\subsection{Why Depth Matters}
+
+Without nonlinear activations, multiple layers collapse to single linear transformation. With nonlinearities, deep networks learn complex functions efficiently.
+
+\section{Activation Functions}
+\label{sec:activations}
+
+\begin{definition}[ReLU]
+\label{def:relu}
+\begin{equation}
+\text{ReLU}(z) = \max(0, z)
+\end{equation}
+Derivative: $\text{ReLU}'(z) = \mathbb{1}[z > 0]$
+\end{definition}
+
+\begin{definition}[GELU]
+\label{def:gelu}
+Gaussian Error Linear Unit (default in transformers):
+\begin{equation}
+\text{GELU}(z) = z \cdot \Phi(z)
+\end{equation}
+where $\Phi$ is standard normal CDF. Approximation:
+\begin{equation}
+\text{GELU}(z) \approx 0.5z \left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}(z + 0.044715z^3)\right]\right)
+\end{equation}
+\end{definition}
+
+\begin{keypoint}
+Transformer models use GELU (BERT, GPT) or variants like Swish for feed-forward networks.
+\end{keypoint}
+
+\section{Universal Approximation Theorem}
+\label{sec:universal_approximation}
+
+\begin{theorem}[Universal Approximation]
+\label{thm:universal_approximation}
+A single-hidden-layer neural network with nonlinear activation can approximate any continuous function on compact domain to arbitrary precision, given sufficient hidden units.
+\end{theorem}
+
+Caveat: The theorem says nothing about how many units needed, how to find weights, or generalization. Deep networks often more efficient than wide networks.
+
+\section{Weight Initialization}
+\label{sec:weight_initialization}
+
+\begin{definition}[Xavier Initialization]
+\label{def:xavier_init}
+For layer with $n_{\text{in}}$ inputs and $n_{\text{out}}$ outputs:
+\begin{equation}
+w_{ij} \sim \mathcal{N}\left(0, \frac{2}{n_{\text{in}} + n_{\text{out}}}\right)
+\end{equation}
+Best for tanh and sigmoid activations.
+\end{definition}
+
+\begin{definition}[He Initialization]
+\label{def:he_init}
+For ReLU networks:
+\begin{equation}
+w_{ij} \sim \mathcal{N}\left(0, \frac{2}{n_{\text{in}}}\right)
+\end{equation}
+Accounts for ReLU zeroing half the activations.
+\end{definition}
+
+\section{Regularization}
+\label{sec:regularization}
+
+\subsection{L2 Regularization}
+
+Add penalty to loss:
+\begin{equation}
+L_{\text{total}} = L_{\text{data}} + \frac{\lambda}{2} \sum_{\ell} \norm{\mW^{(\ell)}}_F^2
+\end{equation}
+
+\subsection{Dropout}
+
+\begin{definition}[Dropout]
+\label{def:dropout}
+During training, randomly set activations to zero with probability p. During inference, scale by $(1-p)$.
+\end{definition}
+
+\section{Exercises}
+
+\begin{exercise}
+Design 3-layer MLP for binary classification of 100-dimensional inputs. Specify layer dimensions, activations, and parameter count.
+\end{exercise}
+
+\begin{exercise}
+Compute forward pass through 2-layer network with given weights and ReLU activation.
+\end{exercise}
+
+\begin{exercise}
+For layer with 512 inputs and 256 outputs using ReLU: (1) What is He initialization variance? (2) Why different from Xavier? (3) What happens with zero initialization?
+\end{exercise}
+
+\begin{exercise}
+Prove that without nonlinear activations, L-layer network equivalent to single layer.
+\end{exercise}
+

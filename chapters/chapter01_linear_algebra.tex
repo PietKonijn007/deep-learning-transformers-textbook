@@ -1,0 +1,360 @@
+\chapter{Linear Algebra for Deep Learning}
+\label{chap:linear_algebra}
+
+\section*{Chapter Overview}
+
+Linear algebra forms the mathematical foundation of deep learning. Neural networks perform sequences of linear transformations interspersed with nonlinear operations, making matrices and vectors the fundamental objects of study. This chapter develops the linear algebra concepts essential for understanding how deep learning models transform data, how information flows through neural architectures, and how we can interpret the geometric operations these models perform.
+
+Unlike a pure mathematics course, our treatment emphasizes the specific linear algebra operations that appear repeatedly in deep learning: matrix multiplication for transforming representations, dot products for measuring similarity, and matrix decompositions for understanding structure. We pay particular attention to dimensions and shapes, as tracking how tensor dimensions transform through operations is crucial for implementing and debugging deep learning systems.
+
+\subsection*{Learning Objectives}
+
+After completing this chapter, you will be able to:
+
+\begin{enumerate}
+    \item Represent data as vectors and transformations as matrices with clear understanding of dimensions
+    \item Perform matrix operations and understand their geometric interpretations
+    \item Calculate and interpret dot products as similarity measures
+    \item Understand eigendecompositions and singular value decompositions and their applications
+    \item Apply matrix norms and use them in regularization
+    \item Recognize how linear algebra operations map to neural network computations
+\end{enumerate}
+
+\section{Vector Spaces and Transformations}
+\label{sec:vector_spaces}
+
+\subsection{Vectors as Data Representations}
+
+In deep learning, we represent data as vectors in high-dimensional spaces. A vector $\vx \in \R^n$ is an ordered collection of $n$ real numbers, which we can interpret geometrically as a point in $n$-dimensional space or as an arrow from the origin to that point.
+
+\begin{definition}[Vector]
+\label{def:vector}
+A vector $\vx \in \R^n$ is an $n$-tuple of real numbers:
+\begin{equation}
+\vx = \begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix}
+\end{equation}
+where each $x_i \in \R$ is called a component or element of the vector.
+\end{definition}
+
+The dimension $n$ is the number of components in the vector. We write vectors as column vectors by default.
+
+\begin{example}[Image as Vector]
+\label{ex:image_vector}
+Consider a grayscale image of size $28 \times 28$ pixels, such as an image from the MNIST handwritten digit dataset. Each pixel has an intensity value between 0 (black) and 255 (white). We can represent this image as a vector $\vx \in \R^{784}$ by concatenating all pixel values:
+\begin{equation}
+\vx = \begin{bmatrix} x_{1,1} \\ x_{1,2} \\ \vdots \\ x_{28,28} \end{bmatrix} \in \R^{784}
+\end{equation}
+
+For color images with three channels (red, green, blue), a $224 \times 224$ RGB image becomes a vector in $\R^{150528}$ ($224 \times 224 \times 3 = 150{,}528$). The enormous dimensionality of image data motivates the need for powerful models that can find meaningful patterns in such high-dimensional spaces.
+\end{example}
+
+\begin{example}[Text as Vector]
+\label{ex:text_vector}
+In natural language processing, we represent words as vectors called \textit{word embeddings}. A common choice is to represent each word as a vector in $\R^{300}$ or $\R^{768}$. For instance, the word ``king'' might be represented as:
+\begin{equation}
+\vw_{\text{king}} = \begin{bmatrix} 0.23 \\ -0.45 \\ 0.87 \\ \vdots \\ 0.12 \end{bmatrix} \in \R^{300}
+\end{equation}
+These embeddings are learned such that semantically similar words have similar vector representations. The famous example is that $\vw_{\text{king}} - \vw_{\text{man}} + \vw_{\text{woman}} \approx \vw_{\text{queen}}$, suggesting that vector arithmetic can capture semantic relationships.
+\end{example}
+
+\subsection{Linear Transformations}
+
+\begin{definition}[Linear Transformation]
+\label{def:linear_transformation}
+A function $T: \R^n \to \R^m$ is a \textbf{linear transformation} if for all vectors $\vx, \vy \in \R^n$ and all scalars $a, b \in \R$:
+\begin{equation}
+T(a\vx + b\vy) = aT(\vx) + bT(\vy)
+\end{equation}
+\end{definition}
+
+Linear transformations preserve vector space structure: they map lines to lines and preserve the origin ($T(\mathbf{0}) = \mathbf{0}$).
+
+\subsection{Matrices as Linear Transformations}
+
+Every linear transformation from $\R^n$ to $\R^m$ can be represented by an $m \times n$ matrix.
+
+\begin{definition}[Matrix]
+\label{def:matrix}
+An $m \times n$ matrix $\mA$ is a rectangular array of numbers with $m$ rows and $n$ columns:
+\begin{equation}
+\mA = \begin{bmatrix} 
+a_{1,1} & a_{1,2} & \cdots & a_{1,n} \\
+a_{2,1} & a_{2,2} & \cdots & a_{2,n} \\
+\vdots & \vdots & \ddots & \vdots \\
+a_{m,1} & a_{m,2} & \cdots & a_{m,n}
+\end{bmatrix} \in \R^{m \times n}
+\end{equation}
+The notation $\mA \in \R^{m \times n}$ specifies the dimensions explicitly: $m$ rows and $n$ columns.
+\end{definition}
+
+\begin{keypoint}
+\textbf{Dimension Tracking:} For matrix-vector multiplication $\mA\vx = \vy$:
+\begin{equation}
+\underbrace{\mA}_{\R^{m \times n}} \underbrace{\vx}_{\R^{n}} = \underbrace{\vy}_{\R^{m}}
+\end{equation}
+The inner dimensions must match ($n$), and the result has the outer dimensions ($m$).
+\end{keypoint}
+
+\begin{example}[Neural Network Layer]
+\label{ex:nn_layer}
+A single fully-connected neural network layer performs:
+\begin{equation}
+\vh = \mW\vx + \vb
+\end{equation}
+where $\vx \in \R^{n_{\text{in}}}$, $\mW \in \R^{n_{\text{out}} \times n_{\text{in}}}$, $\vb \in \R^{n_{\text{out}}}$, $\vh \in \R^{n_{\text{out}}}$.
+
+For transforming a 784-dimensional input to 256-dimensional hidden representation:
+\begin{equation}
+\underbrace{\vh}_{\R^{256}} = \underbrace{\mW}_{\R^{256 \times 784}} \underbrace{\vx}_{\R^{784}} + \underbrace{\vb}_{\R^{256}}
+\end{equation}
+
+This layer has $256 \times 784 = 200{,}704$ weights plus 256 biases, totaling \textbf{200,960 trainable parameters}.
+
+\textbf{Concrete Numerical Example:} With $n_{\text{in}} = 3$, $n_{\text{out}} = 2$:
+\begin{align}
+\mW &= \begin{bmatrix} 0.5 & -0.3 & 0.8 \\ 0.2 & 0.6 & -0.4 \end{bmatrix}, \quad \vb = \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix}, \quad \vx = \begin{bmatrix} 1.0 \\ 2.0 \\ -0.5 \end{bmatrix}
+\end{align}
+
+Computing:
+\begin{align}
+\mW\vx &= \begin{bmatrix} 0.5(1.0) - 0.3(2.0) + 0.8(-0.5) \\ 0.2(1.0) + 0.6(2.0) - 0.4(-0.5) \end{bmatrix} = \begin{bmatrix} -0.5 \\ 1.6 \end{bmatrix}\\
+\vh &= \begin{bmatrix} -0.5 \\ 1.6 \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix} = \begin{bmatrix} -0.4 \\ 1.4 \end{bmatrix}
+\end{align}
+\end{example}
+
+\section{Matrix Operations}
+\label{sec:matrix_operations}
+
+\subsection{Matrix Multiplication}
+
+\begin{definition}[Matrix Multiplication]
+\label{def:matrix_mult}
+For $\mA \in \R^{m \times n}$ and $\mB \in \R^{n \times p}$, their product $\mC = \mA\mB \in \R^{m \times p}$ is:
+\begin{equation}
+c_{i,k} = \sum_{j=1}^{n} a_{i,j} b_{j,k}
+\end{equation}
+\end{definition}
+
+\begin{example}[Matrix Multiplication Computation]
+\label{ex:matrix_mult}
+Compute $\mC = \mA\mB$ where:
+\begin{equation}
+\mA = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix} \in \R^{2 \times 2}, \quad \mB = \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix} \in \R^{2 \times 2}
+\end{equation}
+
+Computing each entry:
+\begin{align}
+c_{1,1} &= 1(5) + 2(7) = 19 \\
+c_{1,2} &= 1(6) + 2(8) = 22 \\
+c_{2,1} &= 3(5) + 4(7) = 43 \\
+c_{2,2} &= 3(6) + 4(8) = 50
+\end{align}
+
+Therefore: $\mC = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix}$
+\end{example}
+
+\subsection{Transpose}
+
+\begin{definition}[Transpose]
+The \textbf{transpose} of $\mA \in \R^{m \times n}$, denoted $\mA\transpose \in \R^{n \times m}$, swaps rows and columns:
+\begin{equation}
+[\mA\transpose]_{i,j} = a_{j,i}
+\end{equation}
+\end{definition}
+
+Important properties:
+\begin{align}
+(\mA\transpose)\transpose &= \mA \\
+(\mA\mB)\transpose &= \mB\transpose \mA\transpose
+\end{align}
+
+\section{Dot Products and Similarity}
+\label{sec:dot_products}
+
+\begin{definition}[Dot Product]
+\label{def:dot_product}
+For vectors $\vx, \vy \in \R^n$, the \textbf{dot product} is:
+\begin{equation}
+\vx\transpose \vy = \sum_{i=1}^{n} x_i y_i
+\end{equation}
+\end{definition}
+
+\begin{theorem}[Geometric Dot Product]
+\label{thm:geometric_dot_product}
+For non-zero vectors $\vx, \vy \in \R^n$:
+\begin{equation}
+\vx\transpose \vy = \norm{\vx}_2 \norm{\vy}_2 \cos(\theta)
+\end{equation}
+where $\theta$ is the angle between vectors and $\norm{\vx}_2 = \sqrt{\vx\transpose \vx}$ is the Euclidean norm.
+\end{theorem}
+
+\begin{corollary}[Cosine Similarity]
+\label{cor:cosine_similarity}
+The \textbf{cosine similarity} between two non-zero vectors is:
+\begin{equation}
+\text{sim}(\vx, \vy) = \frac{\vx\transpose \vy}{\norm{\vx}_2 \norm{\vy}_2} = \cos(\theta) \in [-1, 1]
+\end{equation}
+\end{corollary}
+
+\begin{example}[Attention Similarity Scores]
+\label{ex:attention_similarity}
+In transformer attention, we compute similarity between query and key vectors using dot products:
+\begin{equation}
+\vq = \begin{bmatrix} 0.5 \\ 0.8 \\ 0.3 \end{bmatrix}, \quad 
+\vk_1 = \begin{bmatrix} 0.6 \\ 0.7 \\ 0.2 \end{bmatrix}, \quad
+\vk_2 = \begin{bmatrix} -0.3 \\ 0.1 \\ 0.9 \end{bmatrix}
+\end{equation}
+
+Computing similarities:
+\begin{align}
+\vq\transpose \vk_1 &= 0.5(0.6) + 0.8(0.7) + 0.3(0.2) = 0.92 \\
+\vq\transpose \vk_2 &= 0.5(-0.3) + 0.8(0.1) + 0.3(0.9) = 0.20
+\end{align}
+
+The query $\vq$ is more similar to $\vk_1$ (score 0.92) than to $\vk_2$ (score 0.20). These scores determine attention weights.
+\end{example}
+
+\section{Matrix Decompositions}
+\label{sec:decompositions}
+
+\subsection{Eigenvalues and Eigenvectors}
+
+\begin{definition}[Eigenvalues and Eigenvectors]
+\label{def:eigenvalues}
+For a square matrix $\mA \in \R^{n \times n}$, a non-zero vector $\vv \in \R^n$ is an \textbf{eigenvector} with corresponding \textbf{eigenvalue} $\lambda \in \R$ if:
+\begin{equation}
+\mA \vv = \lambda \vv
+\end{equation}
+\end{definition}
+
+Geometrically, an eigenvector is only scaled (not rotated) when $\mA$ is applied. The eigenvalue $\lambda$ is the scaling factor.
+
+\begin{example}[Computing Eigenvalues]
+\label{ex:eigenvalues}
+Find eigenvalues of:
+\begin{equation}
+\mA = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix}
+\end{equation}
+
+Solving $\det(\mA - \lambda \mI) = 0$:
+\begin{align}
+\det\begin{bmatrix} 3-\lambda & 1 \\ 1 & 3-\lambda \end{bmatrix} &= (3-\lambda)^2 - 1 = \lambda^2 - 6\lambda + 8 = 0\\
+&= (\lambda - 4)(\lambda - 2) = 0
+\end{align}
+
+Eigenvalues: $\lambda_1 = 4$, $\lambda_2 = 2$
+
+For $\lambda_1 = 4$, eigenvector: $\vv_1 = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ 1 \end{bmatrix}$
+
+For $\lambda_2 = 2$, eigenvector: $\vv_2 = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ -1 \end{bmatrix}$
+\end{example}
+
+\subsection{Singular Value Decomposition}
+
+\begin{theorem}[Singular Value Decomposition]
+\label{thm:svd}
+Any matrix $\mA \in \R^{m \times n}$ can be decomposed as:
+\begin{equation}
+\mA = \mU \boldsymbol{\Sigma} \mV\transpose
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mU \in \R^{m \times m}$ is orthogonal (left singular vectors)
+    \item $\boldsymbol{\Sigma} \in \R^{m \times n}$ is diagonal with singular values $\sigma_1 \geq \sigma_2 \geq \cdots \geq 0$
+    \item $\mV \in \R^{n \times n}$ is orthogonal (right singular vectors)
+\end{itemize}
+\end{theorem}
+
+\begin{keypoint}
+SVD always exists for any matrix, unlike eigendecomposition which requires special conditions.
+\end{keypoint}
+
+\begin{example}[SVD for Model Compression]
+\label{ex:svd_compression}
+Consider weight matrix $\mW \in \R^{512 \times 2048}$ containing $1{,}048{,}576$ parameters.
+
+Using rank-$k=64$ SVD approximation:
+\begin{equation}
+\mW \approx \mW_1 \mW_2
+\end{equation}
+where $\mW_1 \in \R^{512 \times 64}$ (32,768 parameters) and $\mW_2 \in \R^{64 \times 2048}$ (131,072 parameters).
+
+Total: 163,840 parameters $\Rightarrow$ \textbf{84\% compression!}
+\end{example}
+
+\section{Norms and Distance Metrics}
+\label{sec:norms}
+
+\begin{definition}[Vector Norms]
+\label{def:norms}
+For vector $\vx \in \R^n$:
+\begin{align}
+\text{L1 norm (Manhattan):} \quad &\norm{\vx}_1 = \sum_{i=1}^n |x_i| \\
+\text{L2 norm (Euclidean):} \quad &\norm{\vx}_2 = \sqrt{\sum_{i=1}^n x_i^2} \\
+\text{L}\infty \text{ norm (Max):} \quad &\norm{\vx}_\infty = \max_i |x_i|
+\end{align}
+\end{definition}
+
+\begin{definition}[Matrix Norms]
+\label{def:matrix_norms}
+For matrix $\mA \in \R^{m \times n}$:
+\begin{equation}
+\text{Frobenius norm:} \quad \norm{\mA}_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n a_{i,j}^2} = \sqrt{\text{tr}(\mA\transpose \mA)}
+\end{equation}
+\end{definition}
+
+Norms are used in regularization to prevent overfitting by penalizing large weights.
+
+\begin{implementation}
+In PyTorch:
+\begin{lstlisting}[language=Python]
+import torch
+
+# Vector norms
+x = torch.tensor([3.0, 4.0])
+l2_norm = torch.norm(x, p=2)  # 5.0
+l1_norm = torch.norm(x, p=1)  # 7.0
+
+# Matrix Frobenius norm
+W = torch.randn(256, 784)
+frob_norm = torch.norm(W, p='fro')
+\end{lstlisting}
+\end{implementation}
+
+\section{Exercises}
+
+\begin{exercise}
+\label{ex:ch1_ex1}
+Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$, compute:
+\begin{enumerate}
+    \item The dot product $\vx\transpose \vy$
+    \item The L2 norms $\norm{\vx}_2$ and $\norm{\vy}_2$
+    \item The cosine similarity between $\vx$ and $\vy$
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+\label{ex:ch1_ex2}
+For a transformer layer with $d_{\text{model}} = 768$ and feed-forward dimension $d_{ff} = 3072$:
+\begin{enumerate}
+    \item Calculate the number of parameters in the two linear transformations
+    \item If processing a batch of $B = 32$ sequences of length $n = 512$, what are the dimensions of the input tensor?
+    \item How many floating-point operations (FLOPs) are required for one forward pass through this layer?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+\label{ex:ch1_ex3}
+Prove that for symmetric matrix $\mA = \mA\transpose$, eigenvectors corresponding to distinct eigenvalues are orthogonal.
+\end{exercise}
+
+\begin{exercise}
+\label{ex:ch1_ex4}
+A weight matrix $\mW \in \R^{1024 \times 4096}$ is approximated using SVD with rank $r$.
+\begin{enumerate}
+    \item Express the number of parameters as a function of $r$
+    \item What value of $r$ achieves 75\% compression?
+    \item What is the memory savings in MB (assuming 32-bit floats)?
+\end{enumerate}
+\end{exercise}
+

@@ -1,0 +1,302 @@
+\documentclass[11pt,twoside,openright]{book}
+
+% ============================================================================
+% PACKAGES
+% ============================================================================
+
+% Math packages
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{bm} % Bold math symbols
+
+% Graphics and figures
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% Tables
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+
+% Colors
+\usepackage{xcolor}
+\definecolor{deepblue}{RGB}{0,51,102}
+\definecolor{darkgreen}{RGB}{0,100,0}
+\definecolor{darkred}{RGB}{139,0,0}
+
+% Algorithms
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+
+% Code listings
+\usepackage{listings}
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{deepblue},
+    commentstyle=\color{darkgreen},
+    stringstyle=\color{darkred},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny\color{gray}
+}
+
+% Hyperlinks and references
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=deepblue,
+    citecolor=darkgreen,
+    urlcolor=deepblue,
+    bookmarksdepth=3
+}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+% Page layout
+\usepackage[margin=1in]{geometry}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\leftmark}
+\fancyhead[RO]{\rightmark}
+\fancyfoot[C]{\thepage}
+
+% Typography
+\usepackage{microtype}
+\usepackage{setspace}
+\onehalfspacing
+
+% Bibliography
+\usepackage[style=alphabetic,sorting=nyt,maxbibnames=99]{biblatex}
+\addbibresource{references.bib}
+
+% Index
+\usepackage{makeidx}
+\makeindex
+
+% Custom theorem environments
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{example}{Example}[chapter]
+\newtheorem{exercise}{Exercise}[chapter]
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[chapter]
+\newtheorem{note}{Note}[chapter]
+
+% Custom commands for notation
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\vx}{\mathbf{x}}
+\newcommand{\vy}{\mathbf{y}}
+\newcommand{\vz}{\mathbf{z}}
+\newcommand{\vh}{\mathbf{h}}
+\newcommand{\vw}{\mathbf{w}}
+\newcommand{\vb}{\mathbf{b}}
+\newcommand{\vq}{\mathbf{q}}
+\newcommand{\vk}{\mathbf{k}}
+\newcommand{\vv}{\mathbf{v}}
+\newcommand{\mA}{\mathbf{A}}
+\newcommand{\mB}{\mathbf{B}}
+\newcommand{\mC}{\mathbf{C}}
+\newcommand{\mW}{\mathbf{W}}
+\newcommand{\mX}{\mathbf{X}}
+\newcommand{\mY}{\mathbf{Y}}
+\newcommand{\mQ}{\mathbf{Q}}
+\newcommand{\mK}{\mathbf{K}}
+\newcommand{\mV}{\mathbf{V}}
+\newcommand{\mH}{\mathbf{H}}
+\newcommand{\mI}{\mathbf{I}}
+\newcommand{\mU}{\mathbf{U}}
+\newcommand{\transpose}{^\top}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\dimof}[1]{\text{dim}(#1)}
+
+% Custom boxes
+\usepackage[most]{tcolorbox}
+\newtcolorbox{keypoint}{
+    colback=blue!5!white,
+    colframe=deepblue,
+    fonttitle=\bfseries,
+    title=Key Point
+}
+
+\newtcolorbox{implementation}{
+    colback=green!5!white,
+    colframe=darkgreen,
+    fonttitle=\bfseries,
+    title=Implementation Note
+}
+
+\newtcolorbox{caution}{
+    colback=red!5!white,
+    colframe=darkred,
+    fonttitle=\bfseries,
+    title=Common Pitfall
+}
+
+% ============================================================================
+% DOCUMENT INFORMATION
+% ============================================================================
+
+\title{
+    {\Huge\bfseries Deep Learning and Transformers}\\[0.5cm]
+    {\Large Theory, Mathematics, and Implementation}\\[0.5cm]
+    {\large A Graduate-Level Course}
+}
+\author{[Author Names]}
+\date{2026}
+
+% ============================================================================
+% DOCUMENT BODY
+% ============================================================================
+
+\begin{document}
+
+% Front matter
+\frontmatter
+\maketitle
+
+% Copyright page
+\thispagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+\textcopyright{} 2026. All rights reserved.\\[1cm]
+First Edition\\[0.5cm]
+ISBN: [To be assigned]
+\end{center}
+\vspace*{\fill}
+\clearpage
+
+% Dedication (optional)
+\thispagestyle{empty}
+\vspace*{3cm}
+\begin{center}
+\textit{To all researchers, students, and practitioners\\
+advancing the field of artificial intelligence}
+\end{center}
+\clearpage
+
+% Table of Contents
+\tableofcontents
+\clearpage
+
+% List of Figures
+\listoffigures
+\clearpage
+
+% List of Algorithms
+\listofalgorithms
+\clearpage
+
+% Preface
+\include{chapters/preface}
+
+% Notation and Conventions
+\include{chapters/notation}
+
+% Main matter
+\mainmatter
+
+% ============================================================================
+% PART I: MATHEMATICAL FOUNDATIONS
+% ============================================================================
+\part{Mathematical Foundations}
+\label{part:foundations}
+
+\include{chapters/chapter01_linear_algebra}
+\include{chapters/chapter02_calculus_optimization}
+\include{chapters/chapter03_probability_information}
+
+% ============================================================================
+% PART II: NEURAL NETWORK FUNDAMENTALS
+% ============================================================================
+\part{Neural Network Fundamentals}
+\label{part:neural_networks}
+
+\include{chapters/chapter04_feedforward_networks}
+\include{chapters/chapter05_convolutional_networks}
+\include{chapters/chapter06_recurrent_networks}
+
+% ============================================================================
+% PART III: ATTENTION MECHANISMS
+% ============================================================================
+\part{Attention Mechanisms}
+\label{part:attention}
+
+\include{chapters/chapter07_attention_fundamentals}
+\include{chapters/chapter08_self_attention}
+\include{chapters/chapter09_attention_variants}
+
+% ============================================================================
+% PART IV: TRANSFORMER ARCHITECTURE
+% ============================================================================
+\part{Transformer Architecture}
+\label{part:transformers}
+
+\include{chapters/chapter10_transformer_model}
+\include{chapters/chapter11_training_transformers}
+\include{chapters/chapter12_computational_analysis}
+
+% ============================================================================
+% PART V: MODERN TRANSFORMER VARIANTS
+% ============================================================================
+\part{Modern Transformer Variants}
+\label{part:variants}
+
+\include{chapters/chapter13_bert}
+\include{chapters/chapter14_gpt}
+\include{chapters/chapter15_t5_bart}
+\include{chapters/chapter16_efficient_transformers}
+
+% ============================================================================
+% PART VI: ADVANCED TOPICS
+% ============================================================================
+\part{Advanced Topics}
+\label{part:advanced}
+
+\include{chapters/chapter17_vision_transformers}
+\include{chapters/chapter18_multimodal_transformers}
+\include{chapters/chapter19_long_context}
+\include{chapters/chapter20_pretraining_transfer}
+
+% ============================================================================
+% PART VII: PRACTICAL IMPLEMENTATION
+% ============================================================================
+\part{Practical Implementation}
+\label{part:implementation}
+
+\include{chapters/chapter21_implementation}
+\include{chapters/chapter22_hardware_systems}
+\include{chapters/chapter23_production_deployment}
+
+% ============================================================================
+% BACK MATTER
+% ============================================================================
+\backmatter
+
+% Appendices
+\appendix
+\include{chapters/appendix_a_notation}
+\include{chapters/appendix_b_datasets}
+\include{chapters/appendix_c_code}
+\include{chapters/appendix_d_reading}
+
+% Bibliography
+\printbibliography[heading=bibintoc]
+
+% Index
+\printindex
+
+\end{document}
