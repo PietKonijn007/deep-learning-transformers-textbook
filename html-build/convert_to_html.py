@@ -83,10 +83,10 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\texttt\{([^}]+)\}', r'<code>\1</code>', html)
     
     # Convert equations (preserve LaTeX for MathJax)
-    # Display equations
-    html = re.sub(r'\\begin\{equation\}(.*?)\\end\{equation\}', r'<div class="equation">\n\\[\1\\]\n</div>', html, flags=re.DOTALL)
-    html = re.sub(r'\\begin\{align\}(.*?)\\end\{align\}', r'<div class="equation">\n\\begin{align}\1\\end{align}\n</div>', html, flags=re.DOTALL)
-    html = re.sub(r'\\begin\{align\*\}(.*?)\\end\{align\*\}', r'<div class="equation">\n\\begin{align*}\1\\end{align*}\n</div>', html, flags=re.DOTALL)
+    # Display equations - use $$ delimiters which MathJax handles better
+    html = re.sub(r'\\begin\{equation\}(.*?)\\end\{equation\}', r'<div class="equation">\n$$\1$$\n</div>', html, flags=re.DOTALL)
+    html = re.sub(r'\\begin\{align\}(.*?)\\end\{align\}', r'<div class="equation">\n$$\\begin{align}\1\\end{align}$$\n</div>', html, flags=re.DOTALL)
+    html = re.sub(r'\\begin\{align\*\}(.*?)\\end\{align\*\}', r'<div class="equation">\n$$\\begin{align*}\1\\end{align*}$$\n</div>', html, flags=re.DOTALL)
     
     # Convert lstlisting to code blocks
     html = re.sub(r'\\begin\{lstlisting\}.*?\n(.*?)\\end\{lstlisting\}', r'<pre><code>\1</code></pre>', html, flags=re.DOTALL)
@@ -165,6 +165,56 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{chapter_title} - Deep Learning and Transformers</title>
     <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {{
+        tex: {{
+            inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+            displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {{
+                R: '{{\\\\mathbb{{R}}}}',
+                N: '{{\\\\mathbb{{N}}}}',
+                Z: '{{\\\\mathbb{{Z}}}}',
+                C: '{{\\\\mathbb{{C}}}}',
+                vx: '{{\\\\mathbf{{x}}}}',
+                vy: '{{\\\\mathbf{{y}}}}',
+                vz: '{{\\\\mathbf{{z}}}}',
+                vh: '{{\\\\mathbf{{h}}}}',
+                vw: '{{\\\\mathbf{{w}}}}',
+                vb: '{{\\\\mathbf{{b}}}}',
+                vq: '{{\\\\mathbf{{q}}}}',
+                vk: '{{\\\\mathbf{{k}}}}',
+                vv: '{{\\\\mathbf{{v}}}}',
+                mA: '{{\\\\mathbf{{A}}}}',
+                mB: '{{\\\\mathbf{{B}}}}',
+                mC: '{{\\\\mathbf{{C}}}}',
+                mW: '{{\\\\mathbf{{W}}}}',
+                mX: '{{\\\\mathbf{{X}}}}',
+                mY: '{{\\\\mathbf{{Y}}}}',
+                mQ: '{{\\\\mathbf{{Q}}}}',
+                mK: '{{\\\\mathbf{{K}}}}',
+                mV: '{{\\\\mathbf{{V}}}}',
+                mH: '{{\\\\mathbf{{H}}}}',
+                mI: '{{\\\\mathbf{{I}}}}',
+                mU: '{{\\\\mathbf{{U}}}}',
+                mM: '{{\\\\mathbf{{M}}}}',
+                transpose: '{{^\\\\top}}',
+                norm: ['\\\\left\\\\|#1\\\\right\\\\|', 1],
+                abs: ['\\\\left|#1\\\\right|', 1]
+            }}
+        }},
+        startup: {{
+            pageReady: () => {{
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }}
+        }}
+    }};
+    </script>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
