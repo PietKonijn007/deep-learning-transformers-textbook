@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 14: GPT - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>GPT: Generative Pre-Training</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>GPT (Generative Pre-trained Transformer) pioneered decoder-only transformer architectures for autoregressive language modeling. This chapter traces the evolution from GPT-1 through GPT-4, covering architecture, pre-training, scaling, few-shot learning, and emergent abilities.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand GPT's decoder-only architecture
+    <li>Implement autoregressive language modeling
+    <li>Apply in-context learning and few-shot prompting
+    <li>Analyze scaling laws and emergent abilities
+    <li>Compare GPT variants (GPT-1, GPT-2, GPT-3, GPT-4)
+    <li>Understand instruction tuning and RLHF
+</ol>
+
+<h2>GPT Architecture</h2>
+
+<h3>Decoder-Only Transformers</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+GPT uses transformer decoder blocks with:
+<ul>
+    <li><strong>Masked self-attention:</strong> Causal masking (no future tokens)
+    <li><strong>No cross-attention:</strong> Decoder-only (vs encoder-decoder)
+    <li><strong>Position-wise FFN:</strong> Same as standard transformer
+    <li><strong>Pre-norm:</strong> Layer norm before sub-layers (GPT-2+)
+</ul>
+</div>
+
+<p><strong>Key difference from BERT:</strong>
+<ul>
+    <li>BERT: Bidirectional encoder (can see future)
+    <li>GPT: Unidirectional decoder (causal, autoregressive)
+</ul>
+
+<h3>GPT Model Sizes</h3>
+
+<p><strong>GPT-1 (2018):</strong>
+<ul>
+    <li>Layers: $L = 12$, Hidden: $d = 768$, Heads: $h = 12$
+    <li>Parameters: 117M
+    <li>Context: 512 tokens
+</ul>
+
+<p><strong>GPT-2 (2019):</strong>
+<ul>
+    <li>Small: 117M, Medium: 345M, Large: 762M, XL: 1.5B
+    <li>GPT-2 XL: $L=48$, $d=1600$, $h=25$
+    <li>Context: 1024 tokens
+</ul>
+
+<p><strong>GPT-3 (2020):</strong>
+<ul>
+    <li>Small: 125M to XL: 175B
+    <li>GPT-3 175B: $L=96$, $d=12288$, $h=96$
+    <li>Context: 2048 tokens
+    <li>Parameters: 175 billion!
+</ul>
+
+<p><strong>GPT-4 (2023):</strong>
+<ul>
+    <li>Architecture details not fully disclosed
+    <li>Estimated: 1-1.7 trillion parameters (mixture of experts)
+    <li>Context: 8K (standard), 32K (extended)
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+Configuration: $L=12$, $d=768$, $h=12$, $d_{ff}=3072$
+
+<p><strong>Single decoder layer:</strong>
+<ol>
+    <li>Layer norm
+    <li>Masked multi-head attention (12 heads)
+    <li>Residual connection
+    <li>Layer norm
+    <li>Feed-forward (768 $\to$ 3072 $\to$ 768)
+    <li>Residual connection
+</ol>
+
+<p><strong>Parameters per layer:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Attention:} \quad &4 \times 768^2 = 2{,}359{,}296 \\
+\text{FFN:} \quad &2 \times 768 \times 3072 = 4{,}718{,}592 \\
+\text{Layer norms:} \quad &2 \times 2 \times 768 = 3{,}072 \\
+\text{Total:} \quad &7{,}080{,}960 \approx 7M
+\end{align}$$
+</div>
+
+<p>12 layers: $\approx 85$M, plus embeddings $\approx 32$M = <strong>117M total</strong>
+</div>
+
+<h2>Pre-Training: Autoregressive Language Modeling</h2>
+
+<h3>Training Objective</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Maximize likelihood of next token given previous context:
+<div class="equation">
+$$
+\mathcal{L} = \sum_{i=1}^{n} \log P(x_i | x_1, \ldots, x_{i-1}; \theta)
+$$
+</div>
+</div>
+
+<p><strong>Implementation:</strong>
+<ol>
+    <li>Input: $[x_1, x_2, \ldots, x_n]$
+    <li>Target: $[x_2, x_3, \ldots, x_{n+1}]$ (shifted by 1)
+    <li>Causal mask: Position $i$ cannot attend to $j > i$
+    <li>Cross-entropy loss at each position
+</ol>
+
+<div class="example"><strong>Example:</strong> 
+Sentence: "The cat sat on the mat"
+
+<p><strong>Tokenized:</strong> $[T_1, T_2, T_3, T_4, T_5, T_6]$ = [The, cat, sat, on, the, mat]</p>
+
+<p><strong>Training:</strong>
+<div class="equation">
+$$\begin{align}
+P(T_2 | T_1) &= \text{softmax}(\vh_1 \mW_{\text{out}}) \quad \text{predict "cat"} \\
+P(T_3 | T_1, T_2) &= \text{softmax}(\vh_2 \mW_{\text{out}}) \quad \text{predict "sat"} \\
+&\vdots \\
+P(T_6 | T_1, \ldots, T_5) &= \text{softmax}(\vh_5 \mW_{\text{out}}) \quad \text{predict "mat"}
+\end{align}$$
+</div>
+
+<p><strong>Loss:</strong>
+<div class="equation">
+$$
+\mathcal{L} = -\sum_{i=1}^{5} \log P(T_{i+1} | T_1, \ldots, T_i)
+$$
+</div>
+
+<p>All positions trained simultaneously in parallel (teacher forcing)!
+</div>
+
+<h3>Pre-Training Data</h3>
+
+<p><strong>GPT-1:</strong> BooksCorpus (7,000 books, $\approx$ 800M words)</p>
+
+<p><strong>GPT-2:</strong> WebText (40GB, 8M web pages)</p>
+
+<p><strong>GPT-3:</strong> Common Crawl (filtered), WebText2, Books1, Books2, Wikipedia
+<ul>
+    <li>Total: $\approx$ 570GB text
+    <li>Tokens: $\approx$ 300 billion
+    <li>Training: Single pass (not multiple epochs)
+</ul>
+
+<h2>In-Context Learning and Few-Shot Prompting</h2>
+
+<h3>Zero-Shot, One-Shot, Few-Shot</h3>
+
+<p><strong>Zero-shot:</strong> Task description only
+\begin{verbatim}
+Translate English to French:
+sea otter =>
+\end{verbatim}</p>
+
+<p><strong>One-shot:</strong> One example
+\begin{verbatim}
+Translate English to French:
+sea otter => loutre de mer
+cheese =>
+\end{verbatim}</p>
+
+<p><strong>Few-shot:</strong> Multiple examples (typical: 10-100)
+\begin{verbatim}
+Translate English to French:
+sea otter => loutre de mer
+peppermint => menthe poivrée
+plush giraffe => girafe en peluche
+cheese =>
+\end{verbatim}</p>
+
+<div class="keypoint">
+GPT-3's key discovery: Large language models can perform tasks through in-context learning without parameter updates! Performance improves with model scale and number of examples.
+</div>
+
+<h3>Emergent Abilities</h3>
+
+<p>Abilities that appear suddenly at certain scales:
+<ul>
+    <li><strong>Few-shot learning:</strong> Emerges around 1B-10B parameters
+    <li><strong>Chain-of-thought reasoning:</strong> Emerges around 100B parameters
+    <li><strong>Complex instruction following:</strong> Largest models
+</ul>
+
+<p><strong>Scaling curve:</strong> Performance on many tasks follows smooth power law, but some tasks show sharp phase transitions.</p>
+
+<h2>Scaling Laws</h2>
+
+<h3>Parameter Scaling</h3>
+
+<p>Performance (measured by loss) scales as:
+<div class="equation">
+$$
+L(N) \approx \left(\frac{N_c}{N}\right)^{\alpha}
+$$
+</div>
+where $N$ is number of parameters, $N_c$ is constant, $\alpha \approx 0.076$.</p>
+
+<p><strong>Implications:</strong>
+<ul>
+    <li>Every 10× increase in parameters $\to$ consistent loss reduction
+    <li>No sign of saturation up to 175B parameters
+    <li>Motivates continued scaling
+</ul>
+
+<h3>Compute-Optimal Training</h3>
+
+<p>Chinchilla findings: For compute budget $C$, optimal allocation is:
+<div class="equation">
+$$
+N_{\text{optimal}} \propto C^{0.5}, \quad D_{\text{optimal}} \propto C^{0.5}
+$$
+</div>
+
+<p><strong>GPT-3 analysis:</strong>
+<ul>
+    <li>175B parameters trained on 300B tokens
+    <li>Chinchilla suggests: 80B parameters on 1.4T tokens would be better
+    <li>Many large models are over-parameterized, under-trained
+</ul>
+
+<h2>Instruction Tuning and RLHF</h2>
+
+<h3>Instruction Tuning</h3>
+
+<p>Fine-tune on (instruction, output) pairs:
+\begin{verbatim}
+Instruction: Summarize the following in one sentence:
+[long text]
+Output: [one-sentence summary]
+\end{verbatim}</p>
+
+<p><strong>InstructGPT / ChatGPT approach:</strong>
+<ol>
+    <li>Pre-train with language modeling
+    <li>Supervised fine-tuning on high-quality instructions
+    <li>Train reward model from human preferences
+    <li>Optimize policy with reinforcement learning
+</ol>
+
+<h3>RLHF (Reinforcement Learning from Human Feedback)</h3>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: RLHF Training</div>
+
+<p><strong>Step 1: Supervised Fine-Tuning</strong>
+<ul>
+    <li>Collect demonstrations: (prompt, high-quality response)
+    <li>Fine-tune GPT on demonstrations
+</ul>
+
+<p><strong>Step 2: Reward Model Training</strong>
+<ul>
+    <li>Generate multiple responses per prompt
+    <li>Humans rank responses
+    <li>Train reward model $r(x, y)$ to predict rankings
+</ul>
+
+<p><strong>Step 3: RL Fine-Tuning</strong>
+<ul>
+    <li>Optimize policy $\pi_\theta$ using PPO
+    <li>Objective: $\mathbb{E}_{x,y \sim \pi_\theta}[r(x,y)] - \beta \text{KL}(\pi_\theta \| \pi_{\text{ref}})$
+    <li>KL penalty prevents divergence from original model
+</ul>
+</div>
+
+<p><strong>Result:</strong> Models better aligned with human preferences, more helpful, honest, and harmless.</p>
+
+<h2>GPT Capabilities and Limitations</h2>
+
+<h3>Capabilities</h3>
+
+<p><strong>Strong:</strong>
+<ul>
+    <li>Text generation (creative writing, code, dialogue)
+    <li>Translation and summarization
+    <li>Question answering
+    <li>Few-shot learning
+    <li>Chain-of-thought reasoning
+    <li>Instruction following
+</ul>
+
+<h3>Limitations</h3>
+
+<p><strong>Weak:</strong>
+<ul>
+    <li>Factual accuracy (hallucinations)
+    <li>Mathematical reasoning (without tools)
+    <li>Long-term coherence in very long texts
+    <li>True understanding vs pattern matching
+    <li>Consistent personality/beliefs
+</ul>
+
+<p><strong>Hallucinations:</strong> Model generates plausible but false information with high confidence.</p>
+
+<p><strong>Mitigation strategies:</strong>
+<ul>
+    <li>Retrieval-augmented generation (RAG)
+    <li>Tool use (calculators, search)
+    <li>Verification and fact-checking
+    <li>Constitutional AI principles
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement autoregressive language modeling loss. For sequence "The quick brown fox", compute loss with teacher forcing. Compare with exposed schedule where model sees its own predictions.
+</div>
+
+<p>\begin{exercise}
+Estimate training cost for GPT-3 (175B params, 300B tokens):
+<ol>
+    <li>FLOPs per forward pass
+    <li>FLOPs for entire training (forward + backward $\approx 3\times$ forward)
+    <li>Time on 1024 A100 GPUs (312 TFLOPS each)
+    <li>Cost at \$2/GPU-hour
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement few-shot prompting. Test GPT-2 on classification task with 0, 1, 5, 10 examples. Plot accuracy vs number of shots. Does performance improve?
+</div>
+
+<p>\begin{exercise}
+Analyze scaling: Train models with [10M, 50M, 100M, 500M] parameters on same data. Plot loss vs parameters on log-log scale. Does it follow power law? Estimate exponent.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter13_bert.html">← Chapter 13: BERT</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter15_t5_bart.html">Chapter 15: T5 and BART →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

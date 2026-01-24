@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 12: Computational Analysis - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Computational Analysis of Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Understanding computational requirements is crucial for deploying transformers. This chapter analyzes time and space complexity, memory footprints, and inference costs. We derive exact FLOP counts, memory requirements, and scaling laws for transformers of different sizes.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Calculate FLOPs for transformer forward and backward passes
+    <li>Analyze memory requirements for training and inference
+    <li>Understand scaling laws for model size, data, and compute
+    <li>Optimize inference through batching and caching
+    <li>Estimate training time and costs for large models
+</ol>
+
+<h2>Computational Complexity</h2>
+
+<h3>Self-Attention Complexity</h3>
+
+<p>For sequence length $n$ and model dimension $d$:</p>
+
+<p><strong>QKV Projections:</strong>
+<div class="equation">
+$$
+3nd^2 \text{ FLOPs} \quad (\text{three matrix multiplications } \mX \mW^{Q/K/V})
+$$
+</div>
+
+<p><strong>Attention Scores:</strong>
+<div class="equation">
+$$
+\mQ \mK\transpose: \quad 2n^2d \text{ FLOPs}
+$$
+</div>
+
+<p><strong>Attention Output:</strong>
+<div class="equation">
+$$
+\mA \mV: \quad 2n^2d \text{ FLOPs}
+$$
+</div>
+
+<p><strong>Output Projection:</strong>
+<div class="equation">
+$$
+nd^2 \text{ FLOPs}
+$$
+</div>
+
+<p><strong>Total self-attention:</strong>
+<div class="equation">
+$$
+4nd^2 + 4n^2d \text{ FLOPs}
+$$
+</div>
+
+<h3>Feed-Forward Complexity</h3>
+
+<p>For FFN with dimension $d_{ff} = 4d$:
+<div class="equation">
+$$\begin{align}
+\text{First projection:} \quad &2nd \cdot d_{ff} = 8nd^2 \\
+\text{Second projection:} \quad &2nd_{ff} \cdot d = 8nd^2 \\
+\text{Total:} \quad &16nd^2 \text{ FLOPs}
+\end{align}$$
+</div>
+
+<h3>Per-Layer Total</h3>
+
+<div class="equation">
+$$
+\text{Transformer layer} = (4nd^2 + 4n^2d) + 16nd^2 = 20nd^2 + 4n^2d \text{ FLOPs}
+$$
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Parameters: $n = 512$, $d = 768$
+
+<p><strong>Self-attention:</strong>
+<div class="equation">
+$$\begin{align}
+&4 \times 512 \times 768^2 + 4 \times 512^2 \times 768 \\
+&= 1{,}207{,}959{,}552 + 805{,}306{,}368 \\
+&= 2{,}013{,}265{,}920 \approx 2.0 \text{ GFLOPs}
+\end{align}$$
+</div>
+
+<p><strong>Feed-forward:</strong>
+<div class="equation">
+$$
+16 \times 512 \times 768^2 = 4{,}831{,}838{,}208 \approx 4.8 \text{ GFLOPs}
+$$
+</div>
+
+<p><strong>Total per layer:</strong> $\approx 6.8$ GFLOPs</p>
+
+<p><strong>Full 12-layer BERT-base:</strong> $12 \times 6.8 \approx 82$ GFLOPs per forward pass
+</div>
+
+<h3>Complexity Analysis</h3>
+
+<div class="theorem"><strong>Theorem:</strong> 
+For $L$ layers, sequence length $n$, dimension $d$:
+
+<p><strong>Time complexity:</strong> $O(Ln^2d + Lnd^2)$</p>
+
+<p><strong>Space complexity:</strong> $O(Ln^2 + Lnd)$
+</div>
+
+<p><strong>Comparison with RNN:</strong>
+<ul>
+    <li>RNN: $O(Lnd^2)$ time, $O(Ld^2)$ space
+    <li>Transformer: Quadratic in $n$ but parallel; RNN sequential
+</ul>
+
+<p><strong>Bottleneck regimes:</strong>
+<ul>
+    <li>Short sequences $(n < d)$: FFN dominates, $O(Lnd^2)$
+    <li>Long sequences $(n > d)$: Attention dominates, $O(Ln^2d)$
+</ul>
+
+<h2>Memory Requirements</h2>
+
+<h3>Model Parameters</h3>
+
+<p>For BERT-base:
+<div class="equation">
+$$\begin{align}
+\text{Token embeddings:} \quad &30000 \times 768 \times 4\text{ bytes} = 92.2\text{ MB} \\
+\text{Position embeddings:} \quad &512 \times 768 \times 4 = 1.6\text{ MB} \\
+\text{Transformer layers:} \quad &85M \times 4 = 340\text{ MB} \\
+\text{Total:} \quad &\approx 434\text{ MB (float32)}
+\end{align}$$
+</div>
+
+<p>With FP16: $434 / 2 \approx 217$ MB</p>
+
+<h3>Activations</h3>
+
+<p>For single sequence, activations stored for backprop:</p>
+
+<p><strong>Per layer:</strong>
+<ul>
+    <li>Query, Key, Value: $3 \times (n \times d)$
+    <li>Attention matrix: $h \times (n \times n)$ (for $h$ heads)
+    <li>Attention output: $n \times d$
+    <li>FFN intermediate: $n \times d_{ff}$
+</ul>
+
+<p><strong>Total per layer:</strong>
+<div class="equation">
+$$
+\text{Memory} \approx (5nd + hn^2 + nd_{ff}) \times 4\text{ bytes}
+$$
+</div>
+
+<div class="example"><strong>Example:</strong> 
+GPT-2 (small): $L=12$, $d=768$, $h=12$, $n=1024$
+
+<p><strong>Per layer:</strong>
+<div class="equation">
+$$\begin{align}
+&(5 \times 1024 \times 768 + 12 \times 1024^2 + 1024 \times 3072) \times 4 \\
+&\approx (3{,}932{,}160 + 12{,}582{,}912 + 3{,}145{,}728) \times 4 \\
+&\approx 78.6\text{ MB per layer}
+\end{align}$$
+</div>
+
+<p><strong>12 layers:</strong> $78.6 \times 12 \approx 943$ MB</p>
+
+<p><strong>Batch size 32:</strong> $943 \times 32 \approx 30$ GB!</p>
+
+<p>This is why large batch sizes require multiple GPUs.
+</div>
+
+<h3>Training Memory Budget</h3>
+
+<p><strong>Total training memory:</strong>
+<div class="equation">
+$$
+\text{Memory} = \text{Model} + \text{Gradients} + \text{Optimizer States} + \text{Activations}
+$$
+</div>
+
+<p>For AdamW:
+<ul>
+    <li>Model parameters: $P$ bytes
+    <li>Gradients: $P$ bytes
+    <li>First moment: $P$ bytes
+    <li>Second moment: $P$ bytes
+    <li>Activations: $A$ bytes (depends on batch size)
+</ul>
+
+<p><strong>Total:</strong> $4P + A$</p>
+
+<div class="example"><strong>Example:</strong> 
+Model: 110M parameters
+
+<p><strong>Float32:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Parameters:} \quad &110M \times 4 = 440\text{ MB} \\
+\text{Gradients:} \quad &440\text{ MB} \\
+\text{Adam states:} \quad &2 \times 440 = 880\text{ MB} \\
+\text{Activations (batch 32):} \quad &\approx 8\text{ GB} \\
+\text{Total:} \quad &\approx 9.7\text{ GB}
+\end{align}$$
+</div>
+
+<p>Fits on single GPU with 16GB memory!
+</div>
+
+<h2>Inference Optimization</h2>
+
+<h3>KV Caching for Autoregressive Decoding</h3>
+
+<p>Problem: Generating token $t$ requires computing attention over all previous tokens $1, \ldots, t-1$.</p>
+
+<p>Solution: Cache key and value projections from previous steps.</p>
+
+<p><strong>Without caching:</strong> Generate 1000 tokens requires $\sum_{t=1}^{1000} t \approx 500{,}000$ attention computations</p>
+
+<p><strong>With caching:</strong> Generate 1000 tokens requires $1000$ attention computations (500× speedup!)</p>
+
+<p><strong>Memory cost:</strong> Store $\mK, \mV$ for all previous positions:
+<div class="equation">
+$$
+2 \times L \times h \times n \times d_k \text{ values}
+$$
+</div>
+
+<p>For GPT-2: $2 \times 12 \times 12 \times 1024 \times 64 \times 4\text{ bytes} \approx 75$ MB per sequence</p>
+
+<h3>Batched Inference</h3>
+
+<p>Process multiple sequences simultaneously:
+<ul>
+    <li>Single sequence: Underutilizes GPU (low parallelism)
+    <li>Batched: Higher throughput
+    <li>Trade-off: Latency vs throughput
+</ul>
+
+<p><strong>Padding challenge:</strong> Different sequence lengths require padding to batch, wasting computation.</p>
+
+<h2>Scaling Laws</h2>
+
+<h3>Kaplan et al. Scaling Laws</h3>
+
+<p>Performance scales as power law with model size $N$, dataset size $D$, and compute $C$:
+<div class="equation">
+$$
+L(N, D, C) \approx \left(\frac{N_c}{N}\right)^{\alpha_N} + \left(\frac{D_c}{D}\right)^{\alpha_D} + \left(\frac{C_c}{C}\right)^{\alpha_C}
+$$
+</div>
+
+<p><strong>Key findings:</strong>
+<ul>
+    <li>Larger models are more sample-efficient
+    <li>Compute-optimal: Balance model size and data
+    <li>Doubling compute $\to$ consistent loss reduction
+</ul>
+
+<h3>Chinchilla Scaling Laws</h3>
+
+<p>For fixed compute budget, optimal allocation:
+<div class="equation">
+$$
+N_{\text{optimal}} \propto C^{0.5}, \quad D_{\text{optimal}} \propto C^{0.5}
+$$
+</div>
+
+<p><strong>Implication:</strong> Many large models (GPT-3) are over-parameterized and under-trained! Chinchilla (70B params, more data) outperforms Gopher (280B params, less data).</p>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Calculate FLOPs for GPT-3 (175B parameters, $L=96$, $d=12288$, $h=96$, $n=2048$) for: (1) Single forward pass, (2) Generating 100 tokens autoregressively, (3) Training on 1 trillion tokens.
+</div>
+
+<p>\begin{exercise}
+Estimate memory for training 1.3B parameter model with batch size 64, sequence length 2048. What GPU memory required? How to fit on A100 (80GB)?
+</div>
+
+<p>\begin{exercise}
+Implement KV caching for GPT-2. Measure speedup for generating 256 tokens. Plot generation time vs sequence length with/without caching.
+</div>
+
+<p>\begin{exercise}
+For fixed compute budget $C = 10^{24}$ FLOPs: Use Chinchilla scaling to find optimal model size and data size. Compare with GPT-3 allocation.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter11_training_transformers.html">← Chapter 11: Training Transformers</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter13_bert.html">Chapter 13: BERT →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

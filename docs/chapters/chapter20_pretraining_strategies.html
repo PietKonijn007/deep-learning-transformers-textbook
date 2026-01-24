@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 20: Pretraining Strategies - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Pre-training Strategies and Transfer Learning</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Pre-training on large unlabeled corpora followed by task-specific fine-tuning has become the dominant paradigm in deep learning. This chapter covers pre-training objectives, data curation, curriculum learning, continual pre-training, and transfer learning strategies for maximizing downstream performance.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand different pre-training objectives and their trade-offs
+    <li>Curate and process pre-training data at scale
+    <li>Apply curriculum learning and domain-adaptive pre-training
+    <li>Implement parameter-efficient fine-tuning (LoRA, adapters)
+    <li>Design multi-task and multi-stage pre-training
+    <li>Measure and improve transfer learning effectiveness
+</ol>
+
+<h2>Pre-training Objectives</h2>
+
+<h3>Language Modeling Objectives</h3>
+
+<p><strong>Causal Language Modeling (CLM):</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{CLM}} = -\sum_{t=1}^{T} \log P(x_t | x_{<t}; \theta)
+$$
+</div>
+
+<p><strong>Pros:</strong> Natural for generation, simple objective</p>
+
+<p><strong>Cons:</strong> Unidirectional, can't use future context</p>
+
+<p><strong>Used by:</strong> GPT, GPT-2, GPT-3, all decoder-only models</p>
+
+<p><strong>Masked Language Modeling (MLM):</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{MLM}} = -\sum_{t \in \mathcal{M}} \log P(x_t | x_{\backslash \mathcal{M}}; \theta)
+$$
+</div>
+
+<p><strong>Pros:</strong> Bidirectional context, better representations</p>
+
+<p><strong>Cons:</strong> Pre-training/fine-tuning mismatch ([MASK] token)</p>
+
+<p><strong>Used by:</strong> BERT, RoBERTa, ALBERT</p>
+
+<p><strong>Prefix Language Modeling:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{prefix}} = -\sum_{t=|p|+1}^{T} \log P(x_t | x_{<t}; \theta)
+$$
+</div>
+where $p$ is prefix with bidirectional attention.</p>
+
+<p><strong>Pros:</strong> Combines benefits of CLM and MLM</p>
+
+<p><strong>Used by:</strong> UniLM, GLM</p>
+
+<h3>Denoising Objectives</h3>
+
+<p><strong>Span Corruption (T5):</strong>
+<ul>
+    <li>Corrupt contiguous spans
+    <li>Predict all masked content
+    <li>More challenging than single tokens
+</ul>
+
+<p><strong>Sentence Shuffling (BART):</strong>
+<ul>
+    <li>Permute sentences
+    <li>Model must reorder
+    <li>Learns document structure
+</ul>
+
+<p><strong>Text Infilling:</strong>
+<ul>
+    <li>Delete spans of varying length
+    <li>Model predicts span length and content
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+Text: "The quick brown fox jumps over the lazy dog"
+
+<p><strong>CLM:</strong> Predict each token given previous
+\begin{verbatim}
+The -> quick
+The quick -> brown
+The quick brown -> fox
+...
+\end{verbatim}</p>
+
+<p><strong>MLM (15
+\begin{verbatim</strong>
+Input:  "The [MASK] brown fox [MASK] over the lazy dog"
+Target: "quick" at position 2, "jumps" at position 5
+\end{verbatim}</p>
+
+<p><strong>Span Corruption:</strong>
+\begin{verbatim}
+Input:  "The <X> fox <Y> the lazy dog"
+Target: "<X> quick brown <Y> jumps over <Z>"
+\end{verbatim}</p>
+
+<p>Different objectives lead to different learned representations!
+</div>
+
+<h3>Contrastive Objectives</h3>
+
+<p><strong>Contrastive Learning:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{contrastive}} = -\log \frac{\exp(\text{sim}(z_i, z_i^+)/\tau)}{\sum_{j} \exp(\text{sim}(z_i, z_j)/\tau)}
+$$
+</div>
+
+<p><strong>Applications:</strong>
+<ul>
+    <li>SimCLR (vision): Augmented views as positives
+    <li>CLIP: Image-text pairs
+    <li>SimCSE (text): Dropout as augmentation
+</ul>
+
+<h2>Data Curation and Processing</h2>
+
+<h3>Data Sources</h3>
+
+<p><strong>Common Crawl:</strong>
+<ul>
+    <li>Petabytes of web data
+    <li>Noisy, requires filtering
+    <li>Used by: GPT-3, LLaMA, many large models
+</ul>
+
+<p><strong>Books:</strong>
+<ul>
+    <li>Long-form text
+    <li>Higher quality than web
+    <li>Copyright considerations
+</ul>
+
+<p><strong>Code:</strong>
+<ul>
+    <li>GitHub, StackOverflow
+    <li>Improves reasoning abilities
+    <li>Used by: Codex, GPT-4
+</ul>
+
+<p><strong>Wikipedia:</strong>
+<ul>
+    <li>High quality, factual
+    <li>Multilingual
+    <li>Structured format
+</ul>
+
+<h3>Data Filtering and Cleaning</h3>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Data Filtering Pipeline</div>
+
+<p><strong>Step 1: Quality Filtering</strong>
+<ul>
+    <li>Remove duplicates (exact and near-duplicates)
+    <li>Filter by language (fastText classifier)
+    <li>Remove toxic/harmful content
+    <li>Filter low-quality (perplexity-based, classifier)
+</ul>
+
+<p><strong>Step 2: Deduplication</strong>
+<ul>
+    <li>Exact match: Hash-based
+    <li>Near-duplicates: MinHash LSH
+    <li>Document-level and paragraph-level
+</ul>
+
+<p><strong>Step 3: Privacy</strong>
+<ul>
+    <li>Remove PII (emails, phone numbers, addresses)
+    <li>Filter memorized content
+    <li>Redact sensitive information
+</ul>
+
+<p><strong>Step 4: Formatting</strong>
+<ul>
+    <li>Unicode normalization
+    <li>Remove excessive whitespace
+    <li>Clean HTML/markup artifacts
+</ul>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Total: ~570GB, 300B tokens
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+<strong>Dataset</strong> & <strong>Weight</strong> & <strong>Epochs</strong> \\
+\midrule
+Common Crawl (filtered) & 60\% & 0.44 \\
+WebText2 & 22\% & 2.9 \\
+Books1 & 8\% & 1.9 \\
+Books2 & 8\% & 1.9 \\
+Wikipedia & 3\% & 3.4 \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<p>Higher-quality sources sampled more frequently (multiple epochs).
+Lower-quality sources seen less to avoid overfitting to noise.
+</div>
+
+<h3>Data Deduplication</h3>
+
+<p><strong>Why deduplicate?</strong>
+<ul>
+    <li>Prevents memorization
+    <li>Better generalization
+    <li>Fairer evaluation (test set contamination)
+</ul>
+
+<p><strong>Methods:</strong></p>
+
+<p><strong>1. Exact Deduplication:</strong>
+<pre><code>seen_hashes = set()
+for doc in corpus:
+    hash_val = hash(doc)
+    if hash_val not in seen_hashes:
+        keep(doc)
+        seen_hashes.add(hash_val)
+</code></pre></p>
+
+<p><strong>2. Fuzzy Deduplication (MinHash):</strong>
+<ul>
+    <li>Compute MinHash signatures
+    <li>Use LSH for near-neighbor search
+    <li>Remove documents with Jaccard similarity $> 0.8$
+</ul>
+
+<h2>Curriculum Learning</h2>
+
+<h3>Progressive Training</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Train on progressively harder examples:
+
+<p><strong>Stage 1:</strong> Easy examples (short sequences, simple patterns)</p>
+
+<p><strong>Stage 2:</strong> Medium difficulty</p>
+
+<p><strong>Stage 3:</strong> Full difficulty (long sequences, complex patterns)
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Faster convergence
+    <li>Better final performance
+    <li>More stable training
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>GPT-3 training:</strong>
+
+<p><strong>Stage 1 (0-100B tokens):</strong> 
+<ul>
+    <li>Sequence length: 1024
+    <li>Batch size: 3.2M tokens
+</ul>
+
+<p><strong>Stage 2 (100B-300B tokens):</strong>
+<ul>
+    <li>Sequence length: 2048
+    <li>Batch size: 3.2M tokens (fewer sequences)
+</ul>
+
+<p>Starting with shorter sequences reduces memory and computation early in training.
+</div>
+
+<h3>Domain-Adaptive Pre-training</h3>
+
+<p><strong>Continue pre-training on domain-specific data:</strong></p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Domain Adaptation</div>
+
+<p><strong>Step 1:</strong> Pre-train on general corpus (e.g., Common Crawl)</p>
+
+<p><strong>Step 2:</strong> Continue pre-training on domain data (e.g., biomedical)</p>
+
+<p><strong>Step 3:</strong> Fine-tune on task
+</div>
+
+<p><strong>Examples:</strong>
+<ul>
+    <li>BioBERT: BERT + PubMed/PMC
+    <li>SciBERT: BERT + scientific papers
+    <li>FinBERT: BERT + financial documents
+    <li>CodeBERT: BERT + code
+</ul>
+
+<h2>Parameter-Efficient Fine-tuning</h2>
+
+<h3>Motivation</h3>
+
+<p><strong>Full fine-tuning challenges:</strong>
+<ul>
+    <li>Requires storing full model copy per task
+    <li>175B model $\times$ 100 tasks = 17.5T parameters!
+    <li>Expensive and slow
+</ul>
+
+<p><strong>Solution:</strong> Fine-tune small subset of parameters.</p>
+
+<h3>LoRA: Low-Rank Adaptation</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Inject trainable low-rank matrices into frozen model:
+
+<p><strong>Original:</strong> $\vh = \mW \vx$ where $\mW \in \R^{d \times d}$</p>
+
+<p><strong>LoRA:</strong> 
+<div class="equation">
+$$
+\vh = \mW \vx + \Delta \mW \vx = \mW \vx + \mB \mA \vx
+$$
+</div>
+
+<p>where $\mA \in \R^{r \times d}$, $\mB \in \R^{d \times r}$, and $r \ll d$ (typically $r = 4$ to $64$).</p>
+
+<p><strong>Parameters:</strong>
+<ul>
+    <li>Original: $d^2$ (frozen)
+    <li>LoRA: $2rd$ (trainable)
+    <li>Reduction: $\frac{2rd}{d^2} = \frac{2r}{d}$
+</ul>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+GPT-3 175B, apply LoRA with $r=8$ to attention projections.
+
+<p><strong>Single attention layer:</strong>
+<ul>
+    <li>$\mW^Q, \mW^K, \mW^V, \mW^O \in \R^{12288 \times 12288}$
+    <li>Original params: $4 \times 12288^2 = 604M$
+</ul>
+
+<p><strong>LoRA params per layer:</strong>
+<div class="equation">
+$$
+4 \times 2 \times 8 \times 12288 = 786{,}432 \approx 0.79M
+$$
+</div>
+
+<p><strong>96 layers total:</strong>
+<ul>
+    <li>LoRA params: $96 \times 0.79M = 75.8M$
+    <li>Full model: 175B
+    <li><strong>Reduction: 2,300×</strong> (train only 0.04\% of parameters!)
+</ul>
+
+<p><strong>Performance:</strong> Matches full fine-tuning on many tasks!
+</div>
+
+<h3>Adapter Layers</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Insert small bottleneck layers between frozen layers:
+
+<div class="equation">
+$$
+\vh_{\text{adapter}} = \vh + \text{FFN}_{\text{adapter}}(\text{LayerNorm}(\vh))
+$$
+</div>
+
+<p>where FFN$_{\text{adapter}}$: $d \to d_{\text{bottleneck}} \to d$ with $d_{\text{bottleneck}} \ll d$.
+</div>
+
+<p><strong>Typical bottleneck:</strong> $d_{\text{bottleneck}} = 64$ for $d = 768$</p>
+
+<p><strong>Parameters per adapter:</strong>
+<div class="equation">
+$$
+2d \cdot d_{\text{bottleneck}} = 2 \times 768 \times 64 = 98{,}304
+$$
+</div>
+
+<h3>Prompt Tuning</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Prepend learnable "soft prompt" vectors:
+
+<p><strong>Input:</strong> $[\vp_1, \ldots, \vp_k, \vx_1, \ldots, \vx_n]$</p>
+
+<p>where $\vp_i \in \R^d$ are learned continuous prompts (not discrete tokens).</p>
+
+<p><strong>Parameters:</strong> Only $k \times d$ prompt vectors (model frozen).
+</div>
+
+<p><strong>Typical:</strong> $k = 20$ prompts, $d = 768$ $\to$ only 15,360 parameters!</p>
+
+<h2>Multi-Task and Multi-Stage Pre-training</h2>
+
+<h3>Multi-Task Pre-training</h3>
+
+<p><strong>Train on multiple objectives simultaneously:</strong></p>
+
+<div class="equation">
+$$
+\mathcal{L}_{\text{total}} = \sum_{i=1}^{K} \lambda_i \mathcal{L}_i
+$$
+</div>
+
+<p><strong>Example (T5):</strong>
+<ul>
+    <li>Span corruption (main)
+    <li>Prefix LM
+    <li>Deshuffling
+</ul>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>More robust representations
+    <li>Better transfer to diverse tasks
+    <li>Can balance objectives with $\lambda_i$
+</ul>
+
+<h3>Multi-Stage Pre-training</h3>
+
+<p><strong>Stage 1: General pre-training</strong>
+<ul>
+    <li>Large diverse corpus
+    <li>Language modeling
+    <li>Build general knowledge
+</ul>
+
+<p><strong>Stage 2: Instruction tuning</strong>
+<ul>
+    <li>Instruction-response pairs
+    <li>Learn to follow instructions
+    <li>Improve helpfulness
+</ul>
+
+<p><strong>Stage 3: RLHF</strong>
+<ul>
+    <li>Reinforcement learning from human feedback
+    <li>Align with human preferences
+    <li>Improve safety
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Stage 1:</strong> GPT-3 pre-training (175B params, 300B tokens)
+
+<p><strong>Stage 2:</strong> Supervised fine-tuning
+<ul>
+    <li>13,000 instruction-output examples
+    <li>Fine-tune for 16 epochs
+    <li>Learning rate: $9.65 \times 10^{-6}$
+</ul>
+
+<p><strong>Stage 3:</strong> Reward modeling
+<ul>
+    <li>33,000 comparison examples
+    <li>Train 6B reward model
+    <li>Predicts human preferences
+</ul>
+
+<p><strong>Stage 4:</strong> PPO optimization
+<ul>
+    <li>31,000 prompts
+    <li>Optimize policy to maximize reward
+    <li>KL penalty from SFT model
+</ul>
+
+<p><strong>Result:</strong> 1.3B InstructGPT preferred over 175B GPT-3 by humans!
+</div>
+
+<h2>Transfer Learning Analysis</h2>
+
+<h3>Measuring Transfer</h3>
+
+<p><strong>Metrics:</strong></p>
+
+<p><strong>1. Downstream Performance:</strong>
+<div class="equation">
+$$
+\Delta = \text{Performance}_{\text{fine-tuned}} - \text{Performance}_{\text{from-scratch}}
+$$
+</div>
+
+<p><strong>2. Sample Efficiency:</strong>
+<ul>
+    <li>Number of examples to reach target performance
+    <li>Pre-trained models: 10-100× fewer examples
+</ul>
+
+<p><strong>3. Convergence Speed:</strong>
+<ul>
+    <li>Training steps to convergence
+    <li>Pre-trained: 10× faster
+</ul>
+
+<h3>What Makes Good Pre-training?</h3>
+
+<p><strong>Data scale:</strong> More data $\to$ better transfer (up to a point)</p>
+
+<p><strong>Data diversity:</strong> Diverse pre-training $\to$ broader transfer</p>
+
+<p><strong>Model scale:</strong> Larger models transfer better</p>
+
+<p><strong>Objective alignment:</strong> Pre-training objective similar to downstream task</p>
+
+<p><strong>Domain match:</strong> Domain-specific pre-training helps domain-specific tasks</p>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Compare pre-training objectives:
+<ol>
+    <li>Train BERT-tiny with: (a) MLM, (b) CLM, (c) Span corruption
+    <li>Evaluate on GLUE tasks
+    <li>Which objective transfers best? Why?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement data filtering pipeline:
+<ol>
+    <li>Download 10,000 documents from Common Crawl
+    <li>Remove duplicates (exact and near-duplicate)
+    <li>Filter by language (keep English)
+    <li>Filter low-quality (perplexity > threshold)
+    <li>Report statistics at each stage
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement LoRA:
+<ol>
+    <li>Load pre-trained GPT-2
+    <li>Add LoRA layers with $r=8$ to attention
+    <li>Fine-tune on sentiment analysis
+    <li>Compare: (a) Full fine-tuning, (b) LoRA, (c) Frozen
+    <li>Measure: parameters trained, memory, accuracy
+</ol>
+</div>
+
+<p>\begin{exercise}
+Analyze transfer learning:
+<ol>
+    <li>Fine-tune BERT on 5 GLUE tasks
+    <li>Vary training data: [100, 500, 1000, 5000, all]
+    <li>Compare to training from scratch
+    <li>Plot sample efficiency curves
+    <li>At what point does pre-training stop helping?
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter19_long_context.html">← Chapter 19: Long Context Handling</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter21_pytorch_implementation.html">Chapter 21: PyTorch Implementation →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

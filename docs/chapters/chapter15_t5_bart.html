@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 15: T5 and BART - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>T5 and BART: Encoder-Decoder Architectures</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>T5 (Text-to-Text Transfer Transformer) and BART (Bidirectional and Auto-Regressive Transformers) represent encoder-decoder architectures that combine the strengths of BERT and GPT. This chapter covers their architectures, pre-training objectives, unified text-to-text framework, and applications to sequence-to-sequence tasks.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand encoder-decoder transformer architectures
+    <li>Implement span corruption and denoising objectives
+    <li>Apply text-to-text framework to diverse tasks
+    <li>Compare T5, BART, and other seq2seq transformers
+    <li>Fine-tune for summarization, translation, and question answering
+    <li>Understand prefix LM and mixture of denoisers
+</ol>
+
+<h2>T5: Text-to-Text Transfer Transformer</h2>
+
+<h3>Unified Text-to-Text Framework</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+All tasks formulated as: text input $\to$ text output
+<ul>
+    <li>Translation: "translate English to German: That is good" $\to$ "Das ist gut"
+    <li>Summarization: "summarize: [article]" $\to$ "[summary]"
+    <li>Classification: "sst2 sentence: This movie is great" $\to$ "positive"
+    <li>QA: "question: ... context: ..." $\to$ "[answer]"
+</ul>
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Single model for all tasks
+    <li>Same architecture and objective
+    <li>Transfer learning across tasks
+    <li>Consistent evaluation framework
+</ul>
+
+<h3>T5 Architecture</h3>
+
+<p><strong>Standard encoder-decoder transformer with modifications:</strong></p>
+
+<p><strong>Encoder:</strong>
+<ul>
+    <li>Fully-visible self-attention (like BERT)
+    <li>No causal masking
+    <li>Processes input text
+</ul>
+
+<p><strong>Decoder:</strong>
+<ul>
+    <li>Causal self-attention (like GPT)
+    <li>Cross-attention to encoder
+    <li>Generates output text autoregressively
+</ul>
+
+<p><strong>Positional Encodings:</strong>
+<ul>
+    <li>Relative position bias (not absolute sinusoidal)
+    <li>Shared across all layers
+    <li>Learned bucket-based distances
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+Configuration:
+<ul>
+    <li>Encoder layers: $L_{\text{enc}} = 12$
+    <li>Decoder layers: $L_{\text{dec}} = 12$
+    <li>Hidden size: $d = 768$
+    <li>Attention heads: $h = 12$
+    <li>FFN dimension: $d_{ff} = 3072$
+    <li>Vocabulary: $V = 32{,}000$ (SentencePiece)
+    <li>Parameters: $\approx 220$M
+</ul>
+
+<p><strong>Parameter breakdown:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Embeddings:} \quad &32{,}000 \times 768 = 24.6\text{M} \\
+\text{Encoder (12 layers):} \quad &12 \times 7.1\text{M} = 85.2\text{M} \\
+\text{Decoder (12 layers):} \quad &12 \times 9.4\text{M} = 112.8\text{M} \\
+\text{Total:} \quad &\approx 220\text{M}
+\end{align}$$
+</div>
+
+<p>Decoder has more parameters due to cross-attention layer.
+</div>
+
+<h3>Pre-Training Objective: Span Corruption</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Corrupt spans of consecutive tokens, predict them:
+<ol>
+    <li>Sample span lengths from Poisson($\lambda = 3$)
+    <li>Mask 15\% of tokens in spans
+    <li>Replace each span with sentinel token <code><X></code>, <code><Y></code>, etc.
+    <li>Predict original spans
+</ol>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Original:</strong> "Thank you for inviting me to your party last week"
+
+<p><strong>Step 1:</strong> Select spans (15\% total): positions [3-4], [8-9]</p>
+
+<p><strong>Corrupted input:</strong>
+\begin{verbatim}
+Thank you <X> inviting me to your <Y> week
+\end{verbatim}</p>
+
+<p><strong>Target output:</strong>
+\begin{verbatim}
+<X> for <Y> party last <Z>
+\end{verbatim}</p>
+
+<p>Model must predict masked content and sentinel order.
+</div>
+
+<p><strong>Why span corruption vs MLM?</strong>
+<ul>
+    <li>More challenging: Predict multiple tokens
+    <li>Better for generation: Decoder learns to produce sequences
+    <li>Efficient: Fewer prediction targets than MLM
+</ul>
+
+<h3>T5 Variants</h3>
+
+<p><strong>T5 Model Sizes:</strong>
+<ul>
+    <li>T5-Small: 60M parameters
+    <li>T5-Base: 220M parameters
+    <li>T5-Large: 770M parameters
+    <li>T5-3B: 3 billion parameters
+    <li>T5-11B: 11 billion parameters
+</ul>
+
+<p><strong>T5.1.1:</strong> Improved version with:
+<ul>
+    <li>GEGLU activation instead of ReLU
+    <li>No dropout in pre-training
+    <li>Trained on C4 + additional data
+</ul>
+
+<h2>BART: Denoising Autoencoder</h2>
+
+<h3>BART Architecture</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Bidirectional And Auto-Regressive Transformers:
+<ul>
+    <li>Encoder: Bidirectional (like BERT)
+    <li>Decoder: Autoregressive (like GPT)
+    <li>Pre-training: Reconstruct original text from corrupted input
+</ul>
+</div>
+
+<p><strong>Configuration (BART-large):</strong>
+<ul>
+    <li>Encoder: 12 layers
+    <li>Decoder: 12 layers
+    <li>Hidden: $d = 1024$
+    <li>Heads: $h = 16$
+    <li>Parameters: $\approx 400$M
+</ul>
+
+<h3>Denoising Objectives</h3>
+
+<p>BART explores multiple corruption strategies:</p>
+
+<p><strong>1. Token Masking:</strong> Replace tokens with <code>[MASK]</code> (like BERT)</p>
+
+<p><strong>2. Token Deletion:</strong> Remove random tokens
+\begin{verbatim}
+Original: A B C D E
+Corrupted: A C E
+\end{verbatim}</p>
+
+<p><strong>3. Text Infilling:</strong> Replace spans with single <code>[MASK]</code>
+\begin{verbatim}
+Original: A B C D E F
+Corrupted: A [MASK] F
+Target: B C D E
+\end{verbatim}</p>
+
+<p><strong>4. Sentence Permutation:</strong> Shuffle sentence order</p>
+
+<p><strong>5. Document Rotation:</strong> Rotate document, model finds start</p>
+
+<p><strong>Best combination (BART's final):</strong> Text infilling + sentence permutation</p>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Original document:</strong>
+\begin{verbatim}
+The cat sat on the mat. It was very comfortable.
+The dog barked loudly.
+\end{verbatim}
+
+<p><strong>After corruption (infilling + permutation):</strong>
+\begin{verbatim}
+The dog barked loudly.
+The [MASK] comfortable.
+\end{verbatim}</p>
+
+<p><strong>Encoder input:</strong> Corrupted text</p>
+
+<p><strong>Decoder target:</strong> Original complete text</p>
+
+<p>Model learns to:
+<ul>
+    <li>Reconstruct missing spans
+    <li>Reorder sentences
+    <li>Generate coherent output
+</ul>
+</div>
+
+<h3>Fine-tuning BART</h3>
+
+<p><strong>Sequence Classification:</strong>
+<ul>
+    <li>Feed input through encoder and decoder
+    <li>Use final decoder token for classification
+    <li>Same input to encoder and decoder
+</ul>
+
+<p><strong>Generation Tasks (Summarization, Translation):</strong>
+<ul>
+    <li>Encoder: Source text
+    <li>Decoder: Generate target autoregressively
+    <li>Standard seq2seq fine-tuning
+</ul>
+
+<h2>Comparing T5 and BART</h2>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+<strong>Aspect</strong> & <strong>T5</strong> & <strong>BART</strong> \\
+\midrule
+Framework & Text-to-text & Denoising autoencoder \\
+Pre-training & Span corruption & Multiple denoisers \\
+Position encoding & Relative bias & Absolute learned \\
+Vocabulary & 32K (SentencePiece) & 50K (BPE) \\
+Best for & Unified multi-task & Summarization/generation \\
+Largest size & 11B parameters & 400M parameters \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<p><strong>Performance comparison on GLUE:</strong>
+<ul>
+    <li>T5-11B: 90.3 (state-of-art at release)
+    <li>BART-large: 88.4
+    <li>RoBERTa-large: 88.5
+</ul>
+
+<p><strong>Summarization (CNN/DailyMail):</strong>
+<ul>
+    <li>BART-large: ROUGE-L 44.16 (best)
+    <li>T5-base: ROUGE-L 42.05
+</ul>
+
+<h2>Prefix Language Models</h2>
+
+<h3>Prefix LM Objective</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Bidirectional attention on prefix, causal on rest:
+<ul>
+    <li>Prefix (input): Fully-visible attention
+    <li>Target (output): Causal attention
+    <li>Single model (no separate encoder/decoder)
+</ul>
+</div>
+
+<p><strong>Example:</strong>
+\begin{verbatim}
+Prefix: "Translate to French: Hello"
+Target: "Bonjour"
+\end{verbatim}</p>
+
+<p>Attention mask:
+<ul>
+    <li>Prefix tokens can attend to all prefix
+    <li>Target tokens attend causally
+    <li>Enables both understanding and generation
+</ul>
+
+<p><strong>Models using Prefix LM:</strong>
+<ul>
+    <li>UniLM (Microsoft)
+    <li>GLM (Tsinghua)
+    <li>UL2 (Google)
+</ul>
+
+<h2>Applications and Fine-tuning</h2>
+
+<h3>Summarization</h3>
+
+<p><strong>Task:</strong> Input document $\to$ Summary</p>
+
+<p><strong>T5 format:</strong>
+\begin{verbatim}
+summarize: [article text]
+\end{verbatim}</p>
+
+<p><strong>BART approach:</strong>
+<ul>
+    <li>Encoder: Full article
+    <li>Decoder: Generate summary
+</ul>
+
+<p><strong>Metrics:</strong>
+<ul>
+    <li>ROUGE-1, ROUGE-2, ROUGE-L (n-gram overlap)
+    <li>BERTScore (semantic similarity)
+</ul>
+
+<h3>Translation</h3>
+
+<p><strong>T5 format:</strong>
+\begin{verbatim}
+translate English to German: That is good.
+\end{verbatim}</p>
+
+<p><strong>Output:</strong> "Das ist gut."</p>
+
+<p><strong>Multi-task advantage:</strong> Single T5 model handles multiple language pairs by conditioning on task prefix.</p>
+
+<h3>Question Answering</h3>
+
+<p><strong>T5 format:</strong>
+\begin{verbatim}
+question: What is the capital of France?
+context: Paris is the capital and largest city of France...
+\end{verbatim}</p>
+
+<p><strong>Output:</strong> "Paris"</p>
+
+<p><strong>Comparison to BERT:</strong>
+<ul>
+    <li>BERT: Span prediction (start/end positions)
+    <li>T5: Text generation (more flexible)
+</ul>
+
+<h2>Mixture of Denoisers (UL2)</h2>
+
+<p><strong>UL2 combines multiple objectives:</strong></p>
+
+<p><strong>R-Denoiser (Regular):</strong> Short spans (like T5)</p>
+
+<p><strong>S-Denoiser (Sequential):</strong> Prefix LM</p>
+
+<p><strong>X-Denoiser (Extreme):</strong> Very long spans or high corruption</p>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>More robust representations
+    <li>Better transfer to diverse tasks
+    <li>Single model for understanding and generation
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement span corruption. For text "The quick brown fox jumps over the lazy dog":
+<ol>
+    <li>Sample span lengths from Poisson($\lambda=3$)
+    <li>Corrupt 15\% with spans
+    <li>Generate corrupted input and target
+</ol>
+</div>
+
+<p>\begin{exercise}
+Fine-tune T5-base on summarization (CNN/DailyMail):
+<ol>
+    <li>Format data as "summarize: [article]" $\to$ "[summary]"
+    <li>Train for 3 epochs with learning rate $10^{-4}$
+    <li>Evaluate ROUGE scores
+    <li>Compare with BART-base
+</ol>
+</div>
+
+<p>\begin{exercise}
+Calculate parameter counts for:
+<ol>
+    <li>T5-base (encoder + decoder)
+    <li>BART-large
+    <li>Compare to BERT-base (encoder only) and GPT-2 (decoder only)
+</ol>
+Explain why encoder-decoder has most parameters.
+</div>
+
+<p>\begin{exercise}
+Implement text-to-text framework. Convert these tasks to T5 format:
+<ol>
+    <li>Sentiment classification (positive/negative)
+    <li>Named entity recognition
+    <li>Textual entailment (premise + hypothesis $\to$ entailed/contradiction/neutral)
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter14_gpt.html">← Chapter 14: GPT</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter16_efficient_transformers.html">Chapter 16: Efficient Transformers →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

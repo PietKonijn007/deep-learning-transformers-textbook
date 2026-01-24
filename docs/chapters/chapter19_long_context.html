@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 19: Long Context Handling - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Long Context Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Extending transformer context length beyond standard limits (512-2048 tokens) enables processing long documents, books, and extended conversations. This chapter covers techniques for scaling to 32K, 100K, and even 1M+ token contexts.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand context length limitations and bottlenecks
+    <li>Implement position interpolation and extrapolation
+    <li>Apply memory-augmented transformers
+    <li>Use retrieval-augmented generation (RAG)
+    <li>Implement recurrent transformers (Transformer-XL)
+    <li>Compare long-context methods and trade-offs
+</ol>
+
+<h2>Context Length Limitations</h2>
+
+<h3>Why Standard Transformers Fail at Long Context</h3>
+
+<p><strong>1. Computational Complexity:</strong> $O(n^2)$ attention</p>
+
+<p><strong>2. Memory:</strong> Attention matrix grows quadratically</p>
+
+<p><strong>3. Position Encodings:</strong> Trained on fixed length, don't extrapolate</p>
+
+<div class="example"><strong>Example:</strong> 
+Model: GPT-3 scale ($L=96$, $d=12288$, $h=96$)
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+<strong>Context</strong> & <strong>Attn Memory/Layer</strong> & <strong>Total Memory</strong> \\
+\midrule
+2K & 32 MB & 3 GB \\
+8K & 512 MB & 49 GB \\
+32K & 8 GB & 768 GB \\
+128K & 131 GB & 12.6 TB \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<p>At 128K context, attention alone exceeds typical GPU memory!
+</div>
+
+<h2>Position Encoding Extensions</h2>
+
+<h3>Absolute Position Interpolation</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+To extend from length $L$ to $L'$:
+
+<p><strong>Original:</strong> Positions $0, 1, \ldots, L-1$</p>
+
+<p><strong>Interpolated:</strong> Map position $i$ to $i \cdot \frac{L}{L'}$
+<div class="equation">
+$$
+\text{PE}_{\text{new}}(i) = \text{PE}_{\text{original}}(i \cdot L/L')
+$$
+</div>
+
+<p>Interpolate between learned position embeddings.
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Works with absolute position embeddings
+    <li>Minimal fine-tuning needed
+    <li>LLaMA 2: 4K $\to$ 32K with small amount of training
+</ul>
+
+<h3>RoPE: Rotary Position Embedding</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Apply rotation to queries and keys based on position:
+<div class="equation">
+$$\begin{align}
+\vq_m' &= \mR_m \vq_m \\
+\vk_n' &= \mR_n \vk_n
+\end{align}$$
+</div>
+
+<p>where $\mR_m$ is rotation matrix for position $m$:
+<div class="equation">
+$$
+\mR_m = \begin{bmatrix}
+\cos(m\theta_1) & -\sin(m\theta_1) & 0 & 0 & \cdots \\
+\sin(m\theta_1) & \cos(m\theta_1) & 0 & 0 & \cdots \\
+0 & 0 & \cos(m\theta_2) & -\sin(m\theta_2) & \cdots \\
+0 & 0 & \sin(m\theta_2) & \cos(m\theta_2) & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \ddots
+\end{bmatrix}
+$$
+</div>
+</div>
+
+<p><strong>Key property:</strong> Attention between positions $m$ and $n$ depends only on relative distance $m-n$!
+<div class="equation">
+$$
+(\vq_m')\transpose \vk_n' = \vq_m\transpose \mR_{m-n} \vk_n
+$$
+</div>
+
+<p><strong>Advantages:</strong>
+<ul>
+    <li>Relative position information
+    <li>Better extrapolation to longer sequences
+    <li>Used in GPT-NeoX, LLaMA, PaLM
+</ul>
+
+<h3>ALiBi: Attention with Linear Biases</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Add bias to attention scores based on distance:
+<div class="equation">
+$$
+\text{score}(q_i, k_j) = \vq_i\transpose \vk_j - m \cdot |i - j|
+$$
+</div>
+
+<p>where $m$ is head-specific slope (different per attention head).
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>No position embeddings needed
+    <li>Perfect extrapolation: Train on 1K, infer on 10K
+    <li>Simpler than RoPE
+</ul>
+
+<p><strong>Used in:</strong> BLOOM, MPT models</p>
+
+<h2>Recurrent Transformers</h2>
+
+<h3>Transformer-XL</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Segment long sequence, reuse representations from previous segments:
+
+<p><strong>Segment $n$:</strong> Tokens $[s_n, s_n+1, \ldots, s_n+L-1]$</p>
+
+<p><strong>Compute:</strong>
+<div class="equation">
+$$
+\vh_n = \text{Transformer}([\text{stop\_grad}(\vh_{n-1}), \vx_n])
+$$
+</div>
+
+<p>Previous segment hidden states provide additional context without recomputation!
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Segment length: $L = 512$
+
+<p><strong>Segment 1:</strong> Process tokens $0$-$511$
+<ul>
+    <li>Save hidden states $\vh_1$
+</ul>
+
+<p><strong>Segment 2:</strong> Process tokens $512$-$1023$
+<ul>
+    <li>Concatenate with $\vh_1$ (frozen)
+    <li>Effective context: $512 + 512 = 1024$ tokens
+    <li>Computation: Still $O(512^2)$ per segment
+</ul>
+
+<p><strong>Segment 3:</strong> Process tokens $1024$-$1535$
+<ul>
+    <li>Use $\vh_2$ from previous segment
+    <li>Effective context: $1024 + 512 = 1536$ tokens
+</ul>
+
+<p>Context grows linearly with segments, computation stays constant!
+</div>
+
+<p><strong>Relative position encodings:</strong> Modified for segment-level recurrence</p>
+
+<h2>Retrieval-Augmented Generation</h2>
+
+<h3>RAG Architecture</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Combine retrieval with generation:
+
+<p><strong>Step 1: Retrieval</strong>
+<div class="equation">
+$$
+\text{docs} = \text{Retrieve}(\text{query}, \text{corpus}, k=5)
+$$
+</div>
+
+<p><strong>Step 2: Concatenate</strong>
+<div class="equation">
+$$
+\text{input} = [\text{docs}_1, \ldots, \text{docs}_k, \text{query}]
+$$
+</div>
+
+<p><strong>Step 3: Generate</strong>
+<div class="equation">
+$$
+\text{output} = \text{LM}(\text{input})
+$$
+</div>
+</div>
+
+<p><strong>Retrieval methods:</strong>
+<ul>
+    <li>BM25 (sparse)
+    <li>Dense retrieval (BERT embeddings + nearest neighbors)
+    <li>Hybrid (combine sparse and dense)
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Question:</strong> "When was the Eiffel Tower built?"
+
+<p><strong>Step 1: Retrieve</strong> (from Wikipedia)
+<ol>
+    <li>"The Eiffel Tower was constructed from 1887 to 1889..."
+    <li>"Gustave Eiffel designed the tower for the 1889 World's Fair..."
+    <li>"The tower is 330 meters tall and was the tallest..."
+</ol>
+
+<p><strong>Step 2: Concatenate</strong>
+\begin{verbatim}
+Context 1: The Eiffel Tower was constructed from 1887 to 1889...
+Context 2: Gustave Eiffel designed the tower for the 1889 World's Fair...
+Context 3: The tower is 330 meters tall and was the tallest...
+Question: When was the Eiffel Tower built?
+Answer:
+\end{verbatim}</p>
+
+<p><strong>Step 3: Generate</strong>
+"The Eiffel Tower was built from 1887 to 1889."</p>
+
+<p><strong>Advantages:</strong>
+<ul>
+    <li>Access to external knowledge
+    <li>No need to fit everything in context window
+    <li>Cite sources
+    <li>Update knowledge without retraining
+</ul>
+</div>
+
+<h3>RETRO: Retrieval-Enhanced Transformer</h3>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Chunk input into segments (64 tokens)
+    <li>Retrieve neighbors for each chunk
+    <li>Cross-attend to retrieved chunks
+    <li>Chunked cross-attention layers
+</ul>
+
+<p><strong>Performance:</strong> 25× fewer parameters with retrieval achieves same performance as larger model without retrieval!</p>
+
+<h2>Memory-Augmented Transformers</h2>
+
+<h3>Compressive Transformer</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Extend Transformer-XL with compression:
+
+<p><strong>Three levels of memory:</strong>
+<ol>
+    <li><strong>Active:</strong> Current segment (full attention)
+    <li><strong>Recent:</strong> Last $n_m$ segments (cached, full precision)
+    <li><strong>Compressed:</strong> Older segments (compressed representations)
+</ol>
+
+<p><strong>Compression:</strong>
+<ul>
+    <li>Learned compression function
+    <li>Reduce $n$ tokens to $n/c$ (e.g., $c=3$)
+    <li>Compression ratio balances memory vs information
+</ul>
+</div>
+
+<p><strong>Effective context:</strong> Active + Recent + Compressed
+<div class="equation">
+$$
+L_{\text{eff}} = L + n_m \cdot L + n_c \cdot (L/c)
+$$
+</div>
+
+<h3>Memorizing Transformers</h3>
+
+<p><strong>Key innovation:</strong> $k$-NN attention over entire history</p>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Store all past $(key, value)$ pairs in memory
+    <li>For each query, retrieve $k$ nearest neighbors
+    <li>Attend to local context + retrieved keys/values
+</ul>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Effectively infinite context (limited by storage)
+    <li>Constant-time attention (with approximate $k$-NN)
+    <li>Improves perplexity on long documents
+</ul>
+
+<h2>Recent Long-Context Models</h2>
+
+<h3>GPT-4 Turbo (128K context)</h3>
+
+<ul>
+    <li>Architecture details undisclosed
+    <li>Likely: Combination of techniques (RoPE, optimized attention, maybe sparse)
+    <li>Can process ~300 pages of text
+    <li>Applications: Long document analysis, code repositories
+</ul>
+
+<h3>Claude 2 (100K context)</h3>
+
+<ul>
+    <li>~75,000 words
+    <li>Entire books in context
+    <li>Strong retrieval from context
+</ul>
+
+<h3>Llama 2 Long (32K → 100K)</h3>
+
+<p>Extension techniques:
+<ul>
+    <li>Position interpolation
+    <li>Fine-tuning on long sequences
+    <li>Maintains quality at extended lengths
+</ul>
+
+<h2>Comparison and Trade-offs</h2>
+
+<p>\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+<strong>Method</strong> & <strong>Max Length</strong> & <strong>Complexity</strong> & <strong>Quality</strong> & <strong>Implementation</strong> \\
+\midrule
+Standard & 2-4K & $O(n^2)$ & Best & Easy \\
+Sparse (Longformer) & 16K & $O(nw)$ & Good & Medium \\
+Linear (Performer) & 64K+ & $O(n)$ & Medium & Medium \\
+Transformer-XL & Unlimited & $O(L^2)$/seg & Good & Medium \\
+RAG & Unlimited & $O(n^2)$ & Excellent & Hard \\
+Flash Attention & 32K+ & $O(n^2)$ & Best & Easy (w/ kernel) \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<p><strong>Recommendations:</strong>
+<ul>
+    <li><strong>Up to 8K:</strong> Standard + Flash Attention
+    <li><strong>8K-32K:</strong> RoPE/ALiBi + Position Interpolation + Flash
+    <li><strong>32K-128K:</strong> Sparse attention or hybrid approaches
+    <li><strong>Beyond 128K:</strong> RAG, compression, or specialized methods
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement position interpolation:
+<ol>
+    <li>Load model trained on 2K context
+    <li>Extend to 8K using position interpolation
+    <li>Test on long document
+    <li>Measure perplexity vs position
+</ol>
+</div>
+
+<p>\begin{exercise}
+Calculate memory requirements:
+<ol>
+    <li>Standard attention: 2K, 8K, 32K, 128K contexts
+    <li>Sparse attention (window 512): Same contexts
+    <li>What GPU memory needed for each?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement simple RAG:
+<ol>
+    <li>Create small document corpus (1000 documents)
+    <li>Embed with BERT
+    <li>Build FAISS index for retrieval
+    <li>For query, retrieve top-5 and generate answer
+</ol>
+</div>
+
+<p>\begin{exercise}
+Compare position encodings:
+<ol>
+    <li>Train on length 512: (a) Absolute, (b) RoPE, (c) ALiBi
+    <li>Test on length 2048
+    <li>Which extrapolates best?
+    <li>Plot perplexity vs position
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter18_multimodal_transformers.html">← Chapter 18: Multimodal Transformers</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter20_pretraining_strategies.html">Chapter 20: Pretraining Strategies →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

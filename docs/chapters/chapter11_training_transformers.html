@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 11: Training Transformers - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Training Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Training transformers requires specialized techniques beyond standard optimization. This chapter covers learning rate schedules, regularization strategies, initialization methods, and training stability techniques specific to transformers. We examine why transformers need warmup, how to prevent overfitting, and best practices from state-of-the-art models.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Implement learning rate warmup and decay schedules
+    <li>Apply dropout in appropriate transformer components
+    <li>Use label smoothing for better generalization
+    <li>Understand gradient accumulation for large batches
+    <li>Apply mixed precision training
+    <li>Monitor training metrics and diagnose issues
+</ol>
+
+<h2>Learning Rate Schedules</h2>
+
+<h3>Warmup and Decay</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Original "Attention is All You Need" schedule:
+<div class="equation">
+$$
+\eta(t) = d_{\text{model}}^{-0.5} \cdot \min(t^{-0.5}, t \cdot \text{warmup\_steps}^{-1.5})
+$$
+</div>
+</div>
+
+<p><strong>Two phases:</strong>
+<ol>
+    <li><strong>Warmup ($t \leq$ warmup\_steps):</strong> Linear increase
+    <div class="equation">
+$$
+    \eta(t) = d_{\text{model}}^{-0.5} \cdot t \cdot \text{warmup\_steps}^{-1.5}
+    $$
+</div>
+
+<p><li><strong>Decay ($t >$ warmup\_steps):</strong> Inverse square root
+    <div class="equation">
+$$
+    \eta(t) = d_{\text{model}}^{-0.5} \cdot t^{-0.5}
+    $$
+</div>
+</ol>
+
+<div class="example"><strong>Example:</strong> 
+BERT uses simpler schedule:
+<ul>
+    <li>Linear warmup: 10,000 steps
+    <li>Linear decay: After warmup to end of training
+    <li>Peak learning rate: $1 \times 10^{-4}$
+    <li>Adam optimizer: $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-6}$
+</ul>
+
+<p>For 1M training steps:
+<div class="equation">
+$$\begin{align}
+\eta(t) = \begin{cases}
+10^{-4} \cdot \frac{t}{10000} & t \leq 10000 \quad \text{(warmup)} \\
+10^{-4} \cdot \frac{1000000 - t}{990000} & t > 10000 \quad \text{(decay)}
+\end{cases}
+\end{align}$$
+</div>
+</div>
+
+<div class="keypoint">
+<strong>Why warmup?</strong> Large learning rates early in training can lead to unstable gradients, especially with Adam's adaptive learning rates. Warmup prevents early instability.
+</div>
+
+<h2>Regularization Techniques</h2>
+
+<h3>Dropout in Transformers</h3>
+
+<p>Dropout applied at three locations:</p>
+
+<ol>
+    <li><strong>Attention dropout:</strong> On attention weights
+    <div class="equation">
+$$
+    \mA = \text{Dropout}(\text{softmax}(\frac{\mQ \mK\transpose}{\sqrt{d_k}}))
+    $$
+</div>
+
+<p><li><strong>Residual dropout:</strong> Before adding to residual
+    <div class="equation">
+$$
+    \text{output} = \vx + \text{Dropout}(\text{Sublayer}(\vx))
+    $$
+</div>
+
+<p><li><strong>Embedding dropout:</strong> On embeddings
+    <div class="equation">
+$$
+    \mX = \text{Dropout}(\text{Embedding} + \text{PositionalEncoding})
+    $$
+</div>
+</ol>
+
+<p><strong>Typical dropout rates:</strong>
+<ul>
+    <li>BERT: $p = 0.1$ (10\% dropout)
+    <li>GPT-2: $p = 0.1$ for all dropout locations
+    <li>Larger models sometimes use lower dropout
+</ul>
+
+<h3>Label Smoothing</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Instead of hard targets $y \in \{0, 1\}^V$, use soft targets:
+<div class="equation">
+$$
+y'_i = \begin{cases}
+1 - \epsilon + \frac{\epsilon}{V} & \text{if } i = \text{true class} \\
+\frac{\epsilon}{V} & \text{otherwise}
+\end{cases}
+$$
+</div>
+where $\epsilon$ is smoothing parameter (typically 0.1).
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Prevents overconfidence
+    <li>Better calibrated probabilities
+    <li>Improved generalization
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+For 4-class problem with $\epsilon = 0.1$:
+
+<p><strong>Hard target (one-hot):</strong> $[0, 1, 0, 0]$</p>
+
+<p><strong>Smoothed target:</strong>
+<div class="equation">
+$$
+y' = [0.025, 0.925, 0.025, 0.025]
+$$
+</div>
+
+<p>where $0.925 = 1 - 0.1 + 0.1/4$ and $0.025 = 0.1/4$.
+</div>
+
+<h2>Optimization Techniques</h2>
+
+<h3>Adam Variants for Transformers</h3>
+
+<p><strong>AdamW (Adam with decoupled Weight decay):</strong>
+<div class="equation">
+$$
+\vw_{t+1} = \vw_t - \eta_t(\hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon) + \lambda \vw_t)
+$$
+</div>
+
+<p>Weight decay applied directly to weights, not through gradient.</p>
+
+<p><strong>Benefits over Adam:</strong>
+<ul>
+    <li>Better generalization
+    <li>Decouples learning rate from weight decay
+    <li>Used in BERT, GPT-2, GPT-3
+</ul>
+
+<h3>Gradient Clipping</h3>
+
+<p>Prevent exploding gradients:
+<div class="equation">
+$$
+\mathbf{g} \leftarrow \begin{cases}
+\mathbf{g} & \text{if } \norm{\mathbf{g}}_2 \leq \theta \\
+\frac{\theta \mathbf{g}}{\norm{\mathbf{g}}_2} & \text{otherwise}
+\end{cases}
+$$
+</div>
+
+<p>Typical threshold: $\theta = 1.0$</p>
+
+<h3>Gradient Accumulation</h3>
+
+<p>For large effective batch sizes on limited memory:</p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Accumulation</div>
+\KwIn{Mini-batches $\{\mathcal{B}_1, \ldots, \mathcal{B}_k\}$, accumulation steps $k$}
+
+<p>Initialize gradients: $\mathbf{g}_{\text{accum}} = \mathbf{0}$ \\
+\For{$i = 1$ \KwTo $k$}{
+    Forward pass on $\mathcal{B}_i$ \\
+    Backward pass: compute $\mathbf{g}_i$ \\
+    $\mathbf{g}_{\text{accum}} \leftarrow \mathbf{g}_{\text{accum}} + \mathbf{g}_i / k$
+}
+Update parameters using $\mathbf{g}_{\text{accum}}$ \\
+Zero gradients
+</div>
+
+<p><strong>Example:</strong> To simulate batch size 1024 with 256 available memory:
+<ul>
+    <li>Physical batch size: 256
+    <li>Accumulation steps: 4
+    <li>Effective batch size: $256 \times 4 = 1024$
+</ul>
+
+<h2>Mixed Precision Training</h2>
+
+<h3>FP16 Training</h3>
+
+<p>Store and compute in float16 (half precision), maintain master weights in float32:</p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Mixed Precision Training</div>
+
+<p>Maintain master weights $\vw_{\text{fp32}}$ \\
+\For{each training step}{
+    Copy to FP16: $\vw_{\text{fp16}} = \text{float16}(\vw_{\text{fp32}})$ \\
+    Forward pass in FP16 \\
+    Compute loss, scale by loss scale $S$ \\
+    Backward pass in FP16: compute $\mathbf{g}_{\text{fp16}}$ \\
+    Unscale gradients: $\mathbf{g}_{\text{fp16}} \leftarrow \mathbf{g}_{\text{fp16}} / S$ \\
+    Convert to FP32: $\mathbf{g}_{\text{fp32}} = \text{float32}(\mathbf{g}_{\text{fp16}})$ \\
+    Update master weights: $\vw_{\text{fp32}} \leftarrow \vw_{\text{fp32}} - \eta \mathbf{g}_{\text{fp32}}$
+}
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>2× memory reduction
+    <li>2-3× speedup on modern GPUs (Tensor Cores)
+    <li>Enables larger models and batch sizes
+</ul>
+
+<p><strong>Loss scaling:</strong> Prevents underflow in gradients (typically $S = 2^{16}$).</p>
+
+<h2>Training Stability</h2>
+
+<h3>Common Issues and Solutions</h3>
+
+<p><strong>Issue 1: Loss spikes</strong>
+<ul>
+    <li>Symptom: Sudden increase in loss
+    <li>Causes: Learning rate too high, gradient explosion
+    <li>Solutions: Lower LR, gradient clipping, increase warmup
+</ul>
+
+<p><strong>Issue 2: Slow convergence</strong>
+<ul>
+    <li>Symptom: Loss decreases very slowly
+    <li>Causes: Learning rate too low, poor initialization
+    <li>Solutions: Increase LR, check weight initialization
+</ul>
+
+<p><strong>Issue 3: NaN/Inf values</strong>
+<ul>
+    <li>Symptom: Loss becomes NaN
+    <li>Causes: Numerical instability, exploding activations
+    <li>Solutions: Lower LR, use mixed precision with loss scaling, check for bugs
+</ul>
+
+<h3>Pre-Norm vs Post-Norm</h3>
+
+<p><strong>Post-Norm (original):</strong>
+<div class="equation">
+$$
+\text{output} = \text{LayerNorm}(\vx + \text{Sublayer}(\vx))
+$$
+</div>
+
+<p><strong>Pre-Norm (more stable):</strong>
+<div class="equation">
+$$
+\text{output} = \vx + \text{Sublayer}(\text{LayerNorm}(\vx))
+$$
+</div>
+
+<p>Pre-norm provides more direct gradient path, easier training for deep models (GPT-2, GPT-3 use pre-norm).</p>
+
+<h2>Monitoring and Debugging</h2>
+
+<h3>Key Metrics to Track</h3>
+
+<p><strong>Training metrics:</strong>
+<ul>
+    <li>Loss (overall and per-component if applicable)
+    <li>Perplexity: $\text{PPL} = \exp(\text{cross-entropy loss})$
+    <li>Gradient norms
+    <li>Learning rate value
+    <li>Parameter norms
+</ul>
+
+<p><strong>Validation metrics:</strong>
+<ul>
+    <li>Validation loss
+    <li>Task-specific metrics (accuracy, BLEU, F1, etc.)
+    <li>Attention statistics (entropy, max values)
+</ul>
+
+<h3>Diagnostic Checks</h3>
+
+<p><strong>Gradient flow:</strong>
+<pre><code># Check gradient norms per layer
+for name, param in model.named_parameters():
+    if param.grad is not None:
+        grad_norm = param.grad.norm().item()
+        print(f"{name}: {grad_norm:.4f}")
+</code></pre></p>
+
+<p><strong>Activation statistics:</strong>
+<pre><code># Monitor activation magnitudes
+def forward_hook(module, input, output):
+    print(f"Mean: {output.mean():.4f}, Std: {output.std():.4f}")</p>
+
+<p>model.register_forward_hook(forward_hook)
+</code></pre></p>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement transformer learning rate schedule from scratch. Plot learning rate for first 100,000 steps with $d_{\text{model}} = 512$, warmup\_steps = 4000. Compare with linear warmup + linear decay.
+</div>
+
+<p>\begin{exercise}
+For model with 12 layers, $d_{\text{model}} = 768$: If training with physical batch size 32 but want effective batch size 512, how many gradient accumulation steps needed? Calculate memory savings vs single batch.
+</div>
+
+<p>\begin{exercise}
+Implement label smoothing with $\epsilon = 0.1$ for vocabulary size 30,000. Compute cross-entropy loss for smoothed vs hard targets. Show improved calibration.
+</div>
+
+<p>\begin{exercise}
+Compare AdamW vs Adam on small transformer. Track weight norms, gradient norms, and validation performance. Explain differences.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter10_transformer_model.html">← Chapter 10: The Transformer Model</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter12_computational_analysis.html">Chapter 12: Computational Analysis →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

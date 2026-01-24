@@ -21,6 +21,20 @@ CHAPTERS = [
     ("chapter07_attention_fundamentals", "Chapter 7: Attention Mechanisms: Fundamentals"),
     ("chapter08_self_attention", "Chapter 8: Self-Attention and Multi-Head Attention"),
     ("chapter09_attention_variants", "Chapter 9: Attention Variants and Mechanisms"),
+    ("chapter10_transformer_model", "Chapter 10: The Transformer Model"),
+    ("chapter11_training_transformers", "Chapter 11: Training Transformers"),
+    ("chapter12_computational_analysis", "Chapter 12: Computational Analysis"),
+    ("chapter13_bert", "Chapter 13: BERT"),
+    ("chapter14_gpt", "Chapter 14: GPT"),
+    ("chapter15_t5_bart", "Chapter 15: T5 and BART"),
+    ("chapter16_efficient_transformers", "Chapter 16: Efficient Transformers"),
+    ("chapter17_vision_transformers", "Chapter 17: Vision Transformers"),
+    ("chapter18_multimodal_transformers", "Chapter 18: Multimodal Transformers"),
+    ("chapter19_long_context", "Chapter 19: Long Context Handling"),
+    ("chapter20_pretraining_strategies", "Chapter 20: Pretraining Strategies"),
+    ("chapter21_pytorch_implementation", "Chapter 21: PyTorch Implementation"),
+    ("chapter22_hardware_optimization", "Chapter 22: Hardware Optimization"),
+    ("chapter23_best_practices", "Chapter 23: Best Practices"),
 ]
 
 def read_latex_file(filepath):
@@ -232,6 +246,20 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
         <a href="chapter07_attention_fundamentals.html">Ch 7</a>
         <a href="chapter08_self_attention.html">Ch 8</a>
         <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
     </nav>
 
     <main>

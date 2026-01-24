@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 17: Vision Transformers - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Vision Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Vision Transformers (ViT) apply transformer architecture to computer vision, replacing convolutional neural networks. This chapter covers patch embeddings, position encodings for 2D images, ViT architecture variants, and hybrid CNN-transformer models.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand how to apply transformers to images
+    <li>Implement patch embedding and position encoding
+    <li>Compare ViT to CNNs (ResNet, EfficientNet)
+    <li>Apply data augmentation and regularization for ViT
+    <li>Understand ViT variants (DeiT, Swin, CoAtNet)
+    <li>Implement masked autoencoding (MAE) for vision
+</ol>
+
+<h2>From Images to Sequences</h2>
+
+<h3>The Patch Embedding Approach</h3>
+
+<p><strong>Challenge:</strong> Image is 2D array, transformer expects 1D sequence.</p>
+
+<p><strong>Solution:</strong> Divide image into patches, flatten each patch.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For image $\mI \in \R^{H \times W \times C}$ with patch size $P$:
+
+<p><strong>Step 1:</strong> Divide into $N = HW/P^2$ patches
+<div class="equation">
+$$
+\mI_{\text{patches}} \in \R^{N \times (P^2 \cdot C)}
+$$
+</div>
+
+<p><strong>Step 2:</strong> Linear projection
+<div class="equation">
+$$
+\mX = \mI_{\text{patches}} \mW_{\text{patch}} + \vb \quad \text{where } \mW_{\text{patch}} \in \R^{(P^2C) \times d}
+$$
+</div>
+
+<p><strong>Step 3:</strong> Add position embeddings
+<div class="equation">
+$$
+\mX = \mX + \mE_{\text{pos}}
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Image: $224 \times 224 \times 3$ (ImageNet standard)
+
+<p>Patch size: $P = 16$</p>
+
+<p><strong>Number of patches:</strong>
+<div class="equation">
+$$
+N = \frac{224 \times 224}{16^2} = \frac{50176}{256} = 196 \text{ patches}
+$$
+</div>
+
+<p><strong>Each patch:</strong> $16 \times 16 \times 3 = 768$ values</p>
+
+<p><strong>Linear projection to </strong> $d = 768$:
+<div class="equation">
+$$
+\mW_{\text{patch}} \in \R^{768 \times 768}
+$$
+</div>
+
+<p><strong>Sequence length:</strong> 196 tokens (much shorter than full image 50,176 pixels!)</p>
+
+<p><strong>With [CLS] token:</strong> 197 total sequence length
+</div>
+
+<h3>Position Encodings for 2D</h3>
+
+<p><strong>Option 1: 1D Position Embeddings</strong>
+<div class="equation">
+$$
+\mE_{\text{pos}} \in \R^{N \times d}
+$$
+</div>
+Learned absolute positions, treats as 1D sequence.</p>
+
+<p><strong>Option 2: 2D Position Embeddings</strong>
+<div class="equation">
+$$
+\mE_{\text{pos}}(i,j) = \mE_{\text{row}}(i) + \mE_{\text{col}}(j)
+$$
+</div>
+Separate embeddings for row and column.</p>
+
+<p><strong>Original ViT uses 1D:</strong> Simpler, works well in practice!</p>
+
+<h2>Vision Transformer (ViT) Architecture</h2>
+
+<h3>Complete ViT Model</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>Input:</strong> Image $\mI \in \R^{H \times W \times C}$
+
+<p><strong>Step 1:</strong> Patch embedding
+<div class="equation">
+$$
+\vx_{\text{patches}} = \text{PatchEmbed}(\mI) \in \R^{N \times d}
+$$
+</div>
+
+<p><strong>Step 2:</strong> Add [CLS] token
+<div class="equation">
+$$
+\vx_0 = [\vx_{\text{cls}}, \vx_{\text{patches}}] \in \R^{(N+1) \times d}
+$$
+</div>
+
+<p><strong>Step 3:</strong> Add position embeddings
+<div class="equation">
+$$
+\vx_0 = \vx_0 + \mE_{\text{pos}}
+$$
+</div>
+
+<p><strong>Step 4:</strong> Transformer encoder (L layers)
+<div class="equation">
+$$
+\vx_L = \text{Transformer}(\vx_0)
+$$
+</div>
+
+<p><strong>Step 5:</strong> Classification head on [CLS]
+<div class="equation">
+$$
+y = \text{softmax}(\mW_{\text{head}} \vx_L^{\text{cls}} + \vb)
+$$
+</div>
+</div>
+
+<h3>ViT Model Variants</h3>
+
+<p><strong>ViT-Base:</strong>
+<ul>
+    <li>Layers: $L = 12$
+    <li>Hidden: $d = 768$
+    <li>Heads: $h = 12$
+    <li>Patch size: $P = 16$
+    <li>Parameters: 86M
+</ul>
+
+<p><strong>ViT-Large:</strong>
+<ul>
+    <li>Layers: $L = 24$
+    <li>Hidden: $d = 1024$
+    <li>Heads: $h = 16$
+    <li>Parameters: 307M
+</ul>
+
+<p><strong>ViT-Huge:</strong>
+<ul>
+    <li>Layers: $L = 32$
+    <li>Hidden: $d = 1280$
+    <li>Heads: $h = 16$
+    <li>Parameters: 632M
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+Configuration: $L=12$, $d=768$, $h=12$, $P=16$, ImageNet ($N=196$)
+
+<p><strong>Patch embedding:</strong>
+<div class="equation">
+$$
+768 \times 768 = 589{,}824
+$$
+</div>
+
+<p><strong>Position embeddings:</strong>
+<div class="equation">
+$$
+197 \times 768 = 151{,}296
+$$
+</div>
+
+<p><strong>Transformer encoder (12 layers):</strong>
+<div class="equation">
+$$
+12 \times 7{,}084{,}800 = 85{,}017{,}600
+$$
+</div>
+
+<p><strong>Classification head (ImageNet, 1000 classes):</strong>
+<div class="equation">
+$$
+768 \times 1000 = 768{,}000
+$$
+</div>
+
+<p><strong>Total:</strong> $\approx 86{,}527{,}000 \approx$ <strong>86M parameters</strong>
+</div>
+
+<h2>Training Vision Transformers</h2>
+
+<h3>Pre-training Strategies</h3>
+
+<p><strong>Supervised Pre-training (Original ViT):</strong>
+<ul>
+    <li>Large datasets: JFT-300M (300M images, 18K classes)
+    <li>Standard classification loss
+    <li>Then fine-tune on ImageNet
+</ul>
+
+<p><strong>Key finding:</strong> ViT requires massive data to outperform CNNs!
+<ul>
+    <li>On ImageNet alone: ResNet > ViT
+    <li>Pre-trained on JFT-300M: ViT > ResNet
+</ul>
+
+<h3>Data Augmentation and Regularization</h3>
+
+<p><strong>Essential for ViT (lacks CNN inductive biases):</strong></p>
+
+<p><strong>Augmentation:</strong>
+<ul>
+    <li>RandAugment: Random augmentation policies
+    <li>Mixup: $\tilde{x} = \lambda x_i + (1-\lambda) x_j$
+    <li>CutMix: Cut and paste patches between images
+    <li>Random erasing
+</ul>
+
+<p><strong>Regularization:</strong>
+<ul>
+    <li>Dropout: 0.1
+    <li>Stochastic depth: Drop entire layers randomly
+    <li>Weight decay: $10^{-4}$ to $10^{-2}$
+</ul>
+
+<h3>DeiT: Data-efficient Image Transformers</h3>
+
+<p>Improvements for training without massive datasets:</p>
+
+<p><strong>1. Knowledge Distillation</strong>
+<ul>
+    <li>Teacher: CNN (RegNetY) or ViT
+    <li>Student: ViT
+    <li>Distillation token alongside [CLS]
+</ul>
+
+<p><strong>2. Strong Augmentation</strong>
+<ul>
+    <li>Aggressive RandAugment
+    <li>Repeated augmentation
+</ul>
+
+<p><strong>Result:</strong> DeiT-Base achieves 81.8\% on ImageNet trained only on ImageNet (1.3M images)!</p>
+
+<h2>Masked Autoencoders (MAE)</h2>
+
+<h3>Self-Supervised Pre-training for Vision</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+BERT-style masking for images:
+
+<p><strong>Step 1:</strong> Randomly mask 75\% of patches</p>
+
+<p><strong>Step 2:</strong> Encoder processes only visible patches</p>
+
+<p><strong>Step 3:</strong> Decoder reconstructs all patches (including masked)</p>
+
+<p><strong>Loss:</strong> Pixel-level MSE on masked patches
+<div class="equation">
+$$
+\mathcal{L} = \frac{1}{|\mathcal{M}|} \sum_{i \in \mathcal{M}} \|\hat{\vx}_i - \vx_i\|^2
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Image:</strong> $224 \times 224$, patches $16 \times 16$ ($N=196$)
+
+<p><strong>Masking:</strong> Keep 25\% = 49 patches, mask 147 patches</p>
+
+<p><strong>Encoder:</strong>
+<ul>
+    <li>Input: 49 visible patches only
+    <li>Architecture: ViT-Large (24 layers, $d=1024$)
+    <li>Much faster (process 1/4 of patches)
+</ul>
+
+<p><strong>Decoder:</strong>
+<ul>
+    <li>Input: Encoder output + mask tokens
+    <li>Architecture: Smaller (8 layers, $d=512$)
+    <li>Reconstruct all 196 patches
+</ul>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Self-supervised (no labels needed)
+    <li>Learns strong representations
+    <li>Fine-tune on ImageNet: 87.8\% accuracy
+</ul>
+</div>
+
+<h2>Hierarchical Vision Transformers</h2>
+
+<h3>Swin Transformer</h3>
+
+<p><strong>Problem with ViT:</strong> Fixed patch size, no hierarchical features.</p>
+
+<p><strong>Swin solution:</strong> Multi-scale with shifted windows.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>Key innovations:</strong>
+
+<p><strong>1. Hierarchical architecture</strong>
+<ul>
+    <li>Stage 1: Small patches (4×4), many tokens
+    <li>Stage 2: Merge patches, fewer tokens
+    <li>Stage 3, 4: Further merging
+    <li>Like CNN pyramid: high-res → low-res
+</ul>
+
+<p><strong>2. Shifted window attention</strong>
+<ul>
+    <li>Partition image into windows
+    <li>Attention within window only
+    <li>Shift windows between layers
+    <li>Enables cross-window connections
+</ul>
+</div>
+
+<p><strong>Complexity:</strong> $O(MHW)$ instead of $O((HW)^2)$ where $M$ is window size.</p>
+
+<p><strong>Performance:</strong>
+<ul>
+    <li>ImageNet: 87.3\% (Swin-Large)
+    <li>COCO object detection: SOTA
+    <li>Combines ViT flexibility with CNN efficiency
+</ul>
+
+<h3>Hybrid Models: CoAtNet</h3>
+
+<p>Combine convolution and attention:</p>
+
+<p><strong>Architecture:</strong>
+<ol>
+    <li><strong>Stage 1-2:</strong> Convolutional blocks (local features)
+    <li><strong>Stage 3-4:</strong> Transformer blocks (global features)
+    <li><strong>Stage 5:</strong> Attention pooling
+</ol>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>CNN inductive bias early
+    <li>Transformer global modeling late
+    <li>Best of both worlds
+</ul>
+
+<p><strong>Result:</strong> CoAtNet-7 achieves 90.88\% ImageNet (SOTA at release)</p>
+
+<h2>ViT vs CNN Comparison</h2>
+
+<p>\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+<strong>Aspect</strong> & <strong>CNN (ResNet)</strong> & <strong>ViT</strong> \\
+\midrule
+Inductive bias & Strong (locality, translation) & Weak \\
+Data requirement & Moderate (ImageNet) & Large (JFT-300M) \\
+Computation & $O(HW)$ & $O((HW)^2)$ or hierarchical \\
+Interpretability & Filter visualization & Attention maps \\
+Transfer & Good & Excellent (large-scale) \\
+Best use & Small/medium data & Large-scale pre-training \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<p><strong>When to use:</strong>
+<ul>
+    <li><strong>CNN:</strong> Limited data, need efficiency, strong prior
+    <li><strong>ViT:</strong> Massive pre-training data, transfer learning, SOTA performance
+    <li><strong>Hybrid:</strong> Production systems balancing performance and efficiency
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement patch embedding for image $224 \times 224 \times 3$ with patch size 16:
+<ol>
+    <li>Reshape image to patches
+    <li>Apply linear projection
+    <li>Add position embeddings
+    <li>Verify output shape: $(196, 768)$
+</ol>
+</div>
+
+<p>\begin{exercise}
+Compare ViT-Base and ResNet-50:
+<ol>
+    <li>Parameter count
+    <li>FLOPs for $224 \times 224$ image
+    <li>Memory footprint
+    <li>Which is more efficient?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement MAE masking:
+<ol>
+    <li>Randomly mask 75\% of 196 patches
+    <li>Keep 49 visible patches
+    <li>Add mask tokens for decoder
+    <li>Compute reconstruction loss
+</ol>
+</div>
+
+<p>\begin{exercise}
+Train ViT-Tiny on CIFAR-10:
+<ol>
+    <li>Use patch size 4 (for $32 \times 32$ images)
+    <li>6 layers, $d=192$, 3 heads
+    <li>Apply RandAugment
+    <li>Compare to small ResNet
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter16_efficient_transformers.html">← Chapter 16: Efficient Transformers</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter18_multimodal_transformers.html">Chapter 18: Multimodal Transformers →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

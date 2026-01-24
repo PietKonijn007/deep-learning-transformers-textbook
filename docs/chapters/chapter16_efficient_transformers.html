@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 16: Efficient Transformers - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Efficient Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Standard transformers have $O(n^2)$ complexity in sequence length, limiting their application to long sequences. This chapter covers efficient attention mechanisms that reduce complexity: sparse attention, linear attention, low-rank methods, and kernel-based approaches.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand the quadratic bottleneck in standard attention
+    <li>Implement sparse attention patterns (sliding window, strided, global)
+    <li>Apply Linformer and Performer for linear complexity
+    <li>Use Flash Attention for memory-efficient computation
+    <li>Compare trade-offs: accuracy vs efficiency vs memory
+    <li>Deploy long-context models (Longformer, BigBird)
+</ol>
+
+<h2>The Quadratic Bottleneck</h2>
+
+<h3>Complexity Analysis</h3>
+
+<p>Standard self-attention:
+<div class="equation">
+$$
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+$$
+</div>
+
+<p><strong>Bottlenecks:</strong>
+<ul>
+    <li><strong>Computation:</strong> $\mQ \mK\transpose \in \R^{n \times n}$ requires $O(n^2 d)$ FLOPs
+    <li><strong>Memory:</strong> Storing attention matrix requires $O(n^2)$ memory
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+For $n = 4096$, $d = 768$:
+
+<p><strong>Attention matrix:</strong>
+<div class="equation">
+$$
+4096^2 \times 4\text{ bytes} = 67\text{ MB per head}
+$$
+</div>
+
+<p>With 12 heads: $804$ MB just for attention weights!</p>
+
+<p><strong>Quadratic scaling:</strong>
+<ul>
+    <li>$n = 512$: 1.3 MB/head
+    <li>$n = 2048$: 16.8 MB/head (16× increase for 4× length)
+    <li>$n = 8192$: 268 MB/head (256× increase for 16× length)
+</ul>
+
+<p>This is why BERT limits to 512 tokens, GPT-2 to 1024.
+</div>
+
+<h2>Sparse Attention Patterns</h2>
+
+<h3>Fixed Sparse Patterns</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Restrict attention to subset of positions: Each query attends to $k \ll n$ keys
+<div class="equation">
+$$
+\text{Attention}_{\text{sparse}}(\mQ, \mK, \mV)_{ij} = \begin{cases}
+\text{Attention}(\mQ, \mK, \mV)_{ij} & \text{if } (i,j) \in \mathcal{S} \\
+0 & \text{otherwise}
+\end{cases}
+$$
+</div>
+where $\mathcal{S}$ is sparse pattern.
+</div>
+
+<p><strong>Common patterns:</strong></p>
+
+<p><strong>1. Sliding Window (Local)</strong>
+<div class="equation">
+$$
+\mathcal{S}_{\text{local}} = \{(i,j) : |i-j| \leq w\}
+$$
+</div>
+Each token attends to window of $2w+1$ tokens.</p>
+
+<p><strong>2. Strided (Dilated)</strong>
+<div class="equation">
+$$
+\mathcal{S}_{\text{strided}} = \{(i,j) : (i-j) \mod s = 0\}
+$$
+</div>
+Attend to every $s$-th token.</p>
+
+<p><strong>3. Global Tokens</strong>
+Designated tokens attend to all positions, all positions attend to them.</p>
+
+<div class="example"><strong>Example:</strong> 
+Combines local + global:
+<ul>
+    <li>All tokens: Local attention (window $w = 512$)
+    <li>Special tokens: Global attention (attend to all)
+</ul>
+
+<p>For $n = 4096$, $w = 512$:
+<div class="equation">
+$$\begin{align}
+\text{Local connections:} \quad &n \times 2w = 4096 \times 1024 \approx 4M \\
+\text{vs Full:} \quad &n^2 = 4096^2 \approx 16M
+\end{align}$$
+</div>
+
+<p>4× reduction in attention computations!
+</div>
+
+<h3>BigBird: Random + Window + Global</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Three components:
+<ol>
+    <li><strong>Random:</strong> Each query attends to $r$ random keys
+    <li><strong>Window:</strong> Local attention with window $w$
+    <li><strong>Global:</strong> $g$ global tokens
+</ol>
+
+<p>Total connections per query: $w + r + g$
+</div>
+
+<p><strong>Theoretical result:</strong> BigBird can approximate full attention with $O(n)$ complexity while maintaining theoretical expressiveness.</p>
+
+<h2>Linear Attention Methods</h2>
+
+<h3>Linformer</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Project keys and values to lower dimension $k \ll n$:
+<div class="equation">
+$$\begin{align}
+\bar{\mK} &= \mE \mK \quad \text{where } \mE \in \R^{k \times n} \\
+\bar{\mV} &= \mF \mV \quad \text{where } \mF \in \R^{k \times n}
+\end{align}$$
+</div>
+
+<p>Attention:
+<div class="equation">
+$$
+\text{Linformer}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \bar{\mK}\transpose}{\sqrt{d}}\right) \bar{\mV}
+$$
+</div>
+</div>
+
+<p><strong>Complexity:</strong>
+<ul>
+    <li>$\mQ \bar{\mK}\transpose$: $O(nkd)$ instead of $O(n^2d)$
+    <li>With $k = 256$, 16× reduction for $n=4096$
+</ul>
+
+<p><strong>Projection matrices:</strong> Learned or fixed (e.g., random, max pooling)</p>
+
+<h3>Performer (Kernel-based)</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Approximate attention using kernel feature maps:
+<div class="equation">
+$$
+\text{softmax}(\vq\transpose \vk) \approx \phi(\vq)\transpose \phi(\vk)
+$$
+</div>
+where $\phi : \R^d \to \R^m$ is random feature map.
+
+<p>Rewrite attention:
+<div class="equation">
+$$
+\text{Attention}(\mQ, \mK, \mV) \approx \frac{\phi(\mQ) (\phi(\mK)\transpose \mV)}{\phi(\mQ) (\phi(\mK)\transpose \mathbf{1})}
+$$
+</div>
+</div>
+
+<p><strong>Key insight:</strong> Compute $(\phi(\mK)\transpose \mV) \in \R^{m \times d_v}$ first!
+<ul>
+    <li>Cost: $O(nm d_v)$ instead of $O(n^2 d_v)$
+    <li>Linear in $n$!
+</ul>
+
+<p><strong>Random features:</strong>
+<div class="equation">
+$$
+\phi(\vx)_i = \frac{1}{\sqrt{m}} \exp\left(\vw_i\transpose \vx - \frac{\|\vx\|^2}{2}\right)
+$$
+</div>
+where $\vw_i \sim \mathcal{N}(0, \mI)$</p>
+
+<h2>Memory-Efficient Attention</h2>
+
+<h3>Flash Attention</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Compute exact attention without materializing $n \times n$ matrix:
+<ul>
+    <li>Tile computation into blocks
+    <li>Fuse operations (softmax, multiply)
+    <li>Keep intermediate results in fast SRAM
+    <li>Reduce HBM (slow memory) reads/writes
+</ul>
+</div>
+
+<p><strong>Algorithm:</strong>
+<ol>
+    <li>Divide $\mQ, \mK, \mV$ into blocks
+    <li>Load blocks into SRAM
+    <li>Compute attention for block, keep running softmax statistics
+    <li>Write output, load next block
+</ol>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li><strong>Memory:</strong> $O(n)$ instead of $O(n^2)$
+    <li><strong>Speed:</strong> 2-4× faster (fewer memory accesses)
+    <li><strong>Exact:</strong> No approximation!
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+For $n = 2048$, $d = 768$ on A100 GPU:
+
+<p><strong>Standard attention:</strong>
+<ul>
+    <li>Memory: $2048^2 \times 4 = 16.8$ MB
+    <li>Time: 12 ms
+</ul>
+
+<p><strong>Flash Attention:</strong>
+<ul>
+    <li>Memory: $O(n)$ (much less)
+    <li>Time: 3.5 ms (3.4× speedup)
+</ul>
+
+<p>Enables $n = 8192$ on same GPU!
+</div>
+
+<h3>Memory-Efficient Transformers</h3>
+
+<p><strong>Reversible Layers:</strong> Recompute activations during backward pass (save memory)</p>
+
+<p><strong>Gradient Checkpointing:</strong> Store subset of activations, recompute rest</p>
+
+<p><strong>Mixed Precision:</strong> FP16 for forward/backward, FP32 for critical ops</p>
+
+<h2>Comparison of Efficient Methods</h2>
+
+<p>\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+<strong>Method</strong> & <strong>Complexity</strong> & <strong>Memory</strong> & <strong>Exact</strong> & <strong>Quality</strong> \\
+\midrule
+Standard & $O(n^2d)$ & $O(n^2)$ & Yes & Best \\
+Sliding Window & $O(nwd)$ & $O(nw)$ & No & Good \\
+Linformer & $O(nkd)$ & $O(nk)$ & No & Good \\
+Performer & $O(nmd)$ & $O(nm)$ & Approx & Medium \\
+Flash Attention & $O(n^2d)$ & $O(n)$ & Yes & Best \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<p><strong>Trade-offs:</strong>
+<ul>
+    <li><strong>Sparse:</strong> Fast, but may miss long-range dependencies
+    <li><strong>Low-rank:</strong> Linear complexity, but approximation quality varies
+    <li><strong>Kernel:</strong> Theoretically elegant, but overhead for small $n$
+    <li><strong>Flash:</strong> Exact and fast, but requires custom CUDA kernels
+</ul>
+
+<h2>Long-Context Models</h2>
+
+<h3>Longformer</h3>
+
+<p>Architecture for documents up to 4096 tokens:
+<ul>
+    <li>Sliding window attention (512 tokens)
+    <li>Task-specific global tokens
+    <li>Pre-trained on long documents
+</ul>
+
+<p><strong>Performance:</strong>
+<ul>
+    <li>WikiHop, TriviaQA: State-of-art on long-context QA
+    <li>Summarization: Better than truncating documents
+</ul>
+
+<h3>Reformer</h3>
+
+<p><strong>Two innovations:</strong></p>
+
+<p><strong>1. Locality-Sensitive Hashing (LSH) Attention</strong>
+<ul>
+    <li>Hash queries and keys
+    <li>Attend only within same hash bucket
+    <li>Reduces attention from $n \times n$ to $n \times (n/b)$ where $b$ is buckets
+</ul>
+
+<p><strong>2. Reversible Layers</strong>
+<ul>
+    <li>Compute activations from outputs during backprop
+    <li>Memory: $O(nL)$ instead of $O(nL \times \text{layers})$
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement sliding window attention with $w=256$. For $n=1024$:
+<ol>
+    <li>Create attention mask
+    <li>Compute attention
+    <li>Compare FLOPs and memory vs full attention
+    <li>Visualize attention pattern as heatmap
+</ol>
+</div>
+
+<p>\begin{exercise}
+Compare methods for $n=4096$, $d=768$:
+<ol>
+    <li>Standard attention: Calculate memory and FLOPs
+    <li>Linformer ($k=256$): Calculate savings
+    <li>Sliding window ($w=512$): Calculate savings
+    <li>Which is better for: (a) accuracy, (b) speed, (c) memory?
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement Performer random features. Use $m=256$ features for $d=64$:
+<ol>
+    <li>Generate random projection matrix
+    <li>Compute $\phi(\mQ)$ and $\phi(\mK)$
+    <li>Compare attention output to standard softmax attention
+    <li>Measure approximation error
+</ol>
+</div>
+
+<p>\begin{exercise}
+Analyze BigBird pattern. For $n=4096$, $w=256$, $r=64$, $g=32$:
+<ol>
+    <li>How many attention connections per token?
+    <li>What is sparsity percentage?
+    <li>Estimate memory savings vs full attention
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter15_t5_bart.html">← Chapter 15: T5 and BART</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter17_vision_transformers.html">Chapter 17: Vision Transformers →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

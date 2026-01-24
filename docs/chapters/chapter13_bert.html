@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 13: BERT - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>BERT: Bidirectional Encoder Representations</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>BERT (Bidirectional Encoder Representations from Transformers) revolutionized NLP by introducing effective bidirectional pre-training. This chapter covers BERT's architecture, pre-training objectives (masked language modeling and next sentence prediction), fine-tuning strategies, and variants (RoBERTa, ALBERT, DistilBERT).</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand BERT's encoder-only architecture
+    <li>Implement masked language modeling (MLM)
+    <li>Apply BERT to downstream tasks via fine-tuning
+    <li>Compare BERT variants and their improvements
+    <li>Analyze BERT's learned representations
+    <li>Understand limitations and failure modes
+</ol>
+
+<h2>BERT Architecture</h2>
+
+<h3>Model Specification</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+BERT is a stack of transformer encoder layers with:
+<ul>
+    <li><strong>Input:</strong> Token + Segment + Position embeddings
+    <li><strong>Processing:</strong> $L$ transformer encoder layers
+    <li><strong>Output:</strong> Contextualized representations for all tokens
+</ul>
+</div>
+
+<p><strong>BERT-base:</strong>
+<ul>
+    <li>Layers: $L = 12$
+    <li>Hidden size: $d = 768$
+    <li>Attention heads: $h = 12$
+    <li>Feed-forward size: $d_{ff} = 3072$
+    <li>Parameters: $\approx 110$M
+</ul>
+
+<p><strong>BERT-large:</strong>
+<ul>
+    <li>Layers: $L = 24$
+    <li>Hidden size: $d = 1024$
+    <li>Attention heads: $h = 16$
+    <li>Feed-forward size: $d_{ff} = 4096$
+    <li>Parameters: $\approx 340$M
+</ul>
+
+<h3>Input Representation</h3>
+
+<div class="equation">
+$$
+\text{Input} = \text{TokenEmb} + \text{SegmentEmb} + \text{PositionEmb}
+$$
+</div>
+
+<p><strong>Token Embeddings:</strong> WordPiece tokenization, vocabulary $\approx 30{,}000$</p>
+
+<p><strong>Segment Embeddings:</strong> Distinguish sentence A vs B (for sentence-pair tasks)
+<div class="equation">
+$$
+\text{SegEmb}(i) = \begin{cases}
+\mathbf{e}_A & \text{if token } i \text{ in sentence A} \\
+\mathbf{e}_B & \text{if token } i \text{ in sentence B}
+\end{cases}
+$$
+</div>
+
+<p><strong>Position Embeddings:</strong> Learned absolute positions (not sinusoidal)</p>
+
+<p><strong>Special tokens:</strong>
+<ul>
+    <li><code>[CLS]</code>: Start of sequence, used for classification
+    <li><code>[SEP]</code>: Separate sentences
+    <li><code>[MASK]</code>: Masked token for MLM
+    <li><code>[PAD]</code>: Padding
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+Sentence pair: "The cat sat" and "It was tired"
+
+<p><strong>Tokenized:</strong>
+<div class="equation">
+$$
+[<code>[CLS]</code>, \text{The}, \text{cat}, \text{sat}, <code>[SEP]</code>, \text{It}, \text{was}, \text{tired}, <code>[SEP]</code>]
+$$
+</div>
+
+<p><strong>Segment IDs:</strong>
+<div class="equation">
+$$
+[0, 0, 0, 0, 0, 1, 1, 1, 1]
+$$
+</div>
+
+<p><strong>Position IDs:</strong>
+<div class="equation">
+$$
+[0, 1, 2, 3, 4, 5, 6, 7, 8]
+$$
+</div>
+</div>
+
+<h2>Pre-Training Objectives</h2>
+
+<h3>Masked Language Modeling (MLM)</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Randomly mask 15\% of tokens and predict them:
+<ol>
+    <li>Select 15\% of tokens
+    <li>Of selected tokens:
+    <ul>
+        <li>80\%: Replace with <code>[MASK]</code>
+        <li>10\%: Replace with random token
+        <li>10\%: Keep original
+    </ul>
+    <li>Predict original tokens
+</ol>
+</div>
+
+<p><strong>Objective:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{MLM}} = -\sum_{i \in \mathcal{M}} \log P(x_i | \vx_{\backslash \mathcal{M}})
+$$
+</div>
+where $\mathcal{M}$ is set of masked positions and $\vx_{\backslash \mathcal{M}}$ are unmasked tokens.</p>
+
+<div class="example"><strong>Example:</strong> 
+Original: "The cat sat on the mat"
+
+<p><strong>Step 1:</strong> Select 15\%: positions 2, 5</p>
+
+<p><strong>Step 2:</strong> Apply masking strategy:
+<ul>
+    <li>Position 2 ("cat"): Replace with <code>[MASK]</code> (80\% case)
+    <li>Position 5 ("the"): Keep original (10\% case)
+</ul>
+
+<p><strong>Input:</strong> "The <code>[MASK]</code> sat on the mat"</p>
+
+<p><strong>Targets:</strong> Predict "cat" at position 2, "the" at position 5</p>
+
+<p><strong>Output layer:</strong>
+<div class="equation">
+$$
+\text{logits}_2 = \vh_2 \mW_{\text{vocab}} \quad \text{where } \vh_2 \in \R^{768}
+$$
+</div>
+<div class="equation">
+$$
+P(\text{token} | \text{position 2}) = \text{softmax}(\text{logits}_2)
+$$
+</div>
+</div>
+
+<p><strong>Why this masking strategy?</strong>
+<ul>
+    <li>80\% <code>[MASK]</code>: Standard masking
+    <li>10\% random: Prevents over-reliance on <code>[MASK]</code> token
+    <li>10\% original: Encourages model to maintain representations
+</ul>
+
+<h3>Next Sentence Prediction (NSP)</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Binary classification: Does sentence B follow sentence A?
+<div class="equation">
+$$
+P(\text{IsNext} | <code>[CLS]</code>) = \sigma(\mW_{\text{NSP}} \vh_{<code>[CLS]</code>} + \vb_{\text{NSP}})
+$$
+</div>
+</div>
+
+<p><strong>Training data:</strong>
+<ul>
+    <li>50\%: B actually follows A (label: IsNext)
+    <li>50\%: B is random sentence (label: NotNext)
+</ul>
+
+<p><strong>NSP Loss:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{NSP}} = -\log P(y_{\text{NSP}} | <code>[CLS]</code>)
+$$
+</div>
+
+<p><strong>Total pre-training loss:</strong>
+<div class="equation">
+$$
+\mathcal{L} = \mathcal{L}_{\text{MLM}} + \mathcal{L}_{\text{NSP}}
+$$
+</div>
+
+<div class="keypoint">
+Later work (RoBERTa) showed NSP provides minimal benefit. Modern models often use only MLM or variants like span corruption.
+</div>
+
+<h2>Fine-Tuning BERT</h2>
+
+<h3>Classification Tasks</h3>
+
+<p>For sequence classification (sentiment, topic, etc.):
+<ol>
+    <li>Add classification head on <code>[CLS]</code> token
+    <div class="equation">
+$$
+    \text{logits} = \mW_{\text{cls}} \vh_{<code>[CLS]</code>} + \vb_{\text{cls}}
+    $$
+</div>
+    <li>Fine-tune entire model end-to-end
+</ol>
+
+<div class="example"><strong>Example:</strong> 
+Task: Binary sentiment (positive/negative)
+
+<p><strong>Input:</strong> "This movie was amazing!" $\to$ <code>[CLS]</code> This movie was amazing ! <code>[SEP]</code></p>
+
+<p><strong>BERT encoding:</strong> $\vh_{<code>[CLS]</code>} \in \R^{768}$</p>
+
+<p><strong>Classification head:</strong>
+<div class="equation">
+$$
+\text{logits} = \mW \vh_{<code>[CLS]</code>} + \vb \quad \text{where } \mW \in \R^{2 \times 768}
+$$
+</div>
+
+<p><strong>Prediction:</strong>
+<div class="equation">
+$$
+P(\text{positive}) = \text{softmax}(\text{logits})_1
+$$
+</div>
+
+<p><strong>Fine-tuning:</strong> Train on labeled sentiment data for 2-4 epochs with small learning rate ($2 \times 10^{-5}$).
+</div>
+
+<h3>Token-Level Tasks</h3>
+
+<p>For named entity recognition (NER), POS tagging:
+<ol>
+    <li>Add classification head on each token
+    <div class="equation">
+$$
+    \text{logits}_i = \mW_{\text{token}} \vh_i + \vb_{\text{token}}
+    $$
+</div>
+    <li>Predict label for each token independently
+</ol>
+
+<h3>Question Answering (SQuAD)</h3>
+
+<p>For span-based QA:
+<ol>
+    <li>Input: <code>[CLS]</code> Question <code>[SEP]</code> Context <code>[SEP]</code>
+    <li>Predict start and end positions in context
+    <div class="equation">
+$$\begin{align}
+    P_{\text{start}}(i) &= \text{softmax}(\vh_i\transpose \mathbf{s}) \\
+    P_{\text{end}}(i) &= \text{softmax}(\vh_i\transpose \mathbf{e})
+    \end{align}$$
+</div>
+    where $\mathbf{s}, \mathbf{e} \in \R^{768}$ are learned vectors.
+</ol>
+
+<h2>BERT Variants</h2>
+
+<h3>RoBERTa (Robustly Optimized BERT)</h3>
+
+<p>Improvements over BERT:
+<ol>
+    <li><strong>Remove NSP:</strong> Train only with MLM
+    <li><strong>Dynamic masking:</strong> Change masks during training
+    <li><strong>Larger batches:</strong> 8K vs 256
+    <li><strong>More data:</strong> 160GB vs 16GB text
+    <li><strong>Longer training:</strong> 500K vs 1M steps
+</ol>
+
+<p>Result: Significant performance improvements on GLUE, SQuAD, RACE</p>
+
+<h3>ALBERT (A Lite BERT)</h3>
+
+<p>Parameter reduction techniques:
+<ol>
+    <li><strong>Factorized embedding:</strong> $V \times H = V \times E \times E \times H$
+    <ul>
+        <li>Instead: vocab $\to$ 768, use vocab $\to$ 128 $\to$ 768
+        <li>Reduces embedding parameters from 23M to 4M
+    </ul>
+
+<p><li><strong>Cross-layer parameter sharing:</strong> Same weights for all layers
+    <ul>
+        <li>Reduces parameters by $\approx 12\times$
+        <li>Slight performance drop but huge memory savings
+    </ul>
+
+<p><li><strong>Replace NSP with SOP:</strong> Sentence Order Prediction
+</ol>
+
+<p>ALBERT-xxlarge: 235M parameters but same performance as BERT-large (340M)</p>
+
+<h3>DistilBERT</h3>
+
+<p>Knowledge distillation for compression:
+<ul>
+    <li>6 layers instead of 12
+    <li>40\% smaller, 60\% faster
+    <li>Retains 97\% of BERT's performance
+</ul>
+
+<p><strong>Distillation loss:</strong>
+<div class="equation">
+$$
+\mathcal{L} = \alpha \mathcal{L}_{\text{CE}} + (1-\alpha) \mathcal{L}_{\text{KD}}
+$$
+</div>
+where:
+<div class="equation">
+$$
+\mathcal{L}_{\text{KD}} = \text{KL}(\text{softmax}(z_s/T) \| \text{softmax}(z_t/T))
+$$
+</div>
+$z_s$ = student logits, $z_t$ = teacher logits, $T$ = temperature</p>
+
+<h2>Analysis and Interpretability</h2>
+
+<h3>What BERT Learns</h3>
+
+<p><strong>Lower layers:</strong> Syntactic information (POS tags, parse trees)</p>
+
+<p><strong>Middle layers:</strong> Semantic information (word sense, entity types)</p>
+
+<p><strong>Upper layers:</strong> Task-specific information</p>
+
+<p><strong>Attention patterns:</strong>
+<ul>
+    <li>Some heads attend to next token (language modeling pattern)
+    <li>Some heads attend to syntactic relations (e.g., verbs to subjects)
+    <li>Some heads attend broadly (averaging)
+</ul>
+
+<h3>Probing Tasks</h3>
+
+<p>Test what linguistic information is encoded:
+<ul>
+    <li>Surface: Sentence length, word order
+    <li>Syntactic: POS tags, dependency labels, constituency trees
+    <li>Semantic: Named entities, semantic roles, coreference
+</ul>
+
+<p>Method: Train linear classifier on frozen BERT representations</p>
+
+<p>Result: BERT captures surprisingly rich linguistic structure!</p>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement masked language modeling. For sentence "The quick brown fox jumps", mask 15\% of tokens and compute MLM loss. Show prediction probabilities for masked positions.
+</div>
+
+<p>\begin{exercise}
+Fine-tune BERT-base on binary classification with 10,000 examples. Compare learning curves for: (1) Training only classification head, (2) Fine-tuning all layers. Which converges faster? Which achieves better performance?
+</div>
+
+<p>\begin{exercise}
+Compare parameter counts for BERT-base, RoBERTa-base, ALBERT-base, DistilBERT. For each, calculate: (1) Total parameters, (2) Memory footprint (FP32), (3) Inference FLOPs for sequence length 128.
+</div>
+
+<p>\begin{exercise}
+Visualize attention patterns for multi-head attention in BERT. For sentence "The cat that chased the mouse ran away", identify heads that capture: (1) Adjacent words, (2) Subject-verb relations, (3) Long-range dependencies.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter12_computational_analysis.html">← Chapter 12: Computational Analysis</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter14_gpt.html">Chapter 14: GPT →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 18: Multimodal Transformers - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Multimodal Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Multimodal transformers process multiple modalities (text, images, audio, video) in a unified framework. This chapter covers vision-language models (CLIP, DALL-E), audio-text models (Whisper), and unified architectures that handle arbitrary combinations of modalities.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand multimodal fusion strategies
+    <li>Implement contrastive learning (CLIP)
+    <li>Apply vision-language models to zero-shot classification
+    <li>Generate images from text (DALL-E, Stable Diffusion)
+    <li>Process audio with transformers (Whisper)
+    <li>Build unified multimodal models
+</ol>
+
+<h2>Multimodal Learning Fundamentals</h2>
+
+<h3>Fusion Strategies</h3>
+
+<p><strong>1. Early Fusion</strong>
+<ul>
+    <li>Combine modalities at input level
+    <li>Single encoder processes all modalities
+    <li>Example: Concatenate text and image embeddings
+</ul>
+
+<p><strong>2. Late Fusion</strong>
+<ul>
+    <li>Separate encoders per modality
+    <li>Combine at decision level
+    <li>Example: Average image and text predictions
+</ul>
+
+<p><strong>3. Cross-Modal Attention</strong>
+<ul>
+    <li>Modality A attends to modality B
+    <li>Bidirectional cross-attention
+    <li>Example: Text queries attend to image regions
+</ul>
+
+<h3>Alignment Objectives</h3>
+
+<p><strong>Contrastive Learning:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{contrastive}} = -\log \frac{\exp(\text{sim}(v_i, t_i)/\tau)}{\sum_j \exp(\text{sim}(v_i, t_j)/\tau)}
+$$
+</div>
+where $v_i$ = image embedding, $t_i$ = text embedding, $\tau$ = temperature</p>
+
+<p><strong>Matching Loss:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{match}} = -\mathbb{E}[\log P(\text{match}|v, t)]
+$$
+</div>
+
+<p><strong>Reconstruction:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{recon}} = \|f_{\text{dec}}(v) - t\|^2
+$$
+</div>
+
+<h2>CLIP: Contrastive Language-Image Pre-training</h2>
+
+<h3>CLIP Architecture</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>Components:</strong>
+<ul>
+    <li><strong>Image Encoder:</strong> ViT or ResNet $\to$ embedding $\vv \in \R^{d}$
+    <li><strong>Text Encoder:</strong> Transformer $\to$ embedding $\vt \in \R^{d}$
+    <li><strong>Projection:</strong> Map both to shared embedding space
+</ul>
+
+<p><strong>Training:</strong>
+<ol>
+    <li>Batch of $(image, text)$ pairs
+    <li>Encode all images and texts
+    <li>Compute $N \times N$ similarity matrix
+    <li>Maximize diagonal (correct pairs)
+</ol>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Batch size $N = 4$, dimension $d = 512$
+
+<p><strong>Images:</strong> $\mV = [\vv_1, \vv_2, \vv_3, \vv_4]\transpose \in \R^{4 \times 512}$</p>
+
+<p><strong>Texts:</strong> $\mT = [\vt_1, \vt_2, \vt_3, \vt_4]\transpose \in \R^{4 \times 512}$</p>
+
+<p><strong>Similarity matrix:</strong>
+<div class="equation">
+$$
+\mS = \mV \mT\transpose \in \R^{4 \times 4}
+$$
+</div>
+
+<p><strong>Normalize:</strong>
+<div class="equation">
+$$
+S_{ij} = \frac{\vv_i \cdot \vt_j}{\|\vv_i\| \|\vt_j\|} \quad (\text{cosine similarity})
+$$
+</div>
+
+<p><strong>Loss (image-to-text):</strong>
+<div class="equation">
+$$
+\mathcal{L}_i = -\log \frac{\exp(S_{ii}/\tau)}{\sum_j \exp(S_{ij}/\tau)}
+$$
+</div>
+
+<p><strong>Total loss:</strong>
+<div class="equation">
+$$
+\mathcal{L} = \frac{1}{2N} \sum_{i=1}^{N} (\mathcal{L}_i^{\text{img}\to\text{txt}} + \mathcal{L}_i^{\text{txt}\to\text{img}})
+$$
+</div>
+
+<p>Temperature $\tau = 0.07$ (learned during training)
+</div>
+
+<h3>Zero-Shot Classification with CLIP</h3>
+
+<p><strong>Procedure:</strong>
+<ol>
+    <li>Create text prompts for each class
+    <ul>
+        <li>"a photo of a dog"
+        <li>"a photo of a cat"
+        <li>...
+    </ul>
+    <li>Encode all prompts: $\vt_1, \ldots, \vt_C$ (C classes)
+    <li>Encode image: $\vv$
+    <li>Compute similarities: $s_i = \vv \cdot \vt_i$
+    <li>Predict: $\arg\max_i s_i$
+</ol>
+
+<p><strong>Performance:</strong>
+<ul>
+    <li>ImageNet zero-shot: 76.2\% (CLIP ViT-L/14)
+    <li>Comparable to supervised ResNet-50 trained on ImageNet!
+    <li>Generalizes to new datasets without fine-tuning
+</ul>
+
+<h3>CLIP Variants</h3>
+
+<p><strong>CLIP:</strong> 400M image-text pairs from web</p>
+
+<p><strong>OpenCLIP:</strong> Open-source reproduction, various scales</p>
+
+<p><strong>ALIGN (Google):</strong> 1.8B image-text pairs, noisy data</p>
+
+<p><strong>Florence:</strong> Unified vision foundation model</p>
+
+<h2>DALL-E and Stable Diffusion</h2>
+
+<h3>DALL-E: Text-to-Image Generation</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>DALL-E 1 (2021):</strong>
+<ul>
+    <li>Encoder: Compress images to discrete tokens (VQ-VAE)
+    <li>Transformer: Autoregressive model over text + image tokens
+    <li>Training: Next token prediction
+</ul>
+
+<p><strong>Sequence:</strong>
+<div class="equation">
+$$
+[\text{BOS}, \text{text tokens}, \text{image tokens}, \text{EOS}]
+$$
+</div>
+
+<p>Generate image by: (1) Encode text, (2) Sample image tokens autoregressively
+</div>
+
+<p><strong>DALL-E 2 (2022):</strong>
+<ul>
+    <li>Use CLIP embeddings
+    <li>Prior: Text embedding $\to$ Image embedding
+    <li>Decoder: Image embedding $\to$ Image (diffusion model)
+    <li>Much higher quality than DALL-E 1
+</ul>
+
+<h3>Stable Diffusion</h3>
+
+<p><strong>Latent Diffusion Model:</strong>
+<ol>
+    <li>Encode image to latent space (VAE)
+    <li>Add noise iteratively (forward diffusion)
+    <li>Learn to denoise (reverse diffusion)
+    <li>Condition on text via cross-attention
+</ol>
+
+<p><strong>Text conditioning:</strong>
+<ul>
+    <li>Text encoder: CLIP or T5
+    <li>Cross-attention: Latent queries attend to text keys/values
+    <li>Enables text-guided image generation
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Components:</strong>
+
+<p><strong>1. Text Encoder:</strong> CLIP text encoder
+<div class="equation">
+$$
+\text{prompt} \to \vt \in \R^{77 \times 768}
+$$
+</div>
+
+<p><strong>2. VAE Encoder:</strong> Image $\to$ latent
+<div class="equation">
+$$
+\mI \in \R^{512 \times 512 \times 3} \to \vz \in \R^{64 \times 64 \times 4}
+$$
+</div>
+
+<p><strong>3. U-Net Denoiser:</strong> Diffusion model with cross-attention
+<ul>
+    <li>Input: Noisy latent $\vz_t$
+    <li>Condition: Text embedding $\vt$
+    <li>Output: Predicted noise $\epsilon_\theta(\vz_t, t, \vt)$
+</ul>
+
+<p><strong>4. VAE Decoder:</strong> Latent $\to$ image
+<div class="equation">
+$$
+\vz \in \R^{64 \times 64 \times 4} \to \mI \in \R^{512 \times 512 \times 3}
+$$
+</div>
+
+<p><strong>Parameters:</strong> $\approx 860$M total
+</div>
+
+<h2>Vision-Language Understanding</h2>
+
+<h3>BLIP: Bootstrapped Language-Image Pre-training</h3>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Image encoder (ViT)
+    <li>Text encoder (BERT)
+    <li>Multimodal encoder (cross-attention between vision and text)
+</ul>
+
+<p><strong>Training objectives:</strong>
+<ol>
+    <li><strong>ITC:</strong> Image-Text Contrastive (like CLIP)
+    <li><strong>ITM:</strong> Image-Text Matching (binary: match or not)
+    <li><strong>LM:</strong> Language Modeling on text
+</ol>
+
+<p><strong>Bootstrapping:</strong> Generate synthetic captions, filter with model, retrain</p>
+
+<h3>Flamingo: Few-Shot Learning</h3>
+
+<p><strong>Key innovation:</strong> Interleave images and text</p>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Frozen vision encoder (CLIP)
+    <li>Frozen language model (Chinchilla)
+    <li>Learned cross-attention layers (Perceiver Resampler)
+</ul>
+
+<p><strong>Input format:</strong>
+\begin{verbatim}
+<image1> Caption for image 1. <image2> Caption for image 2.
+Question: What is in <image3>? Answer:
+\end{verbatim}</p>
+
+<p><strong>Performance:</strong>
+<ul>
+    <li>Few-shot image captioning: SOTA
+    <li>Visual question answering: Competitive with fine-tuned models
+    <li>Zero-shot to 32-shot learning
+</ul>
+
+<h2>Audio Transformers</h2>
+
+<h3>Whisper: Speech Recognition</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Encoder-decoder transformer for speech:
+
+<p><strong>Input:</strong> Audio waveform $\to$ Log-mel spectrogram</p>
+
+<p><strong>Encoder:</strong>
+<ul>
+    <li>Input: Spectrogram (80 mel bins)
+    <li>Convolution layers (downsample)
+    <li>Transformer encoder layers
+</ul>
+
+<p><strong>Decoder:</strong>
+<ul>
+    <li>Autoregressive text generation
+    <li>Special tokens for language, task, timestamps
+</ul>
+</div>
+
+<p><strong>Training data:</strong> 680,000 hours of multilingual audio</p>
+
+<p><strong>Tasks supported:</strong>
+<ul>
+    <li>Speech recognition (transcription)
+    <li>Translation (to English)
+    <li>Language identification
+    <li>Voice activity detection
+    <li>Timestamp prediction
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Special tokens:</strong>
+\begin{verbatim}
+<|startoftranscript|><|en|><|transcribe|><|notimestamps|>
+\end{verbatim}
+
+<p><strong>Spectrogram:</strong>
+<ul>
+    <li>80 mel bins
+    <li>3000 frames (30 seconds audio at 100 Hz)
+    <li>Input: $3000 \times 80$
+</ul>
+
+<p><strong>Encoder:</strong>
+<ul>
+    <li>Conv layers: $3000 \times 80 \to 1500 \times 768$
+    <li>Transformer: Process 1500 tokens
+</ul>
+
+<p><strong>Decoder:</strong> Generate text tokens autoregressively
+</div>
+
+<h3>Audio-Text Pre-training</h3>
+
+<p><strong>Contrastive learning:</strong> Like CLIP but audio-text</p>
+
+<p><strong>AudioCLIP:</strong> Tri-modal (image, text, audio)</p>
+
+<p><strong>Applications:</strong>
+<ul>
+    <li>Zero-shot audio classification
+    <li>Audio captioning
+    <li>Text-to-audio generation
+</ul>
+
+<h2>Unified Multimodal Models</h2>
+
+<h3>Perceiver and Perceiver IO</h3>
+
+<p><strong>Key idea:</strong> Map arbitrary modalities to latent space via cross-attention</p>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>Components:</strong>
+
+<p><strong>1. Latent array:</strong> Fixed set of learned queries $\mZ \in \R^{M \times d}$</p>
+
+<p><strong>2. Cross-attention:</strong> Latents attend to inputs
+<div class="equation">
+$$
+\mZ_1 = \text{CrossAttn}(\mQ=\mZ, \mK=\mX, \mV=\mX)
+$$
+</div>
+
+<p><strong>3. Transformer:</strong> Process latents
+<div class="equation">
+$$
+\mZ_L = \text{Transformer}(\mZ_1)
+$$
+</div>
+
+<p><strong>4. Output:</strong> Decode latents to task outputs
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Handles arbitrary input sizes
+    <li>Computation independent of input size (fixed latents)
+    <li>Unified architecture for images, video, audio, text
+</ul>
+
+<h3>GPT-4V and LLaVA</h3>
+
+<p><strong>GPT-4V (Vision):</strong> GPT-4 with vision capabilities
+<ul>
+    <li>Interleaved image and text inputs
+    <li>Strong vision-language understanding
+    <li>Details not fully disclosed
+</ul>
+
+<p><strong>LLaVA (Open-source):</strong>
+<ul>
+    <li>CLIP vision encoder
+    <li>LLaMA language model
+    <li>Linear projection to align embeddings
+    <li>Instruction tuning on visual conversations
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement CLIP contrastive loss for batch size 8:
+<ol>
+    <li>Generate random image embeddings $(8, 512)$
+    <li>Generate random text embeddings $(8, 512)$
+    <li>Compute $8 \times 8$ similarity matrix
+    <li>Calculate contrastive loss with $\tau = 0.07$
+</ol>
+</div>
+
+<p>\begin{exercise}
+Use CLIP for zero-shot classification on CIFAR-10:
+<ol>
+    <li>Load pre-trained CLIP model
+    <li>Create text prompts for 10 classes
+    <li>Encode images and prompts
+    <li>Compute accuracy
+    <li>Compare to supervised baseline
+</ol>
+</div>
+
+<p>\begin{exercise}
+Analyze Whisper architecture:
+<ol>
+    <li>Calculate parameters for encoder (24 layers, $d=1024$)
+    <li>Calculate parameters for decoder (24 layers)
+    <li>Estimate memory for 30-second audio
+    <li>Compare to text-only GPT-2
+</ol>
+</div>
+
+<p>\begin{exercise}
+Design multimodal fusion strategy for video understanding (visual + audio + captions):
+<ol>
+    <li>Propose architecture
+    <li>Define fusion mechanism
+    <li>Specify training objective
+    <li>Estimate parameter count
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter17_vision_transformers.html">← Chapter 17: Vision Transformers</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter19_long_context.html">Chapter 19: Long Context Handling →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

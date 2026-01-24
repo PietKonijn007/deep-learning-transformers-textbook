@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 22: Hardware Optimization - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Hardware Optimization and Deployment</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Deploying transformers efficiently requires understanding hardware architectures, optimization techniques, and deployment strategies. This chapter covers GPUs, TPUs, model quantization, pruning, distillation, and production deployment best practices.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand GPU/TPU architectures for transformers
+    <li>Apply model quantization (INT8, FP16)
+    <li>Implement pruning and sparsity
+    <li>Use knowledge distillation for compression
+    <li>Optimize inference latency and throughput
+    <li>Deploy models in production environments
+</ol>
+
+<h2>Hardware Architectures</h2>
+
+<h3>GPU Architecture for Deep Learning</h3>
+
+<p><strong>NVIDIA Tensor Cores:</strong>
+<ul>
+    <li>Specialized matrix multiplication units
+    <li>Mixed precision (FP16): 312 TFLOPS (A100)
+    <li>FP32: 156 TFLOPS
+    <li>INT8: 624 TOPS
+</ul>
+
+<p><strong>Memory hierarchy:</strong>
+<ol>
+    <li><strong>Registers:</strong> Fastest, smallest ($\sim$256KB/SM)
+    <li><strong>Shared memory (SRAM):</strong> Fast, limited (164KB/SM on A100)
+    <li><strong>L2 cache:</strong> Medium speed (40MB on A100)
+    <li><strong>HBM (High Bandwidth Memory):</strong> Largest, slower (40-80GB)
+</ol>
+
+<p><strong>Bandwidth:</strong>
+<ul>
+    <li>A100 HBM: 1.6 TB/s
+    <li>V100 HBM: 900 GB/s
+    <li>Memory bandwidth often bottleneck for transformers
+</ul>
+
+<h3>Computational Intensity</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+<div class="equation">
+$$
+\text{Arithmetic Intensity} = \frac{\text{FLOPs}}{\text{Bytes transferred}}
+$$
+</div>
+</div>
+
+<p><strong>For attention:</strong>
+<ul>
+    <li>$\mQ \mK\transpose$: Intensity = $\frac{2n^2d}{2nd + 2nd} = \frac{nd}{2d} = \frac{n}{2}$
+    <li>For small $n$ (< 1024): Memory-bound
+    <li>For large $n$ (> 4096): Compute-bound
+</ul>
+
+<h3>TPU Architecture</h3>
+
+<p><strong>Tensor Processing Units (TPUs):</strong>
+<ul>
+    <li>Systolic array architecture
+    <li>Optimized for matrix multiplications
+    <li>High memory bandwidth (900 GB/s, TPU v4)
+    <li>275 TFLOPS (bfloat16)
+</ul>
+
+<p><strong>TPU vs GPU:</strong>
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+<strong>Aspect</strong> & <strong>GPU</strong> & <strong>TPU</strong> \\
+\midrule
+Flexibility & High (general purpose) & Medium (ML-specific) \\
+Peak FLOPS & 312 (A100 FP16) & 275 (v4 bf16) \\
+Memory & 40-80 GB & 32 GB (per chip) \\
+Batch size & Medium-Large & Very Large \\
+Best for & Flexibility, research & Large-scale training \\
+\bottomrule
+\end{tabular}
+\end{table}</p>
+
+<h2>Model Quantization</h2>
+
+<h3>Quantization Fundamentals</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Map FP32 weights to lower precision (INT8, FP16):
+<div class="equation">
+$$
+w_{\text{quant}} = \text{round}\left(\frac{w_{\text{float}}}{s}\right) + z
+$$
+</div>
+where $s$ is scale factor, $z$ is zero-point.
+</div>
+
+<p><strong>Precision options:</strong>
+<ul>
+    <li><strong>FP32:</strong> 32 bits, full precision (baseline)
+    <li><strong>FP16:</strong> 16 bits, 2× compression
+    <li><strong>BF16:</strong> 16 bits, better range than FP16
+    <li><strong>INT8:</strong> 8 bits, 4× compression
+    <li><strong>INT4:</strong> 4 bits, 8× compression (extreme)
+</ul>
+
+<h3>Post-Training Quantization (PTQ)</h3>
+
+<p><strong>Procedure:</strong>
+<ol>
+    <li>Train model in FP32
+    <li>Collect activation statistics on calibration set
+    <li>Determine scale factors
+    <li>Convert weights and activations to INT8
+</ol>
+
+<div class="example"><strong>Example:</strong> 
+<strong>FP32 weight:</strong> $w = 0.137$
+
+<p><strong>Determine range:</strong> $w \in [-1.0, 1.0]$</p>
+
+<p><strong>Scale:</strong> $s = \frac{2.0}{256} = 0.0078125$</p>
+
+<p><strong>Quantize:</strong>
+<div class="equation">
+$$
+w_{\text{INT8}} = \text{round}\left(\frac{0.137}{0.0078125}\right) = \text{round}(17.54) = 18
+$$
+</div>
+
+<p><strong>Dequantize:</strong> $w' = 18 \times 0.0078125 = 0.1406$</p>
+
+<p><strong>Error:</strong> $|0.137 - 0.1406| = 0.0036$ (2.6\% relative)
+</div>
+
+<h3>Quantization-Aware Training (QAT)</h3>
+
+<p><strong>Simulate quantization during training:</strong>
+<ol>
+    <li>Forward pass: Quantize weights/activations
+    <li>Compute loss with quantized values
+    <li>Backward pass: FP32 gradients
+    <li>Update FP32 weights
+</ol>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Model learns to be robust to quantization
+    <li>Better accuracy than PTQ
+    <li>Minimal accuracy loss with INT8
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\toprule
+<strong>Precision</strong> & <strong>GLUE Score</strong> & <strong>Speedup</strong> \\
+\midrule
+FP32 (baseline) & 84.5 & 1.0× \\
+FP16 & 84.4 & 1.8× \\
+INT8 (PTQ) & 82.1 & 2.9× \\
+INT8 (QAT) & 84.2 & 2.9× \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+<p>QAT recovers most accuracy lost in PTQ!
+</div>
+
+<h2>Model Pruning</h2>
+
+<h3>Pruning Strategies</h3>
+
+<p><strong>Magnitude-based pruning:</strong>
+<div class="equation">
+$$
+\text{Prune if } |w_{ij}| < \tau
+$$
+</div>
+
+<p><strong>Structured pruning:</strong>
+<ul>
+    <li>Remove entire neurons, heads, layers
+    <li>Easier to deploy (no sparse kernels needed)
+    <li>Less aggressive compression
+</ul>
+
+<p><strong>Unstructured pruning:</strong>
+<ul>
+    <li>Remove individual weights
+    <li>Higher compression ratios
+    <li>Requires sparse matrix operations
+</ul>
+
+<h3>Iterative Pruning</h3>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Iterative Magnitude Pruning</div>
+
+<p><strong>Input:</strong> Model, sparsity target $s_{\text{target}}$</p>
+
+<p>\For{sparsity $s = 0$ \KwTo $s_{\text{target}}$ by steps}{
+    Train model to convergence \\
+    Prune $\Delta s$ lowest-magnitude weights \\
+    Fine-tune model
+}
+</div>
+
+<div class="example"><strong>Example:</strong> 
+BERT-base: 12 layers × 12 heads = 144 heads
+
+<p><strong>Finding:</strong> Can remove 50\% of heads with minimal impact!</p>
+
+<p><strong>Procedure:</strong>
+<ol>
+    <li>Compute importance score per head
+    <li>Rank heads by importance
+    <li>Prune lowest 50\% (72 heads)
+    <li>Fine-tune remaining model
+</ol>
+
+<p><strong>Result:</strong>
+<ul>
+    <li>50\% fewer attention operations
+    <li>GLUE score: 84.5 $\to$ 83.8 (0.7 point drop)
+    <li>1.5× faster inference
+</ul>
+</div>
+
+<h2>Knowledge Distillation</h2>
+
+<h3>Distillation Loss</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+<div class="equation">
+$$
+\mathcal{L} = \alpha \mathcal{L}_{\text{CE}}(y, y_{\text{student}}) + (1-\alpha) \mathcal{L}_{\text{KD}}(y_{\text{teacher}}, y_{\text{student}})
+$$
+</div>
+
+<p>where:
+<div class="equation">
+$$
+\mathcal{L}_{\text{KD}} = \text{KL}\left(\frac{\exp(z_t/T)}{\sum \exp(z_t/T)} \Big\| \frac{\exp(z_s/T)}{\sum \exp(z_s/T)}\right)
+$$
+</div>
+
+<p>$T$ = temperature (typically 2-5), higher = softer probabilities
+</div>
+
+<h3>DistilBERT Approach</h3>
+
+<p><strong>Student architecture:</strong>
+<ul>
+    <li>6 layers (vs 12 in BERT)
+    <li>Same hidden size (768)
+    <li>Initialize from teacher's even layers
+</ul>
+
+<p><strong>Training:</strong>
+<ul>
+    <li>Distillation loss from teacher
+    <li>Masked language modeling loss
+    <li>Cosine distance between hidden states
+</ul>
+
+<p><strong>Results:</strong>
+<ul>
+    <li>40\% smaller (66M vs 110M params)
+    <li>60\% faster
+    <li>Retains 97\% of BERT performance
+</ul>
+
+<h2>Inference Optimization</h2>
+
+<h3>ONNX Runtime</h3>
+
+<p><strong>ONNX (Open Neural Network Exchange):</strong>
+<ul>
+    <li>Framework-agnostic model format
+    <li>Optimized inference engine
+    <li>Supports quantization, pruning
+</ul>
+
+<p><strong>Optimizations:</strong>
+<ul>
+    <li>Operator fusion (combine LayerNorm + Add)
+    <li>Constant folding
+    <li>Dead code elimination
+    <li>Graph optimization
+</ul>
+
+<h3>TensorRT</h3>
+
+<p><strong>NVIDIA TensorRT:</strong>
+<ul>
+    <li>Deep learning inference optimizer
+    <li>Layer fusion
+    <li>Kernel auto-tuning
+    <li>INT8 calibration
+</ul>
+
+<p><strong>Typical speedups:</strong>
+<ul>
+    <li>BERT-base: 2-3× over PyTorch
+    <li>With INT8: 4-5× over PyTorch FP32
+</ul>
+
+<h3>Batching Strategies</h3>
+
+<p><strong>Static batching:</strong>
+<ul>
+    <li>Fixed batch size
+    <li>Pad to max length
+    <li>Simple but wasteful
+</ul>
+
+<p><strong>Dynamic batching:</strong>
+<ul>
+    <li>Accumulate requests until batch full or timeout
+    <li>Reduces latency while maintaining throughput
+</ul>
+
+<p><strong>Continuous batching:</strong>
+<ul>
+    <li>For autoregressive generation
+    <li>Add new sequences as others finish
+    <li>Maximizes GPU utilization
+</ul>
+
+<h2>Production Deployment</h2>
+
+<h3>Serving Frameworks</h3>
+
+<p><strong>TorchServe:</strong>
+<ul>
+    <li>PyTorch native serving
+    <li>REST/gRPC APIs
+    <li>Batching, versioning, monitoring
+</ul>
+
+<p><strong>Triton Inference Server:</strong>
+<ul>
+    <li>Multi-framework (PyTorch, TensorFlow, ONNX)
+    <li>Concurrent model execution
+    <li>Dynamic batching
+    <li>Model ensembles
+</ul>
+
+<p><strong>FastAPI + Custom:</strong>
+<ul>
+    <li>Lightweight, flexible
+    <li>Full control over serving logic
+    <li>Easy integration with existing systems
+</ul>
+
+<h3>Deployment Checklist</h3>
+
+<p><strong>Performance:</strong>
+<ul>
+    <li>Quantize to INT8/FP16
+    <li>Export to ONNX/TensorRT
+    <li>Optimize batch size for latency/throughput
+    <li>Enable KV caching for generation
+</ul>
+
+<p><strong>Reliability:</strong>
+<ul>
+    <li>Graceful degradation on errors
+    <li>Request timeouts
+    <li>Health checks
+    <li>Model versioning
+</ul>
+
+<p><strong>Monitoring:</strong>
+<ul>
+    <li>Latency (p50, p95, p99)
+    <li>Throughput (requests/second)
+    <li>GPU utilization
+    <li>Error rates
+</ul>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Quantize BERT-base to INT8:
+<ol>
+    <li>Use PyTorch quantization APIs
+    <li>Calibrate on 1000 examples
+    <li>Measure: (a) Model size, (b) Inference speed, (c) GLUE accuracy
+    <li>Compare PTQ vs QAT
+</ol>
+</div>
+
+<p>\begin{exercise}
+Implement attention head pruning:
+<ol>
+    <li>Compute importance scores for all heads
+    <li>Prune 25\%, 50\%, 75\% of heads
+    <li>Fine-tune after pruning
+    <li>Plot accuracy vs sparsity
+</ol>
+</div>
+
+<p>\begin{exercise}
+Optimize inference pipeline:
+<ol>
+    <li>Baseline: PyTorch FP32
+    <li>Convert to ONNX, measure speedup
+    <li>Apply INT8 quantization
+    <li>Implement dynamic batching
+    <li>Report final throughput improvement
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter21_pytorch_implementation.html">← Chapter 21: PyTorch Implementation</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter23_best_practices.html">Chapter 23: Best Practices →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

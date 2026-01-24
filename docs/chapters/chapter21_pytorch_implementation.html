@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 21: PyTorch Implementation - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}',
+                vw: '{\\mathbf{w}}',
+                vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}',
+                vk: '{\\mathbf{k}}',
+                vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}',
+                mK: '{\\mathbf{K}}',
+                mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mU: '{\\mathbf{U}}',
+                mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Implementing Transformers in PyTorch</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>This chapter provides complete, production-ready PyTorch implementations of transformer models. We build from scratch: attention mechanisms, encoder/decoder blocks, position encodings, and full models (BERT, GPT, T5). Each implementation includes training loops, optimization, and best practices.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Implement multi-head attention from scratch
+    <li>Build transformer encoder and decoder blocks
+    <li>Create complete BERT and GPT models
+    <li>Write efficient training loops with mixed precision
+    <li>Apply gradient accumulation and checkpointing
+    <li>Debug common implementation issues
+</ol>
+
+<h2>Multi-Head Attention Implementation</h2>
+
+<h3>Core Components</h3>
+
+<p><strong>Key implementation considerations:</strong>
+<ul>
+    <li>Efficient batched matrix multiplications
+    <li>Proper dimension handling for multi-head split
+    <li>Memory-efficient attention computation
+    <li>Gradient flow through softmax
+</ul>
+
+<p><strong>PyTorch multi-head attention structure:</strong>
+<ol>
+    <li>Project Q, K, V: Linear layers
+    <li>Reshape for multiple heads: view + transpose
+    <li>Compute scaled dot-product attention
+    <li>Concatenate heads and project output
+</ol>
+
+<h3>Dimension Tracking Example</h3>
+
+<p>For BERT-base configuration ($d=768$, $h=12$):</p>
+
+<p><strong>Input:</strong> $(B, n, 768)$ where $B$ is batch size, $n$ is sequence length</p>
+
+<p><strong>After Q/K/V projection:</strong> $(B, n, 768)$</p>
+
+<p><strong>Reshape for heads:</strong> $(B, n, 12, 64) \to (B, 12, n, 64)$</p>
+
+<p><strong>Attention scores:</strong> $(B, 12, n, n)$</p>
+
+<p><strong>After applying to V:</strong> $(B, 12, n, 64)$</p>
+
+<p><strong>Concatenate heads:</strong> $(B, n, 12, 64) \to (B, n, 768)$</p>
+
+<p><strong>Output projection:</strong> $(B, n, 768)$</p>
+
+<h2>Position Encodings</h2>
+
+<h3>Sinusoidal Encoding</h3>
+
+<p><strong>Mathematical formula:</strong>
+<div class="equation">
+$$\begin{align}
+PE_{(\text{pos}, 2i)} &= \sin\left(\frac{\text{pos}}{10000^{2i/d}}\right) \\
+PE_{(\text{pos}, 2i+1)} &= \cos\left(\frac{\text{pos}}{10000^{2i/d}}\right)
+\end{align}$$
+</div>
+
+<p><strong>Implementation strategy:</strong>
+<ol>
+    <li>Pre-compute position encoding matrix at initialization
+    <li>Register as buffer (not parameter, doesn't need gradients)
+    <li>Add to embeddings in forward pass
+</ol>
+
+<h3>Learned Positional Embeddings</h3>
+
+<p><strong>Alternative approach (BERT):</strong>
+<ul>
+    <li>Embedding layer: max\_len $\times$ d\_model
+    <li>Learn position representations during training
+    <li>More flexible but requires fixed max length
+</ul>
+
+<h2>Masking Strategies</h2>
+
+<h3>Causal Mask for GPT</h3>
+
+<p><strong>Lower triangular mask:</strong>
+<div class="equation">
+$$
+M_{ij} = \begin{cases}
+1 & \text{if } j \leq i \\
+0 & \text{if } j > i
+\end{cases}
+$$
+</div>
+
+<p><strong>Implementation:</strong>
+\begin{verbatim}
+causal_mask = torch.tril(torch.ones(seq_len, seq_len))
+scores = scores.masked_fill(mask == 0, -1e9)
+\end{verbatim}</p>
+
+<h3>Padding Mask</h3>
+
+<p><strong>For variable-length sequences:</strong>
+\begin{verbatim}
+# input_ids: (batch, seq_len)
+# 0 indicates padding
+pad_mask = (input_ids != 0).unsqueeze(1).unsqueeze(2)
+# Shape: (batch, 1, 1, seq_len)
+\end{verbatim}</p>
+
+<h2>Training Optimizations</h2>
+
+<h3>Mixed Precision Training</h3>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>2× memory reduction
+    <li>2-3× training speedup on modern GPUs
+    <li>Same final accuracy with proper loss scaling
+</ul>
+
+<p><strong>Key components:</strong>
+<ol>
+    <li>Automatic mixed precision (AMP) context
+    <li>Gradient scaler for loss scaling
+    <li>FP32 master weights, FP16 forward/backward
+</ol>
+
+<h3>Gradient Accumulation</h3>
+
+<p><strong>Purpose:</strong> Simulate large batch sizes on limited memory</p>
+
+<p><strong>Effective batch size:</strong>
+<div class="equation">
+$$
+B_{\text{effective}} = B_{\text{physical}} \times N_{\text{accumulation}}
+$$
+</div>
+
+<p><strong>Example:</strong>
+<ul>
+    <li>Physical batch: 32 (fits in GPU)
+    <li>Accumulation steps: 8
+    <li>Effective batch: 256
+</ul>
+
+<h3>Gradient Checkpointing</h3>
+
+<p><strong>Trade computation for memory:</strong>
+<ul>
+    <li>Don't store all activations
+    <li>Recompute during backward pass
+    <li>Enables larger models/batches
+    <li>20-30\% slower but saves significant memory
+</ul>
+
+<h2>Model Initialization</h2>
+
+<h3>Best Practices</h3>
+
+<p><strong>Weight initialization:</strong>
+<ul>
+    <li>Linear layers: Xavier/Glorot normal
+    <li>Embeddings: Normal(0, 0.02)
+    <li>Layer norm: gamma=1, beta=0
+</ul>
+
+<p><strong>Special considerations:</strong>
+<ul>
+    <li>Scale residual connections by $1/\sqrt{N_{\text{layers}}}$
+    <li>Weight tying: LM head shares embeddings
+    <li>Careful initialization prevents gradient issues
+</ul>
+
+<h2>Debugging Transformers</h2>
+
+<h3>Common Issues</h3>
+
+<p><strong>1. Dimension mismatches:</strong>
+<ul>
+    <li>Check shapes at each operation
+    <li>Use assertions for critical dimensions
+    <li>Print intermediate tensor shapes
+</ul>
+
+<p><strong>2. NaN/Inf in training:</strong>
+<ul>
+    <li>Too high learning rate
+    <li>Gradient explosion (add clipping)
+    <li>Numerical instability in softmax (check mask values)
+</ul>
+
+<p><strong>3. Slow convergence:</strong>
+<ul>
+    <li>Insufficient warmup
+    <li>Bad initialization
+    <li>Learning rate too low
+</ul>
+
+<p><strong>4. Memory issues:</strong>
+<ul>
+    <li>Reduce batch size
+    <li>Use gradient checkpointing
+    <li>Enable mixed precision
+    <li>Reduce sequence length
+</ul>
+
+<h3>Validation Checks</h3>
+
+<p><strong>Sanity checks before full training:</strong>
+<ol>
+    <li>Overfit single batch (should reach near-zero loss)
+    <li>Check gradient norms are reasonable
+    <li>Verify attention weights sum to 1
+    <li>Test with different sequence lengths
+    <li>Profile memory usage
+</ol>
+
+<h2>Complete Training Pipeline</h2>
+
+<h3>Training Script Structure</h3>
+
+<p><strong>1. Configuration:</strong>
+\begin{verbatim}
+config = {
+    'd_model': 768,
+    'num_heads': 12,
+    'num_layers': 12,
+    'd_ff': 3072,
+    'vocab_size': 30000,
+    'max_seq_len': 512,
+    'dropout': 0.1,
+    'batch_size': 32,
+    'learning_rate': 1e-4,
+    'warmup_steps': 10000,
+    'max_steps': 1000000
+}
+\end{verbatim}</p>
+
+<p><strong>2. Model instantiation:</strong>
+\begin{verbatim}
+model = BERTModel(**config)
+model = model.to(device)
+\end{verbatim}</p>
+
+<p><strong>3. Optimizer setup:</strong>
+\begin{verbatim}
+from torch.optim import AdamW
+optimizer = AdamW(
+    model.parameters(),
+    lr=config['learning_rate'],
+    betas=(0.9, 0.999),
+    eps=1e-6,
+    weight_decay=0.01
+)
+\end{verbatim}</p>
+
+<p><strong>4. Learning rate scheduler:</strong>
+\begin{verbatim}
+from transformers import get_linear_schedule_with_warmup
+scheduler = get_linear_schedule_with_warmup(
+    optimizer,
+    num_warmup_steps=config['warmup_steps'],
+    num_training_steps=config['max_steps']
+)
+\end{verbatim}</p>
+
+<p><strong>5. Training loop with all optimizations:</strong>
+<ul>
+    <li>Mixed precision
+    <li>Gradient accumulation
+    <li>Gradient clipping
+    <li>Checkpointing
+    <li>Logging
+</ul>
+
+<h2>Distributed Training</h2>
+
+<h3>Data Parallel</h3>
+
+<p><strong>Simple multi-GPU:</strong>
+\begin{verbatim}
+if torch.cuda.device_count() > 1:
+    model = nn.DataParallel(model)
+\end{verbatim}</p>
+
+<p><strong>Effective batch size:</strong> $B \times N_{\text{GPUs}}$</p>
+
+<h3>Distributed Data Parallel (DDP)</h3>
+
+<p><strong>More efficient than DataParallel:</strong>
+<ul>
+    <li>One process per GPU
+    <li>Gradient synchronization via all-reduce
+    <li>Better scaling to multiple nodes
+</ul>
+
+<p><strong>Setup requires:</strong>
+<ol>
+    <li>Initialize process group
+    <li>Wrap model in DistributedDataParallel
+    <li>Use DistributedSampler for data
+    <li>Synchronize across processes
+</ol>
+
+<h2>Exercises</h2>
+
+<p>\begin{exercise}
+Implement complete multi-head attention:
+<ol>
+    <li>Write class from scratch
+    <li>Test on BERT-base dimensions
+    <li>Verify output shapes
+    <li>Compare speed: your implementation vs nn.MultiheadAttention
+</ol>
+</div>
+
+<p>\begin{exercise}
+Build mini-GPT and train on WikiText-2:
+<ol>
+    <li>6 layers, 8 heads, d=512
+    <li>Implement causal masking correctly
+    <li>Train for 10 epochs
+    <li>Generate samples, measure perplexity
+</ol>
+</div>
+
+<p>\begin{exercise}
+Optimize training:
+<ol>
+    <li>Baseline: Standard FP32 training
+    <li>Add mixed precision, measure speedup
+    <li>Add gradient accumulation (4 steps)
+    <li>Add gradient checkpointing, measure memory
+    <li>Report: speed, memory, final accuracy for each
+</ol>
+</div>
+
+<p>\begin{exercise}
+Debug a broken transformer:
+<ol>
+    <li>Provided: Transformer with subtle bugs
+    <li>Find and fix: (a) dimension error, (b) masking error, (c) initialization error
+    <li>Verify fixes by successful training
+</ol>
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter20_pretraining_strategies.html">← Chapter 20: Pretraining Strategies</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter22_hardware_optimization.html">Chapter 22: Hardware Optimization →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
