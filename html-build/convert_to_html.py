@@ -101,12 +101,34 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\cite\{[^}]+\}', '[citation]', html)
     html = re.sub(r'\\addcontentsline\{[^}]+\}\{[^}]+\}\{[^}]+\}', '', html)
     
-    # Clean up paragraphs
-    html = re.sub(r'\n\n+', '</p>\n<p>', html)
-    html = '<p>' + html + '</p>'
+    # Clean up paragraphs - but don't wrap block elements
+    # Split by double newlines
+    parts = re.split(r'\n\n+', html)
+    
+    # Only wrap text parts in <p> tags, not block elements
+    wrapped_parts = []
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        # Check if it's a block element (starts with <h, <div, <ul, <ol, <pre, <table)
+        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote)', part):
+            wrapped_parts.append(part)
+        else:
+            wrapped_parts.append(f'<p>{part}</p>')
+    
+    html = '\n\n'.join(wrapped_parts)
     
     # Clean up empty paragraphs
     html = re.sub(r'<p>\s*</p>', '', html)
+    
+    # Fix any remaining nested p tags
+    html = re.sub(r'<p>\s*(<h[1-6]>)', r'\1', html)
+    html = re.sub(r'(</h[1-6]>)\s*</p>', r'\1', html)
+    html = re.sub(r'<p>\s*(<div)', r'\1', html)
+    html = re.sub(r'(</div>)\s*</p>', r'\1', html)
+    html = re.sub(r'<p>\s*(<ul>|<ol>)', r'\1', html)
+    html = re.sub(r'(</ul>|</ol>)\s*</p>', r'\1', html)
     
     return html
 
