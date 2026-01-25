@@ -1,9 +1,9 @@
-\documentclass[11pt,oneside]{book}
+\documentclass[11pt,oneside,a4paper]{book}
 
 % Essential packages only
 \usepackage{amsmath, amssymb, amsthm}
 \usepackage{graphicx}
-\usepackage[margin=1in]{geometry}
+\usepackage[a4paper,margin=0.75in]{geometry}
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
@@ -12,25 +12,214 @@
     urlcolor=blue,
     hidelinks
 }
+\usepackage{xcolor}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{listings}
+
+% Define colors matching the web version
+\definecolor{defgreen}{RGB}{76,175,80}
+\definecolor{defgreenlight}{RGB}{76,175,80}
+\definecolor{thmblue}{RGB}{33,150,243}
+\definecolor{thmbluelight}{RGB}{33,150,243}
+\definecolor{exorange}{RGB}{255,152,0}
+\definecolor{exorangelight}{RGB}{255,152,0}
+\definecolor{keypurple}{RGB}{156,39,176}
+\definecolor{keypurplelight}{RGB}{156,39,176}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+
+% Configure listings for code blocks
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    framerule=0pt,
+    rulecolor=\color{codeframe},
+    numbers=none,
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=4,
+    showstringspaces=false,
+    captionpos=b,
+    xleftmargin=10pt,
+    xrightmargin=10pt,
+    framexleftmargin=10pt,
+    framexrightmargin=10pt,
+    framextopmargin=6pt,
+    framexbottommargin=6pt,
+    columns=flexible,
+    keepspaces=true
+}
+
+% Python-specific settings
+\lstdefinestyle{python}{
+    language=Python,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{red},
+    showstringspaces=false,
+    morekeywords={self, True, False, None}
+}
 
 % Theorem environments
 \theoremstyle{definition}
-\newtheorem{definition}{Definition}[chapter]
-\newtheorem{example}{Example}[chapter]
+\newtheorem{definitioninner}{Definition}[chapter]
+\newtheorem{exampleinner}{Example}[chapter]
 
 \theoremstyle{plain}
-\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{theoreminner}{Theorem}[chapter]
+\newtheorem{keypointinner}{Key Point}[chapter]
+
+% Styled environments with colored boxes
+\newenvironment{definition}[1][]{%
+    \begin{mdframed}[
+        backgroundcolor=defgreenlight!10,
+        linecolor=defgreen,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false,
+        innerleftmargin=10pt,
+        innerrightmargin=10pt,
+        innertopmargin=10pt,
+        innerbottommargin=10pt,
+        skipabove=10pt,
+        skipbelow=10pt
+    ]
+    \begin{definitioninner}[#1]
+}{%
+    \end{definitioninner}
+    \end{mdframed}
+}
+
+\newenvironment{theorem}[1][]{%
+    \begin{mdframed}[
+        backgroundcolor=thmbluelight!10,
+        linecolor=thmblue,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false,
+        innerleftmargin=10pt,
+        innerrightmargin=10pt,
+        innertopmargin=10pt,
+        innerbottommargin=10pt,
+        skipabove=10pt,
+        skipbelow=10pt
+    ]
+    \begin{theoreminner}[#1]
+}{%
+    \end{theoreminner}
+    \end{mdframed}
+}
+
+\newenvironment{example}[1][]{%
+    \begin{mdframed}[
+        backgroundcolor=exorangelight!10,
+        linecolor=exorange,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false,
+        innerleftmargin=10pt,
+        innerrightmargin=10pt,
+        innertopmargin=10pt,
+        innerbottommargin=10pt,
+        skipabove=10pt,
+        skipbelow=10pt
+    ]
+    \begin{exampleinner}[#1]
+}{%
+    \end{exampleinner}
+    \end{mdframed}
+}
+
+\newenvironment{keypoint}[1][]{%
+    \begin{mdframed}[
+        backgroundcolor=keypurplelight!10,
+        linecolor=keypurple,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false,
+        innerleftmargin=10pt,
+        innerrightmargin=10pt,
+        innertopmargin=10pt,
+        innerbottommargin=10pt,
+        skipabove=10pt,
+        skipbelow=10pt
+    ]
+    \begin{keypointinner}[#1]
+}{%
+    \end{keypointinner}
+    \end{mdframed}
+}
+
+% Implementation environment for code blocks
+\newenvironment{implementation}{%
+    \par\vspace{10pt}
+    \noindent\textbf{Implementation:}
+    \par\vspace{5pt}
+}{%
+    \par\vspace{10pt}
+}
+
+% Exercise environment with light gray box
+\theoremstyle{definition}
+\newtheorem{exerciseinner}{Exercise}[chapter]
+
+\newenvironment{exercise}[1][]{%
+    \begin{mdframed}[
+        backgroundcolor=white,
+        linecolor=black!30,
+        linewidth=1pt,
+        topline=true,
+        rightline=true,
+        bottomline=true,
+        leftline=true,
+        innerleftmargin=10pt,
+        innerrightmargin=10pt,
+        innertopmargin=10pt,
+        innerbottommargin=10pt,
+        skipabove=10pt,
+        skipbelow=10pt
+    ]
+    \begin{exerciseinner}[#1]
+}{%
+    \end{exerciseinner}
+    \end{mdframed}
+}
 
 % Custom commands
 \newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\C}{\mathbb{C}}
 \newcommand{\vx}{\mathbf{x}}
 \newcommand{\vy}{\mathbf{y}}
+\newcommand{\vz}{\mathbf{z}}
+\newcommand{\vh}{\mathbf{h}}
+\newcommand{\vw}{\mathbf{w}}
+\newcommand{\vb}{\mathbf{b}}
+\newcommand{\vq}{\mathbf{q}}
+\newcommand{\vk}{\mathbf{k}}
+\newcommand{\vv}{\mathbf{v}}
 \newcommand{\mA}{\mathbf{A}}
+\newcommand{\mB}{\mathbf{B}}
+\newcommand{\mC}{\mathbf{C}}
 \newcommand{\mW}{\mathbf{W}}
+\newcommand{\mX}{\mathbf{X}}
+\newcommand{\mY}{\mathbf{Y}}
 \newcommand{\mQ}{\mathbf{Q}}
 \newcommand{\mK}{\mathbf{K}}
 \newcommand{\mV}{\mathbf{V}}
+\newcommand{\mH}{\mathbf{H}}
+\newcommand{\mI}{\mathbf{I}}
+\newcommand{\mU}{\mathbf{U}}
+\newcommand{\mM}{\mathbf{M}}
 \newcommand{\transpose}{^\top}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\abs}[1]{\left|#1\right|}
 
 \title{Deep Learning and Transformers:\\Theory, Mathematics, and Implementation}
 \author{[Author Names]}
