@@ -317,8 +317,11 @@ def convert_latex_to_html(latex_content):
     
     return html
 
-def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_chapter=None):
+def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_chapter=None, output_dirs=None):
     """Create HTML file for a chapter"""
+    if output_dirs is None:
+        output_dirs = [Path("output")]
+    
     # Use absolute path from project root
     project_root = Path(__file__).parent.parent
     latex_path = project_root / "chapters" / f"{chapter_file}.tex"
@@ -481,17 +484,21 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
 </html>
 """
     
-    # Write HTML file
-    output_path = Path(f"output/chapters/{chapter_file}.html")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Write HTML file to all output directories
+    for base_dir in output_dirs:
+        output_path = base_dir / "chapters" / f"{chapter_file}.html"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(full_html)
     
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(full_html)
-    
-    print(f"Created: {output_path}")
+    print(f"Created: {chapter_file}.html")
 
-def create_index_html():
+def create_index_html(output_dirs=None):
     """Create main index page"""
+    if output_dirs is None:
+        output_dirs = [Path("output")]
+    
     html = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -583,11 +590,12 @@ def create_index_html():
 </html>
 """
     
-    output_path = Path("output/index.html")
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html)
+    for base_dir in output_dirs:
+        output_path = base_dir / "index.html"
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html)
     
-    print(f"Created: {output_path}")
+    print(f"Created: index.html")
 
 def convert_algorithm_content(content):
     """Convert LaTeX algorithm pseudocode to properly formatted HTML."""
@@ -684,9 +692,12 @@ def convert_algorithm_content(content):
     
     return '\n'.join(result)
 
-def fix_algorithms():
-    """Fix algorithm formatting in all generated HTML files."""
-    output_dir = Path("output/chapters")
+def fix_algorithms_in_dir(output_dir):
+    """Fix algorithm formatting in all generated HTML files in a directory."""
+    output_dir = Path(output_dir)
+    
+    if not output_dir.exists():
+        return
     
     for filepath in sorted(output_dir.glob("chapter*.html")):
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -720,10 +731,17 @@ def main():
     """Main conversion function"""
     print("Converting LaTeX textbook to HTML...")
     
+    # Define output directories
+    output_dirs = [
+        Path("output"),  # Keep for reference
+        Path("nodejs-version/public")  # Primary deployment location
+    ]
+    
     # Create output directories
-    Path("output/chapters").mkdir(parents=True, exist_ok=True)
-    Path("output/css").mkdir(parents=True, exist_ok=True)
-    Path("output/js").mkdir(parents=True, exist_ok=True)
+    for base_dir in output_dirs:
+        (base_dir / "chapters").mkdir(parents=True, exist_ok=True)
+        (base_dir / "css").mkdir(parents=True, exist_ok=True)
+        (base_dir / "js").mkdir(parents=True, exist_ok=True)
     
     # Copy CSS and JS - use absolute paths from project root
     import shutil
@@ -731,42 +749,50 @@ def main():
     
     # Copy the correct CSS file
     source_css = project_root / "docs" / "css" / "style.css"
-    dest_css = Path("output/css/style.css")
     
     if source_css.exists():
-        shutil.copy(source_css, dest_css)
+        for base_dir in output_dirs:
+            dest_css = base_dir / "css" / "style.css"
+            shutil.copy(source_css, dest_css)
         print(f"✓ Copied CSS from {source_css}")
     else:
         print(f"⚠ Warning: CSS file not found at {source_css}")
     
     # Copy JS if it exists
     source_js = project_root / "docs" / "js" / "main.js"
-    dest_js = Path("output/js/main.js")
     
     if source_js.exists():
-        shutil.copy(source_js, dest_js)
+        for base_dir in output_dirs:
+            dest_js = base_dir / "js" / "main.js"
+            shutil.copy(source_js, dest_js)
         print(f"✓ Copied JS from {source_js}")
     else:
         # Create a minimal main.js if it doesn't exist
-        dest_js.write_text("// Main JavaScript file\nconsole.log('Deep Learning Textbook loaded');")
+        for base_dir in output_dirs:
+            dest_js = base_dir / "js" / "main.js"
+            dest_js.write_text("// Main JavaScript file\nconsole.log('Deep Learning Textbook loaded');")
         print(f"✓ Created minimal JS file")
     
     # Convert each chapter
     for i, (chapter_file, chapter_title) in enumerate(CHAPTERS):
         prev_chapter = CHAPTERS[i-1] if i > 0 else None
         next_chapter = CHAPTERS[i+1] if i < len(CHAPTERS)-1 else None
-        create_chapter_html(chapter_file, chapter_title, prev_chapter, next_chapter)
+        create_chapter_html(chapter_file, chapter_title, prev_chapter, next_chapter, output_dirs)
     
     # Create index
-    create_index_html()
+    create_index_html(output_dirs)
     
     # Fix algorithm formatting
     print("\nFixing algorithm formatting...")
-    fix_algorithms()
+    for base_dir in output_dirs:
+        fix_algorithms_in_dir(base_dir / "chapters")
     
     print("\n✅ Conversion complete!")
-    print("📂 Output directory: output/")
-    print("🌐 Open output/index.html in your browser")
+    print("📂 Output directories:")
+    for base_dir in output_dirs:
+        print(f"   - {base_dir}/")
+    print("🌐 Primary deployment: nodejs-version/public/")
+    print("🌐 Reference copy: output/")
 
 if __name__ == "__main__":
     main()

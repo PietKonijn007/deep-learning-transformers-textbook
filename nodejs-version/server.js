@@ -50,8 +50,8 @@ app.get('/api/chapters', (req, res) => {
 // API endpoint to get chapter content
 app.get('/api/chapter/:id', (req, res) => {
   const chapterId = req.params.id;
-  // Support both local and Vercel deployment paths
-  const htmlPath = path.join(__dirname, '..', 'docs', 'chapters', `${chapterId}.html`);
+  // Read from public/chapters directory (works for both local and Vercel)
+  const htmlPath = path.join(__dirname, 'public', 'chapters', `${chapterId}.html`);
   
   fs.readFile(htmlPath, 'utf8', (err, data) => {
     if (err) {
