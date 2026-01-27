@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 10: The Transformer Model - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>The Transformer Model</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>The Transformer architecture, introduced in "Attention is All You Need" (Vaswani et al., 2017), revolutionized deep learning by replacing recurrence with pure attention mechanisms. This chapter presents the complete transformer architecture, combining all attention mechanisms from previous chapters into a powerful encoder-decoder model.</p>
+
+<p>We develop the transformer from bottom to top: starting with the attention layer, building encoder and decoder blocks, and assembling the full architecture. We provide complete mathematical specifications, dimension tracking, and parameter counts for standard transformer configurations.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand the complete transformer encoder-decoder architecture
+    <li>Implement position-wise feed-forward networks
+    <li>Apply layer normalization and residual connections
+    <li>Compute output dimensions through the entire network
+    <li>Count parameters for transformer models (BERT-base, GPT-2)
+    <li>Understand training objectives for different transformer variants
+</ol>
+
+<h2>Transformer Architecture Overview</h2>
+
+<h3>High-Level Structure</h3>
+
+<p>The transformer architecture represents a fundamental departure from the recurrent and convolutional architectures that dominated sequence modeling before 2017. At its core, the transformer is an encoder-decoder architecture that processes sequences entirely through attention mechanisms, eliminating the sequential dependencies that made RNNs difficult to parallelize. The encoder processes the input sequence and produces contextualized representations where each position has attended to all other positions in the input. The decoder then generates the output sequence autoregressively, attending both to its own previously generated tokens and to the encoder's output through a cross-attention mechanism. This design enables the model to capture long-range dependencies without the vanishing gradient problems that plague recurrent architectures, while simultaneously allowing massive parallelization during training.</p>
+
+<p>The key innovation that makes transformers practical is the elimination of recurrence in favor of pure attention mechanisms. In an RNN, processing a sequence of length $n$ requires $n$ sequential steps, each depending on the previous hidden state. This sequential dependency means that even with unlimited computational resources, the time complexity remains $O(n)$ because operations cannot be parallelized across time steps. The transformer, by contrast, computes attention between all pairs of positions simultaneously, requiring only $O(1)$ sequential operations regardless of sequence length. For a sequence of length 512, this means the difference between 512 sequential steps (RNN) and a single parallel operation (transformer). On modern GPUs with thousands of cores, this parallelization advantage translates to training speedups of 10-100× compared to recurrent architectures.</p>
+
+<p>The transformer achieves this parallelization through multi-head self-attention, which allows each position to attend to all positions in a single operation. For an input sequence $\mX \in \R^{n \times d_{\text{model}}}$, the self-attention mechanism computes attention scores between all $n^2$ pairs of positions simultaneously, producing an output of the same shape $\R^{n \times d_{\text{model}}}$. This operation is entirely parallelizable across both the batch dimension and the sequence dimension, making it ideally suited for GPU acceleration. The multi-head aspect further enhances expressiveness by allowing the model to attend to different representation subspaces simultaneously—one head might capture syntactic relationships while another captures semantic similarity.</p>
+
+<p>However, pure attention mechanisms lack an inherent notion of sequence order. Unlike RNNs where position information is implicit in the sequential processing, transformers must explicitly encode positional information. This is achieved through positional encodings that are added to the input embeddings, providing each position with a unique signature that the attention mechanism can use to distinguish positions. The original transformer uses sinusoidal positional encodings, though learned positional embeddings have also proven effective. This explicit position encoding is crucial: without it, the transformer would be permutation-invariant, treating "the cat sat" identically to "sat cat the."</p>
+
+<p>The transformer architecture also incorporates residual connections and layer normalization at every sub-layer, forming the pattern $\text{LayerNorm}(x + \text{Sublayer}(x))$ throughout the network. These residual connections serve multiple purposes: they provide direct gradient pathways that enable training of very deep networks (the original transformer uses 6 layers, but modern variants scale to 96 layers in GPT-3), they allow the model to learn incremental refinements rather than complete transformations at each layer, and they stabilize training by preventing the exploding or vanishing gradient problems that can occur in deep networks. Layer normalization, applied after each residual connection, normalizes activations across the feature dimension, ensuring stable activation distributions throughout the network regardless of batch size.</p>
+
+<p>The position-wise feed-forward network, applied after each attention layer, provides additional representational capacity through a simple two-layer network with a ReLU or GELU activation. This network is applied independently to each position, meaning it doesn't mix information across positions (unlike attention). The feed-forward network typically expands the representation to a higher dimension (usually $4 \times d_{\text{model}}$) before projecting back down, creating a bottleneck architecture that encourages the model to learn compressed representations. For BERT-base with $d_{\text{model}} = 768$, the feed-forward network expands to $d_{ff} = 3072$ dimensions, and this expansion-projection accounts for approximately two-thirds of the parameters in each transformer layer.</p>
+
+<div class="keypoint">
+Transformers achieve $O(1)$ sequential operations compared to $O(n)$ for RNNs, enabling massive parallelization during training. For a sequence of length 512 on a GPU with 10,000 cores, this means the difference between 512 sequential steps and a single parallel operation, yielding training speedups of 10-100× in practice. This parallelization advantage is the primary reason transformers have replaced RNNs as the dominant architecture for sequence modeling.
+</div>
+
+<h2>Transformer Encoder</h2>
+
+<h3>Single Encoder Layer</h3>
+
+<p>A transformer encoder layer consists of two main sub-layers: multi-head self-attention followed by a position-wise feed-forward network, with residual connections and layer normalization applied around each sub-layer. This architecture enables the encoder to build increasingly sophisticated representations of the input sequence as information flows through multiple layers. The self-attention mechanism allows each position to gather information from all other positions, creating contextualized representations where the meaning of each token depends on its surrounding context. The feed-forward network then processes each position independently, applying a non-linear transformation that enhances the model's representational capacity.</p>
+
+<p>The residual connections are crucial for enabling gradient flow through deep networks. Without them, gradients would need to flow through multiple attention and feed-forward layers, potentially vanishing or exploding. With residual connections, gradients have a direct path from the output back to the input of each layer, ensuring stable training even for very deep transformers. The layer normalization, applied after adding the residual, normalizes the activations across the feature dimension, maintaining stable activation distributions throughout the network. This combination of residual connections and layer normalization is what enables transformers to scale to dozens or even hundreds of layers.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+An encoder layer applies multi-head self-attention followed by feed-forward network, with residual connections and layer normalization. For input $\mX \in \R^{B \times n \times d_{\text{model}}}$ where $B$ is batch size, $n$ is sequence length, and $d_{\text{model}}$ is model dimension:
+
+<p><strong>Step 1: Multi-Head Self-Attention</strong>
+<div class="equation">
+$$
+\vh^{(1)} = \text{LayerNorm}(\mX + \text{MultiHeadAttn}(\mX, \mX, \mX))
+$$
+</div>
+where the output maintains shape $\R^{B \times n \times d_{\text{model}}}$.</p>
+
+<p><strong>Step 2: Position-wise Feed-Forward</strong>
+<div class="equation">
+$$
+\vh^{(2)} = \text{LayerNorm}(\vh^{(1)} + \text{FFN}(\vh^{(1)}))
+$$
+</div>
+where the output again maintains shape $\R^{B \times n \times d_{\text{model}}}$.</p>
+
+<p>The feed-forward network is defined as:
+<div class="equation">
+$$
+\text{FFN}(\vx) = \mW_2 \cdot \text{ReLU}(\mW_1 \vx + \vb_1) + \vb_2
+$$
+</div>
+with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \times d_{\text{model}}}$, and typically $d_{ff} = 4 \times d_{\text{model}}$.
+</div>
+
+<p>The dimension tracking through an encoder layer reveals important properties about memory consumption and computational cost. The input $\mX \in \R^{B \times n \times d_{\text{model}}}$ is first projected to queries, keys, and values, each with shape $\R^{B \times n \times d_{\text{model}}}$. For multi-head attention with $h$ heads, these are reshaped to $\R^{B \times h \times n \times d_k}$ where $d_k = d_{\text{model}}/h$. The attention scores form a matrix $\R^{B \times h \times n \times n}$, and this quadratic term in sequence length is what dominates memory consumption for long sequences. After attention, the output is projected back to $\R^{B \times n \times d_{\text{model}}}$, added to the residual, and normalized.</p>
+
+<p>The feed-forward network then expands each position's representation from $d_{\text{model}}$ to $d_{ff}$ dimensions before projecting back down. For BERT-base with $d_{\text{model}} = 768$ and $d_{ff} = 3072$, this means each position's representation temporarily expands to 4× its original size. This expansion creates a bottleneck that forces the model to learn compressed representations, similar to the hidden layer in an autoencoder. The intermediate activations $\R^{B \times n \times d_{ff}}$ consume significant memory during training—for batch size 32 and sequence length 512, this amounts to $32 \times 512 \times 3072 \times 4 = 201$ MB per layer in FP32, and with 12 layers in BERT-base, the feed-forward activations alone consume 2.4 GB of GPU memory.</p>
+
+<div class="example"><strong>Example:</strong> 
+BERT-base uses the following configuration, which has become a standard baseline for many transformer models:
+<ul>
+    <li>Model dimension: $d_{\text{model}} = 768$
+    <li>Attention heads: $h = 12$, so $d_k = d_v = 768/12 = 64$ per head
+    <li>Feed-forward dimension: $d_{ff} = 3072$ (exactly $4 \times d_{\text{model}}$)
+    <li>Sequence length: $n = 512$ (maximum)
+    <li>Batch size: $B = 32$ (typical for training)
+</ul>
+
+<p><strong>Dimension tracking through the layer:</strong></p>
+
+<p><strong>Input:</strong> $\mX \in \R^{32 \times 512 \times 768}$ (batch × sequence × model dimension)</p>
+
+<p><strong>Multi-Head Attention:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Q, K, V projections:} \quad &\R^{32 \times 512 \times 768} \to \R^{32 \times 512 \times 768} \\
+\text{Reshape for heads:} \quad &\R^{32 \times 512 \times 768} \to \R^{32 \times 12 \times 512 \times 64} \\
+\text{Attention scores:} \quad &\R^{32 \times 12 \times 512 \times 512} \quad \text{(quadratic in } n\text{!)} \\
+\text{Attention output:} \quad &\R^{32 \times 12 \times 512 \times 64} \\
+\text{Concatenate heads:} \quad &\R^{32 \times 512 \times 768} \\
+\text{Output projection:} \quad &\R^{32 \times 512 \times 768}
+\end{align}$$
+</div>
+
+<p>The attention scores matrix $\R^{32 \times 12 \times 512 \times 512}$ requires $32 \times 12 \times 512 \times 512 \times 4 = 402$ MB in FP32. This quadratic scaling means that doubling the sequence length to 1024 would require 1.6 GB just for attention scores in a single layer.</p>
+
+<p><strong>Feed-Forward Network:</strong>
+<div class="equation">
+$$\begin{align}
+\text{First projection:} \quad &\R^{32 \times 512 \times 768} \xrightarrow{\mW_1} \R^{32 \times 512 \times 3072} \\
+\text{ReLU activation:} \quad &\R^{32 \times 512 \times 3072} \to \R^{32 \times 512 \times 3072} \\
+\text{Second projection:} \quad &\R^{32 \times 512 \times 3072} \xrightarrow{\mW_2} \R^{32 \times 512 \times 768}
+\end{align}$$
+</div>
+
+<p>The intermediate activations $\R^{32 \times 512 \times 3072}$ require $32 \times 512 \times 3072 \times 4 = 201$ MB in FP32.</p>
+
+<p><strong>Parameter count breakdown:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Multi-head attention:} \quad &4 \times 768^2 = 2{,}359{,}296 \quad \text{(Q, K, V, O projections)} \\
+\text{Feed-forward network:} \quad &768 \times 3072 + 3072 + 3072 \times 768 + 768 \\
+&= 2{,}359{,}296 + 3{,}072 + 2{,}359{,}296 + 768 \\
+&= 4{,}722{,}432 \\
+\text{Layer normalization (2×):} \quad &2 \times 2 \times 768 = 3{,}072 \quad \text{(scale } \gamma \text{ and shift } \beta\text{)}
+\end{align}$$
+</div>
+
+<p><strong>Total per encoder layer:</strong> $2{,}359{,}296 + 4{,}722{,}432 + 3{,}072 = 7{,}084{,}800$ parameters</p>
+
+<p>This reveals that the feed-forward network contains approximately twice as many parameters as the attention mechanism ($4.7$M vs $2.4$M), despite attention being conceptually more complex. This is because the feed-forward network's expansion to $4 \times d_{\text{model}}$ dimensions creates two large weight matrices, while attention's parameters are distributed across four projections of size $d_{\text{model}} \times d_{\text{model}}$.</p>
+
+<p><strong>Memory requirements during training:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Parameters (FP32):} \quad &7{,}084{,}800 \times 4 = 28.3 \text{ MB} \\
+\text{Gradients (FP32):} \quad &7{,}084{,}800 \times 4 = 28.3 \text{ MB} \\
+\text{Adam optimizer states:} \quad &7{,}084{,}800 \times 8 = 56.7 \text{ MB} \\
+\text{Attention scores:} \quad &402 \text{ MB} \\
+\text{FFN intermediate:} \quad &201 \text{ MB} \\
+\text{Total per layer:} \quad &\approx 716 \text{ MB}
+\end{align}$$
+</div>
+
+<p>For BERT-base with 12 encoder layers, this amounts to approximately 8.6 GB just for the encoder layers, not including embeddings or other activations. This explains why training BERT-base requires GPUs with at least 16 GB of memory.
+</div>
+
+<h3>Complete Encoder Stack</h3>
+
+<p>The complete transformer encoder stacks $N$ identical encoder layers, with each layer's output serving as input to the next layer. This stacking enables the model to build increasingly abstract representations: early layers might capture local syntactic patterns, middle layers might identify semantic relationships, and later layers might encode task-specific features. The depth of the network is crucial for performance—BERT-base uses 12 layers, BERT-large uses 24 layers, and GPT-3 uses 96 layers. However, deeper networks require more careful optimization, including learning rate warmup, gradient clipping, and appropriate weight initialization.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+Stack $N$ encoder layers, with input embeddings and positional encodings added at the bottom:
+<div class="equation">
+$$
+\mX^{(0)} = \text{Embedding}(\text{input}) + \text{PositionalEncoding}
+$$
+</div>
+where $\text{Embedding} \in \R^{V \times d_{\text{model}}}$ maps vocabulary indices to dense vectors, and $\text{PositionalEncoding} \in \R^{n_{\max} \times d_{\text{model}}}$ provides position information.
+
+<p>Then apply $N$ encoder layers sequentially:
+<div class="equation">
+$$
+\mX^{(\ell)} = \text{EncoderLayer}^{(\ell)}(\mX^{(\ell-1)}) \quad \text{for } \ell = 1, \ldots, N
+$$
+</div>
+
+<p>The final encoder output $\mX^{(N)} \in \R^{B \times n \times d_{\text{model}}}$ contains contextualized representations of the input sequence.
+</div>
+
+<p>The sequential application of encoder layers means that information flows through $N$ attention operations, allowing each token to indirectly attend to all other tokens through multiple hops. In a 12-layer encoder, information can propagate across the entire sequence through 12 levels of attention, enabling the model to capture very long-range dependencies. However, this sequential stacking also means that encoder layers cannot be parallelized—layer $\ell$ must wait for layer $\ell-1$ to complete. The parallelization in transformers occurs within each layer (across batch and sequence dimensions), not across layers.</p>
+
+<div class="example"><strong>Example:</strong> 
+BERT-base represents the standard configuration that has been widely adopted and serves as a baseline for many NLP tasks. The architecture is:
+<ul>
+    <li>Layers: $N = 12$
+    <li>Model dimension: $d_{\text{model}} = 768$
+    <li>Attention heads: $h = 12$
+    <li>Feed-forward dimension: $d_{ff} = 3072$
+    <li>Vocabulary size: $V = 30{,}000$ (WordPiece tokenization)
+    <li>Maximum sequence length: $n_{\max} = 512$
+</ul>
+
+<p><strong>Complete parameter count breakdown:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Token embeddings:} \quad &30{,}000 \times 768 = 23{,}040{,}000 \\
+\text{Position embeddings:} \quad &512 \times 768 = 393{,}216 \\
+\text{Token type embeddings:} \quad &2 \times 768 = 1{,}536 \quad \text{(for segment A/B)} \\
+\text{Embedding layer norm:} \quad &2 \times 768 = 1{,}536 \\
+\text{12 encoder layers:} \quad &12 \times 7{,}084{,}800 = 85{,}017{,}600 \\
+\text{Pooler (for classification):} \quad &768 \times 768 + 768 = 590{,}592 \\
+\text{Total:} \quad &109{,}044{,}480 \approx <strong>110M parameters</strong>
+\end{align}$$
+</div>
+
+<p>This matches the reported BERT-base size of 110M parameters. Notice that the embeddings account for approximately 21\% of the total parameters ($23$M out of $110$M), while the transformer layers account for 78\%. This ratio changes dramatically for larger vocabularies—models with 50,000 token vocabularies would have embeddings consuming 35\% of parameters, motivating techniques like vocabulary pruning or shared embeddings.</p>
+
+<p><strong>Memory requirements for training (batch size 32, sequence length 512):</strong>
+<div class="equation">
+$$\begin{align}
+\text{Parameters (FP32):} \quad &110{,}000{,}000 \times 4 = 440 \text{ MB} \\
+\text{Gradients (FP32):} \quad &110{,}000{,}000 \times 4 = 440 \text{ MB} \\
+\text{Adam optimizer states:} \quad &110{,}000{,}000 \times 8 = 880 \text{ MB} \\
+\text{Activations (estimated):} \quad &\approx 12 \text{ GB} \\
+\text{Total:} \quad &\approx 13.8 \text{ GB}
+\end{align}$$
+</div>
+
+<p>The activation memory dominates, consuming approximately 87\% of total memory. This is why techniques like gradient checkpointing (recomputing activations during backward pass instead of storing them) can reduce memory consumption by 50-70\% at the cost of 20-30\% slower training.</p>
+
+<p><strong>Training throughput on NVIDIA A100 GPU:</strong></p>
+
+<p>The A100 provides 312 TFLOPS of FP16 compute with Tensor Cores. For BERT-base, a single forward pass with batch size 32 and sequence length 512 requires approximately:
+<div class="equation">
+$$\begin{align}
+\text{FLOPs per layer:} \quad &24nd_{\text{model}}^2 + 4n^2d_{\text{model}} \\
+&= 24 \times 512 \times 768^2 + 4 \times 512^2 \times 768 \\
+&= 7.26 \text{ GFLOPs} \\
+\text{Total for 12 layers:} \quad &12 \times 7.26 = 87.1 \text{ GFLOPs} \\
+\text{With embeddings and overhead:} \quad &\approx 100 \text{ GFLOPs}
+\end{align}$$
+</div>
+
+<p>At 312 TFLOPS, this suggests a forward pass should take $100 / 312{,}000 = 0.32$ milliseconds. In practice, memory bandwidth limitations and kernel launch overhead mean actual forward pass time is approximately 5-10 milliseconds, achieving 10-20\% of peak FLOPS. With backward pass taking approximately 2× forward pass time, a complete training step takes 15-30 milliseconds, yielding throughput of 30-60 training steps per second, or approximately 500,000-1,000,000 tokens per second.
+</div>
+
+<h2>Position-wise Feed-Forward Networks</h2>
+
+<p>The position-wise feed-forward network represents the second major component of each transformer layer, complementing the attention mechanism with additional non-linear transformations. While attention allows positions to exchange information and build contextualized representations, the feed-forward network processes each position independently, applying the same learned transformation to every position in the sequence. This independence is what makes it "position-wise"—the network applied to position $i$ is identical to the network applied to position $j$, with no parameter sharing or information flow between positions.</p>
+
+<p>The feed-forward network consists of two linear transformations with a non-linear activation function in between, forming a simple two-layer neural network. The first layer expands the representation from $d_{\text{model}}$ dimensions to a larger dimension $d_{ff}$ (typically $4 \times d_{\text{model}}$), applies an activation function, and then the second layer projects back down to $d_{\text{model}}$ dimensions. This expansion-and-contraction creates a bottleneck architecture similar to an autoencoder, forcing the model to learn compressed representations that capture the most important features. The expansion factor of 4× is a design choice from the original transformer paper that has been widely adopted, though some recent models experiment with different ratios.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For input $\mX \in \R^{B \times n \times d_{\text{model}}}$, apply the same two-layer network independently to each position:
+<div class="equation">
+$$
+\text{FFN}(\vx) = \max(0, \vx \mW_1 + \vb_1) \mW_2 + \vb_2
+$$
+</div>
+where $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\vb_1 \in \R^{d_{ff}}$, $\mW_2 \in \R^{d_{ff} \times d_{\text{model}}}$, and $\vb_2 \in \R^{d_{\text{model}}}$.
+
+<p>For a sequence $\mX \in \R^{B \times n \times d_{\text{model}}}$, apply to each position independently:
+<div class="equation">
+$$
+\text{FFN}(\mX)_{i,:} = \text{FFN}(\mX_{i,:}) \quad \text{for } i = 1, \ldots, n
+$$
+</div>
+
+<p>The output maintains the same shape as the input: $\R^{B \times n \times d_{\text{model}}}$.
+</div>
+
+<p>The term "position-wise" emphasizes a crucial distinction from the attention mechanism. In attention, every position attends to every other position, creating $O(n^2)$ interactions. In the feed-forward network, each position is processed completely independently, creating only $O(n)$ operations. This means the feed-forward network is embarrassingly parallel—all $n$ positions can be processed simultaneously with no dependencies. In practice, this is implemented as a single matrix multiplication: the input $\mX \in \R^{B \times n \times d_{\text{model}}}$ is reshaped to $\R^{Bn \times d_{\text{model}}}$, multiplied by $\mW_1$, activated, multiplied by $\mW_2$, and reshaped back to $\R^{B \times n \times d_{\text{model}}}$.</p>
+
+<p>The choice of activation function significantly impacts model performance and training dynamics. The original transformer used ReLU activation, which is simple and computationally efficient but can suffer from "dying ReLU" problems where neurons become permanently inactive. BERT and GPT introduced the GELU (Gaussian Error Linear Unit) activation, which provides a smoother, probabilistic alternative to ReLU. GELU is defined as $\text{GELU}(x) = x \cdot \Phi(x)$ where $\Phi(x)$ is the cumulative distribution function of the standard normal distribution. In practice, GELU is approximated as $\text{GELU}(x) \approx 0.5x(1 + \tanh[\sqrt{2/\pi}(x + 0.044715x^3)])$. Empirically, GELU tends to provide slightly better performance than ReLU for transformer models, though the difference is often small.</p>
+
+<p>The feed-forward network accounts for a substantial portion of the model's parameters and computational cost. For BERT-base with $d_{\text{model}} = 768$ and $d_{ff} = 3072$, each feed-forward network contains $768 \times 3072 + 3072 \times 768 = 4.7$M parameters, compared to $4 \times 768^2 = 2.4$M parameters in the attention mechanism. This means approximately two-thirds of each layer's parameters are in the feed-forward network. Similarly, for short sequences where $n < d_{\text{model}}$, the feed-forward network dominates computational cost. For BERT-base with sequence length 512, the feed-forward network requires $2 \times 512 \times 768 \times 3072 = 2.4$ GFLOPs per layer, while attention requires $8 \times 512 \times 768^2 + 4 \times 512^2 \times 768 = 3.2$ GFLOPs. The crossover point occurs around $n = 2d_{\text{model}}$—for longer sequences, attention dominates; for shorter sequences, the feed-forward network dominates.</p>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base with $d_{\text{model}} = 768$, $d_{ff} = 3072$, batch size $B = 32$, and sequence length $n = 512$:
+
+<p><strong>Dimension tracking:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Input:} \quad &\mX \in \R^{32 \times 512 \times 768} \\
+\text{First projection:} \quad &\mX \mW_1 + \vb_1 \in \R^{32 \times 512 \times 3072} \\
+\text{After ReLU/GELU:} \quad &\R^{32 \times 512 \times 3072} \\
+\text{Second projection:} \quad &\mX \mW_2 + \vb_2 \in \R^{32 \times 512 \times 768} \\
+\text{Output:} \quad &\R^{32 \times 512 \times 768}
+\end{align}$$
+</div>
+
+<p><strong>Memory requirements:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Input activations:} \quad &32 \times 512 \times 768 \times 4 = 50.3 \text{ MB (FP32)} \\
+\text{Intermediate activations:} \quad &32 \times 512 \times 3072 \times 4 = 201.3 \text{ MB (FP32)} \\
+\text{Output activations:} \quad &32 \times 512 \times 768 \times 4 = 50.3 \text{ MB (FP32)} \\
+\text{Parameters } (\mW_1, \mW_2): \quad &(768 \times 3072 + 3072 \times 768) \times 4 = 18.9 \text{ MB (FP32)}
+\end{align}$$
+</div>
+
+<p>The intermediate activations at dimension $d_{ff} = 3072$ consume 4× the memory of the input/output activations at dimension $d_{\text{model}} = 768$. For a 12-layer BERT model, the feed-forward intermediate activations across all layers consume $12 \times 201.3 = 2.4$ GB of memory during training. This is why gradient checkpointing, which recomputes these activations during the backward pass instead of storing them, can significantly reduce memory consumption.</p>
+
+<p><strong>Computational cost:</strong>
+<div class="equation">
+$$\begin{align}
+\text{First projection:} \quad &Bn \times d_{\text{model}} \times d_{ff} = 32 \times 512 \times 768 \times 3072 = 38.7 \text{ GFLOPs} \\
+\text{Second projection:} \quad &Bn \times d_{ff} \times d_{\text{model}} = 32 \times 512 \times 3072 \times 768 = 38.7 \text{ GFLOPs} \\
+\text{Total:} \quad &77.4 \text{ GFLOPs per layer}
+\end{align}$$
+</div>
+
+<p>For comparison, the attention mechanism in the same layer requires approximately $51.5$ GFLOPs (including Q, K, V projections, attention computation, and output projection). This means the feed-forward network accounts for 60\% of the computational cost per layer for this configuration.
+</div>
+
+<p><strong>Alternative activation functions:</strong> While ReLU and GELU are most common, other activation functions have been explored for transformers. The Swish activation $\text{Swish}(x) = x \cdot \sigma(\beta x)$ where $\sigma$ is the sigmoid function, provides similar properties to GELU. The GLU (Gated Linear Unit) family, including $\text{GLU}(x) = (x \mW_1) \odot \sigma(x \mW_2)$, uses gating mechanisms similar to LSTMs. Recent work has also explored learned activation functions that adapt during training. However, GELU remains the most widely adopted choice for modern transformers due to its balance of performance and computational efficiency.</p>
+
+<h2>Transformer Decoder</h2>
+
+<h3>Single Decoder Layer</h3>
+
+<p>The transformer decoder extends the encoder architecture with an additional cross-attention mechanism that allows the decoder to attend to the encoder's output. While the encoder uses only self-attention to build contextualized representations of the input, the decoder must perform three distinct operations: masked self-attention on the target sequence, cross-attention to the source sequence, and position-wise feed-forward transformation. This three-sublayer structure enables the decoder to generate output sequences that are conditioned on both the previously generated tokens and the encoded input sequence.</p>
+
+<p>The masked self-attention in the decoder is crucial for maintaining the autoregressive property during training. Unlike the encoder's bidirectional self-attention where each position can attend to all positions, the decoder's self-attention must be causal—position $i$ can only attend to positions $j \leq i$. This masking ensures that the model cannot "cheat" by looking at future tokens during training. Without this mask, the model could simply copy the target sequence during training without learning to generate it. The mask is implemented by setting attention scores for future positions to $-\infty$ before the softmax, ensuring they receive zero attention weight.</p>
+
+<p>The cross-attention mechanism is where the decoder actually uses information from the encoder. In cross-attention, the queries come from the decoder's hidden states (representing "what information do I need?"), while the keys and values come from the encoder's output (representing "what information is available from the source?"). This asymmetry allows the decoder to selectively focus on relevant parts of the source sequence when generating each target token. For machine translation, this might mean attending to the source word being translated; for summarization, it might mean attending to the most salient sentences in the document.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+A decoder layer has three sub-layers, each with residual connections and layer normalization. For input $\mY \in \R^{B \times m \times d_{\text{model}}}$ (target sequence) and encoder output $\mX_{\text{enc}} \in \R^{B \times n \times d_{\text{model}}}$ (source sequence):
+
+<p><strong>Step 1: Masked Self-Attention</strong>
+<div class="equation">
+$$
+\vh^{(1)} = \text{LayerNorm}(\mY + \text{MaskedMultiHeadAttn}(\mY, \mY, \mY))
+$$
+</div>
+where the attention mask prevents position $i$ from attending to positions $j > i$.</p>
+
+<p><strong>Step 2: Cross-Attention to Encoder</strong>
+<div class="equation">
+$$
+\vh^{(2)} = \text{LayerNorm}(\vh^{(1)} + \text{MultiHeadAttn}(\vh^{(1)}, \mX_{\text{enc}}, \mX_{\text{enc}}))
+$$
+</div>
+where queries come from $\vh^{(1)}$ and keys/values come from $\mX_{\text{enc}}$.</p>
+
+<p><strong>Step 3: Feed-Forward</strong>
+<div class="equation">
+$$
+\vh^{(3)} = \text{LayerNorm}(\vh^{(2)} + \text{FFN}(\vh^{(2)}))
+$$
+</div>
+
+<p>The output $\vh^{(3)} \in \R^{B \times m \times d_{\text{model}}}$ maintains the target sequence length $m$.
+</div>
+
+<p>The dimension compatibility in cross-attention deserves careful attention. The decoder hidden states $\vh^{(1)} \in \R^{B \times m \times d_{\text{model}}}$ are projected to queries $\mQ \in \R^{B \times m \times d_{\text{model}}}$, while the encoder output $\mX_{\text{enc}} \in \R^{B \times n \times d_{\text{model}}}$ is projected to keys $\mK \in \R^{B \times n \times d_{\text{model}}}$ and values $\mV \in \R^{B \times n \times d_{\text{model}}}$. The attention scores are computed as $\mQ \mK^T \in \R^{B \times m \times n}$, creating a rectangular attention matrix where each of the $m$ target positions attends to all $n$ source positions. This is different from self-attention where the attention matrix is square ($n \times n$ for encoder, $m \times m$ for decoder self-attention).</p>
+
+<p>The causal mask in decoder self-attention is implemented as a lower-triangular matrix. For a sequence of length $m = 5$, the mask looks like:
+<div class="equation">
+$$
+\text{Mask} = \begin{bmatrix}
+1 & 0 & 0 & 0 & 0 \\
+1 & 1 & 0 & 0 & 0 \\
+1 & 1 & 1 & 0 & 0 \\
+1 & 1 & 1 & 1 & 0 \\
+1 & 1 & 1 & 1 & 1
+\end{bmatrix}
+$$
+</div>
+where 1 indicates positions that can be attended to and 0 indicates positions that must be masked. In practice, the zeros are replaced with $-\infty$ before the softmax operation, ensuring masked positions receive zero attention weight. This mask is applied to the attention scores before softmax: $\text{softmax}(\mQ \mK^T / \sqrt{d_k} + \text{Mask})$.</p>
+
+<div class="example"><strong>Example:</strong> 
+For a translation task with source sequence length $n = 20$ (e.g., "The cat sat on the mat") and target sequence length $m = 15$ (e.g., "Le chat était assis"), using BERT-base dimensions ($d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$), batch size $B = 32$:
+
+<p><strong>Inputs:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Decoder input:} \quad &\mY \in \R^{32 \times 15 \times 768} \\
+\text{Encoder output:} \quad &\mX_{\text{enc}} \in \R^{32 \times 20 \times 768}
+\end{align}$$
+</div>
+
+<p><strong>Masked Self-Attention:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Q, K, V from } \mY: \quad &\R^{32 \times 15 \times 768} \\
+\text{Attention scores:} \quad &\R^{32 \times 12 \times 15 \times 15} \quad \text{(square, causal masked)} \\
+\text{Output:} \quad &\R^{32 \times 15 \times 768}
+\end{align}$$
+</div>
+
+<p>The attention scores matrix $\R^{32 \times 12 \times 15 \times 15}$ requires $32 \times 12 \times 15 \times 15 \times 4 = 3.5$ MB in FP32. This is much smaller than encoder self-attention because the target sequence is shorter than the source sequence in this example.</p>
+
+<p><strong>Cross-Attention:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Q from } \vh^{(1)}: \quad &\R^{32 \times 15 \times 768} \\
+\text{K, V from } \mX_{\text{enc}}: \quad &\R^{32 \times 20 \times 768} \\
+\text{Attention scores:} \quad &\R^{32 \times 12 \times 15 \times 20} \quad \text{(rectangular!)} \\
+\text{Output:} \quad &\R^{32 \times 15 \times 768}
+\end{align}$$
+</div>
+
+<p>The cross-attention scores $\R^{32 \times 12 \times 15 \times 20}$ require $32 \times 12 \times 15 \times 20 \times 4 = 4.6$ MB in FP32. Notice this is rectangular: 15 target positions attending to 20 source positions.</p>
+
+<p><strong>Feed-Forward Network:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Input:} \quad &\R^{32 \times 15 \times 768} \\
+\text{Intermediate:} \quad &\R^{32 \times 15 \times 3072} \\
+\text{Output:} \quad &\R^{32 \times 15 \times 768}
+\end{align}$$
+</div>
+
+<p>The intermediate activations require $32 \times 15 \times 3072 \times 4 = 59.0$ MB in FP32.
+</div>
+
+<h3>Complete Decoder Stack</h3>
+
+<p>The complete decoder stacks $N$ decoder layers, with each layer attending to both the previous decoder layer's output and the encoder's final output. This stacking enables the decoder to build increasingly sophisticated representations of the target sequence, conditioned on the source sequence. The encoder output $\mX_{\text{enc}}$ is reused by every decoder layer—it's computed once by the encoder and then fed into all $N$ decoder layers. This means the encoder output must be stored in memory throughout the decoder's computation, contributing to memory requirements.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+Stack $N$ decoder layers, with target embeddings and positional encodings at the bottom:
+<div class="equation">
+$$
+\mY^{(0)} = \text{Embedding}(\text{target}) + \text{PositionalEncoding}
+$$
+</div>
+
+<p>Then apply $N$ decoder layers sequentially, each attending to the encoder output:
+<div class="equation">
+$$
+\mY^{(\ell)} = \text{DecoderLayer}^{(\ell)}(\mY^{(\ell-1)}, \mX_{\text{enc}}) \quad \text{for } \ell = 1, \ldots, N
+$$
+</div>
+
+<p>The final decoder output $\mY^{(N)} \in \R^{B \times m \times d_{\text{model}}}$ is projected to vocabulary logits:
+<div class="equation">
+$$
+\text{logits} = \mY^{(N)} \mW_{\text{out}} + \vb_{\text{out}} \in \R^{B \times m \times V}
+$$
+</div>
+where $\mW_{\text{out}} \in \R^{d_{\text{model}} \times V}$ and $V$ is the vocabulary size.
+</div>
+
+<p>During training, the entire target sequence is processed in parallel using teacher forcing—the model receives the ground-truth previous tokens rather than its own predictions. The causal mask ensures that position $i$ cannot attend to future positions, maintaining the autoregressive property even though all positions are computed simultaneously. This parallel training is a major advantage over RNN decoders, which must process the target sequence sequentially even during training.</p>
+
+<p>During inference, however, the decoder must generate tokens autoregressively, one at a time. At step $t$, the decoder has generated tokens $y_1, \ldots, y_{t-1}$ and must predict $y_t$. This requires running the decoder with input sequence length $t-1$, computing attention over all previously generated tokens. For a target sequence of length $m$, this requires $m$ forward passes through the decoder, making inference much slower than training. This is why techniques like KV caching (storing computed key and value projections) are crucial for efficient inference.</p>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base dimensions ($d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$), a decoder layer contains:
+
+<p><strong>Masked self-attention:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Q, K, V, O projections:} \quad &4 \times 768^2 = 2{,}359{,}296
+\end{align}$$
+</div>
+
+<p><strong>Cross-attention:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Q, K, V, O projections:} \quad &4 \times 768^2 = 2{,}359{,}296
+\end{align}$$
+</div>
+
+<p><strong>Feed-forward network:</strong>
+<div class="equation">
+$$\begin{align}
+\mW_1, \vb_1, \mW_2, \vb_2: \quad &768 \times 3072 + 3072 + 3072 \times 768 + 768 = 4{,}722{,}432
+\end{align}$$
+</div>
+
+<p><strong>Layer normalization (3 instances):</strong>
+<div class="equation">
+$$\begin{align}
+\text{Scale and shift parameters:} \quad &3 \times 2 \times 768 = 4{,}608
+\end{align}$$
+</div>
+
+<p><strong>Total per decoder layer:</strong> $2{,}359{,}296 + 2{,}359{,}296 + 4{,}722{,}432 + 4{,}608 = 9{,}445{,}632$ parameters</p>
+
+<p>This is approximately 33\% more parameters than an encoder layer ($9.4$M vs $7.1$M) due to the additional cross-attention mechanism. For a 6-layer decoder, this amounts to $6 \times 9{,}445{,}632 = 56.7$M parameters, compared to $6 \times 7{,}084{,}800 = 42.5$M for a 6-layer encoder.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+During autoregressive generation, the decoder must recompute attention over all previously generated tokens at each step. For a target sequence of length $m = 100$, generating the final token requires:
+
+<p><strong>Without KV caching:</strong>
+<ul>
+<li>Process sequence of length 100
+<li>Compute Q, K, V for all 100 positions
+<li>Compute attention scores $\R^{100 \times 100}$
+<li>Total: 100 forward passes through decoder, each processing increasing sequence lengths
+</ul>
+
+<p><strong>With KV caching:</strong>
+<ul>
+<li>Store K, V from previous steps: $\R^{99 \times 768}$ per layer
+<li>At step 100, compute only Q for new position: $\R^{1 \times 768}$
+<li>Concatenate with cached K, V: $\R^{100 \times 768}$
+<li>Compute attention scores $\R^{1 \times 100}$ (only for new position)
+<li>Total: 100 forward passes, but each processes only 1 new position
+</ul>
+
+<p>For BERT-base dimensions with 12 decoder layers, the KV cache requires:
+<div class="equation">
+$$\begin{align}
+\text{Per layer:} \quad &2 \times 100 \times 768 \times 4 = 614 \text{ KB (FP32)} \\
+\text{All 12 layers:} \quad &12 \times 614 = 7.4 \text{ MB}
+\end{align}$$
+</div>
+
+<p>This modest memory cost (7.4 MB for 100 tokens) enables approximately 50× speedup in generation, reducing generation time from several seconds to tens of milliseconds for typical sequences.
+</div>
+
+<h2>Computational Complexity and Hardware Analysis</h2>
+
+<h3>FLOPs Analysis</h3>
+
+<p>Understanding the computational complexity of transformers is essential for predicting training time, estimating hardware requirements, and identifying optimization opportunities. The transformer's computational cost is dominated by matrix multiplications in the attention mechanism and feed-forward network, with the relative importance depending on sequence length. For short sequences, the feed-forward network dominates; for long sequences, attention dominates due to its quadratic scaling.</p>
+
+<p>For a single transformer encoder layer processing a sequence of length $n$ with model dimension $d_{\text{model}}$, feed-forward dimension $d_{ff}$, and $h$ attention heads (where $d_k = d_{\text{model}}/h$), the computational cost breaks down as follows. The multi-head attention requires four matrix multiplications for Q, K, V, and output projections, each costing $2nd_{\text{model}}^2$ FLOPs (the factor of 2 accounts for both multiplication and addition in matrix multiplication). The attention score computation $\mQ \mK^T$ requires $2n^2d_{\text{model}}$ FLOPs, and the attention-weighted sum $\text{Attn} \mV$ requires another $2n^2d_{\text{model}}$ FLOPs. The feed-forward network requires $2nd_{\text{model}}d_{ff}$ FLOPs for the first projection and another $2nd_{\text{model}}d_{ff}$ FLOPs for the second projection.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For a single encoder layer with input $\mX \in \R^{B \times n \times d_{\text{model}}}$:
+
+<p><strong>Multi-head attention:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Q, K, V projections:} \quad &3 \times 2Bnd_{\text{model}}^2 = 6Bnd_{\text{model}}^2 \\
+\text{Attention scores } (\mQ \mK^T): \quad &2Bn^2d_{\text{model}} \\
+\text{Attention-weighted sum:} \quad &2Bn^2d_{\text{model}} \\
+\text{Output projection:} \quad &2Bnd_{\text{model}}^2 \\
+\text{Total attention:} \quad &8Bnd_{\text{model}}^2 + 4Bn^2d_{\text{model}}
+\end{align}$$
+</div>
+
+<p><strong>Feed-forward network (assuming $d_{ff} = 4d_{\text{model}}$):</strong>
+<div class="equation">
+$$\begin{align}
+\text{First projection:} \quad &2Bnd_{\text{model}}d_{ff} = 8Bnd_{\text{model}}^2 \\
+\text{Second projection:} \quad &2Bnd_{ff}d_{\text{model}} = 8Bnd_{\text{model}}^2 \\
+\text{Total FFN:} \quad &16Bnd_{\text{model}}^2
+\end{align}$$
+</div>
+
+<p><strong>Total per encoder layer:</strong>
+<div class="equation">
+$$
+\text{FLOPs} = 24Bnd_{\text{model}}^2 + 4Bn^2d_{\text{model}}
+$$
+</div>
+
+<p>The crossover point where attention and FFN have equal cost occurs when $8nd_{\text{model}}^2 = 4n^2d_{\text{model}}$, which simplifies to $n = 2d_{\text{model}}$. For $n < 2d_{\text{model}}$, the feed-forward network dominates; for $n > 2d_{\text{model}}$, attention dominates.
+</div>
+
+<p>This crossover point has important implications for model design and optimization. For BERT-base with $d_{\text{model}} = 768$, the crossover occurs at $n = 1536$ tokens. Since BERT uses maximum sequence length 512, the feed-forward network accounts for approximately 67\% of computation per layer. For longer-sequence models like Longformer or BigBird that process 4096 tokens, attention accounts for approximately 80\% of computation. This explains why efficient attention mechanisms focus on reducing the $O(n^2)$ term—it's the bottleneck for long sequences.</p>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base with 12 encoder layers, $d_{\text{model}} = 768$, batch size $B = 32$, sequence length $n = 512$:
+
+<p><strong>Per encoder layer:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Attention:} \quad &8 \times 32 \times 512 \times 768^2 + 4 \times 32 \times 512^2 \times 768 \\
+&= 77.3 \text{ GFLOPs} + 16.1 \text{ GFLOPs} = 93.4 \text{ GFLOPs} \\
+\text{Feed-forward:} \quad &16 \times 32 \times 512 \times 768^2 = 154.6 \text{ GFLOPs} \\
+\text{Total per layer:} \quad &248.0 \text{ GFLOPs}
+\end{align}$$
+</div>
+
+<p><strong>All 12 layers:</strong> $12 \times 248.0 = 2{,}976$ GFLOPs $\approx 3.0$ TFLOPs per training step</p>
+
+<p><strong>Backward pass:</strong> Approximately $2 \times$ forward pass = $6.0$ TFLOPs</p>
+
+<p><strong>Total per training step:</strong> $3.0 + 6.0 = 9.0$ TFLOPs</p>
+
+<p><strong>Training time on NVIDIA A100 (312 TFLOPS FP16):</strong></p>
+
+<p>Theoretical minimum: $9.0 / 312 = 28.8$ milliseconds per step</p>
+
+<p>In practice, memory bandwidth limitations, kernel launch overhead, and non-matrix operations reduce efficiency to approximately 40-50\% of peak FLOPs, yielding actual training time of 60-75 milliseconds per step. This corresponds to throughput of 13-17 training steps per second, or approximately 210,000-270,000 tokens per second.</p>
+
+<p>For the full BERT-base training (1 million steps), this amounts to:
+<div class="equation">
+$$\begin{align}
+\text{Total FLOPs:} \quad &9.0 \times 10^{12} \times 10^6 = 9.0 \times 10^{18} \text{ FLOPs} \\
+\text{Training time on A100:} \quad &\frac{9.0 \times 10^{18}}{312 \times 10^{12} \times 0.45} \approx 64{,}000 \text{ seconds} \approx 18 \text{ hours}
+\end{align}$$
+</div>
+
+<p>This assumes 45\% efficiency and continuous training. In practice, BERT-base training takes approximately 3-4 days on 16 V100 GPUs (equivalent to 1-2 days on 16 A100 GPUs), accounting for data loading, checkpointing, and other overhead.
+</div>
+
+<h3>Memory Bandwidth Considerations</h3>
+
+<p>While FLOPs provide a theoretical upper bound on training speed, memory bandwidth often becomes the practical bottleneck. Modern GPUs have enormous computational capacity but limited memory bandwidth. The NVIDIA A100 provides 312 TFLOPS of FP16 compute but only 1.6 TB/s of memory bandwidth. For operations to be compute-bound (limited by FLOPs rather than memory), they must have high arithmetic intensity—the ratio of FLOPs to bytes transferred.</p>
+
+<p>Matrix multiplication has arithmetic intensity $O(n)$ for $n \times n$ matrices, making it compute-bound for large matrices. However, element-wise operations like activation functions, layer normalization, and residual additions have arithmetic intensity $O(1)$, making them memory-bound. For transformers, the large matrix multiplications in attention and feed-forward networks are typically compute-bound, while the numerous element-wise operations between them are memory-bound. This is why kernel fusion—combining multiple operations into a single kernel to reduce memory transfers—is crucial for transformer efficiency.</p>
+
+<div class="example"><strong>Example:</strong> 
+For BERT-base layer with $d_{\text{model}} = 768$, batch size 32, sequence length 512:
+
+<p><strong>Feed-forward first projection:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Input:} \quad &32 \times 512 \times 768 \times 2 = 25.2 \text{ MB (FP16)} \\
+\text{Weight:} \quad &768 \times 3072 \times 2 = 4.7 \text{ MB (FP16)} \\
+\text{Output:} \quad &32 \times 512 \times 3072 \times 2 = 100.7 \text{ MB (FP16)} \\
+\text{Total memory:} \quad &130.6 \text{ MB} \\
+\text{FLOPs:} \quad &2 \times 32 \times 512 \times 768 \times 3072 = 77.3 \text{ GFLOPs}
+\end{align}$$
+</div>
+
+<p><strong>Arithmetic intensity:</strong> $77.3 \times 10^9 / (130.6 \times 10^6) = 592$ FLOPs/byte</p>
+
+<p><strong>Time on A100:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Compute-bound:} \quad &77.3 / 312{,}000 = 0.25 \text{ ms} \\
+\text{Memory-bound:} \quad &130.6 / 1{,}600{,}000 = 0.08 \text{ ms}
+\end{align}$$
+</div>
+
+<p>Since compute time exceeds memory time, this operation is compute-bound. The GPU's computational capacity is the bottleneck, not memory bandwidth.</p>
+
+<p><strong>Layer normalization:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Input/output:} \quad &32 \times 512 \times 768 \times 2 \times 2 = 50.3 \text{ MB (read + write)} \\
+\text{FLOPs:} \quad &\approx 32 \times 512 \times 768 \times 10 = 1.3 \text{ GFLOPs (approximate)}
+\end{align}$$
+</div>
+
+<p><strong>Arithmetic intensity:</strong> $1.3 \times 10^9 / (50.3 \times 10^6) = 26$ FLOPs/byte</p>
+
+<p><strong>Time on A100:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Compute-bound:} \quad &1.3 / 312{,}000 = 0.004 \text{ ms} \\
+\text{Memory-bound:} \quad &50.3 / 1{,}600{,}000 = 0.031 \text{ ms}
+\end{align}$$
+</div>
+
+<p>Since memory time exceeds compute time, layer normalization is memory-bound. The GPU's memory bandwidth is the bottleneck, not computational capacity. This is why fusing layer normalization with adjacent operations can significantly improve performance.
+</div>
+
+<h3>Scaling to Large Models</h3>
+
+<p>As transformer models scale from millions to billions of parameters, the computational and memory requirements grow dramatically. GPT-3 with 175 billion parameters requires approximately 700 GB of memory just to store the parameters in FP32 (or 350 GB in FP16), far exceeding the capacity of any single GPU. This necessitates model parallelism, where the model is split across multiple GPUs. The three main parallelism strategies are data parallelism (different GPUs process different batches), model parallelism (different GPUs hold different parts of the model), and pipeline parallelism (different GPUs process different layers).</p>
+
+<div class="example"><strong>Example:</strong> 
+GPT-3 (175B parameters) uses 96 layers, $d_{\text{model}} = 12{,}288$, $h = 96$ heads, $d_{ff} = 49{,}152$:
+
+<p><strong>Parameter count per layer:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Self-attention:} \quad &4 \times 12{,}288^2 = 604{,}045{,}824 \approx 604 \text{M} \\
+\text{Feed-forward:} \quad &2 \times 12{,}288 \times 49{,}152 = 1{,}208{,}091{,}648 \approx 1{,}208 \text{M} \\
+\text{Total per layer:} \quad &\approx 1{,}812 \text{M parameters}
+\end{align}$$
+</div>
+
+<p><strong>Total model:</strong> $96 \times 1{,}812 = 173{,}952$M $\approx 174$B parameters (plus embeddings $\approx 1$B)</p>
+
+<p><strong>Memory requirements:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Parameters (FP16):} \quad &175 \times 10^9 \times 2 = 350 \text{ GB} \\
+\text{Gradients (FP16):} \quad &350 \text{ GB} \\
+\text{Adam states (FP32):} \quad &175 \times 10^9 \times 8 = 1{,}400 \text{ GB} \\
+\text{Activations (batch 1, seq 2048):} \quad &\approx 60 \text{ GB} \\
+\text{Total:} \quad &\approx 2{,}160 \text{ GB}
+\end{align}$$
+</div>
+
+<p>This requires at minimum 28 A100 GPUs (80 GB each) just to store parameters and optimizer states, not including activations. In practice, GPT-3 training used hundreds of GPUs with sophisticated parallelism strategies.</p>
+
+<p><strong>Training cost estimate:</strong></p>
+
+<p>For 300 billion tokens (GPT-3 training corpus):
+<div class="equation">
+$$\begin{align}
+\text{FLOPs per token:} \quad &\approx 6 \times 175 \times 10^9 = 1.05 \times 10^{12} \text{ FLOPs} \\
+\text{Total FLOPs:} \quad &300 \times 10^9 \times 1.05 \times 10^{12} = 3.15 \times 10^{23} \text{ FLOPs}
+\end{align}$$
+</div>
+
+<p>At 40\% efficiency on A100 (312 TFLOPS FP16):
+<div class="equation">
+$$\begin{align}
+\text{GPU-hours:} \quad &\frac{3.15 \times 10^{23}}{312 \times 10^{12} \times 0.4 \times 3600} \approx 700{,}000 \text{ GPU-hours}
+\end{align}$$
+</div>
+
+<p>With 1024 A100 GPUs, this amounts to approximately 28 days of training. At cloud pricing of approximately \$2.50/hour per A100, the compute cost is approximately \$1.75 million, not including data storage, networking, or engineering costs.
+</div>
+
+<h2>Complete Transformer Architecture</h2>
+
+<h3>Full Encoder-Decoder Model</h3>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Transformer Forward Pass</div>
+<div class="algorithm-line"><strong>Input:</strong> Source sequence $\mathbf{x} = [x_1, \ldots, x_n]$, target sequence $\mathbf{y} = [y_1, \ldots, y_m]$</div>
+<div class="algorithm-line"><strong>Output:</strong> Predicted probabilities for each target position</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Encoder</span></div>
+<div class="algorithm-line">$\mX_{\text{emb}} = \text{Embedding}(\mathbf{x})$</div>
+<div class="algorithm-line">$\mX^{(0)} = \mX_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$</div>
+<div class="algorithm-line">$\mX^{(\ell)} = \text{EncoderLayer}^{(\ell)}(\mX^{(\ell-1)})$</div>
+<div class="algorithm-line">$\mX_{\text{enc}} = \mX^{(N_{\text{enc}})}$</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Decoder</span></div>
+<div class="algorithm-line">$\mY_{\text{emb}} = \text{Embedding}(\mathbf{y})$</div>
+<div class="algorithm-line">$\mY^{(0)} = \mY_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$</div>
+<div class="algorithm-line">$\mY^{(\ell)} = \text{DecoderLayer}^{(\ell)}(\mY^{(\ell-1)}, \mX_{\text{enc}})$</div>
+<div class="algorithm-line">$\mY_{\text{dec}} = \mY^{(N_{\text{dec}})}$</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Output Projection</span></div>
+<div class="algorithm-line">$\text{logits} = \mY_{\text{dec}} \mW_{\text{out}} + \vb_{\text{out}}$ \quad where $\mW_{\text{out}} \in \R^{d_{\text{model}} \times V}$</div>
+<div class="algorithm-line">$\text{probs} = \text{softmax}(\text{logits})$ \\</p></div>
+<div class="algorithm-line"><strong>return</strong> probs</div>
+</div>
+
+<h3>Original Transformer Configuration</h3>
+
+<p>"Attention is All You Need" base model:
+<ul>
+    <li>Encoder layers: $N_{\text{enc}} = 6$
+    <li>Decoder layers: $N_{\text{dec}} = 6$
+    <li>Model dimension: $d_{\text{model}} = 512$
+    <li>Attention heads: $h = 8$
+    <li>Feed-forward dimension: $d_{ff} = 2048$
+    <li>Dropout rate: $p = 0.1$
+</ul>
+
+<p><strong>Parameter count:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Encoder (6 layers):} \quad &6 \times (\text{attn} + \text{FFN}) \approx 25M \\
+\text{Decoder (6 layers):} \quad &6 \times (\text{2×attn} + \text{FFN}) \approx 31M \\
+\text{Embeddings:} \quad &\text{varies by vocabulary} \\
+\text{Total (excluding embeddings):} \quad &\approx <strong>56M parameters</strong>
+\end{align}$$
+</div>
+
+<h2>Residual Connections and Layer Normalization</h2>
+
+<h3>Residual Connections</h3>
+
+<p>Residual connections, also known as skip connections, are fundamental to enabling the training of deep transformer networks. Without residual connections, gradients would need to flow through dozens of attention and feed-forward layers during backpropagation, leading to vanishing or exploding gradients that make optimization extremely difficult. The residual connection provides a direct path from each layer's output back to its input, allowing gradients to flow unimpeded through the network. This gradient highway ensures that even the earliest layers receive meaningful gradient signals, enabling effective training of networks with 96 layers (GPT-3) or more.</p>
+
+<p>The residual connection pattern in transformers follows the post-addition layer normalization structure: $\text{LayerNorm}(x + \text{Sublayer}(x))$. This means the sublayer's output is added to its input before normalization. The addition operation has a gradient of 1 with respect to both operands, so during backpropagation, gradients flow both through the sublayer (learning to refine representations) and directly through the residual connection (providing a gradient highway). This dual path enables the network to learn both identity mappings (when the sublayer output is near zero) and complex transformations (when the sublayer output is large).</p>
+
+<p>The residual connection also enables the network to learn incrementally. Early in training, the sublayer outputs are typically small due to weight initialization, so the network effectively starts as a near-identity function. As training progresses, the sublayers learn to make increasingly sophisticated transformations, building on the representations from previous layers. This incremental learning is much more stable than trying to learn the complete transformation from scratch. For a 12-layer BERT model, each layer can focus on learning a small refinement rather than a complete transformation, making optimization tractable.</p>
+
+<h3>Layer Normalization</h3>
+
+<p>Layer normalization stabilizes training by normalizing activations across the feature dimension, ensuring that each layer receives inputs with consistent statistics regardless of how previous layers' parameters change during training. Unlike batch normalization, which normalizes across the batch dimension and is commonly used in convolutional networks, layer normalization normalizes across features for each example independently. This independence from batch size is crucial for transformers, which often use small batch sizes during inference or fine-tuning, and for handling variable-length sequences where batch normalization's statistics would be unreliable.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For input $\vx \in \R^d$, layer normalization computes mean and variance across the feature dimension, then normalizes and applies learned affine transformation:
+<div class="equation">
+$$\begin{align}
+\mu &= \frac{1}{d} \sum_{i=1}^d x_i \\
+\sigma^2 &= \frac{1}{d} \sum_{i=1}^d (x_i - \mu)^2 \\
+\hat{x}_i &= \frac{x_i - \mu}{\sqrt{\sigma^2 + \epsilon}} \\
+y_i &= \gamma \hat{x}_i + \beta
+\end{align}$$
+</div>
+where $\gamma, \beta \in \R^d$ are learnable scale and shift parameters, and $\epsilon \approx 10^{-5}$ prevents division by zero.
+
+<p>For a batch of sequences $\mX \in \R^{B \times n \times d}$, layer normalization is applied independently to each of the $B \times n$ vectors, normalizing across the $d$ features.</p>
+
+<p>The learned parameters $\gamma$ and $\beta$ allow the network to undo the normalization if beneficial. If $\gamma_i = \sqrt{\sigma^2 + \epsilon}$ and $\beta_i = \mu$, the normalization is completely undone. In practice, the network learns appropriate values that balance normalization's stabilizing effect with the flexibility to learn arbitrary distributions.</p>
+
+<p>Layer normalization differs fundamentally from batch normalization in its normalization dimension. Batch normalization computes statistics across the batch dimension (normalizing each feature across all examples in the batch), making it dependent on batch size and batch composition. Layer normalization computes statistics across the feature dimension (normalizing all features for each example independently), making it independent of batch size. For transformers processing variable-length sequences with potentially small batch sizes, this independence is essential. A batch size of 1 works perfectly with layer normalization but would be problematic for batch normalization.</p>
+
+<h3>Pre-Norm vs Post-Norm</h3>
+
+<p>The placement of layer normalization relative to the residual connection significantly impacts training dynamics. The original transformer paper used post-norm: $\text{LayerNorm}(x + \text{Sublayer}(x))$, where normalization is applied after adding the residual. More recent models like GPT-2 and GPT-3 use pre-norm: $x + \text{LayerNorm}(\text{Sublayer}(x))$, where normalization is applied before the sublayer, and the residual connection bypasses normalization entirely.</p>
+
+<p>Post-norm architecture normalizes the sum of the input and sublayer output, which can help prevent activation magnitudes from growing unboundedly as depth increases. However, post-norm requires careful learning rate warmup and can be unstable for very deep networks. The gradients must flow through the layer normalization operation, which can introduce additional numerical instabilities. BERT uses post-norm with 12-24 layers successfully, but scaling to 96+ layers becomes challenging.</p>
+
+<p>Pre-norm architecture applies normalization before each sublayer, so the sublayer receives normalized inputs. The residual connection then adds the sublayer output directly to the (unnormalized) input, bypassing the normalization. This provides a cleaner gradient path through the residual connection and tends to be more stable for very deep networks. GPT-2 and GPT-3 use pre-norm, enabling training of 48-96 layer models without learning rate warmup. The trade-off is that pre-norm may achieve slightly lower final performance than post-norm for shallow networks, but this difference diminishes for deeper networks where pre-norm's stability advantages dominate.</p>
+
+<div class="example"><strong>Example:</strong> 
+For a single position's representation $\vx \in \R^{768}$ from BERT-base:
+
+<p><strong>Input:</strong> $\vx = [0.5, -0.3, 1.2, \ldots]$ (768 values)</p>
+
+<p><strong>Compute statistics:</strong>
+<div class="equation">
+$$\begin{align}
+\mu &= \frac{1}{768} \sum_{i=1}^{768} x_i = 0.15 \quad \text{(example value)} \\
+\sigma^2 &= \frac{1}{768} \sum_{i=1}^{768} (x_i - 0.15)^2 = 0.42 \quad \text{(example value)} \\
+\sigma &= \sqrt{0.42 + 10^{-5}} = 0.648
+\end{align}$$
+</div>
+
+<p><strong>Normalize:</strong>
+<div class="equation">
+$$\begin{align}
+\hat{x}_1 &= \frac{0.5 - 0.15}{0.648} = 0.540 \\
+\hat{x}_2 &= \frac{-0.3 - 0.15}{0.648} = -0.694 \\
+\hat{x}_3 &= \frac{1.2 - 0.15}{0.648} = 1.620 \\
+&\vdots
+\end{align}$$
+</div>
+
+<p>The normalized values $\hat{\vx}$ have mean 0 and variance 1 across the 768 dimensions.</p>
+
+<p><strong>Apply learned affine transformation:</strong>
+<div class="equation">
+$$\begin{align}
+y_1 &= \gamma_1 \times 0.540 + \beta_1 \\
+y_2 &= \gamma_2 \times (-0.694) + \beta_2 \\
+y_3 &= \gamma_3 \times 1.620 + \beta_3 \\
+&\vdots
+\end{align}$$
+</div>
+
+<p>where $\gamma, \beta \in \R^{768}$ are learned during training. Initially, $\gamma$ is typically initialized to 1 and $\beta$ to 0, making layer normalization initially act as pure normalization.</p>
+
+<p><strong>Memory and computation:</strong>
+<ul>
+<li>Parameters: $2 \times 768 = 1{,}536$ (scale and shift)
+<li>FLOPs per position: $\approx 10 \times 768 = 7{,}680$ (mean, variance, normalize, scale, shift)
+<li>For batch 32, sequence 512: $32 \times 512 \times 7{,}680 = 126$ MFLOPs
+</ul>
+
+<p>Layer normalization is computationally cheap compared to attention or feed-forward networks, but it's memory-bound rather than compute-bound, so kernel fusion with adjacent operations is important for efficiency.
+</div>
+</div>
+
+<h2>Training Objectives</h2>
+
+<h3>Sequence-to-Sequence Training</h3>
+
+<p>For machine translation, minimize cross-entropy loss:
+<div class="equation">
+$$
+\mathcal{L} = -\sum_{t=1}^m \log P(y_t | y_{<t}, \mathbf{x}; \theta)
+$$
+</div>
+
+<p><strong>Teacher forcing:</strong> During training, use ground-truth previous tokens $y_{<t}$, not model predictions.</p>
+
+<h3>Autoregressive Generation</h3>
+
+<p>At inference, generate one token at a time:
+<div class="algorithm"><div class="algorithm-title">Algorithm: Autoregressive Decoding</div>
+<div class="algorithm-line"><strong>Input:</strong> Source sequence $\mathbf{x}$, max length $T$</div>
+<div class="algorithm-line"><strong>Output:</strong> Generated sequence $\mathbf{y}$</div>
+<div class="algorithm-line"><p>Encode source: $\mX_{\text{enc}} = \text{Encoder}(\mathbf{x})$</div>
+<div class="algorithm-line">Initialize: $\mathbf{y} = [\text{BOS}]$ \quad (begin-of-sequence token)</div>
+<div class="algorithm-line"><strong>for</strong> $t = 1$ to $T$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\text{probs}_t = \text{Decoder}(\mathbf{y}, \mX_{\text{enc}})$</div>
+<div class="algorithm-line">$y_t = \arg\max(\text{probs}_t)$ \quad (or sample from distribution)</div>
+<div class="algorithm-line">Append $y_t$ to $\mathbf{y}$</div>
+<div class="algorithm-line"><strong>break</strong> \quad (end-of-sequence token)</div>
+</div>
+<div class="algorithm-line"><strong>return</strong> $\mathbf{y</div>
+</div>
+
+<h2>Transformer Variants: Architectural Patterns</h2>
+
+<p>While the original transformer uses both an encoder and decoder for sequence-to-sequence tasks, subsequent research has shown that encoder-only and decoder-only architectures can be highly effective for specific task families. These three architectural patterns—encoder-only, decoder-only, and encoder-decoder—represent different trade-offs between bidirectional context, autoregressive generation, and architectural complexity. Understanding these trade-offs is essential for choosing the right architecture for a given application.</p>
+
+<h3>Encoder-Only Architecture (BERT)</h3>
+
+<p>Encoder-only models use bidirectional self-attention throughout, allowing each position to attend to all other positions in both directions. This bidirectional context is ideal for understanding tasks where the model needs to build rich representations of the input but doesn't need to generate output sequences. BERT (Bidirectional Encoder Representations from Transformers) exemplifies this architecture, using 12 or 24 encoder layers with no decoder. The model is pre-trained using masked language modeling, where random tokens are masked and the model must predict them using bidirectional context.</p>
+
+<p>The key advantage of encoder-only models is computational efficiency for understanding tasks. Since all positions can attend to all other positions, the entire sequence is processed in a single forward pass with full parallelization. For a classification task with sequence length 512, BERT requires one forward pass through 12 layers, computing attention over all $512^2$ position pairs simultaneously. This is dramatically faster than autoregressive generation, which would require 512 sequential forward passes.</p>
+
+<p>Encoder-only models excel at tasks requiring deep understanding of input text: sentiment classification, named entity recognition, question answering (when the answer is a span in the input), and semantic similarity. They are less suitable for generation tasks, though they can be adapted for generation through techniques like iterative refinement or by using the encoder representations to condition a separate decoder. The bidirectional attention means the model cannot be used for standard autoregressive generation without modification.</p>
+
+<h3>Decoder-Only Architecture (GPT)</h3>
+
+<p>Decoder-only models use causal (masked) self-attention, where each position can only attend to previous positions. This maintains the autoregressive property essential for generation: the model predicts each token based only on previous tokens, never "cheating" by looking ahead. GPT (Generative Pre-trained Transformer) exemplifies this architecture, using 12-96 decoder layers with no encoder. The model is pre-trained using standard language modeling, predicting the next token given all previous tokens.</p>
+
+<p>The key advantage of decoder-only models is their simplicity and flexibility. With no encoder-decoder cross-attention, the architecture is simpler and has fewer parameters than an equivalent encoder-decoder model. More importantly, decoder-only models can handle both understanding and generation tasks through careful prompting. For classification, the model generates the class label; for question answering, it generates the answer; for translation, it generates the target language text. This unified interface enables few-shot learning, where the model learns new tasks from just a few examples in the prompt.</p>
+
+<p>Decoder-only models excel at generation tasks: text completion, dialogue, creative writing, code generation, and few-shot learning. They can also handle understanding tasks by framing them as generation problems, though this may be less parameter-efficient than encoder-only models. The causal attention means generation is inherently sequential—generating 512 tokens requires 512 forward passes—but techniques like KV caching make this practical. Modern large language models like GPT-3, GPT-4, and LLaMA all use decoder-only architectures due to their flexibility and scaling properties.</p>
+
+<h3>Encoder-Decoder Architecture (T5, BART)</h3>
+
+<p>Encoder-decoder models combine both architectural patterns: a bidirectional encoder processes the input, and a causal decoder generates the output while attending to the encoder through cross-attention. This is the original transformer architecture from "Attention is All You Need," and it remains optimal for sequence-to-sequence tasks where the input and output are distinct sequences. T5 (Text-to-Text Transfer Transformer) and BART (Bidirectional and Autoregressive Transformer) exemplify modern encoder-decoder models.</p>
+
+<p>The key advantage of encoder-decoder models is their explicit separation of understanding and generation. The encoder can use bidirectional attention to build rich representations of the input without worrying about causality, while the decoder can focus on generation while attending to relevant parts of the input through cross-attention. This separation is particularly valuable for tasks like translation, where the source and target languages have different structures, or summarization, where the output is much shorter than the input.</p>
+
+<p>Encoder-decoder models excel at sequence-to-sequence tasks: machine translation, summarization, question answering (when generating free-form answers), and text simplification. They require approximately twice the parameters of encoder-only or decoder-only models of similar capacity (due to having both encoder and decoder stacks), but this investment pays off for tasks requiring both deep understanding and flexible generation. The cross-attention mechanism provides interpretability, showing which source positions the model attends to when generating each target token.</p>
+
+<div class="example"><strong>Example:</strong>
+
+<p><strong>BERT-base (Encoder-only):</strong>
+<ul>
+<li>Layers: 12 encoder layers
+<li>Dimensions: $d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$
+<li>Parameters: 110M (embeddings + 12 encoder layers)
+<li>Attention: Bidirectional self-attention in all layers
+<li>Pre-training: Masked language modeling (predict masked tokens)
+<li>Inference: Single forward pass for sequence length $n$
+<li>Best for: Classification, NER, extractive QA
+</ul>
+
+<p><strong>GPT-2 (Decoder-only):</strong>
+<ul>
+<li>Layers: 12 decoder layers (but no cross-attention, so effectively simplified decoders)
+<li>Dimensions: $d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$
+<li>Parameters: 117M (embeddings + 12 decoder layers without cross-attention)
+<li>Attention: Causal self-attention in all layers
+<li>Pre-training: Autoregressive language modeling (predict next token)
+<li>Inference: $n$ forward passes for sequence length $n$ (autoregressive)
+<li>Best for: Text generation, few-shot learning, dialogue
+</ul>
+
+<p><strong>T5-base (Encoder-Decoder):</strong>
+<ul>
+<li>Layers: 12 encoder layers + 12 decoder layers
+<li>Dimensions: $d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$
+<li>Parameters: 220M (embeddings + 12 encoders + 12 decoders with cross-attention)
+<li>Attention: Bidirectional in encoder, causal + cross-attention in decoder
+<li>Pre-training: Span corruption (predict masked spans)
+<li>Inference: One encoder pass + $m$ decoder passes for output length $m$
+<li>Best for: Translation, summarization, generative QA
+</ul>
+
+<p><strong>Parameter breakdown comparison:</strong>
+<div class="equation">
+$$\begin{align}
+\text{BERT encoder layer:} \quad &7.1\text{M parameters} \\
+\text{GPT-2 decoder layer (no cross-attn):} \quad &7.1\text{M parameters} \\
+\text{T5 encoder layer:} \quad &7.1\text{M parameters} \\
+\text{T5 decoder layer (with cross-attn):} \quad &9.4\text{M parameters}
+\end{align}$$
+</div>
+
+<p>Notice that GPT-2's "decoder" layers are actually simpler than true decoder layers because they lack cross-attention. This makes GPT-2 and BERT have similar parameter counts despite different attention patterns.</p>
+
+<p><strong>Computational cost for sequence length 512:</strong>
+<div class="equation">
+$$\begin{align}
+\text{BERT (understanding):} \quad &1 \text{ forward pass} \times 12 \text{ layers} = 12 \text{ layer passes} \\
+\text{GPT-2 (generation):} \quad &512 \text{ forward passes} \times 12 \text{ layers} = 6{,}144 \text{ layer passes} \\
+\text{T5 (translation):} \quad &1 \text{ encoder pass} \times 12 + 512 \text{ decoder passes} \times 12 \\
+&= 12 + 6{,}144 = 6{,}156 \text{ layer passes}
+\end{align}$$
+</div>
+
+<p>This illustrates why generation is much slower than understanding: autoregressive decoding requires hundreds of sequential forward passes, while understanding requires just one parallel forward pass.
+</div>
+
+<h3>Choosing the Right Architecture</h3>
+
+<p>The choice between encoder-only, decoder-only, and encoder-decoder architectures depends on the task requirements and deployment constraints. For pure understanding tasks (classification, entity recognition, span-based QA), encoder-only models like BERT provide the best parameter efficiency and inference speed. For pure generation tasks (text completion, creative writing, code generation), decoder-only models like GPT provide simplicity and flexibility. For sequence-to-sequence tasks with distinct input and output (translation, summarization, generative QA), encoder-decoder models like T5 provide the best performance despite higher parameter counts.</p>
+
+<p>Recent trends favor decoder-only architectures for their versatility. Large language models like GPT-3, GPT-4, PaLM, and LLaMA all use decoder-only architectures, handling both understanding and generation through prompting. This unified architecture simplifies deployment (one model for all tasks) and enables few-shot learning (learning new tasks from examples in the prompt). However, for specific applications where understanding or sequence-to-sequence performance is critical, encoder-only or encoder-decoder models may still provide better parameter efficiency and performance.</p>
+
+<p>The computational trade-offs also matter for deployment. Encoder-only models are fastest for understanding tasks, requiring one forward pass regardless of sequence length. Decoder-only models are slower for generation due to autoregressive decoding, but KV caching makes this practical. Encoder-decoder models combine both costs: one encoder pass plus autoregressive decoder passes. For latency-sensitive applications, these computational differences can be decisive.</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise"><strong>Exercise:</strong> For transformer with $N=6$, $d_{\text{model}}=512$, $h=8$, $d_{ff}=2048$, $V=32000$:
+<ol>
+    <li>Calculate total parameters in encoder
+    <li>Calculate total parameters in decoder
+    <li>What percentage are in embeddings vs transformer layers?
+    <li>How does this change if vocabulary increases to 50,000?
+</ol>
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> Implement single transformer encoder layer in PyTorch. Test with batch size 16, sequence length 64, $d_{\text{model}}=256$. Verify output shape and gradient flow through residual connections.
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> Compare memory and computation for:
+<ol>
+    <li>Encoder processing sequence length 1024
+    <li>Decoder generating 1024 tokens autoregressively
+</ol>
+Why is decoding slower? How many forward passes required?
+</div>
+
+<div class="exercise"><strong>Exercise:</strong> Show that layer normalization is invariant to input scale: if $\vx' = c\vx$ for constant $c > 0$, then $\text{LayerNorm}(\vx') = \text{LayerNorm}(\vx)$ (ignoring learnable $\gamma, \beta$).
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter09_attention_variants.html">← Chapter 9: Attention Variants and Mechanisms</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter11_training_transformers.html">Chapter 11: Training Transformers →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
