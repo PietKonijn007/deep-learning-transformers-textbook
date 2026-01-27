@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -263,13 +293,14 @@ $$
 <p>Gradient descent iteratively moves parameters in the direction opposite to the gradient:</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Descent</div>
-\KwIn{Objective function $f(\vw)$, initial parameters $\vw^{(0)}$, learning rate $\eta$, iterations $T$}
-\KwOut{Optimized parameters $\vw^{(T)}$}
-\For{$t = 0$ \KwTo $T-1$}{
-    Compute gradient: $\mathbf{g}^{(t)} = \nabla f(\vw^{(t)})$ \\
-    Update parameters: $\vw^{(t+1)} = \vw^{(t)} - \eta \mathbf{g}^{(t)}$
-}
-\Return{$\vw^{(T)}$}
+<div class="algorithm-line"><strong>Input:</strong> Objective function $f(\vw)$, initial parameters $\vw^{(0)}$, learning rate $\eta$, iterations $T$</div>
+<div class="algorithm-line"><strong>Output:</strong> Optimized parameters $\vw^{(T)}$</div>
+<div class="algorithm-line"><strong>for</strong> $t = 0$ to $T-1$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Compute gradient: $\mathbf{g}^{(t)} = \nabla f(\vw^{(t)})$</div>
+<div class="algorithm-line">Update parameters: $\vw^{(t+1)} = \vw^{(t)} - \eta \mathbf{g}^{(t)}$</div>
+</div>
+<div class="algorithm-line"><strong>return</strong> $\vw^{(T)</div>
 </div>
 
 <div class="keypoint">
@@ -294,17 +325,16 @@ t=2:& \quad w^{(2)} = 1.92, \quad g^{(2)} = 3.84, \quad w^{(3)} = 1.92 - 0.1(3.8
 <p>For large datasets, computing the full gradient is expensive. SGD approximates the gradient using mini-batches.</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Stochastic Gradient Descent (SGD)</div>
-\KwIn{Dataset $\mathcal{D} = \{(\vx^{(i)}, y^{(i)})\}_{i=1}^N$, batch size $B$, learning rate $\eta$, epochs $E$}
-\KwOut{Optimized parameters $\vw$}
-Initialize $\vw$ randomly \\
-\For{epoch $e = 1$ \KwTo $E$}{
-    Shuffle dataset $\mathcal{D}$ \\
-    \For{each mini-batch $\mathcal{B} \subset \mathcal{D}$ of size $B$}{
-        Compute mini-batch gradient: $\mathbf{g} = \frac{1}{B} \sum_{(\vx, y) \in \mathcal{B}} \nabla_{\vw} L(\vw; \vx, y)$ \\
-        Update: $\vw \leftarrow \vw - \eta \mathbf{g}$
-    }
-}
-\Return{$\vw$}
+<div class="algorithm-line"><strong>Input:</strong> Dataset $\mathcal{D} = \{(\vx^{(i)}, y^{(i)})\}_{i=1}^N$, batch size $B$, learning rate $\eta$, epochs $E$</div>
+<div class="algorithm-line"><strong>Output:</strong> Optimized parameters $\vw$</div>
+<div class="algorithm-line">Initialize $\vw$ randomly</div>
+<div class="algorithm-line"><strong>for</strong> epoch $e = 1$ to $E$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Shuffle dataset $\mathcal{D}$</div>
+<div class="algorithm-line">Compute mini-batch gradient: $\mathbf{g} = \frac{1}{B} \sum_{(\vx, y) \in \mathcal{B}} \nabla_{\vw} L(\vw; \vx, y)$</div>
+<div class="algorithm-line">Update: $\vw \leftarrow \vw - \eta \mathbf{g}$</div>
+</div>
+<div class="algorithm-line"><strong>return</strong> $\vw$</div>
 </div>
 
 <div class="implementation">
@@ -338,13 +368,14 @@ for epoch in range(100):
 <p>Momentum accelerates SGD by accumulating a velocity vector:</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: SGD with Momentum</div>
-\KwIn{Learning rate $\eta$, momentum coefficient $\beta$ (typically 0.9)}
-Initialize velocity $\mathbf{v} = \mathbf{0}$ \\
-\For{each iteration}{
-    Compute gradient $\mathbf{g} = \nabla_{\vw} L(\vw)$ \\
-    Update velocity: $\mathbf{v} \leftarrow \beta \mathbf{v} + \mathbf{g}$ \\
-    Update parameters: $\vw \leftarrow \vw - \eta \mathbf{v}$
-}
+<div class="algorithm-line"><strong>Input:</strong> Learning rate $\eta$, momentum coefficient $\beta$ (typically 0.9)</div>
+<div class="algorithm-line">Initialize velocity $\mathbf{v} = \mathbf{0}$</div>
+<div class="algorithm-line"><strong>for</strong> each iteration <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Compute gradient $\mathbf{g} = \nabla_{\vw} L(\vw)$</div>
+<div class="algorithm-line">Update velocity: $\mathbf{v} \leftarrow \beta \mathbf{v} + \mathbf{g}$</div>
+<div class="algorithm-line">Update parameters: $\vw \leftarrow \vw - \eta \mathbf{v}$</div>
+</div>
 </div>
 
 <p>Momentum helps navigate ravines and accelerates convergence in relevant directions.</p>
@@ -354,17 +385,18 @@ Initialize velocity $\mathbf{v} = \mathbf{0}$ \\
 <p>Adam (Adaptive Moment Estimation) combines momentum with adaptive learning rates:</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Adam Optimizer</div>
-\KwIn{Learning rate $\alpha$ (default 0.001), $\beta_1$ = 0.9, $\beta_2$ = 0.999, $\epsilon$ = $10^{-8}$}
-Initialize $\mathbf{m}_0 = \mathbf{0}$ (first moment), $\mathbf{v}_0 = \mathbf{0}$ (second moment), $t = 0$ \\
-\While{not converged}{
-    $t \leftarrow t + 1$ \\
-    Compute gradient: $\mathbf{g}_t = \nabla_{\vw} L(\vw_{t-1})$ \\
-    Update biased first moment: $\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t$ \\
-    Update biased second moment: $\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2$ \\
-    Bias-corrected first moment: $\hat{\mathbf{m}}_t = \mathbf{m}_t / (1 - \beta_1^t)$ \\
-    Bias-corrected second moment: $\hat{\mathbf{v}}_t = \mathbf{v}_t / (1 - \beta_2^t)$ \\
-    Update parameters: $\vw_t = \vw_{t-1} - \alpha \hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$
-}
+<div class="algorithm-line"><strong>Input:</strong> Learning rate $\alpha$ (default 0.001), $\beta_1$ = 0.9, $\beta_2$ = 0.999, $\epsilon$ = $10^{-8}$</div>
+<div class="algorithm-line">Initialize $\mathbf{m}_0 = \mathbf{0}$ (first moment), $\mathbf{v}_0 = \mathbf{0}$ (second moment), $t = 0$</div>
+<div class="algorithm-line"><strong>while</strong> not converged <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$t \leftarrow t + 1$</div>
+<div class="algorithm-line">Compute gradient: $\mathbf{g}_t = \nabla_{\vw} L(\vw_{t-1})$</div>
+<div class="algorithm-line">Update biased first moment: $\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t$</div>
+<div class="algorithm-line">Update biased second moment: $\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2$</div>
+<div class="algorithm-line">Bias-corrected first moment: $\hat{\mathbf{m}}_t = \mathbf{m}_t / (1 - \beta_1^t)$</div>
+<div class="algorithm-line">Bias-corrected second moment: $\hat{\mathbf{v}}_t = \mathbf{v}_t / (1 - \beta_2^t)$</div>
+<div class="algorithm-line">Update parameters: $\vw_t = \vw_{t-1} - \alpha \hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$</div>
+</div>
 </div>
 
 <p>Adam is the most commonly used optimizer for training transformers and large language models.</p>
@@ -472,22 +504,22 @@ For a network with $n = 10^8$ parameters (100M) and scalar loss ($m = 1$):
 <p>Gradient checkpointing trades computation for memory by recomputing activations during the backward pass.</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Checkpointing</div>
-\KwIn{Network with $L$ layers, checkpoint every $k$ layers}
-\tcp{Forward Pass}
-\For{$\ell = 1$ \KwTo $L$}{
-    Compute $\vh^{(\ell)} = f^{(\ell)}(\vh^{(\ell-1)})$ \\
-    \If{$\ell \bmod k = 0$}{
-        Save $\vh^{(\ell)}$ to memory (checkpoint)
-    }
-}
-
-<p>\tcp{Backward Pass}
-\For{$\ell = L$ \KwTo $1$}{
-    \If{$\vh^{(\ell)}$ not in memory}{
-        Recompute forward from last checkpoint to layer $\ell$
-    }
-    Compute gradient $\nabla_{\vh^{(\ell-1)}} L$ using $\vh^{(\ell)}$
-}
+<div class="algorithm-line"><strong>Input:</strong> Network with $L$ layers, checkpoint every $k$ layers</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Forward Pass</span></div>
+<div class="algorithm-line"><strong>for</strong> $\ell = 1$ to $L$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Compute $\vh^{(\ell)} = f^{(\ell)}(\vh^{(\ell-1)})$</div>
+<div class="algorithm-line"><strong>if</strong> $\ell \bmod k = 0$ <strong>then</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Save $\vh^{(\ell)}$ to memory (checkpoint)</div>
+</div>
+</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Backward Pass</span></div>
+<div class="algorithm-line"><strong>for</strong> $\ell = L$ to $1$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Recompute forward from last checkpoint to layer $\ell$</div>
+</div>
+<div class="algorithm-line">Compute gradient $\nabla_{\vh^{(\ell-1)}} L$ using $\vh^{(\ell)}$</div>
 </div>
 
 <div class="example"><strong>Example:</strong> 
@@ -545,28 +577,29 @@ $$\begin{align}
 <h3>Backpropagation Algorithm</h3>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Backpropagation</div>
-\KwIn{Training example $(\vx, y)$, network with $L$ layers}
-\KwOut{Gradients $\{\nabla_{\mW^{(\ell)}} L, \nabla_{\vb^{(\ell)}} L\}_{\ell=1}^L$}
-
-<p>\tcp{Forward Pass}
-$\vh^{(0)} = \vx$ \\
-\For{$\ell = 1$ \KwTo $L$}{
-    $\vz^{(\ell)} = \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)}$ \\
-    $\vh^{(\ell)} = \sigma^{(\ell)}(\vz^{(\ell)})$
-}
-$\hat{y} = \vh^{(L)}$ \\
-Compute loss: $L = \text{Loss}(y, \hat{y})$</p>
-
-<p>\tcp{Backward Pass}
-$\boldsymbol{\delta}^{(L)} = \nabla_{\vh^{(L)}} L \odot \sigma'^{(L)}(\vz^{(L)})$ \\
-\For{$\ell = L$ \KwTo $1$}{
-    $\nabla_{\mW^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)} (\vh^{(\ell-1)})\transpose$ \\
-    $\nabla_{\vb^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)}$ \\
-    \If{$\ell > 1$}{
-        $\boldsymbol{\delta}^{(\ell-1)} = (\mW^{(\ell)})\transpose \boldsymbol{\delta}^{(\ell)} \odot \sigma'^{(\ell-1)}(\vz^{(\ell-1)})$
-    }
-}
-\Return{All gradients}
+<div class="algorithm-line"><strong>Input:</strong> Training example $(\vx, y)$, network with $L$ layers</div>
+<div class="algorithm-line"><strong>Output:</strong> Gradients $\{\nabla_{\mW^{(\ell)}} L, \nabla_{\vb^{(\ell)}} L\}_{\ell=1}^L$</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Forward Pass</span></div>
+<div class="algorithm-line">$\vh^{(0)} = \vx$</div>
+<div class="algorithm-line"><strong>for</strong> $\ell = 1$ to $L$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\vz^{(\ell)} = \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)}$</div>
+<div class="algorithm-line">$\vh^{(\ell)} = \sigma^{(\ell)}(\vz^{(\ell)})$</div>
+</div>
+<div class="algorithm-line">$\hat{y} = \vh^{(L)}$</div>
+<div class="algorithm-line">Compute loss: $L = \text{Loss}(y, \hat{y})$</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Backward Pass</span></div>
+<div class="algorithm-line">$\boldsymbol{\delta}^{(L)} = \nabla_{\vh^{(L)}} L \odot \sigma'^{(L)}(\vz^{(L)})$</div>
+<div class="algorithm-line"><strong>for</strong> $\ell = L$ to $1$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\nabla_{\mW^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)} (\vh^{(\ell-1)})\transpose$</div>
+<div class="algorithm-line">$\nabla_{\vb^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)}$</div>
+<div class="algorithm-line"><strong>if</strong> $\ell > 1$ <strong>then</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\boldsymbol{\delta}^{(\ell-1)} = (\mW^{(\ell)})\transpose \boldsymbol{\delta}^{(\ell)} \odot \sigma'^{(\ell-1)}(\vz^{(\ell-1)})$</div>
+</div>
+</div>
+<div class="algorithm-line"><strong>return</strong> All gradients</div>
 </div>
 
 <div class="keypoint">
@@ -579,7 +612,7 @@ Backpropagation computes gradients in $O(n)$ time where $n$ is the number of par
 For a neural network with $n$ parameters and $m$ operations, backpropagation computes all gradients in $O(m)$ time, where typically $m = O(n)$.
 </div>
 
-<p>\begin{proof}[Intuition]
+<div class="proof"><strong>Proof (Intuition):</strong> 
 Each operation in the forward pass corresponds to one gradient computation in the backward pass. The chain rule allows us to reuse intermediate gradients:
 <div class="equation">
 $$
@@ -588,7 +621,7 @@ $$
 </div>
 
 <p>We compute $\frac{\partial L}{\partial z_j}$ once and reuse it for all parameters that affect $z_j$. This sharing prevents the $O(n^2)$ cost of computing each gradient independently.
-\end{proof}</p>
+</div>
 
 <div class="example"><strong>Example:</strong> 
 For a network with $n = 10^8$ parameters:
@@ -619,16 +652,16 @@ Requires $n$ forward passes: $O(n \cdot m) = O(n^2)$ operations.</p>
 
 <p>\begin{table}[h]
 \centering
-\begin{tabular}{lcc}
-\toprule
-<strong>Optimizer</strong> & <strong>Memory per Parameter</strong> & <strong>Total Memory Factor</strong> \\
-\midrule
-SGD (no momentum) & 4 bytes (fp32) & 1× \\
-SGD with momentum & 8 bytes (param + velocity) & 2× \\
-Adam & 16 bytes (param + 2 moments) & 4× \\
-Adam (mixed precision) & 10 bytes (fp16 param + fp32 master + 2 moments) & 2.5× \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Optimizer</strong></th><th><strong>Memory per Parameter</strong></th><th><strong>Total Memory Factor</strong></th></tr>
+<tr><td>\midrule
+SGD (no momentum)</td><td>4 bytes (fp32)</td><td>1×</td></tr>
+<tr><td>SGD with momentum</td><td>8 bytes (param + velocity)</td><td>2×</td></tr>
+<tr><td>Adam</td><td>16 bytes (param + 2 moments)</td><td>4×</td></tr>
+<tr><td>Adam (mixed precision)</td><td>10 bytes (fp16 param + fp32 master + 2 moments)</td><td>2.5×</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Memory requirements per parameter for different optimizers}</p>
 
 <p>\end{table}</p>
@@ -726,17 +759,17 @@ Training BERT-base on 1M examples:
 
 <p>\begin{table}[h]
 \centering
-\begin{tabular}{cccc}
-\toprule
-<strong>Learning Rate</strong> & <strong>Steps to Converge</strong> & <strong>Wall Time</strong> & <strong>Final Loss</strong> \\
-\midrule
-$1 \times 10^{-5}$ & 100,000 & 12 hours & 1.85 \\
-$1 \times 10^{-4}$ & 30,000 & 3.6 hours & 1.82 \\
-$5 \times 10^{-4}$ & 15,000 & 1.8 hours & 1.81 \\
-$1 \times 10^{-3}$ & 20,000 & 2.4 hours & 1.83 \\
-$5 \times 10^{-3}$ & Diverges & - & - \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Learning Rate</strong></th><th><strong>Steps to Converge</strong></th><th><strong>Wall Time</strong></th><th><strong>Final Loss</strong></th></tr>
+<tr><td>\midrule
+$1 \times 10^{-5}$</td><td>100,000</td><td>12 hours</td><td>1.85</td></tr>
+<tr><td>$1 \times 10^{-4}$</td><td>30,000</td><td>3.6 hours</td><td>1.82</td></tr>
+<tr><td>$5 \times 10^{-4}$</td><td>15,000</td><td>1.8 hours</td><td>1.81</td></tr>
+<tr><td>$1 \times 10^{-3}$</td><td>20,000</td><td>2.4 hours</td><td>1.83</td></tr>
+<tr><td>$5 \times 10^{-3}$</td><td>Diverges</td><td>-</td><td>-</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Learning rate impact on BERT-base training}
 \end{table}</p>
 
@@ -761,17 +794,17 @@ Training BERT-base with different batch sizes:
 
 <p>\begin{table}[h]
 \centering
-\begin{tabular}{ccccc}
-\toprule
-<strong>Batch Size</strong> & <strong>Learning Rate</strong> & <strong>GPU Util.</strong> & <strong>Steps/sec</strong> & <strong>Samples/sec</strong> \\
-\midrule
-32 & $5 \times 10^{-4}$ & 45\% & 2.1 & 67 \\
-64 & $1 \times 10^{-3}$ & 68\% & 1.8 & 115 \\
-128 & $2 \times 10^{-3}$ & 85\% & 1.4 & 179 \\
-256 & $4 \times 10^{-3}$ & 92\% & 1.0 & 256 \\
-512 & $8 \times 10^{-3}$ & 95\% & 0.6 & 307 \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Batch Size</strong></th><th><strong>Learning Rate</strong></th><th><strong>GPU Util.</strong></th><th><strong>Steps/sec</strong></th><th><strong>Samples/sec</strong></th></tr>
+<tr><td>\midrule
+32</td><td>$5 \times 10^{-4}$</td><td>45\%</td><td>2.1</td><td>67</td></tr>
+<tr><td>64</td><td>$1 \times 10^{-3}$</td><td>68\%</td><td>1.8</td><td>115</td></tr>
+<tr><td>128</td><td>$2 \times 10^{-3}$</td><td>85\%</td><td>1.4</td><td>179</td></tr>
+<tr><td>256</td><td>$4 \times 10^{-3}$</td><td>92\%</td><td>1.0</td><td>256</td></tr>
+<tr><td>512</td><td>$8 \times 10^{-3}$</td><td>95\%</td><td>0.6</td><td>307</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Batch size impact on GPU utilization (A100 GPU)}
 \end{table}</p>
 
@@ -782,19 +815,19 @@ Training BERT-base with different batch sizes:
 
 <p>\begin{table}[h]
 \centering
-\begin{tabular}{lcc}
-\toprule
-<strong>Model</strong> & <strong>Batch Size</strong> & <strong>Peak Learning Rate</strong> \\
-\midrule
-BERT-base & 256 & $1 \times 10^{-4}$ \\
-BERT-large & 256 & $5 \times 10^{-5}$ \\
-GPT-2 (117M) & 512 & $2.5 \times 10^{-4}$ \\
-GPT-2 (1.5B) & 512 & $1.5 \times 10^{-4}$ \\
-GPT-3 (175B) & 3.2M & $6 \times 10^{-5}$ \\
-T5-base & 128 & $1 \times 10^{-4}$ \\
-T5-11B & 2048 & $1 \times 10^{-4}$ \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Model</strong></th><th><strong>Batch Size</strong></th><th><strong>Peak Learning Rate</strong></th></tr>
+<tr><td>\midrule
+BERT-base</td><td>256</td><td>$1 \times 10^{-4}$</td></tr>
+<tr><td>BERT-large</td><td>256</td><td>$5 \times 10^{-5}$</td></tr>
+<tr><td>GPT-2 (117M)</td><td>512</td><td>$2.5 \times 10^{-4}$</td></tr>
+<tr><td>GPT-2 (1.5B)</td><td>512</td><td>$1.5 \times 10^{-4}$</td></tr>
+<tr><td>GPT-3 (175B)</td><td>3.2M</td><td>$6 \times 10^{-5}$</td></tr>
+<tr><td>T5-base</td><td>128</td><td>$1 \times 10^{-4}$</td></tr>
+<tr><td>T5-11B</td><td>2048</td><td>$1 \times 10^{-4}$</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Typical learning rates for transformer models}</p>
 
 <p>\end{table}</p>
@@ -871,17 +904,18 @@ Computing gradients for BERT-base (110M parameters) on one training batch:
 <p>Mixed precision uses FP16 for computation and FP32 for accumulation, reducing memory and increasing speed.</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Mixed Precision Training</div>
-\KwIn{Model parameters $\vw$ (FP32 master copy)}
-\For{each training step}{
-    Convert $\vw$ to FP16: $\vw_{16} = \text{FP16}(\vw)$ \\
-    Forward pass in FP16: $\hat{y} = f(\vx; \vw_{16})$ \\
-    Compute loss: $L = \text{Loss}(y, \hat{y})$ \\
-    Scale loss: $L_{\text{scaled}} = s \cdot L$ (prevent underflow) \\
-    Backward pass in FP16: $\mathbf{g}_{16} = \nabla_{\vw_{16}} L_{\text{scaled}}$ \\
-    Unscale gradients: $\mathbf{g}_{16} = \mathbf{g}_{16} / s$ \\
-    Convert to FP32: $\mathbf{g} = \text{FP32}(\mathbf{g}_{16})$ \\
-    Update FP32 master: $\vw \leftarrow \vw - \eta \mathbf{g}$
-}
+<div class="algorithm-line"><strong>Input:</strong> Model parameters $\vw$ (FP32 master copy)</div>
+<div class="algorithm-line"><strong>for</strong> each training step <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Convert $\vw$ to FP16: $\vw_{16} = \text{FP16}(\vw)$</div>
+<div class="algorithm-line">Forward pass in FP16: $\hat{y} = f(\vx; \vw_{16})$</div>
+<div class="algorithm-line">Compute loss: $L = \text{Loss}(y, \hat{y})$</div>
+<div class="algorithm-line">Scale loss: $L_{\text{scaled}} = s \cdot L$ (prevent underflow)</div>
+<div class="algorithm-line">Backward pass in FP16: $\mathbf{g}_{16} = \nabla_{\vw_{16}} L_{\text{scaled}}$</div>
+<div class="algorithm-line">Unscale gradients: $\mathbf{g}_{16} = \mathbf{g}_{16} / s$</div>
+<div class="algorithm-line">Convert to FP32: $\mathbf{g} = \text{FP32}(\mathbf{g}_{16})$</div>
+<div class="algorithm-line">Update FP32 master: $\vw \leftarrow \vw - \eta \mathbf{g}$</div>
+</div>
 </div>
 
 <div class="example"><strong>Example:</strong> 
@@ -911,17 +945,18 @@ Training BERT-base on A100 GPU:
 <p>Gradient accumulation simulates large batch sizes by accumulating gradients over multiple forward-backward passes.</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Accumulation</div>
-\KwIn{Desired batch size $B$, physical batch size $b$, accumulation steps $k = B/b$}
-Initialize gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$ \\
-\For{$i = 1$ \KwTo $k$}{
-    Sample mini-batch $\mathcal{B}_i$ of size $b$ \\
-    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
-    Backward pass: $\mathbf{g}_i = \nabla L_i$ \\
-    Accumulate: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} + \mathbf{g}_i$
-}
-Average: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} / k$ \\
-Update parameters: $\vw \leftarrow \vw - \eta \mathbf{g}_{\text{acc}}$ \\
-Clear gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$
+<div class="algorithm-line"><strong>Input:</strong> Desired batch size $B$, physical batch size $b$, accumulation steps $k = B/b$</div>
+<div class="algorithm-line">Initialize gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$</div>
+<div class="algorithm-line"><strong>for</strong> $i = 1$ to $k$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Sample mini-batch $\mathcal{B}_i$ of size $b$</div>
+<div class="algorithm-line">Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$</div>
+<div class="algorithm-line">Backward pass: $\mathbf{g}_i = \nabla L_i$</div>
+<div class="algorithm-line">Accumulate: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} + \mathbf{g}_i$</div>
+</div>
+<div class="algorithm-line">Average: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} / k$</div>
+<div class="algorithm-line">Update parameters: $\vw \leftarrow \vw - \eta \mathbf{g}_{\text{acc}}$</div>
+<div class="algorithm-line">Clear gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$</div>
 </div>
 
 <div class="example"><strong>Example:</strong> 
@@ -951,16 +986,18 @@ Training GPT-2 (1.5B parameters) on single A100 GPU (80 GB):
 <p>For multi-GPU training, gradients must be synchronized across devices.</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Data Parallel Training with Gradient Synchronization</div>
-\KwIn{$N$ GPUs, global batch size $B$, local batch size $b = B/N$}
-\For{each GPU $i = 1, \ldots, N$ in parallel}{
-    Sample local mini-batch $\mathcal{B}_i$ of size $b$ \\
-    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
-    Backward pass: $\mathbf{g}_i = \nabla L_i$
-}
-All-reduce gradients: $\mathbf{g} = \frac{1}{N} \sum_{i=1}^N \mathbf{g}_i$ \\
-\For{each GPU $i = 1, \ldots, N$ in parallel}{
-    Update local parameters: $\vw_i \leftarrow \vw_i - \eta \mathbf{g}$
-}
+<div class="algorithm-line"><strong>Input:</strong> $N$ GPUs, global batch size $B$, local batch size $b = B/N$</div>
+<div class="algorithm-line"><strong>for</strong> each GPU $i = 1, \ldots, N$ in parallel <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Sample local mini-batch $\mathcal{B}_i$ of size $b$</div>
+<div class="algorithm-line">Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$</div>
+<div class="algorithm-line">Backward pass: $\mathbf{g}_i = \nabla L_i$</div>
+</div>
+<div class="algorithm-line">All-reduce gradients: $\mathbf{g} = \frac{1}{N} \sum_{i=1}^N \mathbf{g}_i$</div>
+<div class="algorithm-line"><strong>for</strong> each GPU $i = 1, \ldots, N$ in parallel <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Update local parameters: $\vw_i \leftarrow \vw_i - \eta \mathbf{g}$</div>
+</div>
 </div>
 
 <div class="example"><strong>Example:</strong> 
@@ -991,16 +1028,13 @@ For large models, gradient synchronization can become a bottleneck. Techniques l
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Compute the gradient of $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA \in \R^{n \times n}$ is symmetric, $\vw, \vb \in \R^n$, and $c \in \R$.
+<div class="exercise"><strong>Exercise:</strong> Compute the gradient of $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA \in \R^{n \times n}$ is symmetric, $\vw, \vb \in \R^n$, and $c \in \R$.
 </div>
 
-<p>\begin{exercise}
-Implement backpropagation for a 2-layer network with ReLU activation. Given input $\vx = [1.0, 0.5]\transpose$, weights $\mW^{(1)} \in \R^{3 \times 2}$, $\mW^{(2)} \in \R^{1 \times 3}$, and target $y = 2.0$, compute all gradients.
+<div class="exercise"><strong>Exercise:</strong> Implement backpropagation for a 2-layer network with ReLU activation. Given input $\vx = [1.0, 0.5]\transpose$, weights $\mW^{(1)} \in \R^{3 \times 2}$, $\mW^{(2)} \in \R^{1 \times 3}$, and target $y = 2.0$, compute all gradients.
 </div>
 
-<p>\begin{exercise}
-For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
+<div class="exercise"><strong>Exercise:</strong> For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
 <ol>
     <li>Why is bias correction necessary?
     <li>What are the effective learning rates after steps $t = 1, 10, 100, 1000$?
@@ -1008,8 +1042,7 @@ For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
 </ol>
 </div>
 
-<p>\begin{exercise}
-A transformer is trained with learning rate warmup over 4000 steps, then inverse square root decay. If $d_{\text{model}} = 512$:
+<div class="exercise"><strong>Exercise:</strong> A transformer is trained with learning rate warmup over 4000 steps, then inverse square root decay. If $d_{\text{model}} = 512$:
 <ol>
     <li>Plot the learning rate schedule for 100,000 steps
     <li>What is the learning rate at step 1, 4000, and 10,000?
@@ -1017,8 +1050,7 @@ A transformer is trained with learning rate warmup over 4000 steps, then inverse
 </ol>
 </div>
 
-<p>\begin{exercise}
-Calculate the memory requirements for training GPT-2 (1.5B parameters) with Adam optimizer:
+<div class="exercise"><strong>Exercise:</strong> Calculate the memory requirements for training GPT-2 (1.5B parameters) with Adam optimizer:
 <ol>
     <li>Model parameters in FP16
     <li>Optimizer states (FP32 master copy + 2 moments)
@@ -1028,8 +1060,7 @@ Calculate the memory requirements for training GPT-2 (1.5B parameters) with Adam
 </ol>
 </div>
 
-<p>\begin{exercise}
-For BERT-base processing sequence length 512 with batch size 64:
+<div class="exercise"><strong>Exercise:</strong> For BERT-base processing sequence length 512 with batch size 64:
 <ol>
     <li>Calculate total FLOPs for one training step (forward + backward)
     <li>Estimate time per step on A100 GPU (312 TFLOPS)
@@ -1038,8 +1069,7 @@ For BERT-base processing sequence length 512 with batch size 64:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Compare gradient computation methods for a network with $10^7$ parameters:
+<div class="exercise"><strong>Exercise:</strong> Compare gradient computation methods for a network with $10^7$ parameters:
 <ol>
     <li>How many forward passes does finite differences require?
     <li>How many passes does backpropagation require?
@@ -1048,8 +1078,7 @@ Compare gradient computation methods for a network with $10^7$ parameters:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Implement gradient checkpointing for a 24-layer transformer:
+<div class="exercise"><strong>Exercise:</strong> Implement gradient checkpointing for a 24-layer transformer:
 <ol>
     <li>Without checkpointing, how much activation memory is needed?
     <li>With checkpointing every 6 layers, what is the memory reduction?
@@ -1058,8 +1087,7 @@ Implement gradient checkpointing for a 24-layer transformer:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Analyze distributed training efficiency for 8 GPUs:
+<div class="exercise"><strong>Exercise:</strong> Analyze distributed training efficiency for 8 GPUs:
 <ol>
     <li>If gradient all-reduce takes 15 ms and computation takes 100 ms, what is the scaling efficiency?
     <li>How does batch size affect communication overhead?

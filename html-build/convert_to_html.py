@@ -39,6 +39,12 @@ CHAPTERS = [
 
 def read_latex_file(filepath):
     """Read LaTeX file content"""
+    # Handle both relative and absolute paths
+    if not filepath.exists():
+        # Try relative to project root
+        project_root = Path(__file__).parent.parent
+        filepath = project_root / filepath
+    
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             return f.read()
@@ -62,18 +68,38 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\subsection\*?\{([^}]+)\}', r'<h3>\1</h3>', html)
     html = re.sub(r'\\subsubsection\*?\{([^}]+)\}', r'<h4>\1</h4>', html)
     
-    # Convert environments
-    html = re.sub(r'\\begin\{definition\}.*?\\label\{[^}]+\}', r'<div class="definition"><strong>Definition:</strong> ', html, flags=re.DOTALL)
+    # Convert environments - handle both with and without labels
+    html = re.sub(r'\\begin\{definition\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="definition"><strong>Definition:</strong> ', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{definition\}', r'</div>', html)
     
-    html = re.sub(r'\\begin\{theorem\}.*?\\label\{[^}]+\}', r'<div class="theorem"><strong>Theorem:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\begin\{theorem\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="theorem"><strong>Theorem:</strong> ', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{theorem\}', r'</div>', html)
     
-    html = re.sub(r'\\begin\{example\}.*?\\label\{[^}]+\}', r'<div class="example"><strong>Example:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\begin\{lemma\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="lemma"><strong>Lemma:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\end\{lemma\}', r'</div>', html)
+    
+    html = re.sub(r'\\begin\{corollary\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="corollary"><strong>Corollary:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\end\{corollary\}', r'</div>', html)
+    
+    html = re.sub(r'\\begin\{proposition\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="proposition"><strong>Proposition:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\end\{proposition\}', r'</div>', html)
+    
+    html = re.sub(r'\\begin\{example\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="example"><strong>Example:</strong> ', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{example\}', r'</div>', html)
     
-    html = re.sub(r'\\begin\{exercise\}.*?\\label\{[^}]+\}', r'<div class="exercise"><strong>Exercise:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\begin\{exercise\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="exercise"><strong>Exercise:</strong> ', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{exercise\}', r'</div>', html)
+    
+    # Convert proof environment
+    def format_proof(match):
+        optional_title = match.group(2) if match.group(2) else ''
+        if optional_title:
+            return f'<div class="proof"><strong>Proof ({optional_title}):</strong> '
+        else:
+            return '<div class="proof"><strong>Proof:</strong> '
+    
+    html = re.sub(r'\\begin\{proof\}(\[([^\]]+)\])?', format_proof, html, flags=re.DOTALL)
+    html = re.sub(r'\\end\{proof\}', r'</div>', html)
     
     html = re.sub(r'\\begin\{keypoint\}', r'<div class="keypoint">', html)
     html = re.sub(r'\\end\{keypoint\}', r'</div>', html)
@@ -91,10 +117,92 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\end\{enumerate\}', r'</ol>', html)
     html = re.sub(r'\\item\s+', r'<li>', html)
     
-    # Convert text formatting
-    html = re.sub(r'\\textbf\{([^}]+)\}', r'<strong>\1</strong>', html)
-    html = re.sub(r'\\textit\{([^}]+)\}', r'<em>\1</em>', html)
-    html = re.sub(r'\\texttt\{([^}]+)\}', r'<code>\1</code>', html)
+    # Convert center environment
+    html = re.sub(r'\\begin\{center\}', r'<div style="text-align: center;">', html)
+    html = re.sub(r'\\end\{center\}', r'</div>', html)
+    
+    # Convert tables - basic conversion
+    def convert_table(match):
+        table_content = match.group(1)
+        # Remove \hline commands first
+        table_content = re.sub(r'\\hline\s*', '', table_content)
+        # Split by \\ for rows
+        rows = [r.strip() for r in table_content.split('\\\\') if r.strip()]
+        
+        html_rows = []
+        first_data_row = True
+        
+        for i, row in enumerate(rows):
+            if not row:
+                continue
+            
+            # Split by &
+            cells = [c.strip() for c in row.split('&')]
+            
+            # First row is typically the header
+            if i == 0:
+                html_rows.append('<tr>' + ''.join(f'<th>{cell}</th>' for cell in cells) + '</tr>')
+            else:
+                html_rows.append('<tr>' + ''.join(f'<td>{cell}</td>' for cell in cells) + '</tr>')
+        
+        return '<table>\n' + '\n'.join(html_rows) + '\n</table>'
+    
+    html = re.sub(r'\\begin\{tabular\}\{[^}]+\}(.*?)\\end\{tabular\}', convert_table, html, flags=re.DOTALL)
+    
+    # Convert text formatting - handle nested braces properly
+    def convert_textbf(match):
+        content = match.group(1)
+        return f'<strong>{content}</strong>'
+    
+    def convert_textit(match):
+        content = match.group(1)
+        return f'<em>{content}</em>'
+    
+    def convert_texttt(match):
+        content = match.group(1)
+        return f'<code>{content}</code>'
+    
+    # Match \textbf{...} with proper brace counting
+    def find_and_replace_command(html, command, converter):
+        result = []
+        i = 0
+        pattern = f'\\{command}{{'
+        
+        while i < len(html):
+            pos = html.find(pattern, i)
+            if pos == -1:
+                result.append(html[i:])
+                break
+            
+            # Add text before the command
+            result.append(html[i:pos])
+            
+            # Find the matching closing brace
+            brace_count = 1
+            j = pos + len(pattern)
+            start = j
+            
+            while j < len(html) and brace_count > 0:
+                if html[j] == '{':
+                    brace_count += 1
+                elif html[j] == '}':
+                    brace_count -= 1
+                j += 1
+            
+            if brace_count == 0:
+                content = html[start:j-1]
+                result.append(converter(content))
+                i = j
+            else:
+                # Unmatched braces, keep original
+                result.append(pattern)
+                i = pos + len(pattern)
+        
+        return ''.join(result)
+    
+    html = find_and_replace_command(html, 'textbf', lambda c: f'<strong>{c}</strong>')
+    html = find_and_replace_command(html, 'textit', lambda c: f'<em>{c}</em>')
+    html = find_and_replace_command(html, 'texttt', lambda c: f'<code>{c}</code>')
     
     # Convert equations (preserve LaTeX for MathJax)
     # Display equations - use $$ delimiters which MathJax handles better
@@ -148,7 +256,10 @@ def convert_latex_to_html(latex_content):
 
 def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_chapter=None):
     """Create HTML file for a chapter"""
-    latex_path = Path(f"../chapters/{chapter_file}.tex")
+    # Use absolute path from project root
+    project_root = Path(__file__).parent.parent
+    latex_path = project_root / "chapters" / f"{chapter_file}.tex"
+    
     latex_content = read_latex_file(latex_path)
     
     if not latex_content:
@@ -194,28 +305,58 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
                 N: '{{\\\\mathbb{{N}}}}',
                 Z: '{{\\\\mathbb{{Z}}}}',
                 C: '{{\\\\mathbb{{C}}}}',
+                va: '{{\\\\mathbf{{a}}}}',
+                vb: '{{\\\\mathbf{{b}}}}',
+                vc: '{{\\\\mathbf{{c}}}}',
+                vd: '{{\\\\mathbf{{d}}}}',
+                ve: '{{\\\\mathbf{{e}}}}',
+                vf: '{{\\\\mathbf{{f}}}}',
+                vg: '{{\\\\mathbf{{g}}}}',
+                vh: '{{\\\\mathbf{{h}}}}',
+                vi: '{{\\\\mathbf{{i}}}}',
+                vj: '{{\\\\mathbf{{j}}}}',
+                vk: '{{\\\\mathbf{{k}}}}',
+                vl: '{{\\\\mathbf{{l}}}}',
+                vm: '{{\\\\mathbf{{m}}}}',
+                vn: '{{\\\\mathbf{{n}}}}',
+                vo: '{{\\\\mathbf{{o}}}}',
+                vp: '{{\\\\mathbf{{p}}}}',
+                vq: '{{\\\\mathbf{{q}}}}',
+                vr: '{{\\\\mathbf{{r}}}}',
+                vs: '{{\\\\mathbf{{s}}}}',
+                vt: '{{\\\\mathbf{{t}}}}',
+                vu: '{{\\\\mathbf{{u}}}}',
+                vv: '{{\\\\mathbf{{v}}}}',
+                vw: '{{\\\\mathbf{{w}}}}',
                 vx: '{{\\\\mathbf{{x}}}}',
                 vy: '{{\\\\mathbf{{y}}}}',
                 vz: '{{\\\\mathbf{{z}}}}',
-                vh: '{{\\\\mathbf{{h}}}}',
-                vw: '{{\\\\mathbf{{w}}}}',
-                vb: '{{\\\\mathbf{{b}}}}',
-                vq: '{{\\\\mathbf{{q}}}}',
-                vk: '{{\\\\mathbf{{k}}}}',
-                vv: '{{\\\\mathbf{{v}}}}',
                 mA: '{{\\\\mathbf{{A}}}}',
                 mB: '{{\\\\mathbf{{B}}}}',
                 mC: '{{\\\\mathbf{{C}}}}',
+                mD: '{{\\\\mathbf{{D}}}}',
+                mE: '{{\\\\mathbf{{E}}}}',
+                mF: '{{\\\\mathbf{{F}}}}',
+                mG: '{{\\\\mathbf{{G}}}}',
+                mH: '{{\\\\mathbf{{H}}}}',
+                mI: '{{\\\\mathbf{{I}}}}',
+                mJ: '{{\\\\mathbf{{J}}}}',
+                mK: '{{\\\\mathbf{{K}}}}',
+                mL: '{{\\\\mathbf{{L}}}}',
+                mM: '{{\\\\mathbf{{M}}}}',
+                mN: '{{\\\\mathbf{{N}}}}',
+                mO: '{{\\\\mathbf{{O}}}}',
+                mP: '{{\\\\mathbf{{P}}}}',
+                mQ: '{{\\\\mathbf{{Q}}}}',
+                mR: '{{\\\\mathbf{{R}}}}',
+                mS: '{{\\\\mathbf{{S}}}}',
+                mT: '{{\\\\mathbf{{T}}}}',
+                mU: '{{\\\\mathbf{{U}}}}',
+                mV: '{{\\\\mathbf{{V}}}}',
                 mW: '{{\\\\mathbf{{W}}}}',
                 mX: '{{\\\\mathbf{{X}}}}',
                 mY: '{{\\\\mathbf{{Y}}}}',
-                mQ: '{{\\\\mathbf{{Q}}}}',
-                mK: '{{\\\\mathbf{{K}}}}',
-                mV: '{{\\\\mathbf{{V}}}}',
-                mH: '{{\\\\mathbf{{H}}}}',
-                mI: '{{\\\\mathbf{{I}}}}',
-                mU: '{{\\\\mathbf{{U}}}}',
-                mM: '{{\\\\mathbf{{M}}}}',
+                mZ: '{{\\\\mathbf{{Z}}}}',
                 transpose: '{{^\\\\top}}',
                 norm: ['\\\\left\\\\|#1\\\\right\\\\|', 1],
                 abs: ['\\\\left|#1\\\\right|', 1]
@@ -385,6 +526,133 @@ def create_index_html():
     
     print(f"Created: {output_path}")
 
+def convert_algorithm_content(content):
+    """Convert LaTeX algorithm pseudocode to properly formatted HTML."""
+    
+    # Split into lines
+    lines = content.split('\n')
+    result = []
+    indent_level = 0
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Handle \KwIn
+        if line.startswith('\\KwIn{'):
+            match = re.match(r'\\KwIn\{(.+)\}', line)
+            if match:
+                result.append(f'<div class="algorithm-line"><strong>Input:</strong> {match.group(1)}</div>')
+                continue
+        
+        # Handle \KwOut
+        if line.startswith('\\KwOut{'):
+            match = re.match(r'\\KwOut\{(.+)\}', line)
+            if match:
+                result.append(f'<div class="algorithm-line"><strong>Output:</strong> {match.group(1)}</div>')
+                continue
+        
+        # Handle \For{...}{ - check for this pattern anywhere in the line
+        if '\\For{' in line:
+            match = re.search(r'\\For\{([^}]+)\}\{', line)
+            if match:
+                condition = match.group(1)
+                # Replace \KwTo with 'to'
+                condition = condition.replace('\\KwTo', 'to')
+                result.append(f'<div class="algorithm-line"><strong>for</strong> {condition} <strong>do</strong></div>')
+                result.append('<div class="algorithm-indent">')
+                indent_level += 1
+                continue
+        
+        # Handle \While{...}{
+        if '\\While{' in line:
+            match = re.search(r'\\While\{([^}]+)\}\{', line)
+            if match:
+                condition = match.group(1)
+                result.append(f'<div class="algorithm-line"><strong>while</strong> {condition} <strong>do</strong></div>')
+                result.append('<div class="algorithm-indent">')
+                indent_level += 1
+                continue
+        
+        # Handle \If{...}{
+        if '\\If{' in line:
+            match = re.search(r'\\If\{([^}]+)\}\{', line)
+            if match:
+                condition = match.group(1)
+                result.append(f'<div class="algorithm-line"><strong>if</strong> {condition} <strong>then</strong></div>')
+                result.append('<div class="algorithm-indent">')
+                indent_level += 1
+                continue
+        
+        # Handle closing braces
+        if line == '}':
+            if indent_level > 0:
+                result.append('</div>')
+                indent_level -= 1
+            continue
+        
+        # Handle \Return{...}
+        if '\\Return{' in line:
+            match = re.search(r'\\Return\{([^}]+)\}', line)
+            if match:
+                result.append(f'<div class="algorithm-line"><strong>return</strong> {match.group(1)}</div>')
+                continue
+        
+        # Handle regular lines with \\ at the end
+        if line.endswith('\\\\'):
+            line = line[:-2].strip()
+        
+        # Handle comments
+        if '\\tcp{' in line:
+            match = re.search(r'\\tcp\{([^}]+)\}', line)
+            if match:
+                result.append(f'<div class="algorithm-line"><span class="algorithm-comment">// {match.group(1)}</span></div>')
+                continue
+        
+        # Regular line - skip if it's just a leftover LaTeX command
+        if line and not line.startswith('\\'):
+            result.append(f'<div class="algorithm-line">{line}</div>')
+    
+    # Close any remaining indent blocks
+    while indent_level > 0:
+        result.append('</div>')
+        indent_level -= 1
+    
+    return '\n'.join(result)
+
+def fix_algorithms():
+    """Fix algorithm formatting in all generated HTML files."""
+    output_dir = Path("output/chapters")
+    
+    for filepath in sorted(output_dir.glob("chapter*.html")):
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        original_content = content
+        
+        # Find all algorithm blocks
+        pattern = r'(<div class="algorithm"><div class="algorithm-title">)([^<]+)(</div>)\s*(.*?)\s*(</div>)'
+        
+        def replace_algorithm(match):
+            opening = match.group(1)
+            title = match.group(2)
+            title_close = match.group(3)
+            body = match.group(4)
+            closing = match.group(5)
+            
+            # Convert the body
+            converted_body = convert_algorithm_content(body)
+            
+            return f'{opening}{title}{title_close}\n{converted_body}\n{closing}'
+        
+        content = re.sub(pattern, replace_algorithm, content, flags=re.DOTALL)
+        
+        if content != original_content:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"  ✓ Fixed algorithms in {filepath.name}")
+
 def main():
     """Main conversion function"""
     print("Converting LaTeX textbook to HTML...")
@@ -394,11 +662,31 @@ def main():
     Path("output/css").mkdir(parents=True, exist_ok=True)
     Path("output/js").mkdir(parents=True, exist_ok=True)
     
-    # Copy CSS and JS
+    # Copy CSS and JS - use absolute paths from project root
     import shutil
-    shutil.copy("css/style.css", "output/css/style.css")
-    shutil.copy("js/main.js", "output/js/main.js")
-    print("Copied CSS and JS files")
+    project_root = Path(__file__).parent.parent
+    
+    # Copy the correct CSS file
+    source_css = project_root / "docs" / "css" / "style.css"
+    dest_css = Path("output/css/style.css")
+    
+    if source_css.exists():
+        shutil.copy(source_css, dest_css)
+        print(f"✓ Copied CSS from {source_css}")
+    else:
+        print(f"⚠ Warning: CSS file not found at {source_css}")
+    
+    # Copy JS if it exists
+    source_js = project_root / "docs" / "js" / "main.js"
+    dest_js = Path("output/js/main.js")
+    
+    if source_js.exists():
+        shutil.copy(source_js, dest_js)
+        print(f"✓ Copied JS from {source_js}")
+    else:
+        # Create a minimal main.js if it doesn't exist
+        dest_js.write_text("// Main JavaScript file\nconsole.log('Deep Learning Textbook loaded');")
+        print(f"✓ Created minimal JS file")
     
     # Convert each chapter
     for i, (chapter_file, chapter_title) in enumerate(CHAPTERS):
@@ -408,6 +696,10 @@ def main():
     
     # Create index
     create_index_html()
+    
+    # Fix algorithm formatting
+    print("\nFixing algorithm formatting...")
+    fix_algorithms()
     
     print("\n✅ Conversion complete!")
     print("📂 Output directory: output/")

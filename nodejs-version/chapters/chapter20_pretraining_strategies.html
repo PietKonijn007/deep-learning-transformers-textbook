@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -228,35 +258,31 @@ $$
 <h3>Data Filtering and Cleaning</h3>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Data Filtering Pipeline</div>
-
-<p><strong>Step 1: Quality Filtering</strong>
-<ul>
-    <li>Remove duplicates (exact and near-duplicates)
-    <li>Filter by language (fastText classifier)
-    <li>Remove toxic/harmful content
-    <li>Filter low-quality (perplexity-based, classifier)
-</ul>
-
-<p><strong>Step 2: Deduplication</strong>
-<ul>
-    <li>Exact match: Hash-based
-    <li>Near-duplicates: MinHash LSH
-    <li>Document-level and paragraph-level
-</ul>
-
-<p><strong>Step 3: Privacy</strong>
-<ul>
-    <li>Remove PII (emails, phone numbers, addresses)
-    <li>Filter memorized content
-    <li>Redact sensitive information
-</ul>
-
-<p><strong>Step 4: Formatting</strong>
-<ul>
-    <li>Unicode normalization
-    <li>Remove excessive whitespace
-    <li>Clean HTML/markup artifacts
-</ul>
+<div class="algorithm-line"><p><strong>Step 1: Quality Filtering</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Remove duplicates (exact and near-duplicates)</div>
+<div class="algorithm-line"><li>Filter by language (fastText classifier)</div>
+<div class="algorithm-line"><li>Remove toxic/harmful content</div>
+<div class="algorithm-line"><li>Filter low-quality (perplexity-based, classifier)</div>
+<div class="algorithm-line"></ul></div>
+<div class="algorithm-line"><p><strong>Step 2: Deduplication</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Exact match: Hash-based</div>
+<div class="algorithm-line"><li>Near-duplicates: MinHash LSH</div>
+<div class="algorithm-line"><li>Document-level and paragraph-level</div>
+<div class="algorithm-line"></ul></div>
+<div class="algorithm-line"><p><strong>Step 3: Privacy</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Remove PII (emails, phone numbers, addresses)</div>
+<div class="algorithm-line"><li>Filter memorized content</div>
+<div class="algorithm-line"><li>Redact sensitive information</div>
+<div class="algorithm-line"></ul></div>
+<div class="algorithm-line"><p><strong>Step 4: Formatting</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Unicode normalization</div>
+<div class="algorithm-line"><li>Remove excessive whitespace</div>
+<div class="algorithm-line"><li>Clean HTML/markup artifacts</div>
+<div class="algorithm-line"></ul></div>
 </div>
 
 <div class="example"><strong>Example:</strong> 
@@ -264,17 +290,17 @@ Total: ~570GB, 300B tokens
 
 <p>\begin{table}[htbp]
 \centering
-\begin{tabular}{lll}
-\toprule
-<strong>Dataset</strong> & <strong>Weight</strong> & <strong>Epochs</strong> \\
-\midrule
-Common Crawl (filtered) & 60\% & 0.44 \\
-WebText2 & 22\% & 2.9 \\
-Books1 & 8\% & 1.9 \\
-Books2 & 8\% & 1.9 \\
-Wikipedia & 3\% & 3.4 \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Dataset</strong></th><th><strong>Weight</strong></th><th><strong>Epochs</strong></th></tr>
+<tr><td>\midrule
+Common Crawl (filtered)</td><td>60\%</td><td>0.44</td></tr>
+<tr><td>WebText2</td><td>22\%</td><td>2.9</td></tr>
+<tr><td>Books1</td><td>8\%</td><td>1.9</td></tr>
+<tr><td>Books2</td><td>8\%</td><td>1.9</td></tr>
+<tr><td>Wikipedia</td><td>3\%</td><td>3.4</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \end{table}</p>
 
 <p>Higher-quality sources sampled more frequently (multiple epochs).
@@ -466,12 +492,9 @@ Train on progressively harder examples:
 <p><strong>Continue pre-training on domain-specific data:</strong></p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Domain Adaptation</div>
-
-<p><strong>Step 1:</strong> Pre-train on general corpus (e.g., Common Crawl)</p>
-
-<p><strong>Step 2:</strong> Continue pre-training on domain data (e.g., biomedical)</p>
-
-<p><strong>Step 3:</strong> Fine-tune on task
+<div class="algorithm-line"><p><strong>Step 1:</strong> Pre-train on general corpus (e.g., Common Crawl)</p></div>
+<div class="algorithm-line"><p><strong>Step 2:</strong> Continue pre-training on domain data (e.g., biomedical)</p></div>
+<div class="algorithm-line"><p><strong>Step 3:</strong> Fine-tune on task</div>
 </div>
 
 <p><strong>Examples:</strong>
@@ -769,8 +792,7 @@ $$
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Compare pre-training objectives:
+<div class="exercise"><strong>Exercise:</strong> Compare pre-training objectives:
 <ol>
     <li>Train BERT-tiny with: (a) MLM, (b) CLM, (c) Span corruption
     <li>Evaluate on GLUE tasks
@@ -778,8 +800,7 @@ Compare pre-training objectives:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Implement data filtering pipeline:
+<div class="exercise"><strong>Exercise:</strong> Implement data filtering pipeline:
 <ol>
     <li>Download 10,000 documents from Common Crawl
     <li>Remove duplicates (exact and near-duplicate)
@@ -789,8 +810,7 @@ Implement data filtering pipeline:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Implement LoRA:
+<div class="exercise"><strong>Exercise:</strong> Implement LoRA:
 <ol>
     <li>Load pre-trained GPT-2
     <li>Add LoRA layers with $r=8$ to attention
@@ -800,8 +820,7 @@ Implement LoRA:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Analyze transfer learning:
+<div class="exercise"><strong>Exercise:</strong> Analyze transfer learning:
 <ol>
     <li>Fine-tune BERT on 5 GLUE tasks
     <li>Vary training data: [100, 500, 1000, 5000, all]

@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -539,20 +569,20 @@ $$
 <p>\begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{lllll}
-\toprule
-<strong>Method</strong> & <strong>Max Length</strong> & <strong>Complexity</strong> & <strong>Quality</strong> & <strong>Implementation</strong> \\
-\midrule
-Full Attention & 2-4K & $O(n^2 d)$ & Excellent & Simple \\
-Flash Attention & 4-8K & $O(n^2 d)$ & Excellent & Medium \\
-Longformer & 4-16K & $O(nwd)$ & Good & Medium \\
-BigBird & 4-16K & $O(n(w+r)d)$ & Good & Medium \\
-Linformer & 8-32K & $O(nkd)$ & Fair & Medium \\
-Performer & 16-64K & $O(nd^2)$ & Fair & Hard \\
-Transformer-XL & Unlimited & $O(L^2 d)$/seg & Good & Medium \\
-RAG & Unlimited & $O(n^2 d)$ & Excellent & Hard \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Method</strong></th><th><strong>Max Length</strong></th><th><strong>Complexity</strong></th><th><strong>Quality</strong></th><th><strong>Implementation</strong></th></tr>
+<tr><td>\midrule
+Full Attention</td><td>2-4K</td><td>$O(n^2 d)$</td><td>Excellent</td><td>Simple</td></tr>
+<tr><td>Flash Attention</td><td>4-8K</td><td>$O(n^2 d)$</td><td>Excellent</td><td>Medium</td></tr>
+<tr><td>Longformer</td><td>4-16K</td><td>$O(nwd)$</td><td>Good</td><td>Medium</td></tr>
+<tr><td>BigBird</td><td>4-16K</td><td>$O(n(w+r)d)$</td><td>Good</td><td>Medium</td></tr>
+<tr><td>Linformer</td><td>8-32K</td><td>$O(nkd)$</td><td>Fair</td><td>Medium</td></tr>
+<tr><td>Performer</td><td>16-64K</td><td>$O(nd^2)$</td><td>Fair</td><td>Hard</td></tr>
+<tr><td>Transformer-XL</td><td>Unlimited</td><td>$O(L^2 d)$/seg</td><td>Good</td><td>Medium</td></tr>
+<tr><td>RAG</td><td>Unlimited</td><td>$O(n^2 d)$</td><td>Excellent</td><td>Hard</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Comparison of long context methods. Complexity is per-layer computational cost. Quality is relative to full attention on typical NLP tasks. Implementation difficulty considers both coding complexity and infrastructure requirements.}
 \end{table}</p>
 
@@ -586,8 +616,7 @@ RAG & Unlimited & $O(n^2 d)$ & Excellent & Hard \\
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}[Memory Calculation]
-Calculate the memory requirements for attention matrices in different scenarios:
+<div class="exercise"><strong>Exercise:</strong> Calculate the memory requirements for attention matrices in different scenarios:
 <ol>
     <li>For a BERT-base model ($d=768$, $h=12$, $L=12$) with sequence lengths $n \in \{512, 1024, 2048, 4096, 8192\}$, compute the total memory for attention matrices in FP32 and FP16 formats.
     <li>For the same model using Longformer with window size $w=512$ and 2 global tokens, compute the memory savings compared to full attention at each sequence length.
@@ -596,8 +625,7 @@ Calculate the memory requirements for attention matrices in different scenarios:
 </ol>
 </div>
 
-<p>\begin{exercise}[Position Interpolation Implementation]
-Implement and evaluate position interpolation for extending context length:
+<div class="exercise"><strong>Exercise:</strong> Implement and evaluate position interpolation for extending context length:
 <ol>
     <li>Load a pretrained GPT-2 model (trained on 1024-token contexts).
     <li>Implement position interpolation to extend the model to 4096 tokens by scaling position indices by $1024/4096 = 0.25$.
@@ -607,8 +635,7 @@ Implement and evaluate position interpolation for extending context length:
 </ol>
 </div>
 
-<p>\begin{exercise}[Sparse Attention Patterns]
-Implement and compare different sparse attention patterns:
+<div class="exercise"><strong>Exercise:</strong> Implement and compare different sparse attention patterns:
 <ol>
     <li>Implement local attention with window size $w=256$ for a sequence of length $n=2048$.
     <li>Implement strided attention with stride $s=64$ for the same sequence.
@@ -618,8 +645,7 @@ Implement and compare different sparse attention patterns:
 </ol>
 </div>
 
-<p>\begin{exercise}[ALiBi Extrapolation]
-Implement ALiBi and test its extrapolation capabilities:
+<div class="exercise"><strong>Exercise:</strong> Implement ALiBi and test its extrapolation capabilities:
 <ol>
     <li>Train a small transformer (4 layers, $d=256$, 4 heads) with ALiBi on sequences of length 512 from a language modeling dataset.
     <li>Use head-specific slopes $m_i = 2^{-8i/4}$ for the 4 heads, giving slopes $\{0.25, 0.0625, 0.0156, 0.0039\}$.
@@ -629,8 +655,7 @@ Implement ALiBi and test its extrapolation capabilities:
 </ol>
 </div>
 
-<p>\begin{exercise}[Retrieval-Augmented Generation]
-Implement a simple RAG system for question answering:
+<div class="exercise"><strong>Exercise:</strong> Implement a simple RAG system for question answering:
 <ol>
     <li>Create a document corpus of 1000 Wikipedia articles on a specific topic (e.g., history, science).
     <li>Embed all documents using a pretrained BERT model, storing embeddings in a FAISS index for efficient retrieval.
@@ -641,8 +666,7 @@ Implement a simple RAG system for question answering:
 </ol>
 </div>
 
-<p>\begin{exercise}[Transformer-XL Segment Processing]
-Implement segment-level recurrence for processing long sequences:
+<div class="exercise"><strong>Exercise:</strong> Implement segment-level recurrence for processing long sequences:
 <ol>
     <li>Implement a simplified Transformer-XL that processes a sequence in segments of length $L=256$.
     <li>For each segment, cache the hidden states from the previous segment and concatenate them with the current segment's inputs.
@@ -653,8 +677,7 @@ Implement segment-level recurrence for processing long sequences:
 </ol>
 </div>
 
-<p>\begin{exercise}[Long Context Cost Analysis]
-Analyze the computational and financial costs of long context processing:
+<div class="exercise"><strong>Exercise:</strong> Analyze the computational and financial costs of long context processing:
 <ol>
     <li>For a BERT-base model, measure the actual wall-clock time to process sequences of length 512, 1024, 2048, and 4096 on your available hardware (CPU or GPU).
     <li>Compute the FLOPs for attention at each sequence length and compare to the measured time to determine hardware efficiency.
@@ -664,8 +687,7 @@ Analyze the computational and financial costs of long context processing:
 </ol>
 </div>
 
-<p>\begin{exercise}[Position Encoding Comparison]
-Compare different position encoding schemes empirically:
+<div class="exercise"><strong>Exercise:</strong> Compare different position encoding schemes empirically:
 <ol>
     <li>Train four small transformer models (4 layers, $d=256$, 4 heads) on the same language modeling dataset, using: (a) absolute learned positions, (b) sinusoidal positions, (c) RoPE, and (d) ALiBi.
     <li>Train all models on sequences of length 512 for the same number of steps.

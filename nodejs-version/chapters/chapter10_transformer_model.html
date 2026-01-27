@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -610,7 +640,7 @@ $$\begin{align}
 \end{align}$$
 </div>
 
-<p><strong>Feed-forward network (assuming $d_{ff</strong> = 4d_{\text{model}}$):}
+<p><strong>Feed-forward network (assuming $d_{ff} = 4d_{\text{model}}$):</strong>
 <div class="equation">
 $$\begin{align}
 \text{First projection:} \quad &2Bnd_{\text{model}}d_{ff} = 8Bnd_{\text{model}}^2 \\
@@ -776,30 +806,22 @@ $$\begin{align}
 <h3>Full Encoder-Decoder Model</h3>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Transformer Forward Pass</div>
-\KwIn{Source sequence $\mathbf{x} = [x_1, \ldots, x_n]$, target sequence $\mathbf{y} = [y_1, \ldots, y_m]$}
-\KwOut{Predicted probabilities for each target position}
-
-<p>\tcp{Encoder}
-$\mX_{\text{emb}} = \text{Embedding}(\mathbf{x})$ \\
-$\mX^{(0)} = \mX_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$ \\
-\For{$\ell = 1$ \KwTo $N_{\text{enc}}$}{
-    $\mX^{(\ell)} = \text{EncoderLayer}^{(\ell)}(\mX^{(\ell-1)})$
-}
-$\mX_{\text{enc}} = \mX^{(N_{\text{enc}})}$</p>
-
-<p>\tcp{Decoder}
-$\mY_{\text{emb}} = \text{Embedding}(\mathbf{y})$ \\
-$\mY^{(0)} = \mY_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$ \\
-\For{$\ell = 1$ \KwTo $N_{\text{dec}}$}{
-    $\mY^{(\ell)} = \text{DecoderLayer}^{(\ell)}(\mY^{(\ell-1)}, \mX_{\text{enc}})$
-}
-$\mY_{\text{dec}} = \mY^{(N_{\text{dec}})}$</p>
-
-<p>\tcp{Output Projection}
-$\text{logits} = \mY_{\text{dec}} \mW_{\text{out}} + \vb_{\text{out}}$ \quad where $\mW_{\text{out}} \in \R^{d_{\text{model}} \times V}$ \\
-$\text{probs} = \text{softmax}(\text{logits})$ \\</p>
-
-<p>\Return{probs}
+<div class="algorithm-line"><strong>Input:</strong> Source sequence $\mathbf{x} = [x_1, \ldots, x_n]$, target sequence $\mathbf{y} = [y_1, \ldots, y_m]$</div>
+<div class="algorithm-line"><strong>Output:</strong> Predicted probabilities for each target position</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Encoder</span></div>
+<div class="algorithm-line">$\mX_{\text{emb}} = \text{Embedding}(\mathbf{x})$</div>
+<div class="algorithm-line">$\mX^{(0)} = \mX_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$</div>
+<div class="algorithm-line">$\mX^{(\ell)} = \text{EncoderLayer}^{(\ell)}(\mX^{(\ell-1)})$</div>
+<div class="algorithm-line">$\mX_{\text{enc}} = \mX^{(N_{\text{enc}})}$</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Decoder</span></div>
+<div class="algorithm-line">$\mY_{\text{emb}} = \text{Embedding}(\mathbf{y})$</div>
+<div class="algorithm-line">$\mY^{(0)} = \mY_{\text{emb}} + \text{PositionalEncoding}(\text{positions})$</div>
+<div class="algorithm-line">$\mY^{(\ell)} = \text{DecoderLayer}^{(\ell)}(\mY^{(\ell-1)}, \mX_{\text{enc}})$</div>
+<div class="algorithm-line">$\mY_{\text{dec}} = \mY^{(N_{\text{dec}})}$</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Output Projection</span></div>
+<div class="algorithm-line">$\text{logits} = \mY_{\text{dec}} \mW_{\text{out}} + \vb_{\text{out}}$ \quad where $\mW_{\text{out}} \in \R^{d_{\text{model}} \times V}$</div>
+<div class="algorithm-line">$\text{probs} = \text{softmax}(\text{logits})$ \\</p></div>
+<div class="algorithm-line"><strong>return</strong> probs</div>
 </div>
 
 <h3>Original Transformer Configuration</h3>
@@ -930,20 +952,18 @@ $$
 
 <p>At inference, generate one token at a time:
 <div class="algorithm"><div class="algorithm-title">Algorithm: Autoregressive Decoding</div>
-\KwIn{Source sequence $\mathbf{x}$, max length $T$}
-\KwOut{Generated sequence $\mathbf{y}$}</p>
-
-<p>Encode source: $\mX_{\text{enc}} = \text{Encoder}(\mathbf{x})$ \\
-Initialize: $\mathbf{y} = [\text{BOS}]$ \quad (begin-of-sequence token) \\
-\For{$t = 1$ \KwTo $T$}{
-    $\text{probs}_t = \text{Decoder}(\mathbf{y}, \mX_{\text{enc}})$ \\
-    $y_t = \arg\max(\text{probs}_t)$ \quad (or sample from distribution) \\
-    Append $y_t$ to $\mathbf{y}$ \\
-    \If{$y_t = \text{EOS}$}{
-        <strong>break</strong> \quad (end-of-sequence token)
-    }
-}
-\Return{$\mathbf{y}$}
+<div class="algorithm-line"><strong>Input:</strong> Source sequence $\mathbf{x}$, max length $T$</div>
+<div class="algorithm-line"><strong>Output:</strong> Generated sequence $\mathbf{y}$</div>
+<div class="algorithm-line"><p>Encode source: $\mX_{\text{enc}} = \text{Encoder}(\mathbf{x})$</div>
+<div class="algorithm-line">Initialize: $\mathbf{y} = [\text{BOS}]$ \quad (begin-of-sequence token)</div>
+<div class="algorithm-line"><strong>for</strong> $t = 1$ to $T$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\text{probs}_t = \text{Decoder}(\mathbf{y}, \mX_{\text{enc}})$</div>
+<div class="algorithm-line">$y_t = \arg\max(\text{probs}_t)$ \quad (or sample from distribution)</div>
+<div class="algorithm-line">Append $y_t$ to $\mathbf{y}$</div>
+<div class="algorithm-line"><strong>break</strong> \quad (end-of-sequence token)</div>
+</div>
+<div class="algorithm-line"><strong>return</strong> $\mathbf{y</div>
 </div>
 
 <h2>Transformer Variants: Architectural Patterns</h2>
@@ -1044,8 +1064,7 @@ $$\begin{align}
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-For transformer with $N=6$, $d_{\text{model}}=512$, $h=8$, $d_{ff}=2048$, $V=32000$:
+<div class="exercise"><strong>Exercise:</strong> For transformer with $N=6$, $d_{\text{model}}=512$, $h=8$, $d_{ff}=2048$, $V=32000$:
 <ol>
     <li>Calculate total parameters in encoder
     <li>Calculate total parameters in decoder
@@ -1054,12 +1073,10 @@ For transformer with $N=6$, $d_{\text{model}}=512$, $h=8$, $d_{ff}=2048$, $V=320
 </ol>
 </div>
 
-<p>\begin{exercise}
-Implement single transformer encoder layer in PyTorch. Test with batch size 16, sequence length 64, $d_{\text{model}}=256$. Verify output shape and gradient flow through residual connections.
+<div class="exercise"><strong>Exercise:</strong> Implement single transformer encoder layer in PyTorch. Test with batch size 16, sequence length 64, $d_{\text{model}}=256$. Verify output shape and gradient flow through residual connections.
 </div>
 
-<p>\begin{exercise}
-Compare memory and computation for:
+<div class="exercise"><strong>Exercise:</strong> Compare memory and computation for:
 <ol>
     <li>Encoder processing sequence length 1024
     <li>Decoder generating 1024 tokens autoregressively
@@ -1067,8 +1084,7 @@ Compare memory and computation for:
 Why is decoding slower? How many forward passes required?
 </div>
 
-<p>\begin{exercise}
-Show that layer normalization is invariant to input scale: if $\vx' = c\vx$ for constant $c > 0$, then $\text{LayerNorm}(\vx') = \text{LayerNorm}(\vx)$ (ignoring learnable $\gamma, \beta$).
+<div class="exercise"><strong>Exercise:</strong> Show that layer normalization is invariant to input scale: if $\vx' = c\vx$ for constant $c > 0$, then $\text{LayerNorm}(\vx') = \text{LayerNorm}(\vx)$ (ignoring learnable $\gamma, \beta$).
 </div>
         
         <div class="chapter-nav">

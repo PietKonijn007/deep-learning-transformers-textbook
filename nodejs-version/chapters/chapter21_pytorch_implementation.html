@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -1429,37 +1459,31 @@ def train_transformer(model, train_dataloader, val_dataloader, config):
 
 <p><strong>Optimization Results:</strong></p>
 
-<p>\begin{center}
-\begin{tabular}{lrrr}
-\hline
-Configuration & Memory (GB) & Speed (samples/s) & Speedup \\
-\hline
-Baseline (FP32) & 16.2 & 120 & 1.0× \\
-+ Mixed Precision & 10.1 & 280 & 2.3× \\
-+ Gradient Checkpointing & 7.8 & 220 & 1.8× \\
-+ Optimized Batch Size & 7.9 & 310 & 2.6× \\
-+ Flash Attention & 6.2 & 420 & 3.5× \\
-All Optimizations & 6.2 & 420 & 3.5× \\
-\hline
-\end{tabular}
-\end{center}</p>
+<div style="text-align: center;">
+<table>
+<tr><th>Configuration</th><th>Memory (GB)</th><th>Speed (samples/s)</th><th>Speedup</th></tr>
+<tr><td>Baseline (FP32)</td><td>16.2</td><td>120</td><td>1.0×</td></tr>
+<tr><td>+ Mixed Precision</td><td>10.1</td><td>280</td><td>2.3×</td></tr>
+<tr><td>+ Gradient Checkpointing</td><td>7.8</td><td>220</td><td>1.8×</td></tr>
+<tr><td>+ Optimized Batch Size</td><td>7.9</td><td>310</td><td>2.6×</td></tr>
+<tr><td>+ Flash Attention</td><td>6.2</td><td>420</td><td>3.5×</td></tr>
+<tr><td>All Optimizations</td><td>6.2</td><td>420</td><td>3.5×</td></tr>
+</table>
+</div>
 
 <p><strong>Inference Optimization Results:</strong></p>
 
-<p>\begin{center}
-\begin{tabular}{lrrr}
-\hline
-Configuration & Latency (ms) & Throughput & Memory (GB) \\
-\hline
-PyTorch FP32 & 45.2 & 22 & 1.8 \\
-+ TorchScript & 38.1 & 26 & 1.8 \\
-+ FP16 & 22.3 & 45 & 0.9 \\
-+ Dynamic Quantization & 18.7 & 54 & 0.5 \\
-+ TensorRT & 9.2 & 109 & 0.6 \\
-All Optimizations & 9.2 & 109 & 0.6 \\
-\hline
-\end{tabular}
-\end{center}</p>
+<div style="text-align: center;">
+<table>
+<tr><th>Configuration</th><th>Latency (ms)</th><th>Throughput</th><th>Memory (GB)</th></tr>
+<tr><td>PyTorch FP32</td><td>45.2</td><td>22</td><td>1.8</td></tr>
+<tr><td>+ TorchScript</td><td>38.1</td><td>26</td><td>1.8</td></tr>
+<tr><td>+ FP16</td><td>22.3</td><td>45</td><td>0.9</td></tr>
+<tr><td>+ Dynamic Quantization</td><td>18.7</td><td>54</td><td>0.5</td></tr>
+<tr><td>+ TensorRT</td><td>9.2</td><td>109</td><td>0.6</td></tr>
+<tr><td>All Optimizations</td><td>9.2</td><td>109</td><td>0.6</td></tr>
+</table>
+</div>
 
 <p>These benchmarks demonstrate that combining multiple optimization techniques can achieve substantial improvements in both training and inference performance. The key insight is that different optimizations address different bottlenecks, and the cumulative effect can be dramatic when applied systematically.</p>
 
@@ -1790,8 +1814,7 @@ def measure_scaling_efficiency(model, batch_size, seq_len):
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Implement memory-efficient attention:
+<div class="exercise"><strong>Exercise:</strong> Implement memory-efficient attention:
 <ol>
     <li>Implement chunked attention computation
     <li>Compare memory usage with standard attention
@@ -1800,8 +1823,7 @@ Implement memory-efficient attention:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Optimize BERT training:
+<div class="exercise"><strong>Exercise:</strong> Optimize BERT training:
 <ol>
     <li>Start with baseline FP32 training, measure memory and speed
     <li>Add mixed precision, document improvements
@@ -1811,8 +1833,7 @@ Optimize BERT training:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Implement KV caching for GPT:
+<div class="exercise"><strong>Exercise:</strong> Implement KV caching for GPT:
 <ol>
     <li>Modify transformer layer to support KV cache
     <li>Implement generation with and without caching
@@ -1822,8 +1843,7 @@ Implement KV caching for GPT:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Distributed training setup:
+<div class="exercise"><strong>Exercise:</strong> Distributed training setup:
 <ol>
     <li>Implement DistributedDataParallel training
     <li>Train on 1, 2, 4, 8 GPUs
@@ -1833,8 +1853,7 @@ Distributed training setup:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Inference optimization pipeline:
+<div class="exercise"><strong>Exercise:</strong> Inference optimization pipeline:
 <ol>
     <li>Export model to TorchScript and ONNX
     <li>Apply dynamic quantization
@@ -1844,8 +1863,7 @@ Inference optimization pipeline:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Complete implementation project:
+<div class="exercise"><strong>Exercise:</strong> Complete implementation project:
 <ol>
     <li>Build mini-GPT (6 layers, 8 heads, d=512) from scratch
     <li>Implement all optimizations: mixed precision, checkpointing, KV cache

@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -656,26 +686,8 @@ $$\begin{align}
 <p>The gradient accumulation algorithm processes $K$ mini-batches of size $B_{\text{mini}}$, accumulating their gradients, then performs a single parameter update. The effective batch size is $B_{\text{eff}} = K \times B_{\text{mini}}$.</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Gradient Accumulation</div>
-<strong>Input:</strong> Mini-batch size $B_{\text{mini}}$, accumulation steps $K$, dataset
-
-<p>\begin{algorithmic}[1]
-\State Initialize model parameters $\mathbf{w}$
-\State Initialize optimizer
-\For{each epoch}
-    \For{each batch of $K$ mini-batches}
-        \State Zero accumulated gradients: $\mathbf{g}_{\text{accum}} = \mathbf{0}$
-        \For{$k = 1$ to $K$}
-            \State Load mini-batch $\mathcal{B}_k$ of size $B_{\text{mini}}$
-            \State Forward pass: compute loss $L_k$ on $\mathcal{B}_k$
-            \State Scale loss: $L_k \leftarrow L_k / K$
-            \State Backward pass: compute gradients $\mathbf{g}_k$
-            \State Accumulate: $\mathbf{g}_{\text{accum}} \leftarrow \mathbf{g}_{\text{accum}} + \mathbf{g}_k$
-        \EndFor
-        \State Update parameters using $\mathbf{g}_{\text{accum}}$
-        \State Zero gradients for next accumulation
-    \EndFor
-\EndFor
-\end{algorithmic}
+<div class="algorithm-line"><strong>Input:</strong> Mini-batch size $B_{\text{mini}}$, accumulation steps $K$, dataset</div>
+<div class="algorithm-line"><p>\begin{algorithmic}[1]</div>
 </div>
 
 <p>The loss scaling by $1/K$ ensures that the accumulated gradient has the correct magnitude. Without this scaling, the accumulated gradient would be $K$ times larger than the gradient from a single batch of size $B_{\text{eff}}$, leading to overly aggressive parameter updates.</p>
@@ -950,19 +962,19 @@ $$\begin{align}
 
 <p>\begin{table}[htbp]
 \centering
-\begin{tabular}{lccl}
-\toprule
-<strong>Strategy</strong> & <strong>Memory Reduction</strong> & <strong>Communication</strong> & <strong>Use Case</strong> \\
-\midrule
-Data Parallel & None & Gradients & Small models, many GPUs \\
-Model Parallel & $N\times$ & Activations & Large models, sequential \\
-Pipeline Parallel & $N\times$ & Activations & Very large models \\
-Tensor Parallel & $N\times$ & Activations (small) & Huge layers \\
-ZeRO Stage 1 & $4\times$ & Minimal & Optimizer memory bound \\
-ZeRO Stage 2 & $8\times$ & Gradients & Gradient memory bound \\
-ZeRO Stage 3 & $N\times$ & All & Extreme scale \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Strategy</strong></th><th><strong>Memory Reduction</strong></th><th><strong>Communication</strong></th><th><strong>Use Case</strong></th></tr>
+<tr><td>\midrule
+Data Parallel</td><td>None</td><td>Gradients</td><td>Small models, many GPUs</td></tr>
+<tr><td>Model Parallel</td><td>$N\times$</td><td>Activations</td><td>Large models, sequential</td></tr>
+<tr><td>Pipeline Parallel</td><td>$N\times$</td><td>Activations</td><td>Very large models</td></tr>
+<tr><td>Tensor Parallel</td><td>$N\times$</td><td>Activations (small)</td><td>Huge layers</td></tr>
+<tr><td>ZeRO Stage 1</td><td>$4\times$</td><td>Minimal</td><td>Optimizer memory bound</td></tr>
+<tr><td>ZeRO Stage 2</td><td>$8\times$</td><td>Gradients</td><td>Gradient memory bound</td></tr>
+<tr><td>ZeRO Stage 3</td><td>$N\times$</td><td>All</td><td>Extreme scale</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Comparison of distributed training strategies for $N$ GPUs}
 \end{table}</p>
 
@@ -1509,36 +1521,28 @@ where $d_{\text{in}}$ and $d_{\text{out}}$ are the input and output dimensions. 
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Implement the complete mixed precision training algorithm for a small transformer. Compare memory consumption and training time with FP32 training. Experiment with different loss scaling factors and observe their impact on training stability.
+<div class="exercise"><strong>Exercise:</strong> Implement the complete mixed precision training algorithm for a small transformer. Compare memory consumption and training time with FP32 training. Experiment with different loss scaling factors and observe their impact on training stability.
 </div>
 
-<p>\begin{exercise}
-For BERT-base with batch size 32 and sequence length 512, calculate the exact memory requirements for: (a) parameters and optimizer states (AdamW), (b) activations for each layer type, (c) total memory with and without gradient checkpointing. Verify your calculations by profiling actual memory usage during training.
+<div class="exercise"><strong>Exercise:</strong> For BERT-base with batch size 32 and sequence length 512, calculate the exact memory requirements for: (a) parameters and optimizer states (AdamW), (b) activations for each layer type, (c) total memory with and without gradient checkpointing. Verify your calculations by profiling actual memory usage during training.
 </div>
 
-<p>\begin{exercise}
-Implement gradient accumulation to achieve an effective batch size of 512 with physical batch size 32. Measure the training time overhead compared to true batch size 512 (if it fits in memory). Verify that the training dynamics are identical by comparing loss curves.
+<div class="exercise"><strong>Exercise:</strong> Implement gradient accumulation to achieve an effective batch size of 512 with physical batch size 32. Measure the training time overhead compared to true batch size 512 (if it fits in memory). Verify that the training dynamics are identical by comparing loss curves.
 </div>
 
-<p>\begin{exercise}
-Train a small transformer (6 layers, $d_{\text{model}} = 256$) with different learning rate schedules: (a) warmup + linear decay, (b) warmup + inverse square root decay, (c) warmup + cosine annealing. Compare convergence speed and final performance. Plot the learning rate curves and loss curves.
+<div class="exercise"><strong>Exercise:</strong> Train a small transformer (6 layers, $d_{\text{model}} = 256$) with different learning rate schedules: (a) warmup + linear decay, (b) warmup + inverse square root decay, (c) warmup + cosine annealing. Compare convergence speed and final performance. Plot the learning rate curves and loss curves.
 </div>
 
-<p>\begin{exercise}
-Implement data parallelism for training on 4 GPUs. Measure the speedup compared to single-GPU training. Calculate the communication overhead by comparing the time spent in AllReduce operations versus computation. Experiment with different batch sizes and observe how they affect the computation-to-communication ratio.
+<div class="exercise"><strong>Exercise:</strong> Implement data parallelism for training on 4 GPUs. Measure the speedup compared to single-GPU training. Calculate the communication overhead by comparing the time spent in AllReduce operations versus computation. Experiment with different batch sizes and observe how they affect the computation-to-communication ratio.
 </div>
 
-<p>\begin{exercise}
-Analyze the impact of different regularization techniques on a small transformer trained on a limited dataset (10,000 examples). Compare: (a) no regularization, (b) dropout only, (c) weight decay only, (d) dropout + weight decay, (e) dropout + weight decay + label smoothing. Measure training loss, validation loss, and generalization gap.
+<div class="exercise"><strong>Exercise:</strong> Analyze the impact of different regularization techniques on a small transformer trained on a limited dataset (10,000 examples). Compare: (a) no regularization, (b) dropout only, (c) weight decay only, (d) dropout + weight decay, (e) dropout + weight decay + label smoothing. Measure training loss, validation loss, and generalization gap.
 </div>
 
-<p>\begin{exercise}
-Estimate the training time and cost for a GPT-2 medium model (345M parameters) on your available hardware. Calculate: (a) FLOPs per training step, (b) expected throughput (tokens/sec), (c) total training time for 10B tokens, (d) estimated cost on cloud platforms. Compare your estimates with actual training runs.
+<div class="exercise"><strong>Exercise:</strong> Estimate the training time and cost for a GPT-2 medium model (345M parameters) on your available hardware. Calculate: (a) FLOPs per training step, (b) expected throughput (tokens/sec), (c) total training time for 10B tokens, (d) estimated cost on cloud platforms. Compare your estimates with actual training runs.
 </div>
 
-<p>\begin{exercise}
-Implement dynamic batching to minimize padding waste. Compare throughput (tokens/sec) with and without dynamic batching on a dataset with variable-length sequences. Measure the padding fraction in each case and calculate the theoretical maximum speedup from eliminating padding.
+<div class="exercise"><strong>Exercise:</strong> Implement dynamic batching to minimize padding waste. Compare throughput (tokens/sec) with and without dynamic batching on a dataset with variable-length sequences. Measure the padding fraction in each case and calculate the theoretical maximum speedup from eliminating padding.
 </div>
         
         <div class="chapter-nav">

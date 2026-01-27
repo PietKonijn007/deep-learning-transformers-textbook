@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -153,22 +183,23 @@ $$
 <h3>Backpropagation Through Time (BPTT)</h3>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Backpropagation Through Time</div>
-\KwIn{Sequence $\{\vx_1, \ldots, \vx_T\}$, targets $\{\vy_1, \ldots, \vy_T\}$}
-\KwOut{Gradients for all parameters}
-
-<p>\tcp{Forward Pass}
-\For{$t = 1$ \KwTo $T$}{
-    $\vh_t = \tanh(\mW_{hh}\vh_{t-1} + \mW_{xh}\vx_t + \vb_h)$ \\
-    $\vy_t = \mW_{hy}\vh_t + \vb_y$ \\
-    $L_t = \text{Loss}(\vy_t, \text{target}_t)$
-}</p>
-
-<p>\tcp{Backward Pass}
-Initialize $\frac{\partial L}{\partial \vh_{T+1}} = \mathbf{0}$ \\
-\For{$t = T$ \KwTo $1$}{
-    Compute $\frac{\partial L}{\partial \vh_t}$ (includes gradient from $t+1$) \\
-    Accumulate $\frac{\partial L}{\partial \mW_{hh}}, \frac{\partial L}{\partial \mW_{xh}}, \frac{\partial L}{\partial \mW_{hy}}$
-}
+<div class="algorithm-line"><strong>Input:</strong> Sequence $\{\vx_1, \ldots, \vx_T\}$, targets $\{\vy_1, \ldots, \vy_T\}$</div>
+<div class="algorithm-line"><strong>Output:</strong> Gradients for all parameters</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Forward Pass</span></div>
+<div class="algorithm-line"><strong>for</strong> $t = 1$ to $T$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\vh_t = \tanh(\mW_{hh}\vh_{t-1} + \mW_{xh}\vx_t + \vb_h)$</div>
+<div class="algorithm-line">$\vy_t = \mW_{hy}\vh_t + \vb_y$</div>
+<div class="algorithm-line">$L_t = \text{Loss}(\vy_t, \text{target}_t)$</div>
+<div class="algorithm-line">}</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Backward Pass</span></div>
+<div class="algorithm-line">Initialize $\frac{\partial L}{\partial \vh_{T+1}} = \mathbf{0}$</div>
+<div class="algorithm-line"><strong>for</strong> $t = T$ to $1$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Compute $\frac{\partial L}{\partial \vh_t}$ (includes gradient from $t+1$)</div>
+<div class="algorithm-line">Accumulate $\frac{\partial L}{\partial \mW_{hh}}, \frac{\partial L}{\partial \mW_{xh}}, \frac{\partial L}{\partial \mW_{hy}}$</div>
+</div>
+</div>
 </div>
 
 <h3>Vanishing and Exploding Gradients</h3>
@@ -224,7 +255,7 @@ where $\sigma$ is sigmoid, $\odot$ is element-wise multiplication, and $[\cdot, 
 
 <p><strong>Key components:</strong>
 <ul>
-    <li><strong>Cell state $\mathbf{c</strong>_t$:} Long-term memory, flows with minimal modification
+    <li><strong>Cell state $\mathbf{c}_t$:</strong> Long-term memory, flows with minimal modification
     <li><strong>Forget gate $\vf_t$:</strong> What to remove from cell state
     <li><strong>Input gate $\vi_t$:</strong> What new information to store
     <li><strong>Output gate $\vo_t$:</strong> What to output from cell state
@@ -397,28 +428,22 @@ While RNNs were dominant for sequences, transformers now excel in most NLP tasks
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-For vanilla RNN with input dim $d=128$, hidden dim $h=256$, and sequence length $T=50$: (1) Count total parameters in $\mW_{hh}$, $\mW_{xh}$, and $\mW_{hy}$, (2) Compute total FLOPs for forward pass through all time steps, (3) Estimate GPU utilization on an A100 (312 TFLOPS peak) with batch size 32, assuming each time step achieves 2\% of peak throughput. Why is utilization so low?
+<div class="exercise"><strong>Exercise:</strong> For vanilla RNN with input dim $d=128$, hidden dim $h=256$, and sequence length $T=50$: (1) Count total parameters in $\mW_{hh}$, $\mW_{xh}$, and $\mW_{hy}$, (2) Compute total FLOPs for forward pass through all time steps, (3) Estimate GPU utilization on an A100 (312 TFLOPS peak) with batch size 32, assuming each time step achieves 2\% of peak throughput. Why is utilization so low?
 </div>
 
-<p>\begin{exercise}
-Derive the gradient $\frac{\partial L}{\partial \mW_{hh}}$ for a 3-step sequence. Show how the gradient involves products of Jacobians $\frac{\partial \vh_t}{\partial \vh_{t-1}}$. If $\norm{\mW_{hh}} = 0.9$ and $\tanh'$ averages 0.5, compute the gradient magnitude decay factor from time step 3 to time step 0. At what sequence length would gradients vanish below FP32 precision ($10^{-38}$)?
+<div class="exercise"><strong>Exercise:</strong> Derive the gradient $\frac{\partial L}{\partial \mW_{hh}}$ for a 3-step sequence. Show how the gradient involves products of Jacobians $\frac{\partial \vh_t}{\partial \vh_{t-1}}$. If $\norm{\mW_{hh}} = 0.9$ and $\tanh'$ averages 0.5, compute the gradient magnitude decay factor from time step 3 to time step 0. At what sequence length would gradients vanish below FP32 precision ($10^{-38}$)?
 </div>
 
-<p>\begin{exercise}
-Compare parameter counts and FLOPs per sequence for: (1) LSTM with $d=512$, $h=512$, $n=512$, (2) GRU with $d=512$, $h=512$, $n=512$, (3) Transformer attention layer with $d_{\text{model}}=512$, $d_k=64$, $h=8$ heads, $n=512$. Which architecture has the most parameters? Which has the most FLOPs? Which achieves the highest GPU utilization and why?
+<div class="exercise"><strong>Exercise:</strong> Compare parameter counts and FLOPs per sequence for: (1) LSTM with $d=512$, $h=512$, $n=512$, (2) GRU with $d=512$, $h=512$, $n=512$, (3) Transformer attention layer with $d_{\text{model}}=512$, $d_k=64$, $h=8$ heads, $n=512$. Which architecture has the most parameters? Which has the most FLOPs? Which achieves the highest GPU utilization and why?
 </div>
 
-<p>\begin{exercise}
-Implement bidirectional LSTM in PyTorch for sequence "The cat sat on the mat" with vocabulary size 10, embedding dim 16, hidden dim 32. Process the sequence and show output dimensions. Compute the total memory required for hidden states and cell states in FP32. How does this compare to the memory required for attention scores in a transformer with the same dimensions?
+<div class="exercise"><strong>Exercise:</strong> Implement bidirectional LSTM in PyTorch for sequence "The cat sat on the mat" with vocabulary size 10, embedding dim 16, hidden dim 32. Process the sequence and show output dimensions. Compute the total memory required for hidden states and cell states in FP32. How does this compare to the memory required for attention scores in a transformer with the same dimensions?
 </div>
 
-<p>\begin{exercise}
-For BERT-base dimensions ($d=768$, $n=512$), compute: (1) Memory required for LSTM hidden and cell states across 12 layers with batch size 32, (2) Memory required for transformer attention scores across 12 layers with batch size 32 and 12 attention heads, (3) The sequence length at which LSTM memory equals transformer memory. Explain why transformers are memory-limited for long sequences while LSTMs are compute-limited.
+<div class="exercise"><strong>Exercise:</strong> For BERT-base dimensions ($d=768$, $n=512$), compute: (1) Memory required for LSTM hidden and cell states across 12 layers with batch size 32, (2) Memory required for transformer attention scores across 12 layers with batch size 32 and 12 attention heads, (3) The sequence length at which LSTM memory equals transformer memory. Explain why transformers are memory-limited for long sequences while LSTMs are compute-limited.
 </div>
 
-<p>\begin{exercise}
-Estimate the training time for a 110M parameter LSTM on 16 billion tokens (sequence length 512) using 64 TPU cores with 2,880 TFLOPS total peak throughput. Assume the LSTM achieves 3\% of peak throughput due to sequential processing. Compare this to BERT-base training time of 4 days on the same hardware. What is the speedup factor? Explain the three main reasons for the difference: parallelization, memory bandwidth, and GPU utilization.
+<div class="exercise"><strong>Exercise:</strong> Estimate the training time for a 110M parameter LSTM on 16 billion tokens (sequence length 512) using 64 TPU cores with 2,880 TFLOPS total peak throughput. Assume the LSTM achieves 3\% of peak throughput due to sequential processing. Compare this to BERT-base training time of 4 days on the same hardware. What is the speedup factor? Explain the three main reasons for the difference: parallelization, memory bandwidth, and GPU utilization.
 </div>
         
         <div class="chapter-nav">

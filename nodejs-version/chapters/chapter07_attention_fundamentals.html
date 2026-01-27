@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -329,7 +359,7 @@ $$
 </div>
 where entry $e_{i,j} = \vq_i\transpose \vk_j$ measures the compatibility of query $i$ with key $j$.</p>
 
-<p><strong>Step 2: Scale by $\sqrt{d_k</strong>$}
+<p><strong>Step 2: Scale by $\sqrt{d_k}$</strong>
 <div class="equation">
 $$
 \mE_{\text{scaled}} = \frac{\mQ \mK\transpose}{\sqrt{d_k}}
@@ -615,18 +645,15 @@ $$
 
 <p>The following table summarizes the key characteristics of each attention mechanism:</p>
 
-<p>\begin{center}
-\begin{tabular}{lcccc}
-\hline
-<strong>Method</strong> & <strong>Computation</strong> & <strong>Parameters</strong> & <strong>GPU Util.</strong> & <strong>Used In</strong> \\
-\hline
-Additive (Bahdanau) & $\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$ & $O(d_a(d_q + d_k))$ & 15-25\% & Early seq2seq \\
-Dot-product & $\vq\transpose\vk$ & 0 & 80-90\% & Not used \\
-Scaled dot-product & $\vq\transpose\vk/\sqrt{d_k}$ & 0 & 80-90\% & Transformers \\
-General (Luong) & $\vq\transpose\mW\vk$ & $O(d_q d_k)$ & 50-70\% & Some seq2seq \\
-\hline
-\end{tabular}
-\end{center}</p>
+<div style="text-align: center;">
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Computation</strong></th><th><strong>Parameters</strong></th><th><strong>GPU Util.</strong></th><th><strong>Used In</strong></th></tr>
+<tr><td>Additive (Bahdanau)</td><td>$\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$</td><td>$O(d_a(d_q + d_k))$</td><td>15-25\%</td><td>Early seq2seq</td></tr>
+<tr><td>Dot-product</td><td>$\vq\transpose\vk$</td><td>0</td><td>80-90\%</td><td>Not used</td></tr>
+<tr><td>Scaled dot-product</td><td>$\vq\transpose\vk/\sqrt{d_k}$</td><td>0</td><td>80-90\%</td><td>Transformers</td></tr>
+<tr><td>General (Luong)</td><td>$\vq\transpose\mW\vk$</td><td>$O(d_q d_k)$</td><td>50-70\%</td><td>Some seq2seq</td></tr>
+</table>
+</div>
 
 <p><strong>Why Scaled Dot-Product Won:</strong> The dominance of scaled dot-product attention in modern transformers reflects several factors beyond raw computational efficiency. First, the parameter-free nature means the model's capacity is concentrated in the QKV projection matrices and feed-forward networks rather than the scoring function. This architectural choice scales better to very large models—GPT-3 with 175 billion parameters would require even more parameters if using additive or general attention.</p>
 
@@ -873,20 +900,16 @@ where mask $\mM_{ij} = -\infty$ if $j > i$, else $\mM_{ij} = 0$.</p>
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Compute Bahdanau attention for sequence length 4, decoder state dim 3, attention dim 2. Given specific $\mW_1$, $\mW_2$, $\mathbf{v}$, encoder states, and decoder state, calculate all attention weights.
+<div class="exercise"><strong>Exercise:</strong> Compute Bahdanau attention for sequence length 4, decoder state dim 3, attention dim 2. Given specific $\mW_1$, $\mW_2$, $\mathbf{v}$, encoder states, and decoder state, calculate all attention weights.
 </div>
 
-<p>\begin{exercise}
-For scaled dot-product attention with $\mQ \in \R^{10 \times 64}$, $\mK \in \R^{20 \times 64}$, $\mV \in \R^{20 \times 128}$: (1) What is output dimension? (2) What is attention matrix shape? (3) How many FLOPs for computing $\mQ \mK\transpose$?
+<div class="exercise"><strong>Exercise:</strong> For scaled dot-product attention with $\mQ \in \R^{10 \times 64}$, $\mK \in \R^{20 \times 64}$, $\mV \in \R^{20 \times 128}$: (1) What is output dimension? (2) What is attention matrix shape? (3) How many FLOPs for computing $\mQ \mK\transpose$?
 </div>
 
-<p>\begin{exercise}
-Show that without scaling, for $d_k = 64$ and unit variance elements, dot products have variance 64. Demonstrate numerically how this affects softmax gradients.
+<div class="exercise"><strong>Exercise:</strong> Show that without scaling, for $d_k = 64$ and unit variance elements, dot products have variance 64. Demonstrate numerically how this affects softmax gradients.
 </div>
 
-<p>\begin{exercise}
-Implement scaled dot-product attention in PyTorch. Test with sequences of length 5 and 10, dimensions $d_k = 32$, $d_v = 48$. Visualize attention weights as heatmap.
+<div class="exercise"><strong>Exercise:</strong> Implement scaled dot-product attention in PyTorch. Test with sequences of length 5 and 10, dimensions $d_k = 32$, $d_v = 48$. Visualize attention weights as heatmap.
 </div>
         
         <div class="chapter-nav">

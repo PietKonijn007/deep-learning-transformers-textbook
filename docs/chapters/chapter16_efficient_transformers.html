@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -336,19 +366,19 @@ The benefits of Flash Attention scale with sequence length and are particularly 
 <p>\begin{table}[htbp]
 \centering
 \small
-\begin{tabular}{lllll}
-\toprule
-<strong>Method</strong> & <strong>Complexity</strong> & <strong>Memory</strong> & <strong>Exact</strong> & <strong>Quality</strong> \\
-\midrule
-Standard & $O(n^2d)$ & $O(n^2)$ & Yes & Best \\
-Sliding Window & $O(nwd)$ & $O(nw)$ & No & Good \\
-Longformer & $O(nwd)$ & $O(nw)$ & No & Good \\
-BigBird & $O(n(w+r+g)d)$ & $O(n(w+r+g))$ & No & Good \\
-Linformer & $O(nkd)$ & $O(nk)$ & No & Good \\
-Performer & $O(nmd)$ & $O(nm)$ & Approx & Medium \\
-Flash Attention & $O(n^2d)$ & $O(n)$ & Yes & Best \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Method</strong></th><th><strong>Complexity</strong></th><th><strong>Memory</strong></th><th><strong>Exact</strong></th><th><strong>Quality</strong></th></tr>
+<tr><td>\midrule
+Standard</td><td>$O(n^2d)$</td><td>$O(n^2)$</td><td>Yes</td><td>Best</td></tr>
+<tr><td>Sliding Window</td><td>$O(nwd)$</td><td>$O(nw)$</td><td>No</td><td>Good</td></tr>
+<tr><td>Longformer</td><td>$O(nwd)$</td><td>$O(nw)$</td><td>No</td><td>Good</td></tr>
+<tr><td>BigBird</td><td>$O(n(w+r+g)d)$</td><td>$O(n(w+r+g))$</td><td>No</td><td>Good</td></tr>
+<tr><td>Linformer</td><td>$O(nkd)$</td><td>$O(nk)$</td><td>No</td><td>Good</td></tr>
+<tr><td>Performer</td><td>$O(nmd)$</td><td>$O(nm)$</td><td>Approx</td><td>Medium</td></tr>
+<tr><td>Flash Attention</td><td>$O(n^2d)$</td><td>$O(n)$</td><td>Yes</td><td>Best</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Complexity and characteristics of efficient attention methods. Parameters: $w$ = window size, $r$ = random connections, $g$ = global tokens, $k$ = projection dimension, $m$ = random features.}
 \end{table}</p>
 
@@ -456,8 +486,7 @@ x_1 &= y_1 - \text{Attention}(x_2)
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Implement sliding window attention with $w=256$. For $n=1024$:
+<div class="exercise"><strong>Exercise:</strong> Implement sliding window attention with $w=256$. For $n=1024$:
 <ol>
     <li>Create attention mask
     <li>Compute attention
@@ -466,8 +495,7 @@ Implement sliding window attention with $w=256$. For $n=1024$:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Compare methods for $n=4096$, $d=768$:
+<div class="exercise"><strong>Exercise:</strong> Compare methods for $n=4096$, $d=768$:
 <ol>
     <li>Standard attention: Calculate memory and FLOPs
     <li>Linformer ($k=256$): Calculate savings
@@ -476,8 +504,7 @@ Compare methods for $n=4096$, $d=768$:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Implement Performer random features. Use $m=256$ features for $d=64$:
+<div class="exercise"><strong>Exercise:</strong> Implement Performer random features. Use $m=256$ features for $d=64$:
 <ol>
     <li>Generate random projection matrix
     <li>Compute $\phi(\mQ)$ and $\phi(\mK)$
@@ -486,8 +513,7 @@ Implement Performer random features. Use $m=256$ features for $d=64$:
 </ol>
 </div>
 
-<p>\begin{exercise}
-Analyze BigBird pattern. For $n=4096$, $w=256$, $r=64$, $g=32$:
+<div class="exercise"><strong>Exercise:</strong> Analyze BigBird pattern. For $n=4096$, $w=256$, $r=64$, $g=32$:
 <ol>
     <li>How many attention connections per token?
     <li>What is sparsity percentage?
