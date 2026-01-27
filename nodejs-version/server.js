@@ -50,23 +50,27 @@ app.get('/api/chapters', (req, res) => {
 app.get('/api/chapter/:id', (req, res) => {
   const chapterId = req.params.id;
   
-  // For Vercel serverless functions, __dirname is /var/task/api
-  // We need to go up one level to reach the project root, then into public/chapters
-  // For local server, __dirname is the project root
-  const isVercel = process.env.VERCEL === '1';
-  const htmlPath = isVercel 
+  // Determine the correct path based on where this code is running
+  // When running as server.js: __dirname is nodejs-version/, so use ./public/chapters/
+  // When running as api/index.js in Vercel: __dirname is api/, so use ../public/chapters/
+  const isApiDir = __dirname.endsWith('/api') || __dirname.endsWith('\\api');
+  const htmlPath = isApiDir
     ? path.join(__dirname, '..', 'public', 'chapters', `${chapterId}.html`)
     : path.join(__dirname, 'public', 'chapters', `${chapterId}.html`);
-  
-  console.log(`Loading chapter ${chapterId} from: ${htmlPath}`);
   
   fs.readFile(htmlPath, 'utf8', (err, data) => {
     if (err) {
       console.error(`Error reading chapter ${chapterId}:`, err);
       console.error(`Attempted path: ${htmlPath}`);
       console.error(`__dirname: ${__dirname}`);
-      console.error(`isVercel: ${isVercel}`);
-      return res.status(404).json({ error: 'Chapter not found', path: htmlPath });
+      console.error(`isApiDir: ${isApiDir}`);
+      
+      return res.status(404).json({ 
+        error: 'Chapter not found', 
+        attemptedPath: htmlPath,
+        dirname: __dirname,
+        isApiDir: isApiDir
+      });
     }
     // Ensure HTML content type
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
