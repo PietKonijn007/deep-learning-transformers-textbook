@@ -49,13 +49,24 @@ app.get('/api/chapters', (req, res) => {
 // API endpoint to get chapter content
 app.get('/api/chapter/:id', (req, res) => {
   const chapterId = req.params.id;
-  // Read from public/chapters directory (works for both local and Vercel)
-  const htmlPath = path.join(__dirname, 'public', 'chapters', `${chapterId}.html`);
+  
+  // For Vercel serverless functions, __dirname is /var/task/api
+  // We need to go up one level to reach the project root, then into public/chapters
+  // For local server, __dirname is the project root
+  const isVercel = process.env.VERCEL === '1';
+  const htmlPath = isVercel 
+    ? path.join(__dirname, '..', 'public', 'chapters', `${chapterId}.html`)
+    : path.join(__dirname, 'public', 'chapters', `${chapterId}.html`);
+  
+  console.log(`Loading chapter ${chapterId} from: ${htmlPath}`);
   
   fs.readFile(htmlPath, 'utf8', (err, data) => {
     if (err) {
       console.error(`Error reading chapter ${chapterId}:`, err);
-      return res.status(404).json({ error: 'Chapter not found' });
+      console.error(`Attempted path: ${htmlPath}`);
+      console.error(`__dirname: ${__dirname}`);
+      console.error(`isVercel: ${isVercel}`);
+      return res.status(404).json({ error: 'Chapter not found', path: htmlPath });
     }
     // Ensure HTML content type
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
