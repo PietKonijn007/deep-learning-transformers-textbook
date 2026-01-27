@@ -244,8 +244,9 @@ async function loadChapter(chapterId, index) {
         showLoading();
         elements.chapterContent.innerHTML = '<div class="loading">Loading chapter...</div>';
         
-        // Fetch chapter content
-        const response = await fetch(`/api/chapter/${chapterId}`);
+        // Fetch chapter content with cache-busting parameter
+        const cacheBuster = Date.now();
+        const response = await fetch(`/api/chapter/${chapterId}?v=${cacheBuster}`);
         if (!response.ok) throw new Error('Chapter not found');
         
         const html = await response.text();
