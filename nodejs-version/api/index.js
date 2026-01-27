@@ -39,7 +39,7 @@ app.get('/api/chapters', (req, res) => {
 // API endpoint to get chapter content
 app.get('/api/chapter/:id', (req, res) => {
   const chapterId = req.params.id;
-  const htmlPath = path.join(__dirname, '..', 'chapters', `${chapterId}.html`);
+  const htmlPath = path.join(__dirname, '..', 'public', 'chapters', `${chapterId}.html`);
   
   fs.readFile(htmlPath, 'utf8', (err, data) => {
     if (err) {
