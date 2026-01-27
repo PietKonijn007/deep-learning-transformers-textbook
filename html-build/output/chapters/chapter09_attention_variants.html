@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -484,18 +514,15 @@ $$
 \centering
 \caption{Complexity comparison of attention variants for sequence length $n$, model dimension $d$, window size $w$, and rank $r$. Accuracy percentages are relative to full attention on language modeling tasks.}</p>
 
-<p>\begin{tabular}{lccccc}
-\hline
-<strong>Variant</strong> & <strong>Time</strong> & <strong>Memory</strong> & <strong>Accuracy</strong> & <strong>Max Length</strong> & <strong>Use Case</strong> \\
-\hline
-Full Attention & $O(n^2d)$ & $O(n^2)$ & 100\% & 512-1024 & Standard tasks \\
-Local Attention & $O(nwd)$ & $O(nw)$ & 98-99\% & 4096-8192 & Document processing \\
-Sparse Attention & $O(n\sqrt{n}d)$ & $O(n\sqrt{n})$ & 97-99\% & 8192-16384 & Long documents \\
-Linear Attention & $O(nd^2)$ & $O(nd)$ & 95-98\% & 16384+ & Extreme length \\
-Low-Rank Attention & $O(nrd)$ & $O(nr)$ & 96-98\% & 4096-8192 & Compression \\
-\hline
-\end{tabular}
-\end{table}</p>
+<table>
+<tr><th><strong>Variant</strong></th><th><strong>Time</strong></th><th><strong>Memory</strong></th><th><strong>Accuracy</strong></th><th><strong>Max Length</strong></th><th><strong>Use Case</strong></th></tr>
+<tr><td>Full Attention</td><td>$O(n^2d)$</td><td>$O(n^2)$</td><td>100\%</td><td>512-1024</td><td>Standard tasks</td></tr>
+<tr><td>Local Attention</td><td>$O(nwd)$</td><td>$O(nw)$</td><td>98-99\%</td><td>4096-8192</td><td>Document processing</td></tr>
+<tr><td>Sparse Attention</td><td>$O(n\sqrt{n}d)$</td><td>$O(n\sqrt{n})$</td><td>97-99\%</td><td>8192-16384</td><td>Long documents</td></tr>
+<tr><td>Linear Attention</td><td>$O(nd^2)$</td><td>$O(nd)$</td><td>95-98\%</td><td>16384+</td><td>Extreme length</td></tr>
+<tr><td>Low-Rank Attention</td><td>$O(nrd)$</td><td>$O(nr)$</td><td>96-98\%</td><td>4096-8192</td><td>Compression</td></tr>
+</table>
+\end{table}
 
 <p>To make these complexity bounds concrete, consider processing sequences of varying lengths with BERT-base configuration ($d = 768$, 12 heads, $d_k = 64$ per head). The following table shows actual memory requirements for attention matrices across different sequence lengths and attention variants.</p>
 
@@ -503,18 +530,15 @@ Low-Rank Attention & $O(nrd)$ & $O(nr)$ & 96-98\% & 4096-8192 & Compression \\
 \centering
 \caption{Memory requirements (MB) for attention matrices with 12 heads, batch size 1, FP32 precision. Window size $w=256$, rank $r=256$ for applicable variants.}</p>
 
-<p>\begin{tabular}{lcccc}
-\hline
-<strong>Variant</strong> & <strong>n=512</strong> & <strong>n=4096</strong> & <strong>n=8192</strong> & <strong>n=16384</strong> \\
-\hline
-Full Attention & 12.6 MB & 805 MB & 3.2 GB & 12.9 GB \\
-Local Attention ($w=256$) & 6.3 MB & 50.3 MB & 101 MB & 201 MB \\
-Sparse Attention ($\sqrt{n}$) & 1.1 MB & 12.6 MB & 35.7 MB & 101 MB \\
-Linear Attention & 0.3 MB & 2.3 MB & 4.7 MB & 9.4 MB \\
-Low-Rank ($r=256$) & 6.3 MB & 50.3 MB & 101 MB & 201 MB \\
-\hline
-\end{tabular}
-\end{table}</p>
+<table>
+<tr><th><strong>Variant</strong></th><th><strong>n=512</strong></th><th><strong>n=4096</strong></th><th><strong>n=8192</strong></th><th><strong>n=16384</strong></th></tr>
+<tr><td>Full Attention</td><td>12.6 MB</td><td>805 MB</td><td>3.2 GB</td><td>12.9 GB</td></tr>
+<tr><td>Local Attention ($w=256$)</td><td>6.3 MB</td><td>50.3 MB</td><td>101 MB</td><td>201 MB</td></tr>
+<tr><td>Sparse Attention ($\sqrt{n}$)</td><td>1.1 MB</td><td>12.6 MB</td><td>35.7 MB</td><td>101 MB</td></tr>
+<tr><td>Linear Attention</td><td>0.3 MB</td><td>2.3 MB</td><td>4.7 MB</td><td>9.4 MB</td></tr>
+<tr><td>Low-Rank ($r=256$)</td><td>6.3 MB</td><td>50.3 MB</td><td>101 MB</td><td>201 MB</td></tr>
+</table>
+\end{table}
 
 <p>The memory savings become dramatic for long sequences. At 16,384 tokens, full attention requires 12.9 GB per example—impossible to fit on most GPUs even with batch size 1. Local attention reduces this to 201 MB, enabling batch size 32 on a 40 GB A100 GPU. Linear attention requires only 9.4 MB, enabling batch sizes of several hundred even for very long sequences.</p>
 
@@ -536,44 +560,34 @@ Low-Rank ($r=256$) & 6.3 MB & 50.3 MB & 101 MB & 201 MB \\
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Implement cross-attention layer in PyTorch. Test with encoder output (length 10, dim 128) and decoder input (length 7, dim 128). Verify attention matrix shape is $7 \times 10$.
+<div class="exercise"><strong>Exercise:</strong> Implement cross-attention layer in PyTorch. Test with encoder output (length 10, dim 128) and decoder input (length 7, dim 128). Verify attention matrix shape is $7 \times 10$.
 </div>
 
-<p>\begin{exercise}
-Calculate the memory requirements for attention matrices in a BERT-base model (12 heads, $d_{\text{model}} = 768$) processing sequences of length 512, 2048, and 4096 tokens. Compare full attention, local attention with window size 256, and linear attention. How much memory is saved at each sequence length?
+<div class="exercise"><strong>Exercise:</strong> Calculate the memory requirements for attention matrices in a BERT-base model (12 heads, $d_{\text{model}} = 768$) processing sequences of length 512, 2048, and 4096 tokens. Compare full attention, local attention with window size 256, and linear attention. How much memory is saved at each sequence length?
 </div>
 
-<p>\begin{exercise}
-Implement local attention with window size $w=128$ for a sequence of length 1024. Compare the computational cost (FLOPs) and memory usage to full attention. Measure actual runtime on GPU and explain any discrepancy between theoretical and observed speedup.
+<div class="exercise"><strong>Exercise:</strong> Implement local attention with window size $w=128$ for a sequence of length 1024. Compare the computational cost (FLOPs) and memory usage to full attention. Measure actual runtime on GPU and explain any discrepancy between theoretical and observed speedup.
 </div>
 
-<p>\begin{exercise}
-Design a sparse attention pattern for document understanding that combines local attention (window 64), strided attention (stride 128), and global attention to the first token. Calculate the number of attention connections per token and total memory requirements for a 4096-token sequence. What percentage of full attention's connections does this pattern use?
+<div class="exercise"><strong>Exercise:</strong> Design a sparse attention pattern for document understanding that combines local attention (window 64), strided attention (stride 128), and global attention to the first token. Calculate the number of attention connections per token and total memory requirements for a 4096-token sequence. What percentage of full attention's connections does this pattern use?
 </div>
 
-<p>\begin{exercise}
-Implement linear attention using the feature map $\phi(\vx) = \text{elu}(\vx) + 1$. Compare attention patterns to standard softmax attention on a sample sequence. Measure the approximation error and identify cases where linear attention diverges most from full attention.
+<div class="exercise"><strong>Exercise:</strong> Implement linear attention using the feature map $\phi(\vx) = \text{elu}(\vx) + 1$. Compare attention patterns to standard softmax attention on a sample sequence. Measure the approximation error and identify cases where linear attention diverges most from full attention.
 </div>
 
-<p>\begin{exercise}
-For a transformer with 24 layers processing 8192-token sequences, calculate the total memory required for attention matrices using: (1) full attention, (2) local attention with window 512, (3) sparse attention with $\sqrt{n}$ connections per token, (4) linear attention, and (5) low-rank attention with rank 256. Assume 12 heads, $d_{\text{model}} = 1024$, batch size 8, and FP16 precision.
+<div class="exercise"><strong>Exercise:</strong> For a transformer with 24 layers processing 8192-token sequences, calculate the total memory required for attention matrices using: (1) full attention, (2) local attention with window 512, (3) sparse attention with $\sqrt{n}$ connections per token, (4) linear attention, and (5) low-rank attention with rank 256. Assume 12 heads, $d_{\text{model}} = 1024$, batch size 8, and FP16 precision.
 </div>
 
-<p>\begin{exercise}
-Implement relative position bias as in T5. Use buckets: [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32+]. Show how attention scores change with relative distance and compare to absolute position encodings.
+<div class="exercise"><strong>Exercise:</strong> Implement relative position bias as in T5. Use buckets: [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32+]. Show how attention scores change with relative distance and compare to absolute position encodings.
 </div>
 
-<p>\begin{exercise}
-Analyze the trade-off between window size and accuracy for local attention. Train a small transformer on a language modeling task with window sizes [64, 128, 256, 512, full]. Plot perplexity vs window size and identify the point of diminishing returns. How does this relate to the average dependency length in the dataset?
+<div class="exercise"><strong>Exercise:</strong> Analyze the trade-off between window size and accuracy for local attention. Train a small transformer on a language modeling task with window sizes [64, 128, 256, 512, full]. Plot perplexity vs window size and identify the point of diminishing returns. How does this relate to the average dependency length in the dataset?
 </div>
 
-<p>\begin{exercise}
-Create visualization showing: (1) Self-attention patterns for sentence "The quick brown fox jumps", (2) Effect of causal masking, (3) Difference between heads 1 and 12 in multi-head attention. What patterns emerge?
+<div class="exercise"><strong>Exercise:</strong> Create visualization showing: (1) Self-attention patterns for sentence "The quick brown fox jumps", (2) Effect of causal masking, (3) Difference between heads 1 and 12 in multi-head attention. What patterns emerge?
 </div>
 
-<p>\begin{exercise}
-Compare computational cost of: (1) Additive (Bahdanau) attention, (2) Multiplicative attention, (3) Scaled dot-product attention. For $n = 512$, $d_k = 64$, which is most efficient? How does the ranking change for $n = 4096$?
+<div class="exercise"><strong>Exercise:</strong> Compare computational cost of: (1) Additive (Bahdanau) attention, (2) Multiplicative attention, (3) Scaled dot-product attention. For $n = 512$, $d_k = 64$, which is most efficient? How does the ranking change for $n = 4096$?
 </div>
         
         <div class="chapter-nav">

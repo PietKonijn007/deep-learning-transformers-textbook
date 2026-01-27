@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -346,7 +376,51 @@ In multi-head attention with $h = 12$ heads, batch size $B = 32$, sequence lengt
 
 <h3>Transpose</h3>
 
-<div class="definition"><strong>Definition:</strong> 
+<div class="definition"><strong>Definition:</strong> The <strong>transpose</strong> of $\mA \in \R^{m \times n}$, denoted $\mA\transpose \in \R^{n \times m}$, swaps rows and columns:
+<div class="equation">
+$$
+[\mA\transpose]_{i,j} = a_{j,i}
+$$
+</div>
+</div>
+
+<p>Important properties:
+<div class="equation">
+$$\begin{align}
+(\mA\transpose)\transpose &= \mA \\
+(\mA\mB)\transpose &= \mB\transpose \mA\transpose
+\end{align}$$
+</div>
+
+<h3>Hardware Context for Matrix Operations</h3>
+
+<p>Understanding how matrix operations map to hardware is crucial for writing efficient deep learning code.</p>
+
+<h4>Memory Layout: Row-Major vs Column-Major</h4>
+
+<p>Matrices are stored in memory as one-dimensional arrays, and the layout significantly affects performance. In row-major order, used by C and PyTorch, rows are stored consecutively in memory. In column-major order, used by Fortran and MATLAB, columns are stored consecutively. For a matrix $\mA = \begin{bmatrix} a & b \\ c & d \end{bmatrix}$, row-major storage produces the sequence $[a, b, c, d]$ while column-major storage produces $[a, c, b, d]$.</p>
+
+<div class="keypoint">
+<strong>Cache Efficiency:</strong> Accessing memory sequentially is 10-100$\times$ faster than random access due to CPU cache lines, which typically hold 64 bytes of consecutive memory. This means you should always iterate in the storage order. For row-major matrices, iterate rows in the outer loop to access consecutive memory locations, avoiding strided access patterns that jump across rows and cause cache misses.
+
+<p>For row-major matrices, iterate rows in the outer loop:
+<pre><code># Good: Sequential memory access
+for i in range(m):
+    for j in range(n):
+        result += A[i, j]  # Accesses consecutive memory</p>
+
+<p># Bad: Strided memory access  
+for j in range(n):
+    for i in range(m):
+        result += A[i, j]  # Jumps across rows
+</code></pre>
+</div>
+
+<h4>GPU Acceleration and BLAS Libraries</h4>
+
+<p>Modern deep learning relies on highly optimized linear algebra libraries that provide standardized interfaces for common operations. The Basic Linear Algebra Subprograms (BLAS) standard defines three levels of operations: Level 1 for vector operations like dot products and norms with $O(n)$ complexity, Level 2 for matrix-vector operations like $\mA\vx$ with $O(n^2)$ complexity, and Level 3 for matrix-matrix operations like $\mA\mB$ with $O(n^3)$ complexity. Common CPU implementations include Intel MKL, OpenBLAS, and Apple Accelerate, while GPU implementations include NVIDIA cuBLAS and AMD rocBLAS. These libraries achieve near-peak hardware performance through careful optimization of memory access patterns, instruction scheduling, and hardware-specific features.</p>
+
+<div class="example"><strong>Example:</strong> 
 NVIDIA GPUs use specialized Tensor Cores for accelerated matrix multiplication, achieving dramatically higher throughput than standard CUDA cores. The A100 GPU delivers 312 TFLOPS peak performance for FP16 operations with Tensor Cores, has 1.6 TB/s memory bandwidth, and includes 40 MB of L2 cache to reduce memory access latency.
 
 <p>For matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{4096 \times 4096}$, we need $2 \times 4096^3 = 137{,}438{,}953{,}472 \approx 137.4$ GFLOPs of computation and must transfer $3 \times 4096^2 \times 4 = 201{,}326{,}592 \approx 192$ MB of data (three matrices at 4 bytes per float). On an A100, this takes approximately $\frac{137.4 \text{ GFLOPS}}{312{,}000 \text{ GFLOPS}} \approx 0.44$ ms, making it compute-bound since the computation time exceeds the memory transfer time of $\frac{192 \text{ MB}}{1{,}600{,}000 \text{ MB/s}} \approx 0.12$ ms.
@@ -396,15 +470,14 @@ $$
 where $\theta$ is the angle between vectors and $\norm{\vx}_2 = \sqrt{\vx\transpose \vx}$ is the Euclidean norm.
 </div>
 
-<p>\begin{corollary}[Cosine Similarity]</p>
-
-<p>The <strong>cosine similarity</strong> between two non-zero vectors is:
+<div class="corollary"><strong>Corollary:</strong> 
+The <strong>cosine similarity</strong> between two non-zero vectors is:
 <div class="equation">
 $$
 \text{sim}(\vx, \vy) = \frac{\vx\transpose \vy}{\norm{\vx}_2 \norm{\vy}_2} = \cos(\theta) \in [-1, 1]
 $$
 </div>
-\end{corollary}</p>
+</div>
 
 <div class="example"><strong>Example:</strong> 
 In transformer attention, we compute similarity between query and key vectors using dot products:
@@ -529,18 +602,15 @@ $$
 </div>
 
 <p><strong>Typical results for transformer feed-forward layers:</strong>
-\begin{center}
-\begin{tabular}{cccc}
-\hline
-Rank $k$ & Compression & Relative Error & Accuracy Drop \\
-\hline
-256 & 50\% & 0.05 & $<$0.1\% \\
-128 & 75\% & 0.12 & 0.3\% \\
-64 & 87.5\% & 0.25 & 1.2\% \\
-32 & 93.75\% & 0.45 & 3.5\% \\
-\hline
-\end{tabular}
-\end{center}</p>
+<div style="text-align: center;">
+<table>
+<tr><th>Rank $k$</th><th>Compression</th><th>Relative Error</th><th>Accuracy Drop</th></tr>
+<tr><td>256</td><td>50\%</td><td>0.05</td><td>$<$0.1\%</td></tr>
+<tr><td>128</td><td>75\%</td><td>0.12</td><td>0.3\%</td></tr>
+<tr><td>64</td><td>87.5\%</td><td>0.25</td><td>1.2\%</td></tr>
+<tr><td>32</td><td>93.75\%</td><td>0.45</td><td>3.5\%</td></tr>
+</table>
+</div>
 
 <p>Sweet spot: 50-75\% compression with minimal accuracy loss.
 </div>

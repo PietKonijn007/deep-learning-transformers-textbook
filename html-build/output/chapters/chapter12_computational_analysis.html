@@ -20,28 +20,58 @@
                 N: '{\\mathbb{N}}',
                 Z: '{\\mathbb{Z}}',
                 C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
                 vx: '{\\mathbf{x}}',
                 vy: '{\\mathbf{y}}',
                 vz: '{\\mathbf{z}}',
-                vh: '{\\mathbf{h}}',
-                vw: '{\\mathbf{w}}',
-                vb: '{\\mathbf{b}}',
-                vq: '{\\mathbf{q}}',
-                vk: '{\\mathbf{k}}',
-                vv: '{\\mathbf{v}}',
                 mA: '{\\mathbf{A}}',
                 mB: '{\\mathbf{B}}',
                 mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
                 mW: '{\\mathbf{W}}',
                 mX: '{\\mathbf{X}}',
                 mY: '{\\mathbf{Y}}',
-                mQ: '{\\mathbf{Q}}',
-                mK: '{\\mathbf{K}}',
-                mV: '{\\mathbf{V}}',
-                mH: '{\\mathbf{H}}',
-                mI: '{\\mathbf{I}}',
-                mU: '{\\mathbf{U}}',
-                mM: '{\\mathbf{M}}',
+                mZ: '{\\mathbf{Z}}',
                 transpose: '{^\\top}',
                 norm: ['\\left\\|#1\\right\\|', 1],
                 abs: ['\\left|#1\\right|', 1]
@@ -797,18 +827,18 @@ $$\begin{align}
 
 <p>\begin{table}[htbp]
 \centering
-\begin{tabular}{lrrr}
-\toprule
-<strong>Model Size</strong> & <strong>Parameters</strong> & <strong>Min GPU Memory</strong> & <strong>Recommended GPU</strong> \\
-\midrule
-Small & 100M & 8 GB & RTX 3070, V100 \\
-Base & 300M & 12 GB & RTX 3080, V100 \\
-Large & 1B & 24 GB & RTX 3090, A5000 \\
-XL & 3B & 40 GB & A100 (40 GB) \\
-XXL & 10B & 80 GB & A100 (80 GB) \\
-175B (GPT-3) & 175B & 8× A100 (80 GB) & Multi-node cluster \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Model Size</strong></th><th><strong>Parameters</strong></th><th><strong>Min GPU Memory</strong></th><th><strong>Recommended GPU</strong></th></tr>
+<tr><td>\midrule
+Small</td><td>100M</td><td>8 GB</td><td>RTX 3070, V100</td></tr>
+<tr><td>Base</td><td>300M</td><td>12 GB</td><td>RTX 3080, V100</td></tr>
+<tr><td>Large</td><td>1B</td><td>24 GB</td><td>RTX 3090, A5000</td></tr>
+<tr><td>XL</td><td>3B</td><td>40 GB</td><td>A100 (40 GB)</td></tr>
+<tr><td>XXL</td><td>10B</td><td>80 GB</td><td>A100 (80 GB)</td></tr>
+<tr><td>175B (GPT-3)</td><td>175B</td><td>8× A100 (80 GB)</td><td>Multi-node cluster</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{GPU memory requirements for training transformer models (batch size 8-16, sequence length 512-1024)}
 \end{table}</p>
 
@@ -861,30 +891,30 @@ $$
 <p><strong>KV Caching solution:</strong> Key and value projections depend only on input tokens, not on the query position. Cache $\mK$ and $\mV$ from previous steps:</p>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Autoregressive Generation with KV Caching</div>
-\KwIn{Prompt tokens $\vx_1, \ldots, \vx_p$, max length $T$}
-\KwOut{Generated sequence $\vx_1, \ldots, \vx_T$}
-
-<p>\tcp{Initialize cache}
-$\text{cache}_K = []$, $\text{cache}_V = []$ \\</p>
-
-<p>\tcp{Process prompt}
-\For{$t = 1$ \KwTo $p$}{
-    $\vk_t = \mW^K \vx_t$, $\vv_t = \mW^V \vx_t$ \\
-    Append $\vk_t$ to $\text{cache}_K$, $\vv_t$ to $\text{cache}_V$ \\
-    $\vq_t = \mW^Q \vx_t$ \\
-    Compute attention using $\vq_t$ and all cached keys/values \\
-    Generate $\vh_t$
-}</p>
-
-<p>\tcp{Generate new tokens}
-\For{$t = p+1$ \KwTo $T$}{
-    Sample $\vx_t$ from $\vh_{t-1}$ \\
-    $\vk_t = \mW^K \vx_t$, $\vv_t = \mW^V \vx_t$ \\
-    Append $\vk_t$ to $\text{cache}_K$, $\vv_t$ to $\text{cache}_V$ \\
-    $\vq_t = \mW^Q \vx_t$ \\
-    Compute attention: $\text{Attention}(\vq_t, \text{cache}_K, \text{cache}_V)$ \\
-    Generate $\vh_t$
-}
+<div class="algorithm-line"><strong>Input:</strong> Prompt tokens $\vx_1, \ldots, \vx_p$, max length $T$</div>
+<div class="algorithm-line"><strong>Output:</strong> Generated sequence $\vx_1, \ldots, \vx_T$</div>
+<div class="algorithm-line"><span class="algorithm-comment">// Initialize cache</span></div>
+<div class="algorithm-line">$\text{cache}_K = []$, $\text{cache}_V = []$ \\</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Process prompt</span></div>
+<div class="algorithm-line"><strong>for</strong> $t = 1$ to $p$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">$\vk_t = \mW^K \vx_t$, $\vv_t = \mW^V \vx_t$</div>
+<div class="algorithm-line">Append $\vk_t$ to $\text{cache}_K$, $\vv_t$ to $\text{cache}_V$</div>
+<div class="algorithm-line">$\vq_t = \mW^Q \vx_t$</div>
+<div class="algorithm-line">Compute attention using $\vq_t$ and all cached keys/values</div>
+<div class="algorithm-line">Generate $\vh_t$</div>
+<div class="algorithm-line">}</p></div>
+<div class="algorithm-line"><span class="algorithm-comment">// Generate new tokens</span></div>
+<div class="algorithm-line"><strong>for</strong> $t = p+1$ to $T$ <strong>do</strong></div>
+<div class="algorithm-indent">
+<div class="algorithm-line">Sample $\vx_t$ from $\vh_{t-1}$</div>
+<div class="algorithm-line">$\vk_t = \mW^K \vx_t$, $\vv_t = \mW^V \vx_t$</div>
+<div class="algorithm-line">Append $\vk_t$ to $\text{cache}_K$, $\vv_t$ to $\text{cache}_V$</div>
+<div class="algorithm-line">$\vq_t = \mW^Q \vx_t$</div>
+<div class="algorithm-line">Compute attention: $\text{Attention}(\vq_t, \text{cache}_K, \text{cache}_V)$</div>
+<div class="algorithm-line">Generate $\vh_t$</div>
+</div>
+</div>
 </div>
 
 <p><strong>Computational savings:</strong> With caching, each step computes attention once (not recomputing previous positions):
@@ -1046,18 +1076,18 @@ $$\begin{align}
 
 <p>\begin{table}[htbp]
 \centering
-\begin{tabular}{lrrr}
-\toprule
-<strong>Technique</strong> & <strong>Speedup</strong> & <strong>Memory Reduction</strong> & <strong>Accuracy Impact</strong> \\
-\midrule
-KV Caching & 100-500× & -50\% (cache overhead) & None \\
-Batching (32×) & 2-3× throughput & None & None \\
-FP16/BF16 & 1.5-2× & 2× & Negligible \\
-INT8 Quantization & 2-4× & 4× & Small (0.5-2\%) \\
-INT4 Quantization & 4-8× & 8× & Moderate (2-5\%) \\
-Distillation & 2-7× & 2-8× & Small (3-4\%) \\
-\bottomrule
-\end{tabular}
+<table>
+<tr><th>\toprule
+<strong>Technique</strong></th><th><strong>Speedup</strong></th><th><strong>Memory Reduction</strong></th><th><strong>Accuracy Impact</strong></th></tr>
+<tr><td>\midrule
+KV Caching</td><td>100-500×</td><td>-50\% (cache overhead)</td><td>None</td></tr>
+<tr><td>Batching (32×)</td><td>2-3× throughput</td><td>None</td><td>None</td></tr>
+<tr><td>FP16/BF16</td><td>1.5-2×</td><td>2×</td><td>Negligible</td></tr>
+<tr><td>INT8 Quantization</td><td>2-4×</td><td>4×</td><td>Small (0.5-2\%)</td></tr>
+<tr><td>INT4 Quantization</td><td>4-8×</td><td>8×</td><td>Moderate (2-5\%)</td></tr>
+<tr><td>Distillation</td><td>2-7×</td><td>2-8×</td><td>Small (3-4\%)</td></tr>
+<tr><td>\bottomrule</td></tr>
+</table>
 \caption{Inference optimization techniques and their trade-offs}
 \end{table}</p>
 
@@ -1094,20 +1124,16 @@ $$
 
 <h2>Exercises</h2>
 
-<p>\begin{exercise}
-Calculate FLOPs for GPT-3 (175B parameters, $L=96$, $d=12288$, $h=96$, $n=2048$) for: (1) Single forward pass, (2) Generating 100 tokens autoregressively, (3) Training on 1 trillion tokens.
+<div class="exercise"><strong>Exercise:</strong> Calculate FLOPs for GPT-3 (175B parameters, $L=96$, $d=12288$, $h=96$, $n=2048$) for: (1) Single forward pass, (2) Generating 100 tokens autoregressively, (3) Training on 1 trillion tokens.
 </div>
 
-<p>\begin{exercise}
-Estimate memory for training 1.3B parameter model with batch size 64, sequence length 2048. What GPU memory required? How to fit on A100 (80GB)?
+<div class="exercise"><strong>Exercise:</strong> Estimate memory for training 1.3B parameter model with batch size 64, sequence length 2048. What GPU memory required? How to fit on A100 (80GB)?
 </div>
 
-<p>\begin{exercise}
-Implement KV caching for GPT-2. Measure speedup for generating 256 tokens. Plot generation time vs sequence length with/without caching.
+<div class="exercise"><strong>Exercise:</strong> Implement KV caching for GPT-2. Measure speedup for generating 256 tokens. Plot generation time vs sequence length with/without caching.
 </div>
 
-<p>\begin{exercise}
-For fixed compute budget $C = 10^{24}$ FLOPs: Use Chinchilla scaling to find optimal model size and data size. Compare with GPT-3 allocation.
+<div class="exercise"><strong>Exercise:</strong> For fixed compute budget $C = 10^{24}$ FLOPs: Use Chinchilla scaling to find optimal model size and data size. Compare with GPT-3 allocation.
 </div>
         
         <div class="chapter-nav">

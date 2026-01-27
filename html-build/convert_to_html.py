@@ -62,6 +62,58 @@ def convert_latex_to_html(latex_content):
     # Remove LaTeX comments
     html = re.sub(r'(?<!\\)%.*$', '', html, flags=re.MULTILINE)
     
+    # Convert tables FIRST - before any other conversions
+    def convert_table_environment(match):
+        """Convert entire table environment including wrapper and tabular"""
+        full_content = match.group(0)
+        
+        # Extract just the tabular content
+        tabular_match = re.search(r'\\begin\{tabular\}\{[^}]+\}(.*?)\\end\{tabular\}', full_content, re.DOTALL)
+        if not tabular_match:
+            return full_content
+        
+        table_content = tabular_match.group(1)
+        
+        # Remove all booktabs and table formatting commands with surrounding whitespace
+        # These can appear on their own lines or inline
+        table_content = re.sub(r'\s*\\toprule\s*', '\n', table_content)
+        table_content = re.sub(r'\s*\\midrule\s*', '\n', table_content)
+        table_content = re.sub(r'\s*\\bottomrule\s*', '\n', table_content)
+        table_content = re.sub(r'\s*\\hline\s*', '\n', table_content)
+        
+        # Split by \\ for rows
+        rows = [r.strip() for r in table_content.split('\\\\') if r.strip()]
+        
+        html_rows = []
+        
+        for i, row in enumerate(rows):
+            row = row.strip()
+            if not row:
+                continue
+            
+            # Skip rows that are just whitespace or booktabs commands
+            if not row or re.match(r'^\\(toprule|midrule|bottomrule|hline)\s*$', row):
+                continue
+            
+            # Split by &
+            cells = [c.strip() for c in row.split('&')]
+            
+            # First row is typically the header
+            if i == 0:
+                html_rows.append('<tr>' + ''.join(f'<th>{cell}</th>' for cell in cells) + '</tr>')
+            else:
+                html_rows.append('<tr>' + ''.join(f'<td>{cell}</td>' for cell in cells) + '</tr>')
+        
+        return '\n<table>\n' + '\n'.join(html_rows) + '\n</table>\n'
+    
+    # Match entire table environment
+    tables_found = len(re.findall(r'\\begin\{table\}.*?\\end\{table\}', html, flags=re.DOTALL))
+    html = re.sub(r'\\begin\{table\}.*?\\end\{table\}', convert_table_environment, html, flags=re.DOTALL)
+    tables_after = html.count('<table>')
+    
+    if tables_found > 0:
+        print(f"  → Converted {tables_found} table environments to {tables_after} HTML tables [v2-FIXED]")
+    
     # Convert chapters and sections
     html = re.sub(r'\\chapter\*?\{([^}]+)\}', r'<h1>\1</h1>', html)
     html = re.sub(r'\\section\*?\{([^}]+)\}', r'<h2>\1</h2>', html)
@@ -121,19 +173,29 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\begin\{center\}', r'<div style="text-align: center;">', html)
     html = re.sub(r'\\end\{center\}', r'</div>', html)
     
-    # Convert tables - basic conversion
-    def convert_table(match):
+    # Convert standalone tabular environments (not wrapped in table environment)
+    def convert_standalone_tabular(match):
+        """Convert tabular environments that aren't inside table environments"""
         table_content = match.group(1)
-        # Remove \hline commands first
-        table_content = re.sub(r'\\hline\s*', '', table_content)
+        
+        # Remove all booktabs and table formatting commands with surrounding whitespace
+        table_content = re.sub(r'\s*\\toprule\s*', '\n', table_content)
+        table_content = re.sub(r'\s*\\midrule\s*', '\n', table_content)
+        table_content = re.sub(r'\s*\\bottomrule\s*', '\n', table_content)
+        table_content = re.sub(r'\s*\\hline\s*', '\n', table_content)
+        
         # Split by \\ for rows
         rows = [r.strip() for r in table_content.split('\\\\') if r.strip()]
         
         html_rows = []
-        first_data_row = True
         
         for i, row in enumerate(rows):
+            row = row.strip()
             if not row:
+                continue
+            
+            # Skip rows that are just whitespace or booktabs commands
+            if not row or re.match(r'^\\(toprule|midrule|bottomrule|hline)\s*$', row):
                 continue
             
             # Split by &
@@ -145,9 +207,10 @@ def convert_latex_to_html(latex_content):
             else:
                 html_rows.append('<tr>' + ''.join(f'<td>{cell}</td>' for cell in cells) + '</tr>')
         
-        return '<table>\n' + '\n'.join(html_rows) + '\n</table>'
+        return '\n<table>\n' + '\n'.join(html_rows) + '\n</table>\n'
     
-    html = re.sub(r'\\begin\{tabular\}\{[^}]+\}(.*?)\\end\{tabular\}', convert_table, html, flags=re.DOTALL)
+    # Convert standalone tabular environments
+    html = re.sub(r'\\begin\{tabular\}\{[^}]+\}(.*?)\\end\{tabular\}', convert_standalone_tabular, html, flags=re.DOTALL)
     
     # Convert text formatting - handle nested braces properly
     def convert_textbf(match):
