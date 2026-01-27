@@ -363,24 +363,16 @@ The benefits of Flash Attention scale with sequence length and are particularly 
 
 <p>Understanding when to use each efficient attention method requires careful analysis of their performance characteristics across different sequence lengths, hardware platforms, and quality requirements. This section provides detailed benchmarks on NVIDIA A100 GPUs with concrete memory and speed measurements.</p>
 
-<p>\begin{table}[htbp]
-\centering
-\small
 <table>
-<tr><th>\toprule
-<strong>Method</strong></th><th><strong>Complexity</strong></th><th><strong>Memory</strong></th><th><strong>Exact</strong></th><th><strong>Quality</strong></th></tr>
-<tr><td>\midrule
-Standard</td><td>$O(n^2d)$</td><td>$O(n^2)$</td><td>Yes</td><td>Best</td></tr>
+<tr><th><strong>Method</strong></th><th><strong>Complexity</strong></th><th><strong>Memory</strong></th><th><strong>Exact</strong></th><th><strong>Quality</strong></th></tr>
+<tr><td>Standard</td><td>$O(n^2d)$</td><td>$O(n^2)$</td><td>Yes</td><td>Best</td></tr>
 <tr><td>Sliding Window</td><td>$O(nwd)$</td><td>$O(nw)$</td><td>No</td><td>Good</td></tr>
 <tr><td>Longformer</td><td>$O(nwd)$</td><td>$O(nw)$</td><td>No</td><td>Good</td></tr>
 <tr><td>BigBird</td><td>$O(n(w+r+g)d)$</td><td>$O(n(w+r+g))$</td><td>No</td><td>Good</td></tr>
 <tr><td>Linformer</td><td>$O(nkd)$</td><td>$O(nk)$</td><td>No</td><td>Good</td></tr>
 <tr><td>Performer</td><td>$O(nmd)$</td><td>$O(nm)$</td><td>Approx</td><td>Medium</td></tr>
 <tr><td>Flash Attention</td><td>$O(n^2d)$</td><td>$O(n)$</td><td>Yes</td><td>Best</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Complexity and characteristics of efficient attention methods. Parameters: $w$ = window size, $r$ = random connections, $g$ = global tokens, $k$ = projection dimension, $m$ = random features.}
-\end{table}</p>
 
 <h3>Memory Scaling Analysis</h3>
 

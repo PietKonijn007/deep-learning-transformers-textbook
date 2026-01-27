@@ -960,23 +960,16 @@ $$\begin{align}
 
 <h3>Comparison of Strategies</h3>
 
-<p>\begin{table}[htbp]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Strategy</strong></th><th><strong>Memory Reduction</strong></th><th><strong>Communication</strong></th><th><strong>Use Case</strong></th></tr>
-<tr><td>\midrule
-Data Parallel</td><td>None</td><td>Gradients</td><td>Small models, many GPUs</td></tr>
+<tr><th><strong>Strategy</strong></th><th><strong>Memory Reduction</strong></th><th><strong>Communication</strong></th><th><strong>Use Case</strong></th></tr>
+<tr><td>Data Parallel</td><td>None</td><td>Gradients</td><td>Small models, many GPUs</td></tr>
 <tr><td>Model Parallel</td><td>$N\times$</td><td>Activations</td><td>Large models, sequential</td></tr>
 <tr><td>Pipeline Parallel</td><td>$N\times$</td><td>Activations</td><td>Very large models</td></tr>
 <tr><td>Tensor Parallel</td><td>$N\times$</td><td>Activations (small)</td><td>Huge layers</td></tr>
 <tr><td>ZeRO Stage 1</td><td>$4\times$</td><td>Minimal</td><td>Optimizer memory bound</td></tr>
 <tr><td>ZeRO Stage 2</td><td>$8\times$</td><td>Gradients</td><td>Gradient memory bound</td></tr>
 <tr><td>ZeRO Stage 3</td><td>$N\times$</td><td>All</td><td>Extreme scale</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Comparison of distributed training strategies for $N$ GPUs}
-\end{table}</p>
 
 <p>In practice, large-scale training often combines multiple strategies. GPT-3 training used a combination of data parallelism, model parallelism, and pipeline parallelism across thousands of GPUs. Modern frameworks like DeepSpeed and Megatron-LM provide implementations of these strategies that can be combined flexibly based on model size and available hardware.</p>
 

@@ -371,18 +371,17 @@ where $\theta_i = 10000^{-2i/d}$. The key insight is that the dot product betwee
 <p>The following table summarizes the trade-offs between positional encoding methods:</p>
 
 <div style="text-align: center;">
+
 <table>
-<tr><th>\toprule
-<strong>Type</strong></th><th><strong>Memory</strong></th><th><strong>Extrapolation</strong></th><th><strong>Used In</strong></th></tr>
-<tr><td>\midrule
-Sinusoidal</td><td>None</td><td>Good</td><td>Original Transformer</td></tr>
+<tr><th><strong>Type</strong></th><th><strong>Memory</strong></th><th><strong>Extrapolation</strong></th><th><strong>Used In</strong></th></tr>
+<tr><td>Sinusoidal</td><td>None</td><td>Good</td><td>Original Transformer</td></tr>
 <tr><td>Learned</td><td>$n_{\max} \times d$</td><td>Poor</td><td>BERT, GPT-2</td></tr>
 <tr><td>Relative</td><td>$O(d_{\text{rel}})$</td><td>Good</td><td>T5, Transformer-XL</td></tr>
 <tr><td>RoPE</td><td>None</td><td>Excellent</td><td>LLaMA, GPT-NeoX</td></tr>
 <tr><td>ALiBi</td><td>None</td><td>Excellent</td><td>BLOOM</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-</div>
+
+<p></div>
 
 <p>The trend in recent large language models has been toward parameter-free methods with strong extrapolation: RoPE and ALiBi dominate current architectures. These methods avoid the memory cost of learned positional embeddings while providing better length generalization than sinusoidal encodings. For practitioners, the choice depends on the application: if sequences will always be shorter than the training maximum, learned embeddings may provide slightly better performance. If length generalization is important, RoPE or ALiBi are superior choices.</p>
 
@@ -418,19 +417,18 @@ $$
 <p>To illustrate the scaling behavior empirically, consider BERT-base with batch size 1 on an NVIDIA A100 GPU. The following measurements show forward pass time for different sequence lengths:</p>
 
 <div style="text-align: center;">
+
 <table>
-<tr><th>\toprule
-<strong>Sequence Length</strong></th><th><strong>Time (ms)</strong></th><th><strong>Bottleneck</strong></th></tr>
-<tr><td>\midrule
-128</td><td>2.1</td><td>FFN dominates</td></tr>
+<tr><th><strong>Sequence Length</strong></th><th><strong>Time (ms)</strong></th><th><strong>Bottleneck</strong></th></tr>
+<tr><td>128</td><td>2.1</td><td>FFN dominates</td></tr>
 <tr><td>256</td><td>3.8</td><td>FFN dominates</td></tr>
 <tr><td>512</td><td>8.5</td><td>Balanced</td></tr>
 <tr><td>1024</td><td>28.3</td><td>Attention dominates</td></tr>
 <tr><td>2048</td><td>98.7</td><td>Attention dominates</td></tr>
 <tr><td>4096</td><td>367</td><td>Attention dominates</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-</div>
+
+<p></div>
 
 <p>For short sequences (128, 256), the time scales approximately linearly, indicating that the $O(nd_{\text{model}}^2)$ terms dominate. At sequence length 512, the scaling begins to show quadratic behavior. For long sequences (1024, 2048, 4096), the time scales quadratically: doubling from 1024 to 2048 increases time by $98.7 / 28.3 \approx 3.5\times$, and doubling again to 4096 increases time by $367 / 98.7 \approx 3.7\times$. The slight deviation from exactly $4\times$ is due to the linear terms and memory bandwidth effects, but the quadratic scaling is clearly visible.</p>
 

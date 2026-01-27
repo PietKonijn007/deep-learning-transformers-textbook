@@ -825,22 +825,15 @@ $$\begin{align}
 
 <p><strong>GPU memory requirements by model size (mixed precision + gradient checkpointing):</strong></p>
 
-<p>\begin{table}[htbp]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Model Size</strong></th><th><strong>Parameters</strong></th><th><strong>Min GPU Memory</strong></th><th><strong>Recommended GPU</strong></th></tr>
-<tr><td>\midrule
-Small</td><td>100M</td><td>8 GB</td><td>RTX 3070, V100</td></tr>
+<tr><th><strong>Model Size</strong></th><th><strong>Parameters</strong></th><th><strong>Min GPU Memory</strong></th><th><strong>Recommended GPU</strong></th></tr>
+<tr><td>Small</td><td>100M</td><td>8 GB</td><td>RTX 3070, V100</td></tr>
 <tr><td>Base</td><td>300M</td><td>12 GB</td><td>RTX 3080, V100</td></tr>
 <tr><td>Large</td><td>1B</td><td>24 GB</td><td>RTX 3090, A5000</td></tr>
 <tr><td>XL</td><td>3B</td><td>40 GB</td><td>A100 (40 GB)</td></tr>
 <tr><td>XXL</td><td>10B</td><td>80 GB</td><td>A100 (80 GB)</td></tr>
 <tr><td>175B (GPT-3)</td><td>175B</td><td>8× A100 (80 GB)</td><td>Multi-node cluster</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{GPU memory requirements for training transformer models (batch size 8-16, sequence length 512-1024)}
-\end{table}</p>
 
 <p><strong>Inference memory requirements (FP16):</strong>
 <ul>
@@ -1074,22 +1067,15 @@ $$\begin{align}
 
 <h3>Inference Optimization Summary</h3>
 
-<p>\begin{table}[htbp]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Technique</strong></th><th><strong>Speedup</strong></th><th><strong>Memory Reduction</strong></th><th><strong>Accuracy Impact</strong></th></tr>
-<tr><td>\midrule
-KV Caching</td><td>100-500×</td><td>-50\% (cache overhead)</td><td>None</td></tr>
+<tr><th><strong>Technique</strong></th><th><strong>Speedup</strong></th><th><strong>Memory Reduction</strong></th><th><strong>Accuracy Impact</strong></th></tr>
+<tr><td>KV Caching</td><td>100-500×</td><td>-50\% (cache overhead)</td><td>None</td></tr>
 <tr><td>Batching (32×)</td><td>2-3× throughput</td><td>None</td><td>None</td></tr>
 <tr><td>FP16/BF16</td><td>1.5-2×</td><td>2×</td><td>Negligible</td></tr>
 <tr><td>INT8 Quantization</td><td>2-4×</td><td>4×</td><td>Small (0.5-2\%)</td></tr>
 <tr><td>INT4 Quantization</td><td>4-8×</td><td>8×</td><td>Moderate (2-5\%)</td></tr>
 <tr><td>Distillation</td><td>2-7×</td><td>2-8×</td><td>Small (3-4\%)</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Inference optimization techniques and their trade-offs}
-\end{table}</p>
 
 <p><strong>Combined optimizations:</strong> KV caching + FP16 + batching + INT8 can achieve 1000× speedup with minimal accuracy loss!</p>
 

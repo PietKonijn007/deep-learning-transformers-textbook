@@ -646,6 +646,7 @@ $$
 <p>The following table summarizes the key characteristics of each attention mechanism:</p>
 
 <div style="text-align: center;">
+
 <table>
 <tr><th><strong>Method</strong></th><th><strong>Computation</strong></th><th><strong>Parameters</strong></th><th><strong>GPU Util.</strong></th><th><strong>Used In</strong></th></tr>
 <tr><td>Additive (Bahdanau)</td><td>$\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$</td><td>$O(d_a(d_q + d_k))$</td><td>15-25\%</td><td>Early seq2seq</td></tr>
@@ -653,7 +654,8 @@ $$
 <tr><td>Scaled dot-product</td><td>$\vq\transpose\vk/\sqrt{d_k}$</td><td>0</td><td>80-90\%</td><td>Transformers</td></tr>
 <tr><td>General (Luong)</td><td>$\vq\transpose\mW\vk$</td><td>$O(d_q d_k)$</td><td>50-70\%</td><td>Some seq2seq</td></tr>
 </table>
-</div>
+
+<p></div>
 
 <p><strong>Why Scaled Dot-Product Won:</strong> The dominance of scaled dot-product attention in modern transformers reflects several factors beyond raw computational efficiency. First, the parameter-free nature means the model's capacity is concentrated in the QKV projection matrices and feed-forward networks rather than the scoring function. This architectural choice scales better to very large models—GPT-3 with 175 billion parameters would require even more parameters if using additive or general attention.</p>
 

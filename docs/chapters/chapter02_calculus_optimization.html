@@ -650,21 +650,13 @@ Requires $n$ forward passes: $O(n \cdot m) = O(n^2)$ operations.</p>
 
 <h3>Memory Comparison by Optimizer</h3>
 
-<p>\begin{table}[h]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Optimizer</strong></th><th><strong>Memory per Parameter</strong></th><th><strong>Total Memory Factor</strong></th></tr>
-<tr><td>\midrule
-SGD (no momentum)</td><td>4 bytes (fp32)</td><td>1×</td></tr>
+<tr><th><strong>Optimizer</strong></th><th><strong>Memory per Parameter</strong></th><th><strong>Total Memory Factor</strong></th></tr>
+<tr><td>SGD (no momentum)</td><td>4 bytes (fp32)</td><td>1×</td></tr>
 <tr><td>SGD with momentum</td><td>8 bytes (param + velocity)</td><td>2×</td></tr>
 <tr><td>Adam</td><td>16 bytes (param + 2 moments)</td><td>4×</td></tr>
 <tr><td>Adam (mixed precision)</td><td>10 bytes (fp16 param + fp32 master + 2 moments)</td><td>2.5×</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Memory requirements per parameter for different optimizers}</p>
-
-<p>\end{table}</p>
 
 <div class="example"><strong>Example:</strong> 
 For BERT-base with 110M parameters:
@@ -757,21 +749,14 @@ Learning rate affects both convergence speed and hardware efficiency. Larger lea
 <div class="example"><strong>Example:</strong> 
 Training BERT-base on 1M examples:
 
-<p>\begin{table}[h]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Learning Rate</strong></th><th><strong>Steps to Converge</strong></th><th><strong>Wall Time</strong></th><th><strong>Final Loss</strong></th></tr>
-<tr><td>\midrule
-$1 \times 10^{-5}$</td><td>100,000</td><td>12 hours</td><td>1.85</td></tr>
+<tr><th><strong>Learning Rate</strong></th><th><strong>Steps to Converge</strong></th><th><strong>Wall Time</strong></th><th><strong>Final Loss</strong></th></tr>
+<tr><td>$1 \times 10^{-5}$</td><td>100,000</td><td>12 hours</td><td>1.85</td></tr>
 <tr><td>$1 \times 10^{-4}$</td><td>30,000</td><td>3.6 hours</td><td>1.82</td></tr>
 <tr><td>$5 \times 10^{-4}$</td><td>15,000</td><td>1.8 hours</td><td>1.81</td></tr>
 <tr><td>$1 \times 10^{-3}$</td><td>20,000</td><td>2.4 hours</td><td>1.83</td></tr>
 <tr><td>$5 \times 10^{-3}$</td><td>Diverges</td><td>-</td><td>-</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Learning rate impact on BERT-base training}
-\end{table}</p>
 
 <p>Optimal learning rate ($5 \times 10^{-4}$) achieves 6.7× faster convergence than conservative rate.
 </div>
@@ -792,45 +777,30 @@ $$
 <div class="example"><strong>Example:</strong> 
 Training BERT-base with different batch sizes:
 
-<p>\begin{table}[h]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Batch Size</strong></th><th><strong>Learning Rate</strong></th><th><strong>GPU Util.</strong></th><th><strong>Steps/sec</strong></th><th><strong>Samples/sec</strong></th></tr>
-<tr><td>\midrule
-32</td><td>$5 \times 10^{-4}$</td><td>45\%</td><td>2.1</td><td>67</td></tr>
+<tr><th><strong>Batch Size</strong></th><th><strong>Learning Rate</strong></th><th><strong>GPU Util.</strong></th><th><strong>Steps/sec</strong></th><th><strong>Samples/sec</strong></th></tr>
+<tr><td>32</td><td>$5 \times 10^{-4}$</td><td>45\%</td><td>2.1</td><td>67</td></tr>
 <tr><td>64</td><td>$1 \times 10^{-3}$</td><td>68\%</td><td>1.8</td><td>115</td></tr>
 <tr><td>128</td><td>$2 \times 10^{-3}$</td><td>85\%</td><td>1.4</td><td>179</td></tr>
 <tr><td>256</td><td>$4 \times 10^{-3}$</td><td>92\%</td><td>1.0</td><td>256</td></tr>
 <tr><td>512</td><td>$8 \times 10^{-3}$</td><td>95\%</td><td>0.6</td><td>307</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Batch size impact on GPU utilization (A100 GPU)}
-\end{table}</p>
 
 <p>Larger batches improve GPU utilization but require proportionally larger learning rates. Throughput increases 4.6× from batch 32 to 512.
 </div>
 
 <h3>Practical Learning Rates for Transformers</h3>
 
-<p>\begin{table}[h]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Model</strong></th><th><strong>Batch Size</strong></th><th><strong>Peak Learning Rate</strong></th></tr>
-<tr><td>\midrule
-BERT-base</td><td>256</td><td>$1 \times 10^{-4}$</td></tr>
+<tr><th><strong>Model</strong></th><th><strong>Batch Size</strong></th><th><strong>Peak Learning Rate</strong></th></tr>
+<tr><td>BERT-base</td><td>256</td><td>$1 \times 10^{-4}$</td></tr>
 <tr><td>BERT-large</td><td>256</td><td>$5 \times 10^{-5}$</td></tr>
 <tr><td>GPT-2 (117M)</td><td>512</td><td>$2.5 \times 10^{-4}$</td></tr>
 <tr><td>GPT-2 (1.5B)</td><td>512</td><td>$1.5 \times 10^{-4}$</td></tr>
 <tr><td>GPT-3 (175B)</td><td>3.2M</td><td>$6 \times 10^{-5}$</td></tr>
 <tr><td>T5-base</td><td>128</td><td>$1 \times 10^{-4}$</td></tr>
 <tr><td>T5-11B</td><td>2048</td><td>$1 \times 10^{-4}$</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\caption{Typical learning rates for transformer models}</p>
-
-<p>\end{table}</p>
 
 <div class="keypoint">
 Larger models generally require smaller learning rates for stability. GPT-3 uses $6 \times 10^{-5}$ despite massive batch size of 3.2M tokens.

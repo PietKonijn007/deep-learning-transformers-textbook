@@ -598,16 +598,15 @@ CoAtNet-3 configuration for $224 \times 224$ input:
 Compare FLOPs for ResNet-50 and ViT-Base across resolutions:
 
 <div style="text-align: center;">
+
 <table>
-<tr><th>\toprule
-<strong>Resolution</strong></th><th><strong>ResNet-50</strong></th><th><strong>ViT-Base</strong></th></tr>
-<tr><td>\midrule
-$224 \times 224$</td><td>4.1 GFLOPs</td><td>4.2 GFLOPs</td></tr>
+<tr><th><strong>Resolution</strong></th><th><strong>ResNet-50</strong></th><th><strong>ViT-Base</strong></th></tr>
+<tr><td>$224 \times 224$</td><td>4.1 GFLOPs</td><td>4.2 GFLOPs</td></tr>
 <tr><td>$384 \times 384$</td><td>12.0 GFLOPs</td><td>20.4 GFLOPs</td></tr>
 <tr><td>$512 \times 512$</td><td>21.3 GFLOPs</td><td>48.7 GFLOPs</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-</div>
+
+<p></div>
 
 <p>At standard ImageNet resolution, ViT and ResNet have similar computational cost. However, ViT's quadratic attention scaling makes it increasingly expensive at higher resolutions, motivating hierarchical architectures like Swin Transformer that reduce attention to local windows.
 </div>
@@ -624,13 +623,9 @@ $224 \times 224$</td><td>4.1 GFLOPs</td><td>4.2 GFLOPs</td></tr>
 
 <h3>When to Use Each Architecture</h3>
 
-<p>\begin{table}[htbp]
-\centering
 <table>
-<tr><th>\toprule
-<strong>Aspect</strong></th><th><strong>CNN (ResNet)</strong></th><th><strong>ViT</strong></th></tr>
-<tr><td>\midrule
-Inductive bias</td><td>Strong (locality, translation)</td><td>Weak</td></tr>
+<tr><th><strong>Aspect</strong></th><th><strong>CNN (ResNet)</strong></th><th><strong>ViT</strong></th></tr>
+<tr><td>Inductive bias</td><td>Strong (locality, translation)</td><td>Weak</td></tr>
 <tr><td>Data requirement</td><td>Moderate (ImageNet)</td><td>Large (JFT-300M)</td></tr>
 <tr><td>Parameters</td><td>25M (ResNet-50)</td><td>86M (ViT-Base)</td></tr>
 <tr><td>Computation</td><td>$O(HW)$</td><td>$O((HW/P)^2)$</td></tr>
@@ -638,9 +633,7 @@ Inductive bias</td><td>Strong (locality, translation)</td><td>Weak</td></tr>
 <tr><td>Interpretability</td><td>Filter visualization</td><td>Attention maps</td></tr>
 <tr><td>Transfer</td><td>Good</td><td>Excellent (large-scale)</td></tr>
 <tr><td>Best use</td><td>Small/medium data</td><td>Large-scale pre-training</td></tr>
-<tr><td>\bottomrule</td></tr>
 </table>
-\end{table}</p>
 
 <p>The choice between CNNs and Vision Transformers depends on the specific application constraints. CNNs are preferable when training data is limited (fewer than 10 million images), when computational efficiency is critical (mobile or edge deployment), or when strong spatial priors are known to be appropriate for the task. ResNet and EfficientNet variants remain the standard choice for many production computer vision systems due to their reliability and efficiency.</p>
 
