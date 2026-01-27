@@ -50,27 +50,39 @@ app.get('/api/chapters', (req, res) => {
 app.get('/api/chapter/:id', (req, res) => {
   const chapterId = req.params.id;
   
-  // Determine the correct path based on where this code is running
-  // When running as server.js: __dirname is nodejs-version/, so use ./public/chapters/
-  // When running as api/index.js in Vercel: __dirname is api/, so use ../public/chapters/
-  const isApiDir = __dirname.endsWith('/api') || __dirname.endsWith('\\api');
-  const htmlPath = isApiDir
-    ? path.join(__dirname, '..', 'public', 'chapters', `${chapterId}.html`)
-    : path.join(__dirname, 'public', 'chapters', `${chapterId}.html`);
+  // Try multiple possible locations
+  const possiblePaths = [
+    path.join(__dirname, 'public', 'chapters', `${chapterId}.html`),  // Local server
+    path.join(__dirname, '..', 'public', 'chapters', `${chapterId}.html`),  // Vercel from api/
+    path.join(__dirname, 'chapters', `${chapterId}.html`),  // Vercel with build script
+    path.join(__dirname, '..', 'chapters', `${chapterId}.html`)  // Alternative
+  ];
   
-  fs.readFile(htmlPath, 'utf8', (err, data) => {
+  // Try each path until one works
+  let foundPath = null;
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      foundPath = testPath;
+      break;
+    }
+  }
+  
+  if (!foundPath) {
+    console.error(`Chapter ${chapterId} not found in any location`);
+    console.error(`Tried paths:`, possiblePaths);
+    console.error(`__dirname: ${__dirname}`);
+    console.error(`cwd: ${process.cwd()}`);
+    return res.status(404).json({ 
+      error: 'Chapter not found',
+      triedPaths: possiblePaths,
+      dirname: __dirname
+    });
+  }
+  
+  fs.readFile(foundPath, 'utf8', (err, data) => {
     if (err) {
       console.error(`Error reading chapter ${chapterId}:`, err);
-      console.error(`Attempted path: ${htmlPath}`);
-      console.error(`__dirname: ${__dirname}`);
-      console.error(`isApiDir: ${isApiDir}`);
-      
-      return res.status(404).json({ 
-        error: 'Chapter not found', 
-        attemptedPath: htmlPath,
-        dirname: __dirname,
-        isApiDir: isApiDir
-      });
+      return res.status(500).json({ error: 'Error reading chapter' });
     }
     // Ensure HTML content type
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
