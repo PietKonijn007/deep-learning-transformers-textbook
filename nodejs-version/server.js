@@ -57,6 +57,8 @@ app.get('/api/chapter/:id', (req, res) => {
       console.error(`Error reading chapter ${chapterId}:`, err);
       return res.status(404).json({ error: 'Chapter not found' });
     }
+    // Ensure HTML content type
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(data);
   });
 });
