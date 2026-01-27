@@ -46,6 +46,48 @@ app.get('/api/chapters', (req, res) => {
   res.json(chapters);
 });
 
+// Debug endpoint to check file system
+app.get('/api/debug/files', (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  const info = {
+    dirname: __dirname,
+    cwd: process.cwd(),
+    nodeVersion: process.version,
+    platform: process.platform,
+    env: {
+      VERCEL: process.env.VERCEL,
+      VERCEL_ENV: process.env.VERCEL_ENV
+    },
+    paths: {}
+  };
+  
+  // Check various paths
+  const testPaths = [
+    'public/chapters',
+    '../public/chapters',
+    'chapters',
+    '../chapters'
+  ];
+  
+  testPaths.forEach(p => {
+    const fullPath = path.join(__dirname, p);
+    try {
+      const exists = fs.existsSync(fullPath);
+      info.paths[p] = {
+        fullPath,
+        exists,
+        files: exists ? fs.readdirSync(fullPath).slice(0, 5) : []
+      };
+    } catch (e) {
+      info.paths[p] = { fullPath, error: e.message };
+    }
+  });
+  
+  res.json(info);
+});
+
 // API endpoint to get chapter content
 app.get('/api/chapter/:id', (req, res) => {
   const chapterId = req.params.id;
