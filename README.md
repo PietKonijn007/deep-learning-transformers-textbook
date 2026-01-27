@@ -2,7 +2,7 @@
 
 A comprehensive graduate-level textbook covering the theory, mathematics, and implementation of deep learning and transformer architectures.
 
-**📖 [Read Online (HTML)](https://pietkonijn007.github.io/deep-learning-transformers-textbook/)** | **📄 [Download PDF](main.pdf)**
+**📖 [Read Online (HTML)](https://deeplearning.hofkensvermeulen.be/)** | **📄 [Download PDF](main_pro.pdf)**
 
 ## 📚 Book Structure
 
@@ -71,14 +71,14 @@ cd nodejs-version
 **[See nodejs-version/README.md for details](nodejs-version/README.md)** | **[Deploy Guide](nodejs-version/DEPLOY_NOW.md)**
 
 ### Read Online
-Visit the [HTML version](https://pietkonijn007.github.io/deep-learning-transformers-textbook/) for the best reading experience with:
+Visit the [HTML version](https://deeplearning.hofkensvermeulen.be/) for the best reading experience with:
 - Beautiful math rendering via MathJax
 - Responsive design for all devices
 - Easy chapter navigation
 - Syntax-highlighted code examples
 
 ### Download PDF
-The complete book is available as a single PDF: [main.pdf](main.pdf) (429 pages, 1.8MB)
+The complete book is available as a single PDF: [main_pro.pdf](main_pro.pdf) (429 pages, 1.8MB)
 
 ## 🔨 Building from Source
 
@@ -87,15 +87,15 @@ The complete book is available as a single PDF: [main.pdf](main.pdf) (429 pages,
 **Recommended:** Use LuaLaTeX for best results:
 
 ```bash
-lualatex main.tex
-lualatex main.tex  # Run twice for proper ToC and references
+lualatex main_pro.tex
+lualatex main_pro.tex  # Run twice for proper ToC and references
 ```
 
-**Alternative:** Use the simplified version:
+**Alternative:** Use the test version:
 
 ```bash
-lualatex main_simple.tex
-lualatex main_simple.tex
+lualatex main_pro_test.tex
+lualatex main_pro_test.tex
 ```
 
 ### HTML Version
@@ -130,13 +130,14 @@ The HTML files will be created in `html-build/output/` and automatically copied 
 
 ```
 .
-├── main.tex                    # Main LaTeX file (full version)
-├── main_simple.tex             # Simplified LaTeX file (minimal packages)
-├── main.pdf                    # Compiled PDF book
+├── main_pro.tex                # Main LaTeX file (production version)
+├── main_pro_test.tex           # Test LaTeX file (for testing)
+├── main_pro.pdf                # Compiled PDF book
 ├── chapters/                   # Individual chapter LaTeX files
 │   ├── preface.tex
 │   ├── notation.tex
 │   ├── chapter01_linear_algebra.tex
+│   ├── chapter24_solutions.tex
 │   └── ...
 ├── docs/                       # HTML version (GitHub Pages)
 │   ├── index.html
@@ -149,9 +150,10 @@ The HTML files will be created in `html-build/output/` and automatically copied 
 │   └── *.md                   # Comprehensive documentation
 ├── html-build/                 # HTML build system
 │   ├── convert_to_html.py     # Python converter script
+│   ├── fix_algorithms.py      # Algorithm formatting helper
+│   ├── output/                # Generated HTML files
 │   ├── css/
 │   └── js/
-├── tasks/                      # Chapter writing tasks and guides
 └── references.bib              # Bibliography
 
 ```
@@ -193,9 +195,9 @@ This is an academic textbook project. For questions, suggestions, or corrections
 
 ## 🔗 Links
 
-- **Online Book:** https://pietkonijn007.github.io/deep-learning-transformers-textbook/
+- **Online Book:** https://deeplearning.hofkensvermeulen.be/
 - **Repository:** https://github.com/PietKonijn007/deep-learning-transformers-textbook
-- **PDF Download:** [main.pdf](main.pdf)
+- **PDF Download:** [main_pro.pdf](main_pro.pdf)
 
 ---
 
