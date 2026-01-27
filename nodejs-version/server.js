@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Enable gzip compression for faster loading
 app.use(compression());
@@ -67,7 +66,14 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`📚 Deep Learning & Transformers Book Server running on http://localhost:${PORT}`);
-  console.log(`🚀 Fast loading with compression enabled`);
-});
+// Export the app for Vercel
+module.exports = app;
+
+// Start server if running locally (not in Vercel)
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`📚 Deep Learning & Transformers Book Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Fast loading with compression enabled`);
+  });
+}
