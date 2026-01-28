@@ -37,14 +37,14 @@ python html-build/convert_to_html.py
 
 This will:
 - Convert all LaTeX chapters to HTML
-- Output directly to repository root
-- Update `chapters/`, `index.html`, etc.
+- Output chapter files to `chapters/` directory
+- **Does NOT modify** `index.html`, `app.js`, or `styles.css`
 
 ### 3. Deploy
 
-Commit and push:
+Commit and push the updated chapters:
 ```bash
-git add index.html chapters/ styles.css app.js
+git add chapters/
 git commit -m "docs: Update chapter content"
 git push origin main
 ```

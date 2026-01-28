@@ -4,7 +4,7 @@ This directory contains the LaTeX to HTML conversion system for the Deep Learnin
 
 ## Quick Start
 
-To convert LaTeX chapters to HTML and deploy:
+To convert LaTeX chapters to HTML:
 
 ```bash
 python html-build/convert_to_html.py
@@ -12,9 +12,10 @@ python html-build/convert_to_html.py
 
 This will:
 1. Convert all LaTeX chapters to HTML
-2. Output files to the **repository root** (where Vercel deploys from)
-3. Update chapters in the `chapters/` directory
-4. Update `index.html`, `styles.css`, and `app.js`
+2. Output chapter files to `chapters/` directory in repository root
+3. **Does NOT modify** `index.html`, `app.js`, or `styles.css`
+
+**Important:** The conversion script only updates chapter HTML files. The main site files (`index.html`, `app.js`, `styles.css`) are maintained separately and should not be overwritten.
 
 ## Deployment Structure
 
@@ -30,10 +31,12 @@ The site is deployed from the **repository root**:
 After converting chapters, commit and push:
 
 ```bash
-git add index.html chapters/ styles.css app.js
-git commit -m "docs: Update HTML chapters"
+git add chapters/
+git commit -m "docs: Update chapter content"
 git push origin main
 ```
+
+**Note:** Only commit the `chapters/` directory. Do not commit changes to `index.html`, `app.js`, or `styles.css` unless you've intentionally modified them.
 
 Vercel will automatically deploy the changes.
 
