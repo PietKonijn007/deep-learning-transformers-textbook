@@ -733,8 +733,7 @@ def main():
     
     # Define output directories
     output_dirs = [
-        Path("output"),  # Keep for reference
-        Path("nodejs-version/public")  # Primary deployment location
+        Path("."),  # Repository root - this is what gets deployed to Vercel
     ]
     
     # Create output directories
