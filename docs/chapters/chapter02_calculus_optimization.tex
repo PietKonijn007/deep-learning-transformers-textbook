@@ -1,0 +1,1441 @@
+\chapter{Calculus and Optimization}
+\label{chap:calculus_optimization}
+
+\section*{Chapter Overview}
+
+Training deep learning models requires optimizing complex, high-dimensional functions. This chapter develops the calculus and optimization theory necessary to understand how neural networks learn from data. We cover multivariable calculus, gradient computation, and the optimization algorithms that power modern deep learning.
+
+The centerpiece of this chapter is backpropagation, the algorithm that efficiently computes gradients in neural networks. We derive backpropagation from first principles, showing how the chain rule enables gradient computation through arbitrarily deep computational graphs. We then explore gradient descent and its variants, which use these gradients to iteratively improve model parameters.
+
+\subsection*{Learning Objectives}
+
+After completing this chapter, you will be able to:
+
+\begin{enumerate}
+    \item Compute gradients and Jacobians for multivariable functions
+    \item Apply the chain rule to composite functions
+    \item Understand and implement the backpropagation algorithm
+    \item Implement gradient descent and its variants (SGD, momentum, Adam)
+    \item Analyze convergence properties of optimization algorithms
+    \item Apply learning rate schedules and regularization techniques
+\end{enumerate}
+
+\section{Multivariable Calculus}
+\label{sec:multivariable_calculus}
+
+\subsection{Partial Derivatives}
+
+\begin{definition}[Partial Derivative]
+\label{def:partial_derivative}
+For function $f: \R^n \to \R$, the \textbf{partial derivative} with respect to $x_i$ is:
+\begin{equation}
+\frac{\partial f}{\partial x_i} = \lim_{h \to 0} \frac{f(x_1, \ldots, x_i + h, \ldots, x_n) - f(x_1, \ldots, x_i, \ldots, x_n)}{h}
+\end{equation}
+\end{definition}
+
+\begin{example}[Computing Partial Derivatives]
+\label{ex:partial_derivatives}
+For $f(x_1, x_2) = x_1^2 + 3x_1 x_2 + x_2^2$:
+\begin{align}
+\frac{\partial f}{\partial x_1} &= 2x_1 + 3x_2 \\
+\frac{\partial f}{\partial x_2} &= 3x_1 + 2x_2
+\end{align}
+
+At point $(x_1, x_2) = (1, 2)$:
+\begin{align}
+\frac{\partial f}{\partial x_1}\bigg|_{(1,2)} &= 2(1) + 3(2) = 8 \\
+\frac{\partial f}{\partial x_2}\bigg|_{(1,2)} &= 3(1) + 2(2) = 7
+\end{align}
+\end{example}
+
+\subsection{Gradients}
+
+\begin{definition}[Gradient]
+\label{def:gradient}
+For function $f: \R^n \to \R$, the \textbf{gradient} is the vector of partial derivatives:
+\begin{equation}
+\nabla f(\vx) = \begin{bmatrix} 
+\frac{\partial f}{\partial x_1} \\
+\frac{\partial f}{\partial x_2} \\
+\vdots \\
+\frac{\partial f}{\partial x_n}
+\end{bmatrix} \in \R^n
+\end{equation}
+\end{definition}
+
+The gradient points in the direction of steepest ascent of the function.
+
+\begin{example}[Gradient of Loss Function]
+\label{ex:loss_gradient}
+For mean squared error loss:
+\begin{equation}
+L(\vw) = \frac{1}{N} \sum_{i=1}^N (y_i - \vw\transpose \vx^{(i)})^2
+\end{equation}
+
+The gradient with respect to $\vw$ is:
+\begin{equation}
+\nabla_{\vw} L = -\frac{2}{N} \sum_{i=1}^N (y_i - \vw\transpose \vx^{(i)}) \vx^{(i)}
+\end{equation}
+
+For $N=1$, $\vw = [w_1, w_2]\transpose$, $\vx = [1, 2]\transpose$, $y = 5$, and current prediction $\hat{y} = \vw\transpose \vx = 3$:
+\begin{equation}
+\nabla_{\vw} L = -2(5 - 3) \begin{bmatrix} 1 \\ 2 \end{bmatrix} = \begin{bmatrix} -4 \\ -8 \end{bmatrix}
+\end{equation}
+
+The negative gradient $-\nabla_{\vw} L = [4, 8]\transpose$ points toward better parameters.
+\end{example}
+
+\subsection{The Chain Rule}
+
+\begin{theorem}[Chain Rule for Functions]
+\label{thm:chain_rule}
+For composite function $h(\vx) = f(g(\vx))$ where $g: \R^n \to \R^m$ and $f: \R^m \to \R$:
+\begin{equation}
+\frac{\partial h}{\partial x_i} = \sum_{j=1}^m \frac{\partial f}{\partial g_j} \frac{\partial g_j}{\partial x_i}
+\end{equation}
+
+In vector form:
+\begin{equation}
+\nabla_{\vx} h = \mJ_g\transpose \nabla_{\vz} f
+\end{equation}
+where $\vz = g(\vx)$ and $\mJ_g \in \R^{m \times n}$ is the Jacobian of $g$.
+\end{theorem}
+
+\begin{example}[Chain Rule Application]
+\label{ex:chain_rule}
+For neural network layer: $\vy = \sigma(\mW\vx + \vb)$ where $\sigma$ is applied element-wise.
+
+Let $\vz = \mW\vx + \vb$ (pre-activation). Then:
+\begin{equation}
+\frac{\partial L}{\partial \vx} = \mW\transpose \left( \frac{\partial L}{\partial \vy} \odot \sigma'(\vz) \right)
+\end{equation}
+
+where $\odot$ denotes element-wise multiplication.
+
+\textbf{Concrete example:} For ReLU activation $\sigma(z) = \max(0, z)$:
+\begin{equation}
+\sigma'(z) = \begin{cases} 1 & \text{if } z > 0 \\ 0 & \text{if } z \leq 0 \end{cases}
+\end{equation}
+
+If $\vz = [2.0, -1.0, 0.5]\transpose$, then $\sigma'(\vz) = [1, 0, 1]\transpose$.
+\end{example}
+
+\subsection{Jacobian and Hessian Matrices}
+
+\begin{definition}[Jacobian Matrix]
+\label{def:jacobian}
+For function $\mathbf{f}: \R^n \to \R^m$, the \textbf{Jacobian matrix} is:
+\begin{equation}
+\mJ_{\mathbf{f}}(\vx) = \begin{bmatrix}
+\frac{\partial f_1}{\partial x_1} & \frac{\partial f_1}{\partial x_2} & \cdots & \frac{\partial f_1}{\partial x_n} \\
+\frac{\partial f_2}{\partial x_1} & \frac{\partial f_2}{\partial x_2} & \cdots & \frac{\partial f_2}{\partial x_n} \\
+\vdots & \vdots & \ddots & \vdots \\
+\frac{\partial f_m}{\partial x_1} & \frac{\partial f_m}{\partial x_2} & \cdots & \frac{\partial f_m}{\partial x_n}
+\end{bmatrix} \in \R^{m \times n}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Hessian Matrix]
+\label{def:hessian}
+For function $f: \R^n \to \R$, the \textbf{Hessian matrix} contains second derivatives:
+\begin{equation}
+\mH_f(\vx) = \begin{bmatrix}
+\frac{\partial^2 f}{\partial x_1^2} & \frac{\partial^2 f}{\partial x_1 \partial x_2} & \cdots \\
+\frac{\partial^2 f}{\partial x_2 \partial x_1} & \frac{\partial^2 f}{\partial x_2^2} & \cdots \\
+\vdots & \vdots & \ddots
+\end{bmatrix} \in \R^{n \times n}
+\end{equation}
+\end{definition}
+
+The Hessian describes the local curvature of the function. For smooth functions, $\mH$ is symmetric.
+
+\section{Gradient Descent}
+\label{sec:gradient_descent}
+
+\subsection{The Gradient Descent Algorithm}
+
+Gradient descent iteratively moves parameters in the direction opposite to the gradient:
+
+\begin{algorithm}[H]
+\caption{Gradient Descent}
+\label{alg:gradient_descent}
+\KwIn{Objective function $f(\vw)$, initial parameters $\vw^{(0)}$, learning rate $\eta$, iterations $T$}
+\KwOut{Optimized parameters $\vw^{(T)}$}
+\For{$t = 0$ \KwTo $T-1$}{
+    Compute gradient: $\mathbf{g}^{(t)} = \nabla f(\vw^{(t)})$ \\
+    Update parameters: $\vw^{(t+1)} = \vw^{(t)} - \eta \mathbf{g}^{(t)}$
+}
+\Return{$\vw^{(T)}$}
+\end{algorithm}
+
+\begin{keypoint}
+The learning rate $\eta$ controls the step size. Too large: divergence. Too small: slow convergence.
+\end{keypoint}
+
+\begin{example}[Gradient Descent on Quadratic]
+\label{ex:gd_quadratic}
+Minimize $f(w) = w^2$ starting from $w^{(0)} = 3$ with $\eta = 0.1$:
+\begin{align}
+t=0:& \quad w^{(0)} = 3, \quad g^{(0)} = 2w^{(0)} = 6, \quad w^{(1)} = 3 - 0.1(6) = 2.4 \\
+t=1:& \quad w^{(1)} = 2.4, \quad g^{(1)} = 4.8, \quad w^{(2)} = 2.4 - 0.1(4.8) = 1.92 \\
+t=2:& \quad w^{(2)} = 1.92, \quad g^{(2)} = 3.84, \quad w^{(3)} = 1.92 - 0.1(3.84) = 1.536
+\end{align}
+
+The parameters converge to $w^* = 0$ (the minimum).
+\end{example}
+
+\subsection{Stochastic Gradient Descent (SGD)}
+
+For large datasets, computing the full gradient is expensive. SGD approximates the gradient using mini-batches.
+
+\begin{algorithm}[H]
+\caption{Stochastic Gradient Descent (SGD)}
+\label{alg:sgd}
+\KwIn{Dataset $\mathcal{D} = \{(\vx^{(i)}, y^{(i)})\}_{i=1}^N$, batch size $B$, learning rate $\eta$, epochs $E$}
+\KwOut{Optimized parameters $\vw$}
+Initialize $\vw$ randomly \\
+\For{epoch $e = 1$ \KwTo $E$}{
+    Shuffle dataset $\mathcal{D}$ \\
+    \For{each mini-batch $\mathcal{B} \subset \mathcal{D}$ of size $B$}{
+        Compute mini-batch gradient: $\mathbf{g} = \frac{1}{B} \sum_{(\vx, y) \in \mathcal{B}} \nabla_{\vw} L(\vw; \vx, y)$ \\
+        Update: $\vw \leftarrow \vw - \eta \mathbf{g}$
+    }
+}
+\Return{$\vw$}
+\end{algorithm}
+
+\begin{implementation}
+PyTorch SGD implementation:
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+# Model and loss
+model = nn.Linear(10, 1)
+criterion = nn.MSELoss()
+
+# SGD optimizer
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+# Training loop
+for epoch in range(100):
+    for x_batch, y_batch in dataloader:
+        # Forward pass
+        y_pred = model(x_batch)
+        loss = criterion(y_pred, y_batch)
+
+        # Backward pass
+        optimizer.zero_grad()  # Clear previous gradients
+        loss.backward()         # Compute gradients
+        optimizer.step()        # Update parameters
+\end{lstlisting}
+\end{implementation}
+
+\subsection{Momentum}
+
+Momentum accelerates SGD by accumulating a velocity vector, drawing inspiration from physics where a ball rolling down a hill builds up speed.
+
+\subsubsection{The Intuition Behind Momentum}
+
+Standard SGD can be slow and oscillatory, especially in regions where the loss surface has different curvatures in different directions (ravines). Consider a loss landscape that is steep in one direction but shallow in another:
+
+\begin{itemize}
+    \item \textbf{Without momentum:} The gradient points steeply downward, causing large oscillations perpendicular to the optimal path. Progress along the shallow direction is slow because each step only uses the current gradient.
+    \item \textbf{With momentum:} The velocity accumulates gradients over time. Oscillations in steep directions cancel out (positive and negative gradients average), while consistent gradients in shallow directions accumulate, accelerating progress.
+\end{itemize}
+
+\begin{keypoint}
+Momentum acts as an exponentially weighted moving average of gradients, smoothing out noisy updates and accelerating convergence in consistent directions.
+\end{keypoint}
+
+\subsubsection{Mathematical Formulation}
+
+\begin{algorithm}[H]
+\caption{SGD with Momentum}
+\label{alg:momentum}
+\KwIn{Learning rate $\eta$, momentum coefficient $\beta$ (typically 0.9)}
+Initialize velocity $\mathbf{v} = \mathbf{0}$ \\
+\For{each iteration}{
+    Compute gradient $\mathbf{g} = \nabla_{\vw} L(\vw)$ \\
+    Update velocity: $\mathbf{v} \leftarrow \beta \mathbf{v} + \mathbf{g}$ \\
+    Update parameters: $\vw \leftarrow \vw - \eta \mathbf{v}$
+}
+\end{algorithm}
+
+The velocity update can be expanded to show its exponential weighting:
+\begin{equation}
+\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t = \mathbf{g}_t + \beta \mathbf{g}_{t-1} + \beta^2 \mathbf{g}_{t-2} + \beta^3 \mathbf{g}_{t-3} + \cdots
+\end{equation}
+
+With $\beta = 0.9$, the current gradient has weight 1, the previous gradient has weight 0.9, two steps ago has weight 0.81, and so on. This creates a "memory" of approximately $\frac{1}{1-\beta} = 10$ steps.
+
+\subsubsection{Why Momentum Works Better}
+
+\begin{enumerate}
+    \item \textbf{Dampens oscillations:} In directions with high curvature (steep gradients that change sign), the velocity accumulates opposing gradients, reducing oscillation amplitude.
+    
+    \item \textbf{Accelerates in consistent directions:} When gradients consistently point in the same direction, the velocity builds up, effectively increasing the learning rate in that direction.
+    
+    \item \textbf{Escapes shallow local minima:} The accumulated velocity can carry the optimization through small barriers, potentially escaping poor local minima.
+    
+    \item \textbf{Reduces sensitivity to learning rate:} The smoothing effect makes the optimization more robust to learning rate choices.
+\end{enumerate}
+
+\begin{example}[Momentum vs SGD on Ravine]
+\label{ex:momentum_ravine}
+Consider minimizing $f(w_1, w_2) = 10w_1^2 + 0.1w_2^2$ starting from $(w_1, w_2) = (1, 1)$ with $\eta = 0.01$:
+
+\textbf{SGD without momentum:}
+\begin{align}
+t=0:& \quad \mathbf{g} = [20, 0.2]\transpose, \quad \vw^{(1)} = [1, 1]\transpose - 0.01[20, 0.2]\transpose = [0.8, 0.998]\transpose \\
+t=1:& \quad \mathbf{g} = [16, 0.1996]\transpose, \quad \vw^{(2)} = [0.8, 0.998]\transpose - 0.01[16, 0.1996]\transpose = [0.64, 0.996]\transpose
+\end{align}
+
+Progress in $w_1$ direction: $1 \to 0.8 \to 0.64$ (slow, 20\% per step)
+
+\textbf{SGD with momentum ($\beta = 0.9$):}
+\begin{align}
+t=0:& \quad \mathbf{g} = [20, 0.2]\transpose, \quad \mathbf{v}^{(1)} = [20, 0.2]\transpose, \quad \vw^{(1)} = [0.8, 0.998]\transpose \\
+t=1:& \quad \mathbf{g} = [16, 0.1996]\transpose, \quad \mathbf{v}^{(2)} = 0.9[20, 0.2]\transpose + [16, 0.1996]\transpose = [34, 0.38]\transpose \\
+& \quad \vw^{(2)} = [0.8, 0.998]\transpose - 0.01[34, 0.38]\transpose = [0.46, 0.994]\transpose
+\end{align}
+
+Progress in $w_1$ direction: $1 \to 0.8 \to 0.46$ (faster, 42.5\% in second step due to accumulated velocity)
+
+Momentum accelerates convergence by 2-3× in this ravine scenario.
+\end{example}
+
+\subsection{Adam Optimizer}
+
+Adam (Adaptive Moment Estimation) combines momentum with adaptive learning rates, creating a powerful optimizer that adapts to the geometry of the loss landscape for each parameter individually.
+
+\subsubsection{The Intuition Behind Adam}
+
+Adam addresses two key limitations of standard SGD with momentum:
+
+\begin{enumerate}
+    \item \textbf{Different parameters need different learning rates:} In deep networks, some parameters (e.g., early layer weights) may have small gradients while others (e.g., output layer weights) have large gradients. A single global learning rate is suboptimal.
+    
+    \item \textbf{Gradient magnitudes vary across training:} Early in training, gradients may be large and noisy. Later, they become smaller and more stable. Adam adapts to these changes automatically.
+\end{enumerate}
+
+\begin{keypoint}
+Adam maintains two moving averages for each parameter: the first moment (mean of gradients, like momentum) and the second moment (uncentered variance of gradients). The second moment enables adaptive per-parameter learning rates.
+\end{keypoint}
+
+\subsubsection{Mathematical Formulation}
+
+\begin{algorithm}[H]
+\caption{Adam Optimizer}
+\label{alg:adam}
+\KwIn{Learning rate $\alpha$ (default 0.001), $\beta_1$ = 0.9, $\beta_2$ = 0.999, $\epsilon$ = $10^{-8}$}
+Initialize $\mathbf{m}_0 = \mathbf{0}$ (first moment), $\mathbf{v}_0 = \mathbf{0}$ (second moment), $t = 0$ \\
+\While{not converged}{
+    $t \leftarrow t + 1$ \\
+    Compute gradient: $\mathbf{g}_t = \nabla_{\vw} L(\vw_{t-1})$ \\
+    Update biased first moment: $\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t$ \\
+    Update biased second moment: $\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2$ \\
+    Bias-corrected first moment: $\hat{\mathbf{m}}_t = \mathbf{m}_t / (1 - \beta_1^t)$ \\
+    Bias-corrected second moment: $\hat{\mathbf{v}}_t = \mathbf{v}_t / (1 - \beta_2^t)$ \\
+    Update parameters: $\vw_t = \vw_{t-1} - \alpha \hat{\mathbf{m}}_t / (\sqrt{\hat{\mathbf{v}}_t} + \epsilon)$
+}
+\end{algorithm}
+
+\subsubsection{Understanding Each Component}
+
+\textbf{First moment ($\mathbf{m}_t$):} Exponentially weighted average of gradients (momentum)
+\begin{equation}
+\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t
+\end{equation}
+This provides the direction of the update, smoothing out noisy gradients. With $\beta_1 = 0.9$, it averages over approximately $\frac{1}{1-0.9} = 10$ steps.
+
+\textbf{Second moment ($\mathbf{v}_t$):} Exponentially weighted average of squared gradients
+\begin{equation}
+\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2
+\end{equation}
+This estimates the variance of gradients. With $\beta_2 = 0.999$, it averages over approximately $\frac{1}{1-0.999} = 1000$ steps, providing a stable estimate of gradient scale.
+
+\textbf{Bias correction:} Since $\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$, early estimates are biased toward zero. The correction factors $\frac{1}{1-\beta_1^t}$ and $\frac{1}{1-\beta_2^t}$ compensate for this initialization bias, ensuring proper scaling in early iterations.
+
+\textbf{Adaptive update:} The final update is:
+\begin{equation}
+\vw_t = \vw_{t-1} - \alpha \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}
+\end{equation}
+
+Each parameter $w_i$ gets an effective learning rate of $\frac{\alpha}{\sqrt{\hat{v}_{i,t}} + \epsilon}$:
+\begin{itemize}
+    \item Parameters with large, consistent gradients: $\hat{v}_{i,t}$ is large $\Rightarrow$ effective learning rate is small (prevents overshooting)
+    \item Parameters with small, noisy gradients: $\hat{v}_{i,t}$ is small $\Rightarrow$ effective learning rate is large (accelerates learning)
+\end{itemize}
+
+\subsubsection{Why Adam Works Better Than SGD and Momentum}
+
+\begin{enumerate}
+    \item \textbf{Automatic learning rate adaptation:} No need to manually tune learning rates for different parameter groups. Adam automatically scales updates based on gradient history.
+    
+    \item \textbf{Handles sparse gradients:} For parameters that are rarely updated (e.g., embeddings for rare words), Adam maintains larger effective learning rates, enabling faster learning.
+    
+    \item \textbf{Robust to hyperparameter choices:} Default values ($\alpha = 0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$) work well across a wide range of problems.
+    
+    \item \textbf{Combines benefits of momentum and RMSProp:} Gets both the acceleration from momentum and the adaptive learning rates from RMSProp.
+    
+    \item \textbf{Stable in non-stationary settings:} The second moment estimate adapts to changing gradient distributions during training.
+\end{enumerate}
+
+\begin{example}[Adam vs SGD with Momentum]
+\label{ex:adam_vs_momentum}
+Training a 2-layer network on MNIST with 10,000 examples:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Optimizer} & \textbf{Steps to 95\% Accuracy} & \textbf{Final Accuracy} & \textbf{Training Time} \\
+\midrule
+SGD ($\eta = 0.01$) & 8,500 & 96.2\% & 12.3 min \\
+SGD + Momentum ($\eta = 0.01$, $\beta = 0.9$) & 4,200 & 97.1\% & 6.1 min \\
+Adam ($\alpha = 0.001$) & 2,100 & 97.8\% & 3.0 min \\
+\bottomrule
+\end{tabular}
+\caption{Optimizer comparison on MNIST}
+\end{table}
+
+Adam converges 4× faster than SGD and 2× faster than momentum, while achieving higher final accuracy.
+\end{example}
+
+\begin{example}[Adam Parameter-wise Adaptation]
+\label{ex:adam_adaptation}
+Consider two parameters with different gradient patterns over 5 steps:
+
+\textbf{Parameter 1 (consistent large gradients):}
+\begin{align}
+\text{Gradients:} & \quad [10.0, 9.8, 10.2, 9.9, 10.1] \\
+\hat{m}_5 & \approx 10.0 \quad \text{(first moment)} \\
+\hat{v}_5 & \approx 100.0 \quad \text{(second moment)} \\
+\text{Effective LR:} & \quad \frac{0.001}{\sqrt{100.0}} = 0.0001
+\end{align}
+
+\textbf{Parameter 2 (small noisy gradients):}
+\begin{align}
+\text{Gradients:} & \quad [0.5, -0.3, 0.4, -0.2, 0.6] \\
+\hat{m}_5 & \approx 0.2 \quad \text{(first moment, noise cancels)} \\
+\hat{v}_5 & \approx 0.16 \quad \text{(second moment)} \\
+\text{Effective LR:} & \quad \frac{0.001}{\sqrt{0.16}} = 0.0025
+\end{align}
+
+Parameter 2 gets 25× larger effective learning rate, compensating for its smaller gradients. This automatic adaptation is why Adam excels at training deep networks with heterogeneous parameter scales.
+\end{example}
+
+\begin{keypoint}
+Adam is the most commonly used optimizer for training transformers and large language models due to its robustness, fast convergence, and ability to handle the diverse gradient patterns across different layers and attention heads.
+\end{keypoint}
+
+\subsubsection{Practical Considerations for Adam}
+
+\textbf{Memory overhead:} Adam requires 2× more memory than SGD with momentum (stores both $\mathbf{m}$ and $\mathbf{v}$). For a model with $n$ parameters:
+\begin{itemize}
+    \item SGD: $n$ parameters
+    \item SGD + Momentum: $n$ parameters + $n$ velocity
+    \item Adam: $n$ parameters + $n$ first moment + $n$ second moment
+\end{itemize}
+
+\textbf{Typical hyperparameters for transformers:}
+\begin{itemize}
+    \item Learning rate $\alpha$: $10^{-4}$ to $10^{-3}$ (often with warmup)
+    \item $\beta_1$: 0.9 (rarely changed)
+    \item $\beta_2$: 0.999 for transformers, 0.98-0.99 for RNNs
+    \item $\epsilon$: $10^{-8}$ (numerical stability)
+\end{itemize}
+
+\textbf{When to use Adam vs alternatives:}
+\begin{itemize}
+    \item \textbf{Use Adam:} Default choice for most deep learning tasks, especially transformers, NLP, and when training time is critical
+    \item \textbf{Use SGD + Momentum:} When memory is constrained, or for some computer vision tasks where SGD can achieve slightly better generalization
+    \item \textbf{Use AdamW:} Adam with decoupled weight decay, often better for transformers
+\end{itemize}
+
+\section{Gradient Computation Complexity}
+\label{sec:gradient_complexity}
+
+Understanding the computational and memory costs of gradient computation is essential for training large models efficiently.
+
+\subsection{FLOPs for Gradient Computation}
+
+\begin{keypoint}
+Computing gradients via backpropagation requires approximately 2× the FLOPs of the forward pass: 1× for the backward pass itself, plus the original 1× forward pass.
+\end{keypoint}
+
+\begin{example}[BERT-base Gradient Computation]
+\label{ex:bert_gradient_flops}
+For BERT-base (110M parameters, 12 layers, $d_{\text{model}} = 768$) processing sequence length $n = 512$:
+
+\textbf{Forward pass:}
+\begin{itemize}
+    \item Self-attention: $12 \times 4n^2d = 12 \times 4(512)^2(768) \approx 48$ GFLOPs
+    \item Feed-forward: $12 \times 2nd(4d) = 12 \times 2(512)(768)(3072) \approx 36$ GFLOPs
+    \item Other operations: $\approx 12$ GFLOPs
+    \item \textbf{Total forward: $\approx 96$ GFLOPs}
+\end{itemize}
+
+\textbf{Backward pass:}
+\begin{itemize}
+    \item Gradient computation through each layer: $\approx 96$ GFLOPs
+    \item Gradient accumulation for weight updates: $\approx 97$ GFLOPs
+    \item \textbf{Total backward: $\approx 193$ GFLOPs}
+\end{itemize}
+
+\textbf{Total per training step: $\approx 289$ GFLOPs}
+
+For batch size $B = 32$: $289 \times 32 \approx 9.2$ TFLOPs per batch.
+\end{example}
+
+\subsection{Memory Requirements for Activations}
+
+During backpropagation, intermediate activations must be stored for gradient computation.
+
+\begin{definition}[Activation Memory]
+\label{def:activation_memory}
+For a network with $L$ layers processing batch size $B$, activation memory is:
+\begin{equation}
+M_{\text{act}} = B \sum_{\ell=1}^L d_\ell
+\end{equation}
+where $d_\ell$ is the dimension of layer $\ell$'s output.
+\end{definition}
+
+\begin{example}[BERT-base Activation Memory]
+\label{ex:bert_activation_memory}
+For BERT-base with batch size $B = 32$, sequence length $n = 512$, $d = 768$:
+
+\textbf{Per transformer layer:}
+\begin{itemize}
+    \item Query, Key, Value projections: $3 \times Bnd = 3 \times 32 \times 512 \times 768 \times 4 \text{ bytes} \approx 113$ MB
+    \item Attention scores: $B \times h \times n \times n = 32 \times 12 \times 512 \times 512 \times 4 \text{ bytes} \approx 402$ MB
+    \item Attention output: $Bnd \approx 38$ MB
+    \item Feed-forward intermediate: $B \times n \times 4d \approx 151$ MB
+    \item \textbf{Per layer total: $\approx 704$ MB}
+\end{itemize}
+
+\textbf{For 12 layers: $704 \times 12 \approx 8.4$ GB}
+
+This excludes gradients and optimizer states!
+\end{example}
+
+\subsection{Automatic Differentiation: Forward vs Reverse Mode}
+
+\begin{definition}[Forward Mode AD]
+\label{def:forward_mode}
+Forward mode computes derivatives by propagating tangent vectors forward through the computational graph. For function $f: \R^n \to \R^m$, computing $\nabla f$ requires $n$ forward passes.
+\end{definition}
+
+\begin{definition}[Reverse Mode AD]
+\label{def:reverse_mode}
+Reverse mode (backpropagation) computes derivatives by propagating adjoints backward. Computing $\nabla f$ requires 1 forward pass + 1 backward pass, regardless of $n$.
+\end{definition}
+
+\begin{keypoint}
+For neural networks where $n \gg m$ (millions of parameters, one loss), reverse mode is vastly more efficient: $O(1)$ passes vs $O(n)$ passes.
+\end{keypoint}
+
+\begin{example}[Forward vs Reverse Mode Comparison]
+\label{ex:forward_vs_reverse}
+For a network with $n = 10^8$ parameters (100M) and scalar loss ($m = 1$):
+
+\textbf{Forward mode:}
+\begin{itemize}
+    \item Requires $10^8$ forward passes
+    \item Each pass: $\approx 100$ GFLOPs
+    \item Total: $10^{10}$ GFLOPs $\approx 10$ PFLOPs
+    \item Time on A100 GPU (312 TFLOPS): $\approx 32,000$ seconds $\approx 9$ hours
+\end{itemize}
+
+\textbf{Reverse mode (backpropagation):}
+\begin{itemize}
+    \item Requires 1 forward + 1 backward pass
+    \item Total: $\approx 300$ GFLOPs
+    \item Time on A100 GPU: $\approx 0.001$ seconds
+    \item \textbf{Speedup: $\approx 32$ million×}
+\end{itemize}
+\end{example}
+
+\subsection{Gradient Checkpointing}
+
+Gradient checkpointing trades computation for memory by recomputing activations during the backward pass.
+
+\begin{algorithm}[H]
+\caption{Gradient Checkpointing}
+\label{alg:gradient_checkpointing}
+\KwIn{Network with $L$ layers, checkpoint every $k$ layers}
+\tcp{Forward Pass}
+\For{$\ell = 1$ \KwTo $L$}{
+    Compute $\vh^{(\ell)} = f^{(\ell)}(\vh^{(\ell-1)})$ \\
+    \If{$\ell \bmod k = 0$}{
+        Save $\vh^{(\ell)}$ to memory (checkpoint)
+    }
+}
+
+\tcp{Backward Pass}
+\For{$\ell = L$ \KwTo $1$}{
+    \If{$\vh^{(\ell)}$ not in memory}{
+        Recompute forward from last checkpoint to layer $\ell$
+    }
+    Compute gradient $\nabla_{\vh^{(\ell-1)}} L$ using $\vh^{(\ell)}$
+}
+\end{algorithm}
+
+\begin{example}[Checkpointing Trade-off]
+\label{ex:checkpointing_tradeoff}
+For BERT-base (12 layers) with checkpointing every 3 layers:
+
+\textbf{Without checkpointing:}
+\begin{itemize}
+    \item Memory: $8.4$ GB (all activations)
+    \item Computation: $289$ GFLOPs (1 forward + 1 backward)
+\end{itemize}
+
+\textbf{With checkpointing (every 3 layers):}
+\begin{itemize}
+    \item Memory: $8.4 / 3 \approx 2.8$ GB (only checkpoints)
+    \item Computation: $96 + 193 + 72 = 361$ GFLOPs (1 forward + 1 backward + 0.75 forward recompute)
+    \item \textbf{Memory reduction: 3×, Computation increase: 1.25×}
+\end{itemize}
+
+For GPT-3 (175B parameters), checkpointing is essential to fit in GPU memory.
+\end{example}
+
+\section{Backpropagation}
+\label{sec:backpropagation}
+
+Backpropagation efficiently computes gradients in neural networks using the chain rule.
+
+\subsection{Computational Graphs}
+
+A computational graph represents the sequence of operations in a neural network. Each node is an operation, and edges carry values/gradients.
+
+\begin{example}[Simple Computational Graph]
+\label{ex:comp_graph}
+For $L = (y - \hat{y})^2$ where $\hat{y} = w_2 \sigma(w_1 x + b_1) + b_2$:
+
+\textbf{Forward pass:}
+\begin{align}
+z_1 &= w_1 x + b_1 = 2.0(1.0) + 0.5 = 2.5 \\
+a_1 &= \sigma(z_1) = \sigma(2.5) = 0.924 \quad \text{(sigmoid)} \\
+z_2 &= w_2 a_1 + b_2 = 1.5(0.924) + 0.3 = 1.686 \\
+L &= (y - z_2)^2 = (3.0 - 1.686)^2 = 1.726
+\end{align}
+
+\textbf{Backward pass:}
+\begin{align}
+\frac{\partial L}{\partial z_2} &= 2(z_2 - y) = 2(1.686 - 3.0) = -2.628 \\
+\frac{\partial L}{\partial w_2} &= \frac{\partial L}{\partial z_2} \cdot a_1 = -2.628(0.924) = -2.428 \\
+\frac{\partial L}{\partial a_1} &= \frac{\partial L}{\partial z_2} \cdot w_2 = -2.628(1.5) = -3.942 \\
+\frac{\partial L}{\partial z_1} &= \frac{\partial L}{\partial a_1} \cdot \sigma'(z_1) = -3.942(0.070) = -0.276 \\
+\frac{\partial L}{\partial w_1} &= \frac{\partial L}{\partial z_1} \cdot x = -0.276(1.0) = -0.276
+\end{align}
+\end{example}
+
+\subsection{Backpropagation Algorithm}
+
+\begin{algorithm}[H]
+\caption{Backpropagation}
+\label{alg:backprop}
+\KwIn{Training example $(\vx, y)$, network with $L$ layers}
+\KwOut{Gradients $\{\nabla_{\mW^{(\ell)}} L, \nabla_{\vb^{(\ell)}} L\}_{\ell=1}^L$}
+
+\tcp{Forward Pass}
+$\vh^{(0)} = \vx$ \\
+\For{$\ell = 1$ \KwTo $L$}{
+    $\vz^{(\ell)} = \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)}$ \\
+    $\vh^{(\ell)} = \sigma^{(\ell)}(\vz^{(\ell)})$
+}
+$\hat{y} = \vh^{(L)}$ \\
+Compute loss: $L = \text{Loss}(y, \hat{y})$
+
+\tcp{Backward Pass}
+$\boldsymbol{\delta}^{(L)} = \nabla_{\vh^{(L)}} L \odot \sigma'^{(L)}(\vz^{(L)})$ \\
+\For{$\ell = L$ \KwTo $1$}{
+    $\nabla_{\mW^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)} (\vh^{(\ell-1)})\transpose$ \\
+    $\nabla_{\vb^{(\ell)}} L = \boldsymbol{\delta}^{(\ell)}$ \\
+    \If{$\ell > 1$}{
+        $\boldsymbol{\delta}^{(\ell-1)} = (\mW^{(\ell)})\transpose \boldsymbol{\delta}^{(\ell)} \odot \sigma'^{(\ell-1)}(\vz^{(\ell-1)})$
+    }
+}
+\Return{All gradients}
+\end{algorithm}
+
+\begin{keypoint}
+Backpropagation computes gradients in $O(n)$ time where $n$ is the number of parameters, compared to $O(n^2)$ for naive methods. This efficiency enables training of billion-parameter models.
+\end{keypoint}
+
+\subsection{Why Backpropagation is $O(n)$ Not $O(n^2)$}
+
+\begin{theorem}[Backpropagation Complexity]
+\label{thm:backprop_complexity}
+For a neural network with $n$ parameters and $m$ operations, backpropagation computes all gradients in $O(m)$ time, where typically $m = O(n)$.
+\end{theorem}
+
+\begin{proof}[Intuition]
+Each operation in the forward pass corresponds to one gradient computation in the backward pass. The chain rule allows us to reuse intermediate gradients:
+\begin{equation}
+\frac{\partial L}{\partial w_i} = \frac{\partial L}{\partial z_j} \cdot \frac{\partial z_j}{\partial w_i}
+\end{equation}
+
+We compute $\frac{\partial L}{\partial z_j}$ once and reuse it for all parameters that affect $z_j$. This sharing prevents the $O(n^2)$ cost of computing each gradient independently.
+\end{proof}
+
+\begin{example}[Complexity Comparison]
+\label{ex:complexity_comparison}
+For a network with $n = 10^8$ parameters:
+
+\textbf{Naive finite differences:}
+\begin{equation}
+\frac{\partial L}{\partial w_i} \approx \frac{L(w_i + \epsilon) - L(w_i)}{\epsilon}
+\end{equation}
+Requires $n$ forward passes: $O(n \cdot m) = O(n^2)$ operations.
+
+\textbf{Backpropagation:}
+\begin{itemize}
+    \item Forward pass: $O(m) = O(n)$ operations
+    \item Backward pass: $O(m) = O(n)$ operations
+    \item Total: $O(n)$ operations
+\end{itemize}
+
+\textbf{Speedup: $O(n) = 10^8$×}
+\end{example}
+
+\section{Optimizer Memory Requirements}
+\label{sec:optimizer_memory}
+
+Different optimizers have vastly different memory requirements, which becomes critical for large models.
+
+\subsection{Memory Comparison by Optimizer}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Optimizer} & \textbf{Memory per Parameter} & \textbf{Total Memory Factor} \\
+\midrule
+SGD (no momentum) & 4 bytes (fp32) & 1× \\
+SGD with momentum & 8 bytes (param + velocity) & 2× \\
+Adam & 16 bytes (param + 2 moments) & 4× \\
+Adam (mixed precision) & 10 bytes (fp16 param + fp32 master + 2 moments) & 2.5× \\
+\bottomrule
+\end{tabular}
+\caption{Memory requirements per parameter for different optimizers}
+\label{tab:optimizer_memory}
+\end{table}
+
+\begin{example}[BERT-base Memory Requirements]
+\label{ex:bert_memory}
+For BERT-base with 110M parameters:
+
+\textbf{Model parameters:}
+\begin{itemize}
+    \item FP32: $110 \times 10^6 \times 4 \text{ bytes} = 440$ MB
+    \item FP16: $110 \times 10^6 \times 2 \text{ bytes} = 220$ MB
+\end{itemize}
+
+\textbf{SGD with momentum:}
+\begin{itemize}
+    \item Parameters: 440 MB
+    \item Momentum buffer: 440 MB
+    \item \textbf{Total: 880 MB}
+\end{itemize}
+
+\textbf{Adam optimizer:}
+\begin{itemize}
+    \item Parameters: 440 MB
+    \item First moment ($\mathbf{m}$): 440 MB
+    \item Second moment ($\mathbf{v}$): 440 MB
+    \item Gradients: 440 MB
+    \item \textbf{Total: 1,760 MB $\approx 1.7$ GB}
+\end{itemize}
+
+\textbf{Adam with mixed precision:}
+\begin{itemize}
+    \item FP16 parameters: 220 MB
+    \item FP32 master copy: 440 MB
+    \item FP32 first moment: 440 MB
+    \item FP32 second moment: 440 MB
+    \item FP16 gradients: 220 MB
+    \item \textbf{Total: 1,760 MB $\approx 1.7$ GB}
+\end{itemize}
+
+Note: Mixed precision doesn't reduce optimizer memory, but enables larger batch sizes.
+\end{example}
+
+\begin{example}[GPT-3 Memory Requirements]
+\label{ex:gpt3_memory}
+For GPT-3 (175B parameters) with Adam optimizer:
+
+\textbf{Model + optimizer states:}
+\begin{itemize}
+    \item Parameters (FP16): $175 \times 10^9 \times 2 = 350$ GB
+    \item Master copy (FP32): $175 \times 10^9 \times 4 = 700$ GB
+    \item First moment (FP32): 700 GB
+    \item Second moment (FP32): 700 GB
+    \item Gradients (FP16): 350 GB
+    \item \textbf{Total: 2,800 GB $\approx 2.8$ TB}
+\end{itemize}
+
+This requires distributed training across multiple GPUs. With 8× A100 GPUs (80 GB each = 640 GB total), we need model parallelism and optimizer state sharding (e.g., ZeRO optimizer).
+\end{example}
+
+\subsection{Impact on GPU Memory Budget}
+
+\begin{keypoint}
+For large models, optimizer states often consume more memory than the model itself. Adam uses 4× parameter memory, leaving less room for batch size and activations.
+\end{keypoint}
+
+\begin{example}[Memory Budget Breakdown]
+\label{ex:memory_budget}
+Training BERT-base on A100 GPU (80 GB memory):
+
+\textbf{Memory allocation:}
+\begin{itemize}
+    \item Model parameters: 0.44 GB
+    \item Optimizer states (Adam): 1.32 GB
+    \item Activations (batch size 32): 8.4 GB
+    \item Gradients: 0.44 GB
+    \item Framework overhead: $\approx 2$ GB
+    \item \textbf{Total: $\approx 12.6$ GB}
+\end{itemize}
+
+\textbf{Remaining: 67.4 GB} available for larger batch sizes or longer sequences.
+
+With batch size 256: Activations $\approx 67$ GB, total $\approx 71$ GB (fits comfortably).
+\end{example}
+
+\section{Learning Rate Schedules}
+\label{sec:lr_schedules}
+
+Learning rate schedules adjust $\eta$ during training to improve convergence.
+
+\subsection{Learning Rate Impact on Convergence and GPU Utilization}
+
+\begin{keypoint}
+Learning rate affects both convergence speed and hardware efficiency. Larger learning rates enable larger batch sizes, improving GPU utilization.
+\end{keypoint}
+
+\begin{example}[Learning Rate vs Convergence Speed]
+\label{ex:lr_convergence}
+Training BERT-base on 1M examples:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{cccc}
+\toprule
+\textbf{Learning Rate} & \textbf{Steps to Converge} & \textbf{Wall Time} & \textbf{Final Loss} \\
+\midrule
+$1 \times 10^{-5}$ & 100,000 & 12 hours & 1.85 \\
+$1 \times 10^{-4}$ & 30,000 & 3.6 hours & 1.82 \\
+$5 \times 10^{-4}$ & 15,000 & 1.8 hours & 1.81 \\
+$1 \times 10^{-3}$ & 20,000 & 2.4 hours & 1.83 \\
+$5 \times 10^{-3}$ & Diverges & - & - \\
+\bottomrule
+\end{tabular}
+\caption{Learning rate impact on BERT-base training}
+\end{table}
+
+Optimal learning rate ($5 \times 10^{-4}$) achieves 6.7× faster convergence than conservative rate.
+\end{example}
+
+\subsection{Learning Rate Scaling with Batch Size}
+
+\begin{theorem}[Linear Scaling Rule]
+\label{thm:linear_scaling}
+When increasing batch size by factor $k$, scale learning rate by $k$ to maintain convergence behavior:
+\begin{equation}
+\eta_{\text{new}} = k \cdot \eta_{\text{base}}
+\end{equation}
+
+This holds approximately for $k \leq 8$. For larger $k$, use gradual warmup.
+\end{theorem}
+
+\begin{example}[Batch Size and Learning Rate Scaling]
+\label{ex:batch_lr_scaling}
+Training BERT-base with different batch sizes:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Batch Size} & \textbf{Learning Rate} & \textbf{GPU Util.} & \textbf{Steps/sec} & \textbf{Samples/sec} \\
+\midrule
+32 & $5 \times 10^{-4}$ & 45\% & 2.1 & 67 \\
+64 & $1 \times 10^{-3}$ & 68\% & 1.8 & 115 \\
+128 & $2 \times 10^{-3}$ & 85\% & 1.4 & 179 \\
+256 & $4 \times 10^{-3}$ & 92\% & 1.0 & 256 \\
+512 & $8 \times 10^{-3}$ & 95\% & 0.6 & 307 \\
+\bottomrule
+\end{tabular}
+\caption{Batch size impact on GPU utilization (A100 GPU)}
+\end{table}
+
+Larger batches improve GPU utilization but require proportionally larger learning rates. Throughput increases 4.6× from batch 32 to 512.
+\end{example}
+
+\subsection{Practical Learning Rates for Transformers}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Model} & \textbf{Batch Size} & \textbf{Peak Learning Rate} \\
+\midrule
+BERT-base & 256 & $1 \times 10^{-4}$ \\
+BERT-large & 256 & $5 \times 10^{-5}$ \\
+GPT-2 (117M) & 512 & $2.5 \times 10^{-4}$ \\
+GPT-2 (1.5B) & 512 & $1.5 \times 10^{-4}$ \\
+GPT-3 (175B) & 3.2M & $6 \times 10^{-5}$ \\
+T5-base & 128 & $1 \times 10^{-4}$ \\
+T5-11B & 2048 & $1 \times 10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\caption{Typical learning rates for transformer models}
+\label{tab:transformer_lrs}
+\end{table}
+
+\begin{keypoint}
+Larger models generally require smaller learning rates for stability. GPT-3 uses $6 \times 10^{-5}$ despite massive batch size of 3.2M tokens.
+\end{keypoint}
+
+\subsection{Common Schedules}
+
+\textbf{Step Decay:}
+\begin{equation}
+\eta_t = \eta_0 \gamma^{\lfloor t/s \rfloor}
+\end{equation}
+where $\gamma < 1$ (e.g., 0.1) and $s$ is step size (e.g., every 10 epochs).
+
+\textbf{Exponential Decay:}
+\begin{equation}
+\eta_t = \eta_0 e^{-\lambda t}
+\end{equation}
+
+\textbf{Cosine Annealing:}
+\begin{equation}
+\eta_t = \eta_{\min} + \frac{1}{2}(\eta_{\max} - \eta_{\min})\left(1 + \cos\left(\frac{t\pi}{T}\right)\right)
+\end{equation}
+
+\textbf{Warmup + Decay (Transformers):}
+\begin{equation}
+\eta_t = \frac{d_{\text{model}}^{-0.5}}{\max(t, \text{warmup\_steps}^{-0.5})} \cdot \min(t^{-0.5}, t \cdot \text{warmup\_steps}^{-1.5})
+\end{equation}
+
+The warmup phase prevents instability in early training of transformers.
+
+\section{Hardware Considerations for Gradient Computation}
+\label{sec:hardware_gradients}
+
+Modern deep learning relies on specialized hardware for efficient gradient computation.
+
+\subsection{Gradient Computation on GPUs}
+
+GPUs excel at gradient computation due to massive parallelism in matrix operations.
+
+\begin{example}[GPU vs CPU Gradient Computation]
+\label{ex:gpu_cpu_gradients}
+Computing gradients for BERT-base (110M parameters) on one training batch:
+
+\textbf{NVIDIA A100 GPU:}
+\begin{itemize}
+    \item Forward pass: 0.31 ms (96 GFLOPs ÷ 312 TFLOPS)
+    \item Backward pass: 0.62 ms (193 GFLOPs ÷ 312 TFLOPS)
+    \item \textbf{Total: 0.93 ms per batch}
+    \item Throughput: 1,075 batches/second
+\end{itemize}
+
+\textbf{Intel Xeon CPU (32 cores):}
+\begin{itemize}
+    \item Forward pass: 45 ms (96 GFLOPs ÷ 2.1 TFLOPS)
+    \item Backward pass: 90 ms (193 GFLOPs ÷ 2.1 TFLOPS)
+    \item \textbf{Total: 135 ms per batch}
+    \item Throughput: 7.4 batches/second
+\end{itemize}
+
+\textbf{GPU speedup: 145×}
+\end{example}
+
+\subsection{Mixed Precision Training}
+
+Mixed precision uses FP16 for computation and FP32 for accumulation, reducing memory and increasing speed.
+
+\begin{algorithm}[H]
+\caption{Mixed Precision Training}
+\label{alg:mixed_precision}
+\KwIn{Model parameters $\vw$ (FP32 master copy)}
+\For{each training step}{
+    Convert $\vw$ to FP16: $\vw_{16} = \text{FP16}(\vw)$ \\
+    Forward pass in FP16: $\hat{y} = f(\vx; \vw_{16})$ \\
+    Compute loss: $L = \text{Loss}(y, \hat{y})$ \\
+    Scale loss: $L_{\text{scaled}} = s \cdot L$ (prevent underflow) \\
+    Backward pass in FP16: $\mathbf{g}_{16} = \nabla_{\vw_{16}} L_{\text{scaled}}$ \\
+    Unscale gradients: $\mathbf{g}_{16} = \mathbf{g}_{16} / s$ \\
+    Convert to FP32: $\mathbf{g} = \text{FP32}(\mathbf{g}_{16})$ \\
+    Update FP32 master: $\vw \leftarrow \vw - \eta \mathbf{g}$
+}
+\end{algorithm}
+
+\begin{example}[Mixed Precision Impact]
+\label{ex:mixed_precision_impact}
+Training BERT-base on A100 GPU:
+
+\textbf{FP32 training:}
+\begin{itemize}
+    \item Forward + backward: 0.93 ms
+    \item Memory: 12.6 GB
+    \item Max batch size: 32
+    \item Throughput: 34,400 samples/sec
+\end{itemize}
+
+\textbf{Mixed precision (FP16) training:}
+\begin{itemize}
+    \item Forward + backward: 0.48 ms (1.94× faster)
+    \item Memory: 8.2 GB (35\% reduction)
+    \item Max batch size: 64
+    \item Throughput: 133,300 samples/sec (3.87× faster)
+\end{itemize}
+
+Mixed precision provides 1.94× computational speedup and enables 2× larger batches, yielding 3.87× total throughput improvement.
+\end{example}
+
+\subsection{Gradient Accumulation}
+
+Gradient accumulation simulates large batch sizes by accumulating gradients over multiple forward-backward passes.
+
+\begin{algorithm}[H]
+\caption{Gradient Accumulation}
+\label{alg:gradient_accumulation}
+\KwIn{Desired batch size $B$, physical batch size $b$, accumulation steps $k = B/b$}
+Initialize gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$ \\
+\For{$i = 1$ \KwTo $k$}{
+    Sample mini-batch $\mathcal{B}_i$ of size $b$ \\
+    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
+    Backward pass: $\mathbf{g}_i = \nabla L_i$ \\
+    Accumulate: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} + \mathbf{g}_i$
+}
+Average: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} / k$ \\
+Update parameters: $\vw \leftarrow \vw - \eta \mathbf{g}_{\text{acc}}$ \\
+Clear gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$
+\end{algorithm}
+
+\begin{example}[Gradient Accumulation for Large Batches]
+\label{ex:gradient_accumulation}
+Training GPT-2 (1.5B parameters) on single A100 GPU (80 GB):
+
+\textbf{Without accumulation:}
+\begin{itemize}
+    \item Max batch size: 4 (memory limit)
+    \item Update frequency: every 4 samples
+    \item Training unstable (batch too small)
+\end{itemize}
+
+\textbf{With gradient accumulation (32 steps):}
+\begin{itemize}
+    \item Physical batch size: 4
+    \item Effective batch size: $4 \times 32 = 128$
+    \item Update frequency: every 128 samples
+    \item Memory: same as batch size 4
+    \item Training stable and efficient
+\end{itemize}
+
+Trade-off: 32× more forward-backward passes per update, but enables training large models on limited hardware.
+\end{example}
+
+\subsection{Distributed Gradient Synchronization}
+
+For multi-GPU training, gradients must be synchronized across devices.
+
+\begin{algorithm}[H]
+\caption{Data Parallel Training with Gradient Synchronization}
+\label{alg:data_parallel}
+\KwIn{$N$ GPUs, global batch size $B$, local batch size $b = B/N$}
+\For{each GPU $i = 1, \ldots, N$ in parallel}{
+    Sample local mini-batch $\mathcal{B}_i$ of size $b$ \\
+    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
+    Backward pass: $\mathbf{g}_i = \nabla L_i$
+}
+All-reduce gradients: $\mathbf{g} = \frac{1}{N} \sum_{i=1}^N \mathbf{g}_i$ \\
+\For{each GPU $i = 1, \ldots, N$ in parallel}{
+    Update local parameters: $\vw_i \leftarrow \vw_i - \eta \mathbf{g}$
+}
+\end{algorithm}
+
+\begin{example}[Distributed Training Efficiency]
+\label{ex:distributed_efficiency}
+Training BERT-base on 8× A100 GPUs with NVLink:
+
+\textbf{Single GPU baseline:}
+\begin{itemize}
+    \item Batch size: 32
+    \item Time per step: 0.93 ms
+    \item Throughput: 34,400 samples/sec
+\end{itemize}
+
+\textbf{8 GPUs (data parallel):}
+\begin{itemize}
+    \item Global batch size: 256
+    \item Time per step: 0.93 ms (computation) + 0.12 ms (communication)
+    \item Total: 1.05 ms
+    \item Throughput: 243,800 samples/sec
+    \item \textbf{Scaling efficiency: 243,800 / (8 × 34,400) = 88.6\%}
+\end{itemize}
+
+Communication overhead is 11.4\% due to gradient all-reduce. NVLink (600 GB/s) enables efficient synchronization.
+\end{example}
+
+\begin{keypoint}
+For large models, gradient synchronization can become a bottleneck. Techniques like gradient compression, ZeRO optimizer, and pipeline parallelism reduce communication overhead.
+\end{keypoint}
+
+\section{Exercises}
+
+\begin{exercise}
+Compute the gradient of $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA \in \R^{n \times n}$ is symmetric, $\vw, \vb \in \R^n$, and $c \in \R$.
+\end{exercise}
+
+\begin{exercise}
+Implement backpropagation for a 2-layer network with ReLU activation. Given input $\vx = [1.0, 0.5]\transpose$, weights $\mW^{(1)} \in \R^{3 \times 2}$, $\mW^{(2)} \in \R^{1 \times 3}$, and target $y = 2.0$, compute all gradients.
+\end{exercise}
+
+\begin{exercise}
+For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
+\begin{enumerate}
+    \item Why is bias correction necessary?
+    \item What are the effective learning rates after steps $t = 1, 10, 100, 1000$?
+    \item How does Adam handle sparse gradients compared to SGD?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+A transformer is trained with learning rate warmup over 4000 steps, then inverse square root decay. If $d_{\text{model}} = 512$:
+\begin{enumerate}
+    \item Plot the learning rate schedule for 100,000 steps
+    \item What is the learning rate at step 1, 4000, and 10,000?
+    \item Why is warmup beneficial for transformer training?
+\end{enumerate}
+\end{exercise}
+
+
+\begin{exercise}
+Calculate the memory requirements for training GPT-2 (1.5B parameters) with Adam optimizer:
+\begin{enumerate}
+    \item Model parameters in FP16
+    \item Optimizer states (FP32 master copy + 2 moments)
+    \item Gradients in FP16
+    \item Total memory for model + optimizer
+    \item How many A100 GPUs (80 GB each) are needed?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+For BERT-base processing sequence length 512 with batch size 64:
+\begin{enumerate}
+    \item Calculate total FLOPs for one training step (forward + backward)
+    \item Estimate time per step on A100 GPU (312 TFLOPS)
+    \item How does mixed precision (FP16) affect throughput?
+    \item What is the maximum batch size that fits in 80 GB memory?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Compare gradient computation methods for a network with $10^7$ parameters:
+\begin{enumerate}
+    \item How many forward passes does finite differences require?
+    \item How many passes does backpropagation require?
+    \item If one forward pass takes 10 ms, compare total time
+    \item Why is reverse mode AD preferred over forward mode?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Implement gradient checkpointing for a 24-layer transformer:
+\begin{enumerate}
+    \item Without checkpointing, how much activation memory is needed?
+    \item With checkpointing every 6 layers, what is the memory reduction?
+    \item What is the computational overhead (extra forward passes)?
+    \item At what model size does checkpointing become necessary?
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Analyze distributed training efficiency for 8 GPUs:
+\begin{enumerate}
+    \item If gradient all-reduce takes 15 ms and computation takes 100 ms, what is the scaling efficiency?
+    \item How does batch size affect communication overhead?
+    \item Compare ring all-reduce vs tree all-reduce for 64 GPUs
+    \item When does gradient compression become beneficial?
+\end{enumerate}
+\end{exercise}
+
+\section{Solutions}
+
+\begin{solution}[Exercise 1]
+For $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA$ is symmetric:
+
+Using the gradient rules:
+\begin{itemize}
+    \item $\nabla_{\vw}(\vw\transpose \mA \vw) = 2\mA\vw$ (since $\mA$ is symmetric)
+    \item $\nabla_{\vw}(\vb\transpose \vw) = \vb$
+    \item $\nabla_{\vw}(c) = \mathbf{0}$
+\end{itemize}
+
+Therefore:
+\begin{equation}
+\nabla_{\vw} f = 2\mA\vw + \vb
+\end{equation}
+\end{solution}
+
+\begin{solution}[Exercise 2]
+Given: $\vx = [1.0, 0.5]\transpose$, target $y = 2.0$, ReLU activation.
+
+Let's use specific weights:
+\begin{equation}
+\mW^{(1)} = \begin{bmatrix} 0.5 & -0.3 \\ 0.2 & 0.6 \\ -0.4 & 0.8 \end{bmatrix}, \quad \mW^{(2)} = \begin{bmatrix} 1.0 & -0.5 & 0.7 \end{bmatrix}
+\end{equation}
+
+\textbf{Forward pass:}
+\begin{align}
+\vz^{(1)} &= \mW^{(1)}\vx = \begin{bmatrix} 0.5(1.0) - 0.3(0.5) \\ 0.2(1.0) + 0.6(0.5) \\ -0.4(1.0) + 0.8(0.5) \end{bmatrix} = \begin{bmatrix} 0.35 \\ 0.50 \\ 0.00 \end{bmatrix} \\
+\vh^{(1)} &= \text{ReLU}(\vz^{(1)}) = \begin{bmatrix} 0.35 \\ 0.50 \\ 0.00 \end{bmatrix} \\
+z^{(2)} &= \mW^{(2)}\vh^{(1)} = 1.0(0.35) - 0.5(0.50) + 0.7(0.00) = 0.10 \\
+L &= \frac{1}{2}(y - z^{(2)})^2 = \frac{1}{2}(2.0 - 0.10)^2 = 1.805
+\end{align}
+
+\textbf{Backward pass:}
+\begin{align}
+\frac{\partial L}{\partial z^{(2)}} &= -(y - z^{(2)}) = -(2.0 - 0.10) = -1.90 \\
+\frac{\partial L}{\partial \mW^{(2)}} &= \frac{\partial L}{\partial z^{(2)}} \vh^{(1)\transpose} = -1.90 \begin{bmatrix} 0.35 & 0.50 & 0.00 \end{bmatrix} = \begin{bmatrix} -0.665 & -0.950 & 0.000 \end{bmatrix} \\
+\frac{\partial L}{\partial \vh^{(1)}} &= \mW^{(2)\transpose} \frac{\partial L}{\partial z^{(2)}} = \begin{bmatrix} 1.0 \\ -0.5 \\ 0.7 \end{bmatrix}(-1.90) = \begin{bmatrix} -1.90 \\ 0.95 \\ -1.33 \end{bmatrix} \\
+\frac{\partial L}{\partial \vz^{(1)}} &= \frac{\partial L}{\partial \vh^{(1)}} \odot \text{ReLU}'(\vz^{(1)}) = \begin{bmatrix} -1.90 \\ 0.95 \\ -1.33 \end{bmatrix} \odot \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix} = \begin{bmatrix} -1.90 \\ 0.95 \\ 0.00 \end{bmatrix} \\
+\frac{\partial L}{\partial \mW^{(1)}} &= \frac{\partial L}{\partial \vz^{(1)}} \vx\transpose = \begin{bmatrix} -1.90 \\ 0.95 \\ 0.00 \end{bmatrix} \begin{bmatrix} 1.0 & 0.5 \end{bmatrix} = \begin{bmatrix} -1.90 & -0.95 \\ 0.95 & 0.475 \\ 0.00 & 0.00 \end{bmatrix}
+\end{align}
+\end{solution}
+
+\begin{solution}[Exercise 3]
+For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
+
+\textbf{(1) Why bias correction is necessary:}
+The first and second moment estimates are initialized to zero, creating a bias toward zero in early iterations. Without correction, the effective learning rate would be too small initially. Bias correction factors $\frac{1}{1-\beta_1^t}$ and $\frac{1}{1-\beta_2^t}$ compensate for this initialization bias.
+
+\textbf{(2) Effective learning rates:}
+The effective learning rate is $\alpha_{\text{eff}} = \alpha \frac{\sqrt{1-\beta_2^t}}{1-\beta_1^t}$:
+
+\begin{itemize}
+    \item $t=1$: $\alpha_{\text{eff}} = 0.001 \times \frac{\sqrt{1-0.999}}{1-0.9} = 0.001 \times \frac{0.0316}{0.1} \approx 0.000316$
+    \item $t=10$: $\alpha_{\text{eff}} = 0.001 \times \frac{\sqrt{1-0.999^{10}}}{1-0.9^{10}} \approx 0.001 \times \frac{0.0998}{0.651} \approx 0.000153$
+    \item $t=100$: $\alpha_{\text{eff}} = 0.001 \times \frac{\sqrt{1-0.999^{100}}}{1-0.9^{100}} \approx 0.001 \times \frac{0.302}{1.000} \approx 0.000302$
+    \item $t=1000$: $\alpha_{\text{eff}} \approx 0.001$ (bias correction negligible)
+\end{itemize}
+
+\textbf{(3) Handling sparse gradients:}
+Adam maintains separate adaptive learning rates for each parameter through the second moment estimate $\mathbf{v}$. For sparse gradients, parameters with infrequent updates have smaller $v_i$ values, resulting in larger effective learning rates. This allows Adam to make larger updates to rarely-updated parameters, unlike SGD which treats all parameters equally. This is particularly beneficial for embedding layers and natural language processing tasks.
+\end{solution}
+
+\begin{solution}[Exercise 4]
+For transformer with $d_{\text{model}} = 512$ and warmup over 4000 steps:
+
+The learning rate schedule is:
+\begin{equation}
+\eta(t) = d_{\text{model}}^{-0.5} \cdot \min(t^{-0.5}, t \cdot \text{warmup}^{-1.5})
+\end{equation}
+
+\textbf{(1) Plot description:}
+The schedule has two phases:
+\begin{itemize}
+    \item Warmup ($t \leq 4000$): Linear increase $\eta(t) = \frac{t}{4000} \cdot 512^{-0.5} \approx 0.0011 \cdot t$
+    \item Decay ($t > 4000$): Inverse square root $\eta(t) = 512^{-0.5} \cdot t^{-0.5} \approx \frac{1.414}{\sqrt{t}}$
+\end{itemize}
+
+\textbf{(2) Learning rates at specific steps:}
+\begin{itemize}
+    \item $t=1$: $\eta = 512^{-0.5} \cdot 1 \cdot 4000^{-1.5} \approx 0.0000111$
+    \item $t=4000$: $\eta = 512^{-0.5} \cdot 4000^{-0.5} \approx 0.0222$ (peak)
+    \item $t=10000$: $\eta = 512^{-0.5} \cdot 10000^{-0.5} \approx 0.0141$
+\end{itemize}
+
+\textbf{(3) Why warmup is beneficial:}
+\begin{itemize}
+    \item Prevents instability from large gradients in early training when parameters are randomly initialized
+    \item Allows the optimizer's momentum statistics to stabilize
+    \item Particularly important for Adam, where the second moment estimate needs time to accumulate
+    \item Without warmup, large initial learning rates can cause divergence or poor local minima
+\end{itemize}
+\end{solution}
+
+\begin{solution}[Exercise 5]
+For GPT-2 with 1.5B parameters and Adam optimizer:
+
+\textbf{(1) Model parameters in FP16:}
+\begin{equation}
+1.5 \times 10^9 \times 2 \text{ bytes} = 3 \times 10^9 \text{ bytes} = 3 \text{ GB}
+\end{equation}
+
+\textbf{(2) Optimizer states:}
+\begin{itemize}
+    \item FP32 master copy: $1.5 \times 10^9 \times 4 = 6$ GB
+    \item First moment $\mathbf{m}$ (FP32): $1.5 \times 10^9 \times 4 = 6$ GB
+    \item Second moment $\mathbf{v}$ (FP32): $1.5 \times 10^9 \times 4 = 6$ GB
+    \item Total optimizer states: $18$ GB
+\end{itemize}
+
+\textbf{(3) Gradients in FP16:}
+\begin{equation}
+1.5 \times 10^9 \times 2 \text{ bytes} = 3 \text{ GB}
+\end{equation}
+
+\textbf{(4) Total memory:}
+\begin{equation}
+\text{Model (FP16)} + \text{Optimizer states} + \text{Gradients} = 3 + 18 + 3 = 24 \text{ GB}
+\end{equation}
+
+\textbf{(5) Number of A100 GPUs needed:}
+\begin{equation}
+\frac{24 \text{ GB}}{80 \text{ GB per GPU}} = 0.3 \text{ GPUs}
+\end{equation}
+
+One A100 GPU is sufficient for the model and optimizer states alone. However, activations during training require additional memory, so 1-2 GPUs would be needed in practice depending on batch size.
+\end{solution}
+
+\begin{solution}[Exercise 6]
+For BERT-base with sequence length 512 and batch size 64:
+
+\textbf{(1) Total FLOPs per training step:}
+From Example~\ref{ex:bert_gradient_flops}:
+\begin{itemize}
+    \item Forward pass: $\approx 96$ GFLOPs per sample
+    \item Backward pass: $\approx 193$ GFLOPs per sample
+    \item Total per sample: $289$ GFLOPs
+    \item For batch of 64: $289 \times 64 = 18{,}496$ GFLOPs $\approx 18.5$ TFLOPs
+\end{itemize}
+
+\textbf{(2) Time per step on A100:}
+\begin{equation}
+\frac{18.5 \text{ TFLOPs}}{312 \text{ TFLOPs}} \approx 59 \text{ ms}
+\end{equation}
+
+In practice, memory bandwidth and kernel launch overhead increase this to $\approx 80$-$100$ ms.
+
+\textbf{(3) Mixed precision impact:}
+\begin{itemize}
+    \item FP16 Tensor Cores provide 2× speedup: $\approx 30$ ms theoretical
+    \item Reduced memory traffic (2× less bandwidth): enables larger batches
+    \item Practical speedup: 1.8-2.2× including overhead
+    \item Throughput increase: $\approx 3.5$-$4$× due to larger batch sizes
+\end{itemize}
+
+\textbf{(4) Maximum batch size in 80 GB:}
+Memory breakdown:
+\begin{itemize}
+    \item Model + optimizer: $\approx 1.7$ GB
+    \item Activations per sample: $\approx 130$ MB
+    \item Gradients: $\approx 0.44$ GB
+    \item Framework overhead: $\approx 2$ GB
+\end{itemize}
+
+Available for activations: $80 - 1.7 - 0.44 - 2 = 75.86$ GB
+
+Maximum batch size: $\frac{75{,}860 \text{ MB}}{130 \text{ MB/sample}} \approx 583$ samples
+\end{solution}
+
+\begin{solution}[Exercise 7]
+For network with $10^7$ parameters:
+
+\textbf{(1) Finite differences forward passes:}
+Requires one forward pass per parameter: $10^7$ forward passes
+
+\textbf{(2) Backpropagation passes:}
+Requires 1 forward pass + 1 backward pass = 2 passes total
+
+\textbf{(3) Time comparison:}
+\begin{itemize}
+    \item Finite differences: $10^7 \times 10 \text{ ms} = 10^8 \text{ ms} = 100{,}000 \text{ seconds} \approx 27.8 \text{ hours}$
+    \item Backpropagation: $2 \times 10 \text{ ms} = 20 \text{ ms}$
+    \item Speedup: $\frac{10^8}{20} = 5 \times 10^6 = 5$ million×
+\end{itemize}
+
+\textbf{(4) Why reverse mode AD is preferred:}
+\begin{itemize}
+    \item For $n$ parameters and scalar loss, forward mode requires $O(n)$ passes while reverse mode requires $O(1)$ passes
+    \item Reverse mode exploits the structure of neural networks: many parameters, one loss
+    \item Memory cost is higher (must store activations) but computational savings are enormous
+    \item Forward mode would be preferred only if we had many outputs and few inputs (rare in deep learning)
+\end{itemize}
+\end{solution}
+
+\begin{solution}[Exercise 8]
+For 24-layer transformer with gradient checkpointing:
+
+\textbf{(1) Activation memory without checkpointing:}
+Assuming $\approx 700$ MB per layer (from Example~\ref{ex:bert_activation_memory}):
+\begin{equation}
+24 \times 700 \text{ MB} = 16{,}800 \text{ MB} \approx 16.4 \text{ GB}
+\end{equation}
+
+\textbf{(2) Memory reduction with checkpointing every 6 layers:}
+We save only 4 checkpoints (layers 6, 12, 18, 24):
+\begin{equation}
+\text{Memory} = 4 \times 700 \text{ MB} = 2{,}800 \text{ MB} \approx 2.7 \text{ GB}
+\end{equation}
+
+Reduction factor: $\frac{16.4}{2.7} \approx 6\times$
+
+\textbf{(3) Computational overhead:}
+For each checkpoint interval, we recompute the forward pass once during backward:
+\begin{itemize}
+    \item Original: 1 forward + 1 backward
+    \item With checkpointing: 1 forward + 1 backward + 0.75 forward (recompute 18 of 24 layers)
+    \item Overhead: $\frac{1.75}{2} = 87.5\%$ increase, or 1.875× total time
+\end{itemize}
+
+\textbf{(4) When checkpointing becomes necessary:}
+Checkpointing is essential when:
+\begin{itemize}
+    \item Activation memory exceeds available GPU memory
+    \item For GPT-3 scale (175B parameters), activations can exceed 100 GB
+    \item Rule of thumb: Use checkpointing when activations $>$ 50\% of GPU memory
+    \item Trade-off: 1.5-2× slower training for 4-8× memory reduction
+\end{itemize}
+\end{solution}
+
+\begin{solution}[Exercise 9]
+For distributed training with 8 GPUs:
+
+\textbf{(1) Scaling efficiency:}
+\begin{itemize}
+    \item Time per step (single GPU): 100 ms
+    \item Time per step (8 GPUs): $\frac{100}{8} + 15 = 12.5 + 15 = 27.5$ ms
+    \item Ideal time (perfect scaling): $\frac{100}{8} = 12.5$ ms
+    \item Scaling efficiency: $\frac{12.5}{27.5} \approx 45.5\%$
+\end{itemize}
+
+\textbf{(2) Batch size effect on communication:}
+\begin{itemize}
+    \item Communication time is independent of batch size (same gradient size)
+    \item Larger batches increase computation time, reducing communication overhead percentage
+    \item For batch size $B$: efficiency $\approx \frac{100B/8}{100B/8 + 15}$
+    \item Doubling batch size: $\frac{25}{40} = 62.5\%$ efficiency
+    \item 4× batch size: $\frac{50}{65} = 76.9\%$ efficiency
+\end{itemize}
+
+\textbf{(3) Ring vs tree all-reduce for 64 GPUs:}
+\begin{itemize}
+    \item Ring all-reduce: $O(N)$ communication steps, bandwidth-optimal
+    \item Tree all-reduce: $O(\log N)$ communication steps, latency-optimal
+    \item For 64 GPUs: Ring has 64 steps, tree has $\log_2(64) = 6$ steps
+    \item Ring is better for large messages (bandwidth-bound)
+    \item Tree is better for small messages (latency-bound)
+    \item Typical gradient sizes favor ring all-reduce
+\end{itemize}
+
+\textbf{(4) When gradient compression is beneficial:}
+\begin{itemize}
+    \item When communication time $>$ compression time
+    \item For slow networks (inter-node communication)
+    \item Typical compression: 8-bit quantization or top-k sparsification
+    \item Compression ratio: 4× (FP32 to 8-bit)
+    \item Beneficial when: $\frac{\text{gradient size}}{\text{bandwidth}} > \frac{\text{gradient size}}{\text{compression throughput}} + \frac{\text{compressed size}}{\text{bandwidth}}$
+    \item Usually beneficial for $>$8 GPUs across multiple nodes
+\end{itemize}
+\end{solution}

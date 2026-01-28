@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 9: Attention Variants and Mechanisms - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Attention Variants and Mechanisms</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Beyond standard scaled dot-product attention, numerous variants have been developed for specific use cases and improved efficiency. This chapter explores cross-attention for encoder-decoder models, soft vs hard attention, attention with relative position representations, and practical considerations for implementing attention mechanisms.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Distinguish between self-attention and cross-attention
+    <li>Understand relative position representations
+    <li>Implement attention with different scoring functions
+    <li>Apply attention masking for various scenarios
+    <li>Understand attention dropout and layer normalization
+    <li>Visualize and interpret attention patterns
+</ol>
+
+<h2>Cross-Attention</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+In encoder-decoder architectures, decoder attends to encoder output via cross-attention:
+<div class="equation">
+$$\begin{align}
+\mQ &= \mX_{\text{dec}} \mW^Q \quad \text{(queries from decoder)} \\
+\mK &= \mX_{\text{enc}} \mW^K \quad \text{(keys from encoder)} \\
+\mV &= \mX_{\text{enc}} \mW^V \quad \text{(values from encoder)} \\
+\text{CrossAttn}(\mX_{\text{dec}}, \mX_{\text{enc}}) &= \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+\end{align}$$
+</div>
+</div>
+
+<p><strong>Dimensions:</strong>
+<ul>
+    <li>Decoder input: $\mX_{\text{dec}} \in \R^{m \times d}$ ($m$ decoder positions)
+    <li>Encoder output: $\mX_{\text{enc}} \in \R^{n \times d}$ ($n$ encoder positions)
+    <li>Attention matrix: $\mA \in \R^{m \times n}$ (decoder $\times$ encoder)
+    <li>Output: $\R^{m \times d_v}$ (same decoder length)
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+English source: "The cat sat" (3 tokens encoded to $\mX_{\text{enc}} \in \R^{3 \times 512}$)
+
+<p>French target: "Le chat" (2 tokens so far, $\mX_{\text{dec}} \in \R^{2 \times 512}$)</p>
+
+<p>Cross-attention computes:
+<div class="equation">
+$$
+\mA = \begin{bmatrix}
+\alpha_{1,1} & \alpha_{1,2} & \alpha_{1,3} \\
+\alpha_{2,1} & \alpha_{2,2} & \alpha_{2,3}
+\end{bmatrix} \in \R^{2 \times 3}
+$$
+</div>
+
+<p>where $\alpha_{1,j}$ = attention from decoder position 1 ("Le") to encoder position $j$.</p>
+
+<p>When generating "Le" (the), model should attend strongly to "The" in source.</p>
+
+<p>When generating "chat" (cat), model should attend strongly to "cat" in source.
+</div>
+
+<h3>Transformer Decoder Attention Layers</h3>
+
+<p>A transformer decoder block contains <strong>three</strong> attention mechanisms:</p>
+
+<ol>
+    <li><strong>Masked self-attention:</strong> Decoder attends to previous decoder positions
+    <div class="equation">
+$$
+    \mQ = \mK = \mV = \mX_{\text{dec}} \quad \text{(with causal mask)}
+    $$
+</div>
+
+<p><li><strong>Cross-attention:</strong> Decoder attends to encoder output
+    <div class="equation">
+$$
+    \mQ = \mX_{\text{dec}}, \quad \mK = \mV = \mX_{\text{enc}}
+    $$
+</div>
+
+<p><li><strong>Feed-forward:</strong> Position-wise MLP (not attention)
+</ol>
+
+<div class="keypoint">
+Encoder-only models (BERT) use only self-attention. Decoder-only models (GPT) use only masked self-attention. Encoder-decoder models (T5, BART) use all three mechanisms.
+</div>
+
+<h2>Relative Position Representations</h2>
+
+<p><strong>Problem with absolute positions:</strong> Model learns positions 0-512 during training. How to handle position 600 at inference?</p>
+
+<p><strong>Solution:</strong> Relative position representations—encode distance between positions, not absolute positions.</p>
+
+<h3>Shaw et al. Relative Attention</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Modify attention scores to include relative position information:
+<div class="equation">
+$$
+e_{ij} = \frac{\vq_i\transpose \vk_j}{\sqrt{d_k}} + \vq_i\transpose \vr^{K}_{i-j}
+$$
+</div>
+where $\vr^{K}_{i-j} \in \R^{d_k}$ encodes relative position $i-j$ (clipped to maximum distance).
+</div>
+
+<p><strong>Advantages:</strong>
+<ul>
+    <li>Generalize to longer sequences
+    <li>Model learns distance-based patterns
+    <li>More parameter efficient
+</ul>
+
+<h3>T5 Relative Position Bias</h3>
+
+<p>T5 uses even simpler approach—add learned bias based on relative position:
+<div class="equation">
+$$
+\mA_{ij} = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}} + \mB\right)_{ij}
+$$
+</div>
+where $B_{ij}$ depends only on $|i-j|$ (bucketed by distance).</p>
+
+<h2>Alternative Attention Scoring Functions</h2>
+
+<p>Beyond scaled dot-product, various scoring functions exist:</p>
+
+<h3>Additive (Bahdanau)</h3>
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
+$$
+</div>
+
+<h3>Multiplicative (Luong)</h3>
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \vq\transpose \mW \vk
+$$
+</div>
+
+<h3>Scaled Dot-Product (Transformers)</h3>
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
+$$
+</div>
+
+<h3>General</h3>
+<div class="equation">
+$$
+\text{score}(\vq, \vk) = \vq\transpose \mW \vk
+$$
+</div>
+
+<p><strong>Comparison:</strong>
+<ul>
+    <li><strong>Additive:</strong> More parameters, handles different dimensions
+    <li><strong>Dot-product:</strong> Efficient, used in transformers
+    <li><strong>General:</strong> Flexible but more parameters
+</ul>
+
+<h2>Attention Masking</h2>
+
+<h3>Padding Mask</h3>
+
+<p>For variable-length sequences in batch, mask padding tokens:
+<div class="equation">
+$$
+M_{ij} = \begin{cases}
+0 & \text{if position } j \text{ is valid} \\
+-\infty & \text{if position } j \text{ is padding}
+\end{cases}
+$$
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Batch with sequences of length [5, 7, 4], padded to length 7:
+<div class="equation">
+$$\begin{align}
+\text{Seq 1:} & \quad [w_1, w_2, w_3, w_4, w_5, \text{PAD}, \text{PAD}] \\
+\text{Seq 2:} & \quad [w_1, w_2, w_3, w_4, w_5, w_6, w_7] \\
+\text{Seq 3:} & \quad [w_1, w_2, w_3, w_4, \text{PAD}, \text{PAD}, \text{PAD}]
+\end{align}$$
+</div>
+
+<p>Mask for Seq 1:
+<div class="equation">
+$$
+[0, 0, 0, 0, 0, -\infty, -\infty]
+$$
+</div>
+
+<p>Prevents attending to padding tokens.
+</div>
+
+<h3>Combined Masks</h3>
+
+<p>For decoder, combine causal mask and padding mask:
+<div class="equation">
+$$
+\mM_{\text{total}} = \mM_{\text{causal}} + \mM_{\text{padding}}
+$$
+</div>
+
+<p>Element-wise, use most restrictive: if either mask blocks, result blocks.</p>
+
+<h2>Attention Dropout</h2>
+
+<p>Apply dropout to attention weights for regularization:
+<div class="equation">
+$$
+\mA = \text{Dropout}\left(\text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right)\right)
+$$
+</div>
+
+<p>Typical dropout rate: 0.1 (10\%)</p>
+
+<p><strong>Effect:</strong> Randomly zero out some attention connections, preventing over-reliance on specific positions.</p>
+
+<h2>Layer Normalization with Attention</h2>
+
+<p>Two architectures for combining attention with layer norm:</p>
+
+<h3>Post-Norm (Original Transformer)</h3>
+<div class="equation">
+$$\begin{align}
+\vh &= \mX + \text{MultiHeadAttn}(\mX) \\
+\mZ &= \text{LayerNorm}(\vh)
+\end{align}$$
+</div>
+
+<h3>Pre-Norm (More Common Now)</h3>
+<div class="equation">
+$$\begin{align}
+\vh &= \mX + \text{MultiHeadAttn}(\text{LayerNorm}(\mX)) \\
+\mZ &= \vh
+\end{align}$$
+</div>
+
+<p><strong>Pre-norm advantages:</strong>
+<ul>
+    <li>More stable training
+    <li>Easier gradient flow
+    <li>Used in GPT-2, GPT-3, modern transformers
+</ul>
+
+<h2>Visualizing Attention</h2>
+
+<p>Attention weights $\mA \in \R^{n \times n}$ reveal what model attends to:</p>
+
+<h3>Attention Heatmaps</h3>
+
+<p>For sentence "The cat sat on the mat":
+<ul>
+    <li>Row $i$: attention distribution when processing token $i$
+    <li>Bright cell $(i,j)$: token $i$ strongly attends to token $j$
+</ul>
+
+<p><strong>Patterns observed:</strong>
+<ul>
+    <li>Diagonal: Attending to self
+    <li>Vertical lines: Attending to specific important words (e.g., subject, verb)
+    <li>Symmetric patterns: Mutual attention between related words
+    <li>Head-specific patterns: Different heads learn different relationships
+</ul>
+
+<h3>Interpreting Multiple Heads</h3>
+
+<p>In 12-head attention, different heads specialize:
+<ul>
+    <li>Some heads attend to adjacent words (local syntax)
+    <li>Some heads attend to distant words (long-range dependencies)
+    <li>Some heads attend to specific parts of speech
+    <li>Some heads attend based on semantic similarity
+</ul>
+
+<div class="caution">
+Attention weights are NOT necessarily model explanations! High attention doesn't always mean high importance for prediction. Attention shows where model looks, not why decisions are made.
+</div>
+
+<h2>Practical Implementation Considerations</h2>
+
+<h3>Memory-Efficient Attention</h3>
+
+<p>For very long sequences, store attention matrix in chunks:
+<ol>
+    <li>Compute $\mQ \mK\transpose$ for chunk of queries
+    <li>Apply softmax
+    <li>Multiply by $\mV$ chunk
+    <li>Accumulate results
+</ol>
+
+<p>Reduces peak memory from $O(n^2)$ to $O(nc)$ where $c$ is chunk size.</p>
+
+<h3>Fused Attention Kernels</h3>
+
+<p>Modern implementations fuse operations:
+<div class="equation">
+$$
+\text{QK}^T \to \text{Scale} \to \text{Mask} \to \text{Softmax} \to \text{Dropout} \to \text{multiply } \mV
+$$
+</div>
+
+<p>Single fused kernel faster than separate operations (fewer memory transfers).</p>
+
+<p>Example: FlashAttention achieves 2-4x speedup through fused operations and memory hierarchy optimization.</p>
+
+<h2>Efficient Attention Variants</h2>
+
+<p>The standard self-attention mechanism has computational complexity $O(n^2d)$ and memory complexity $O(n^2)$, where $n$ is the sequence length and $d$ is the model dimension. This quadratic scaling in sequence length becomes prohibitive for long sequences. For a sequence of length 4096 with 12 attention heads, the attention matrices alone require $12 \times 4096^2 \times 4 = 805$ MB in FP32 format per example. With batch size 32, this amounts to 25.8 GB just for attention weights, exceeding the memory capacity of most GPUs. This fundamental limitation has motivated extensive research into efficient attention variants that reduce the quadratic complexity while maintaining model quality.</p>
+
+<p>The key insight underlying efficient attention is that not all token pairs require equal attention. In practice, attention patterns often exhibit structure—tokens primarily attend to nearby tokens, specific global tokens, or sparse subsets of the sequence. By exploiting this structure, efficient attention mechanisms can dramatically reduce computational and memory requirements while preserving most of the modeling capacity of full attention. The following sections examine the major classes of efficient attention variants, analyzing their complexity trade-offs, implementation considerations, and practical use cases.</p>
+
+<h3>Local Attention</h3>
+
+<p>Local attention restricts each token to attend only to tokens within a fixed window around its position, rather than attending to all tokens in the sequence. For a window size $w$, token at position $i$ attends only to positions $[i-w/2, i+w/2]$. This reduces the attention matrix from $n \times n$ to $n \times w$, yielding linear scaling in sequence length.</p>
+
+<p>The computational complexity of local attention is $O(nwd)$, where $n$ is sequence length, $w$ is window size, and $d$ is model dimension. Compared to standard attention's $O(n^2d)$, this represents a reduction factor of $n/w$. For a sequence of length 4096 with window size 256, local attention is 16 times faster than full attention. The memory complexity similarly reduces from $O(n^2)$ to $O(nw)$, enabling much longer sequences to fit in GPU memory. For the same 4096-token sequence with 12 heads, local attention with window 256 requires only $12 \times 4096 \times 256 \times 4 = 50.3$ MB per example, a 16-fold reduction from the 805 MB required by full attention.</p>
+
+<p>The primary trade-off of local attention is the loss of long-range dependencies. Tokens separated by more than $w/2$ positions cannot directly attend to each other, requiring information to propagate through multiple layers. In practice, this limitation is often acceptable. Many natural language tasks exhibit strong locality—syntactic dependencies are typically short-range, and semantic relationships can be captured through multiple layers of local attention. Empirical studies show that local attention with window size 256-512 typically achieves 98-99\% of full attention's accuracy on language modeling tasks, while enabling sequences 10-20 times longer.</p>
+
+<p>The Longformer architecture demonstrates effective use of local attention for document-level understanding. Longformer combines local windowed attention for most tokens with global attention for special tokens like [CLS] and task-specific tokens. This hybrid approach maintains $O(n)$ complexity while allowing critical tokens to aggregate information from the entire sequence. On document classification tasks with 4096-token inputs, Longformer achieves comparable accuracy to BERT while processing sequences 8 times longer. The local attention pattern also enables efficient implementation on GPUs through blocked matrix operations, achieving 2-3x speedup over naive implementations.</p>
+
+<h3>Sparse Attention</h3>
+
+<p>Sparse attention generalizes local attention by allowing each token to attend to a sparse subset of positions according to a predefined pattern, rather than a contiguous window. The key insight is that attention patterns in trained transformers often exhibit structure—certain positions are consistently important while others receive minimal attention. By designing sparsity patterns that capture this structure, sparse attention can dramatically reduce computation while maintaining model quality.</p>
+
+<p>Several sparsity patterns have proven effective in practice. Strided attention divides the sequence into blocks and allows each token to attend within its block and to every $k$-th token globally, where $k$ is the stride. This pattern captures both local context and evenly-spaced global context. Fixed attention combines local attention with attention to a fixed set of global tokens, similar to Longformer. Learned sparse attention uses a separate network to predict which positions each token should attend to, adapting the sparsity pattern to the input. The Sparse Transformer architecture uses a factorized attention pattern where each token attends to positions in a strided pattern in one head and a local pattern in another head, allowing information to flow efficiently across the sequence.</p>
+
+<p>The computational complexity of sparse attention is $O(n \sqrt{n} d)$ for typical sparsity patterns, where each token attends to approximately $\sqrt{n}$ other tokens. This represents a substantial improvement over full attention's $O(n^2 d)$, particularly for long sequences. For a sequence of length 4096, sparse attention with $\sqrt{n} = 64$ positions per token is 64 times faster than full attention. The memory complexity is similarly $O(n \sqrt{n})$, enabling sequences that would be impossible with full attention. For 4096 tokens with 12 heads, sparse attention requires approximately $12 \times 4096 \times 64 \times 4 = 12.6$ MB per example, a 64-fold reduction from full attention's 805 MB.</p>
+
+<p>The accuracy trade-off of sparse attention depends critically on the choice of sparsity pattern. Well-designed patterns that align with the task's dependency structure can achieve 97-99\% of full attention's accuracy. The Sparse Transformer achieves perplexity within 0.1 of full attention on language modeling while using only $\sqrt{n}$ attention per token. BigBird, which combines local, global, and random attention patterns, matches BERT's accuracy on question answering and document classification while processing sequences up to 8 times longer. However, poorly chosen sparsity patterns can significantly degrade accuracy, particularly on tasks requiring long-range reasoning.</p>
+
+<p>Implementation of sparse attention on GPUs presents challenges because modern GPUs are optimized for dense matrix operations. Sparse matrix multiplication is less efficient than dense multiplication due to irregular memory access patterns and reduced arithmetic intensity. Specialized kernels and libraries like cuSPARSE can partially mitigate this, but sparse attention typically achieves only 50-70\% of the theoretical speedup in practice. Recent work on block-sparse attention, which operates on blocks of the attention matrix rather than individual elements, achieves better GPU utilization by maintaining some regularity in memory access patterns. The Triton framework enables efficient implementation of custom sparse attention patterns through automatic optimization of memory access.</p>
+
+<h3>Linear Attention</h3>
+
+<p>Linear attention achieves $O(nd^2)$ complexity by reformulating the attention computation to avoid explicitly constructing the $n \times n$ attention matrix. The key insight is that attention can be viewed as a kernel operation, and by choosing an appropriate kernel function, the computation can be reordered to compute the output directly without materializing the full attention matrix.</p>
+
+<p>The standard attention computation is:
+<div class="equation">
+$$
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}(\mQ \mK\transpose) \mV
+$$
+</div>
+
+<p>This requires computing $\mQ \mK\transpose \in \R^{n \times n}$ before applying softmax and multiplying by $\mV$. Linear attention approximates the softmax kernel with a feature map $\phi: \R^{d_k} \to \R^{d'}$ such that:
+<div class="equation">
+$$
+\text{softmax}(\vq\transpose \vk) \approx \phi(\vq)\transpose \phi(\vk)
+$$
+</div>
+
+<p>With this approximation, attention becomes:
+<div class="equation">
+$$
+\text{LinearAttn}(\mQ, \mK, \mV) = \phi(\mQ) (\phi(\mK)\transpose \mV)
+$$
+</div>
+
+<p>The crucial observation is that the parentheses can be reordered. Instead of computing $\phi(\mQ) \phi(\mK)\transpose$ (which is $n \times n$) and then multiplying by $\mV$, we first compute $\phi(\mK)\transpose \mV \in \R^{d' \times d_v}$ and then multiply by $\phi(\mQ)$. This reordering changes complexity from $O(n^2 d)$ to $O(n d'^2)$, where $d'$ is the feature dimension (typically equal to $d_k$).</p>
+
+<p>The computational savings of linear attention are substantial for long sequences. For sequence length 4096 and model dimension 768, standard attention requires approximately $4096^2 \times 768 = 12.9$ billion operations per head, while linear attention requires $4096 \times 768^2 = 2.4$ billion operations—a 5.4x reduction. The memory complexity is even more favorable: linear attention requires only $O(nd)$ memory for the intermediate $\phi(\mK)\transpose \mV$ matrix, compared to $O(n^2)$ for the full attention matrix. For 4096 tokens with 12 heads, linear attention requires approximately $12 \times 768 \times 768 \times 4 = 28.3$ MB, compared to 805 MB for full attention—a 28-fold reduction.</p>
+
+<p>The primary challenge of linear attention is choosing a feature map $\phi$ that accurately approximates the softmax kernel while remaining computationally efficient. The Performer architecture uses random Fourier features with $\phi(\vx) = \exp(\vx^2/2) [\cos(\omega_1\transpose \vx), \sin(\omega_1\transpose \vx), \ldots]$ where $\omega_i$ are random projection vectors. This provides an unbiased approximation of the softmax kernel with controllable accuracy based on the number of random features. The Linear Transformer uses a simpler feature map $\phi(\vx) = \text{elu}(\vx) + 1$, which is faster to compute but provides a looser approximation.</p>
+
+<p>The accuracy trade-off of linear attention is more significant than local or sparse attention. Empirical studies show that linear attention typically achieves 95-98\% of full attention's accuracy on language modeling, with larger degradation on tasks requiring precise attention patterns. The approximation error is particularly noticeable for small attention weights—the softmax function's sharp peaking is difficult to approximate with simple feature maps. However, for applications where extreme sequence length is critical, such as processing entire books or long-form video, the 2-5\% accuracy loss is often acceptable given the dramatic computational savings. Recent work on learned feature maps and adaptive kernel approximations aims to close this accuracy gap while maintaining linear complexity.</p>
+
+<h3>Low-Rank Attention</h3>
+
+<p>Low-rank attention exploits the observation that attention matrices in trained transformers often have low effective rank—most of the variance is captured by a small number of singular values. By explicitly factorizing the attention computation through a low-dimensional bottleneck, low-rank attention reduces complexity from $O(n^2 d)$ to $O(nrd)$, where $r$ is the rank and typically $r \ll n$.</p>
+
+<p>The Linformer architecture implements low-rank attention by projecting the keys and values to a lower-dimensional space before computing attention. Specifically, Linformer adds projection matrices $\mE, \mF \in \R^{r \times n}$ that reduce the sequence length dimension:
+<div class="equation">
+$$
+\text{LinformerAttn}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ (\mE \mK)\transpose}{\sqrt{d_k}}\right) (\mF \mV)
+$$
+</div>
+
+<p>The key insight is that $\mE \mK \in \R^{r \times d_k}$ and $\mF \mV \in \R^{r \times d_v}$ have reduced sequence length $r$ instead of $n$. The attention matrix is now $n \times r$ instead of $n \times n$, reducing both computation and memory by a factor of $n/r$.</p>
+
+<p>For sequence length 4096 and rank 256, low-rank attention reduces computation from $4096^2 \times 768 = 12.9$ billion operations to $4096 \times 256 \times 768 = 805$ million operations per head—a 16-fold reduction. The memory savings are equally dramatic: the attention matrix requires $4096 \times 256 \times 4 = 4.2$ MB per head instead of $4096^2 \times 4 = 67.1$ MB, a 16-fold reduction. With 12 heads, total attention memory drops from 805 MB to 50.3 MB per example.</p>
+
+<p>The accuracy of low-rank attention depends on the choice of rank $r$ and the projection matrices $\mE$ and $\mF$. Linformer uses learned projection matrices that are shared across all layers, reducing the parameter overhead. Empirical studies show that rank $r = 256$ achieves 96-98\% of full attention's accuracy for sequences up to 4096 tokens, with minimal degradation on most language understanding tasks. The accuracy loss is more pronounced for tasks requiring fine-grained attention patterns, such as coreference resolution or syntactic parsing, where the low-rank approximation may miss subtle dependencies.</p>
+
+<p>An important consideration for low-rank attention is that the projection matrices $\mE$ and $\mF$ introduce additional parameters and computation. For rank $r$ and sequence length $n$, the projections add $2rn$ parameters per layer. However, these projections can be implemented efficiently as 1D convolutions or learned position-wise projections, and the parameter cost is typically small compared to the savings in attention computation. The projection operations themselves require $O(rnd)$ computation, which is negligible compared to the $O(n^2d)$ cost of full attention for $r \ll n$.</p>
+
+<h3>Comprehensive Complexity Comparison</h3>
+
+<p>Understanding the trade-offs between different attention variants requires examining multiple dimensions: computational complexity, memory requirements, accuracy preservation, and practical implementation efficiency. The following analysis provides concrete comparisons across these dimensions for typical transformer configurations.</p>
+
+<table>
+<tr><th><strong>Variant</strong></th><th><strong>Time</strong></th><th><strong>Memory</strong></th><th><strong>Accuracy</strong></th><th><strong>Max Length</strong></th><th><strong>Use Case</strong></th></tr>
+<tr><td>Full Attention</td><td>$O(n^2d)$</td><td>$O(n^2)$</td><td>100\%</td><td>512-1024</td><td>Standard tasks</td></tr>
+<tr><td>Local Attention</td><td>$O(nwd)$</td><td>$O(nw)$</td><td>98-99\%</td><td>4096-8192</td><td>Document processing</td></tr>
+<tr><td>Sparse Attention</td><td>$O(n\sqrt{n}d)$</td><td>$O(n\sqrt{n})$</td><td>97-99\%</td><td>8192-16384</td><td>Long documents</td></tr>
+<tr><td>Linear Attention</td><td>$O(nd^2)$</td><td>$O(nd)$</td><td>95-98\%</td><td>16384+</td><td>Extreme length</td></tr>
+<tr><td>Low-Rank Attention</td><td>$O(nrd)$</td><td>$O(nr)$</td><td>96-98\%</td><td>4096-8192</td><td>Compression</td></tr>
+</table>
+
+<p>To make these complexity bounds concrete, consider processing sequences of varying lengths with BERT-base configuration ($d = 768$, 12 heads, $d_k = 64$ per head). The following table shows actual memory requirements for attention matrices across different sequence lengths and attention variants.</p>
+
+<table>
+<tr><th><strong>Variant</strong></th><th><strong>n=512</strong></th><th><strong>n=4096</strong></th><th><strong>n=8192</strong></th><th><strong>n=16384</strong></th></tr>
+<tr><td>Full Attention</td><td>12.6 MB</td><td>805 MB</td><td>3.2 GB</td><td>12.9 GB</td></tr>
+<tr><td>Local Attention ($w=256$)</td><td>6.3 MB</td><td>50.3 MB</td><td>101 MB</td><td>201 MB</td></tr>
+<tr><td>Sparse Attention ($\sqrt{n}$)</td><td>1.1 MB</td><td>12.6 MB</td><td>35.7 MB</td><td>101 MB</td></tr>
+<tr><td>Linear Attention</td><td>0.3 MB</td><td>2.3 MB</td><td>4.7 MB</td><td>9.4 MB</td></tr>
+<tr><td>Low-Rank ($r=256$)</td><td>6.3 MB</td><td>50.3 MB</td><td>101 MB</td><td>201 MB</td></tr>
+</table>
+
+<p>The memory savings become dramatic for long sequences. At 16,384 tokens, full attention requires 12.9 GB per example—impossible to fit on most GPUs even with batch size 1. Local attention reduces this to 201 MB, enabling batch size 32 on a 40 GB A100 GPU. Linear attention requires only 9.4 MB, enabling batch sizes of several hundred even for very long sequences.</p>
+
+<p>The computational cost comparison is equally striking. For a sequence of 8192 tokens with $d=768$ and 12 heads, full attention requires approximately 48.3 billion floating-point operations (FLOPs) per layer. Local attention with window 256 reduces this to 3.0 billion FLOPs (16x speedup), sparse attention to 6.0 billion FLOPs (8x speedup), linear attention to 4.5 billion FLOPs (10.7x speedup), and low-rank attention to 3.0 billion FLOPs (16x speedup). On an NVIDIA A100 GPU with 312 TFLOPS of FP16 throughput, full attention takes approximately 0.15 ms per layer, while efficient variants take 10-20 microseconds—enabling much faster inference and training.</p>
+
+<p>The accuracy trade-offs vary by task and sequence length. For sequences up to 2048 tokens, local attention with window 512 typically matches full attention within 0.5\% on language modeling perplexity. Sparse attention with well-designed patterns achieves similar accuracy. Linear attention shows 2-3\% degradation, while low-rank attention with rank 256 shows 1-2\% degradation. For longer sequences exceeding 4096 tokens, the accuracy gaps widen slightly, but efficient variants remain highly competitive. Importantly, the accuracy loss is often task-dependent—some tasks like document classification are more tolerant of approximate attention than tasks like machine translation or question answering that require precise alignment.</p>
+
+<h3>Implementation Considerations</h3>
+
+<p>Implementing efficient attention variants requires careful consideration of hardware characteristics, numerical stability, and software frameworks. The theoretical complexity improvements do not always translate directly to wall-clock speedups due to GPU architecture constraints and implementation details.</p>
+
+<p>Modern GPUs achieve peak performance on dense matrix multiplications with dimensions that are multiples of 16 or 32 (for tensor cores). Sparse attention patterns that result in irregular memory access or non-aligned dimensions can suffer significant performance degradation. For example, a naive implementation of sparse attention with random sparsity patterns may achieve only 30-40\% of the theoretical speedup due to poor memory coalescing and reduced arithmetic intensity. Block-sparse patterns that operate on 16x16 or 32x32 blocks achieve much better GPU utilization, typically reaching 60-80\% of theoretical speedup.</p>
+
+<p>Memory bandwidth is often the limiting factor for attention computation, particularly for efficient variants. The attention mechanism is memory-bound rather than compute-bound for typical sequence lengths—the GPU spends more time loading data from memory than performing arithmetic operations. This means that reducing the number of operations (FLOPs) does not always proportionally reduce runtime. Efficient implementations must minimize memory transfers through kernel fusion, where multiple operations are combined into a single GPU kernel that keeps intermediate results in fast on-chip memory. FlashAttention demonstrates this principle by fusing the attention computation ($\mQ\mK\transpose$, softmax, multiply by $\mV$) into a single kernel that never materializes the full attention matrix in global memory, achieving 2-4x speedup over standard implementations even for full attention.</p>
+
+<p>Numerical stability is a critical concern for efficient attention variants. The softmax operation in attention is numerically sensitive—subtracting the maximum value before exponentiation is essential to prevent overflow. Linear attention approximations must carefully handle the feature map computation to avoid numerical issues. The Performer's random Fourier features require computing exponentials of potentially large values, necessitating careful scaling and normalization. Low-rank attention must ensure that the projection matrices are well-conditioned to avoid amplifying numerical errors.</p>
+
+<p>Framework support for efficient attention varies significantly. PyTorch and TensorFlow provide optimized implementations of standard attention through torch.nn.MultiheadAttention and tf.keras.layers.MultiHeadAttention, but efficient variants often require custom implementations. The xFormers library provides optimized implementations of several efficient attention variants, including memory-efficient attention and block-sparse attention. The Triton framework enables writing custom GPU kernels in Python that achieve performance comparable to hand-written CUDA, making it easier to implement and experiment with novel attention patterns. For production deployment, specialized libraries like FasterTransformer and TensorRT provide highly optimized implementations of common attention variants with automatic kernel selection based on input dimensions and hardware capabilities.</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> Implement cross-attention layer in PyTorch. Test with encoder output (length 10, dim 128) and decoder input (length 7, dim 128). Verify attention matrix shape is $7 \times 10$.
+</div>
+
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Calculate the memory requirements for attention matrices in a BERT-base model (12 heads, $d_{\text{model}} = 768$) processing sequences of length 512, 2048, and 4096 tokens. Compare full attention, local attention with window size 256, and linear attention. How much memory is saved at each sequence length?
+</div>
+
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Implement local attention with window size $w=128$ for a sequence of length 1024. Compare the computational cost (FLOPs) and memory usage to full attention. Measure actual runtime on GPU and explain any discrepancy between theoretical and observed speedup.
+</div>
+
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Design a sparse attention pattern for document understanding that combines local attention (window 64), strided attention (stride 128), and global attention to the first token. Calculate the number of attention connections per token and total memory requirements for a 4096-token sequence. What percentage of full attention's connections does this pattern use?
+</div>
+
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> Implement linear attention using the feature map $\phi(\vx) = \text{elu}(\vx) + 1$. Compare attention patterns to standard softmax attention on a sample sequence. Measure the approximation error and identify cases where linear attention diverges most from full attention.
+</div>
+
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> For a transformer with 24 layers processing 8192-token sequences, calculate the total memory required for attention matrices using: (1) full attention, (2) local attention with window 512, (3) sparse attention with $\sqrt{n}$ connections per token, (4) linear attention, and (5) low-rank attention with rank 256. Assume 12 heads, $d_{\text{model}} = 1024$, batch size 8, and FP16 precision.
+</div>
+
+<div class="exercise" id="exercise-7"><strong>Exercise 7:</strong> Implement relative position bias as in T5. Use buckets: [0, 1, 2, 3, 4, 5-7, 8-15, 16-31, 32+]. Show how attention scores change with relative distance and compare to absolute position encodings.
+</div>
+
+<div class="exercise" id="exercise-8"><strong>Exercise 8:</strong> Analyze the trade-off between window size and accuracy for local attention. Train a small transformer on a language modeling task with window sizes [64, 128, 256, 512, full]. Plot perplexity vs window size and identify the point of diminishing returns. How does this relate to the average dependency length in the dataset?
+</div>
+
+<div class="exercise" id="exercise-9"><strong>Exercise 9:</strong> Create visualization showing: (1) Self-attention patterns for sentence "The quick brown fox jumps", (2) Effect of causal masking, (3) Difference between heads 1 and 12 in multi-head attention. What patterns emerge?
+</div>
+
+<div class="exercise" id="exercise-10"><strong>Exercise 10:</strong> Compare computational cost of: (1) Additive (Bahdanau) attention, (2) Multiplicative attention, (3) Scaled dot-product attention. For $n = 512$, $d_k = 64$, which is most efficient? How does the ranking change for $n = 4096$?
+</div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Cross-attention PyTorch implementation:</strong>
+
+<pre><code>class CrossAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        self.mha = MultiHeadAttention(d_model, num_heads)
+        
+    def forward(self, decoder_input, encoder_output):
+        # Q from decoder, K and V from encoder
+        return self.mha(decoder_input, encoder_output, encoder_output)
+
+<p># Test
+cross_attn = CrossAttention(d_model=128, num_heads=4)
+decoder_in = torch.randn(1, 7, 128)  # length 7
+encoder_out = torch.randn(1, 10, 128)  # length 10
+output = cross_attn(decoder_in, encoder_out)
+print(f"Output shape: {output.shape}")  # (1, 7, 128)
+# Attention matrix shape internally: (1, 4, 7, 10)
+</code></pre></p>
+
+<p>The attention matrix has shape $7 \times 10$, showing how each of the 7 decoder positions attends to the 10 encoder positions.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For BERT-base (12 heads, $d=768$), batch size 1:
+
+<p><strong>Full attention memory:</strong>
+<ul>
+    <li>$n=512$: $12 \times 512^2 \times 2 = 6{,}291{,}456$ bytes $\approx 6$ MB
+    <li>$n=2048$: $12 \times 2048^2 \times 2 = 100{,}663{,}296$ bytes $\approx 96$ MB
+    <li>$n=4096$: $12 \times 4096^2 \times 2 = 402{,}653{,}184$ bytes $\approx 384$ MB
+</ul>
+
+<p><strong>Local attention (window 256):</strong>
+<ul>
+    <li>$n=512$: $12 \times 512 \times 256 \times 2 = 3{,}145{,}728$ bytes $\approx 3$ MB (50\% savings)
+    <li>$n=2048$: $12 \times 2048 \times 256 \times 2 = 12{,}582{,}912$ bytes $\approx 12$ MB (87.5\% savings)
+    <li>$n=4096$: $12 \times 4096 \times 256 \times 2 = 25{,}165{,}824$ bytes $\approx 24$ MB (93.75\% savings)
+</ul>
+
+<p><strong>Linear attention:</strong>
+Memory: $O(d^2)$ instead of $O(n^2)$, approximately $12 \times 768^2 \times 2 \approx 14$ MB regardless of sequence length.</p>
+
+<p>Savings increase dramatically with sequence length, making efficient attention essential for long contexts.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For local attention with window $w=128$ and sequence length $n=1024$:
+
+<p><strong>Computational cost:</strong>
+<ul>
+    <li>Full attention: $2n^2d_k = 2 \times 1024^2 \times 64 = 134{,}217{,}728$ FLOPs
+    <li>Local attention: $2nwd_k = 2 \times 1024 \times 128 \times 64 = 16{,}777{,}216$ FLOPs
+    <li>Theoretical speedup: $\frac{n}{w} = \frac{1024}{128} = 8\times$
+</ul>
+
+<p><strong>Memory usage:</strong>
+<ul>
+    <li>Full: $n^2 = 1{,}048{,}576$ elements
+    <li>Local: $n \times w = 131{,}072$ elements
+    <li>Memory reduction: $8\times$
+</ul>
+
+<p><strong>Observed GPU speedup:</strong> Typically $5$-$6\times$ instead of theoretical $8\times$ due to:
+<ul>
+    <li>Kernel launch overhead
+    <li>Less efficient memory access patterns
+    <li>Reduced parallelism for smaller operations
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Sparse attention pattern design:</strong>
+
+<p>For 4096-token sequence:
+<ul>
+    <li>Local attention (window 64): $64$ connections per token
+    <li>Strided attention (stride 128): $\frac{4096}{128} = 32$ connections per token
+    <li>Global attention to first token: $1$ connection per token
+    <li>Total: $64 + 32 + 1 = 97$ connections per token
+</ul>
+
+<p><strong>Memory requirements:</strong>
+<div class="equation">
+$$
+4096 \times 97 \times 2 \text{ bytes} = 794{,}624 \text{ bytes} \approx 0.76 \text{ MB}
+$$
+</div>
+
+<p><strong>Percentage of full attention:</strong>
+<div class="equation">
+$$
+\frac{97}{4096} \approx 2.37\%
+$$
+</div>
+
+<p>This sparse pattern uses only 2.37\% of full attention's connections while maintaining both local and long-range dependencies.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Linear attention with $\phi(\vx) = \text{elu}(\vx) + 1$:</strong>
+
+<p>Standard attention:
+<div class="equation">
+$$
+\text{Attention}(\mQ, \mK, \mV) = \text{softmax}(\mQ\mK\transpose)\mV
+$$
+</div>
+
+<p>Linear attention:
+<div class="equation">
+$$
+\text{Attention}(\mQ, \mK, \mV) = \phi(\mQ)(\phi(\mK)\transpose \mV)
+$$
+</div>
+
+<p><strong>Approximation error:</strong>
+Linear attention diverges most when:
+<ul>
+    <li>Attention should be highly peaked (one dominant position)
+    <li>Softmax creates sharp distinctions that linear kernel cannot capture
+    <li>Typical error: 5-15\% in attention weight distribution
+</ul>
+
+<p><strong>Cases of largest divergence:</strong>
+<ul>
+    <li>Copying tasks requiring precise attention to single token
+    <li>Syntactic dependencies with clear head-dependent relationships
+    <li>Tasks requiring hard attention decisions
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For 24 layers, 8192 tokens, 12 heads, $d=1024$, batch size 8, FP16:
+
+<p><strong>(1) Full attention:</strong>
+<div class="equation">
+$$
+24 \times 8 \times 12 \times 8192^2 \times 2 = 309{,}237{,}645{,}312 \text{ bytes} \approx 288 \text{ GB}
+$$
+</div>
+
+<p><strong>(2) Local attention (window 512):</strong>
+<div class="equation">
+$$
+24 \times 8 \times 12 \times 8192 \times 512 \times 2 = 19{,}327{,}352{,}832 \text{ bytes} \approx 18 \text{ GB}
+$$
+</div>
+
+<p><strong>(3) Sparse attention ($\sqrt{n} = 90$ connections):</strong>
+<div class="equation">
+$$
+24 \times 8 \times 12 \times 8192 \times 90 \times 2 = 3{,}397{,}286{,}400 \text{ bytes} \approx 3.2 \text{ GB}
+$$
+</div>
+
+<p><strong>(4) Linear attention:</strong>
+<div class="equation">
+$$
+24 \times 8 \times 12 \times 1024^2 \times 2 = 4{,}831{,}838{,}208 \text{ bytes} \approx 4.5 \text{ GB}
+$$
+</div>
+
+<p><strong>(5) Low-rank attention (rank 256):</strong>
+<div class="equation">
+$$
+24 \times 8 \times 12 \times 8192 \times 256 \times 2 = 9{,}663{,}676{,}416 \text{ bytes} \approx 9 \text{ GB}
+$$
+</div>
+
+<p>Sparse attention provides the best memory efficiency for this configuration.
+</div>
+
+<div class="solution"><strong>Solution:</strong> Due to space constraints, these exercises involve implementation and visualization tasks. Key points:
+
+<p><strong>Exercise 7 (Relative position bias):</strong> T5 uses bucketed relative positions to limit parameter growth while capturing distance information. Attention scores decay with distance.</p>
+
+<p><strong>Exercise 8 (Window size trade-off):</strong> Perplexity improves rapidly up to window 256-512, then plateaus. Optimal window correlates with average dependency length in data.</p>
+
+<p><strong>Exercise 9 (Attention visualization):</strong> Self-attention shows syntactic patterns (subject-verb, determiner-noun). Causal masking creates triangular pattern. Different heads specialize in different linguistic phenomena.</p>
+
+<p><strong>Exercise 10 (Attention mechanism comparison):</strong> Scaled dot-product is most efficient for all sequence lengths due to optimized matrix multiplication. Additive attention has higher constant overhead.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter08_self_attention.html">← Chapter 8: Self-Attention and Multi-Head Attention</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter10_transformer_model.html">Chapter 10: The Transformer Model →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

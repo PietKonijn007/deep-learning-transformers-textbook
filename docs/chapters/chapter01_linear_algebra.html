@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 1: Linear Algebra for Deep Learning - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+    </nav>
+
+    <main>
+        <h1>Linear Algebra for Deep Learning</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Linear algebra forms the mathematical foundation of deep learning. Neural networks perform sequences of linear transformations interspersed with nonlinear operations, making matrices and vectors the fundamental objects of study. This chapter develops the linear algebra concepts essential for understanding how deep learning models transform data, how information flows through neural architectures, and how we can interpret the geometric operations these models perform.</p>
+
+<p>Unlike a pure mathematics course, our treatment emphasizes the specific linear algebra operations that appear repeatedly in deep learning: matrix multiplication for transforming representations, dot products for measuring similarity, and matrix decompositions for understanding structure. We pay particular attention to dimensions and shapes, as tracking how tensor dimensions transform through operations is crucial for implementing and debugging deep learning systems.</p>
+
+<h3>Learning Objectives</h3>
+
+<p>After completing this chapter, you will be able to:</p>
+
+<ol>
+    <li>Represent data as vectors and transformations as matrices with clear understanding of dimensions
+    <li>Perform matrix operations and understand their geometric interpretations
+    <li>Calculate and interpret dot products as similarity measures
+    <li>Understand eigendecompositions and singular value decompositions and their applications
+    <li>Apply matrix norms and use them in regularization
+    <li>Recognize how linear algebra operations map to neural network computations
+</ol>
+
+<h2>Vector Spaces and Transformations</h2>
+
+<h3>Vectors as Data Representations</h3>
+
+<p>In deep learning, we represent data as vectors in high-dimensional spaces. A vector $\vx \in \R^n$ is an ordered collection of $n$ real numbers, which we can interpret geometrically as a point in $n$-dimensional space or as an arrow from the origin to that point.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+A vector $\vx \in \R^n$ is an $n$-tuple of real numbers:
+<div class="equation">
+$$
+\vx = \begin{bmatrix} x_1 \\ x_2 \\ \vdots \\ x_n \end{bmatrix}
+$$
+</div>
+where each $x_i \in \R$ is called a component or element of the vector.
+</div>
+
+<p>The dimension $n$ is the number of components in the vector. We write vectors as column vectors by default.</p>
+
+<div class="example"><strong>Example:</strong> 
+Consider a grayscale image of size $28 \times 28$ pixels, such as an image from the MNIST handwritten digit dataset. Each pixel has an intensity value between 0 (black) and 255 (white). We can represent this image as a vector $\vx \in \R^{784}$ by concatenating all pixel values:
+<div class="equation">
+$$
+\vx = \begin{bmatrix} x_{1,1} \\ x_{1,2} \\ \vdots \\ x_{28,28} \end{bmatrix} \in \R^{784}
+$$
+</div>
+
+<p>For color images with three channels (red, green, blue), a $224 \times 224$ RGB image becomes a vector in $\R^{150528}$ ($224 \times 224 \times 3 = 150{,}528$). The enormous dimensionality of image data motivates the need for powerful models that can find meaningful patterns in such high-dimensional spaces.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In natural language processing, we represent words as vectors called <em>word embeddings</em>. A common choice is to represent each word as a vector in $\R^{300}$ or $\R^{768}$. For instance, the word ``king'' might be represented as:
+<div class="equation">
+$$
+\vw_{\text{king}} = \begin{bmatrix} 0.23 \\ -0.45 \\ 0.87 \\ \vdots \\ 0.12 \end{bmatrix} \in \R^{300}
+$$
+</div>
+These embeddings are learned such that semantically similar words have similar vector representations. The famous example is that $\vw_{\text{king}} - \vw_{\text{man}} + \vw_{\text{woman}} \approx \vw_{\text{queen}}$, suggesting that vector arithmetic can capture semantic relationships.
+</div>
+
+<h3>Linear Transformations</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+A function $T: \R^n \to \R^m$ is a <strong>linear transformation</strong> if for all vectors $\vx, \vy \in \R^n$ and all scalars $a, b \in \R$:
+<div class="equation">
+$$
+T(a\vx + b\vy) = aT(\vx) + bT(\vy)
+$$
+</div>
+</div>
+
+<p>Linear transformations preserve vector space structure: they map lines to lines and preserve the origin ($T(\mathbf{0}) = \mathbf{0}$).</p>
+
+<h3>Matrices as Linear Transformations</h3>
+
+<p>Every linear transformation from $\R^n$ to $\R^m$ can be represented by an $m \times n$ matrix.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+An $m \times n$ matrix $\mA$ is a rectangular array of numbers with $m$ rows and $n$ columns:
+<div class="equation">
+$$
+\mA = \begin{bmatrix} 
+a_{1,1} & a_{1,2} & \cdots & a_{1,n} \\
+a_{2,1} & a_{2,2} & \cdots & a_{2,n} \\
+\vdots & \vdots & \ddots & \vdots \\
+a_{m,1} & a_{m,2} & \cdots & a_{m,n}
+\end{bmatrix} \in \R^{m \times n}
+$$
+</div>
+The notation $\mA \in \R^{m \times n}$ specifies the dimensions explicitly: $m$ rows and $n$ columns.
+</div>
+
+<div class="keypoint">
+<strong>Dimension Tracking:</strong> For matrix-vector multiplication $\mA\vx = \vy$:
+<div class="equation">
+$$
+\underbrace{\mA}_{\R^{m \times n}} \underbrace{\vx}_{\R^{n}} = \underbrace{\vy}_{\R^{m}}
+$$
+</div>
+The inner dimensions must match ($n$), and the result has the outer dimensions ($m$).
+</div>
+
+<div class="example"><strong>Example:</strong> 
+A single fully-connected neural network layer performs:
+<div class="equation">
+$$
+\vh = \mW\vx + \vb
+$$
+</div>
+where $\vx \in \R^{n_{\text{in}}}$, $\mW \in \R^{n_{\text{out}} \times n_{\text{in}}}$, $\vb \in \R^{n_{\text{out}}}$, $\vh \in \R^{n_{\text{out}}}$.
+
+<p>For transforming a 784-dimensional input to 256-dimensional hidden representation:
+<div class="equation">
+$$
+\underbrace{\vh}_{\R^{256}} = \underbrace{\mW}_{\R^{256 \times 784}} \underbrace{\vx}_{\R^{784}} + \underbrace{\vb}_{\R^{256}}
+$$
+</div>
+
+<p>This layer has $256 \times 784 = 200{,}704$ weights plus 256 biases, totaling <strong>200,960 trainable parameters</strong>.</p>
+
+<p><strong>Concrete Numerical Example:</strong> With $n_{\text{in}} = 3$, $n_{\text{out}} = 2$:
+<div class="equation">
+$$\begin{align}
+\mW &= \begin{bmatrix} 0.5 & -0.3 & 0.8 \\ 0.2 & 0.6 & -0.4 \end{bmatrix}, \quad \vb = \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix}, \quad \vx = \begin{bmatrix} 1.0 \\ 2.0 \\ -0.5 \end{bmatrix}
+\end{align}$$
+</div>
+
+<p>Computing:
+<div class="equation">
+$$\begin{align}
+\mW\vx &= \begin{bmatrix} 0.5(1.0) - 0.3(2.0) + 0.8(-0.5) \\ 0.2(1.0) + 0.6(2.0) - 0.4(-0.5) \end{bmatrix} = \begin{bmatrix} -0.5 \\ 1.6 \end{bmatrix}\\
+\vh &= \begin{bmatrix} -0.5 \\ 1.6 \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix} = \begin{bmatrix} -0.4 \\ 1.4 \end{bmatrix}
+\end{align}$$
+</div>
+</div>
+
+<h2>Matrix Operations</h2>
+
+<h3>Matrix Multiplication</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+For $\mA \in \R^{m \times n}$ and $\mB \in \R^{n \times p}$, their product $\mC = \mA\mB \in \R^{m \times p}$ is:
+<div class="equation">
+$$
+c_{i,k} = \sum_{j=1}^{n} a_{i,j} b_{j,k}
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Compute $\mC = \mA\mB$ where:
+<div class="equation">
+$$
+\mA = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix} \in \R^{2 \times 2}, \quad \mB = \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix} \in \R^{2 \times 2}
+$$
+</div>
+
+<p>Computing each entry:
+<div class="equation">
+$$\begin{align}
+c_{1,1} &= 1(5) + 2(7) = 19 \\
+c_{1,2} &= 1(6) + 2(8) = 22 \\
+c_{2,1} &= 3(5) + 4(7) = 43 \\
+c_{2,2} &= 3(6) + 4(8) = 50
+\end{align}$$
+</div>
+
+<p>Therefore: $\mC = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix}$
+</div>
+
+<h3>Computational Complexity of Matrix Operations</h3>
+
+<p>Understanding the computational cost of matrix operations is essential for designing efficient deep learning systems.</p>
+
+<div class="theorem"><strong>Theorem:</strong> 
+Computing $\mC = \mA\mB$ where $\mA \in \R^{m \times n}$ and $\mB \in \R^{n \times p}$ requires:
+<div class="equation">
+$$
+\text{FLOPs} = 2mnp
+$$
+</div>
+floating-point operations (multiply-accumulate operations count as 2 FLOPs each).
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In transformer self-attention, we compute $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in \R^{n \times d_k}$ (sequence length $n$, key dimension $d_k$).
+
+<p>Dimensions: $\underbrace{\mQ}_{\R^{n \times d_k}} \underbrace{\mK\transpose}_{\R^{d_k \times n}} = \underbrace{\mA}_{\R^{n \times n}}$</p>
+
+<p>Computational cost: $2n \cdot d_k \cdot n = 2n^2 d_k$ FLOPs</p>
+
+<p>For GPT-3 with $n = 2048$ tokens and $d_k = 128$:
+<div class="equation">
+$$
+\text{FLOPs} = 2 \times (2048)^2 \times 128 = 1{,}073{,}741{,}824 \approx 1.07 \text{ GFLOPs}
+$$
+</div>
+
+<p>This quadratic scaling in sequence length ($O(n^2)$) is why long-context transformers are computationally expensive.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+A transformer feed-forward network applies two linear transformations:
+<div class="equation">
+$$\begin{align}
+\vh &= \mW_1 \vx + \vb_1 \quad \text{where } \mW_1 \in \R^{d_{ff} \times d_{\text{model}}} \\
+\vy &= \mW_2 \vh + \vb_2 \quad \text{where } \mW_2 \in \R^{d_{\text{model}} \times d_{ff}}
+\end{align}$$
+</div>
+
+<p>For a batch of $B$ sequences of length $n$, input is $\mX \in \R^{B \times n \times d_{\text{model}}}$.</p>
+
+<p>First transformation: $2 \cdot (Bn) \cdot d_{\text{model}} \cdot d_{ff}$ FLOPs</p>
+
+<p>Second transformation: $2 \cdot (Bn) \cdot d_{ff} \cdot d_{\text{model}}$ FLOPs</p>
+
+<p>Total: $4Bn \cdot d_{\text{model}} \cdot d_{ff}$ FLOPs</p>
+
+<p>For BERT-base ($d_{\text{model}} = 768$, $d_{ff} = 3072$, $n = 512$, $B = 32$):
+<div class="equation">
+$$
+\text{FLOPs} = 4 \times 32 \times 512 \times 768 \times 3072 = 154{,}618{,}822{,}656 \approx 154.6 \text{ GFLOPs}
+$$
+</div>
+</div>
+
+<h3>Batch Matrix Multiplication</h3>
+
+<p>Modern deep learning frameworks process multiple examples simultaneously using batched operations.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+For tensors $\mA \in \R^{B \times m \times n}$ and $\mB \in \R^{B \times n \times p}$, batch matrix multiplication produces $\mC \in \R^{B \times m \times p}$ where:
+<div class="equation">
+$$
+\mC[b] = \mA[b] \mB[b] \quad \text{for } b = 1, \ldots, B
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In multi-head attention with $h = 12$ heads, batch size $B = 32$, sequence length $n = 512$, and head dimension $d_k = 64$:
+
+<p>Query tensor: $\mQ \in \R^{B \times h \times n \times d_k} = \R^{32 \times 12 \times 512 \times 64}$</p>
+
+<p>Key tensor: $\mK \in \R^{B \times h \times n \times d_k} = \R^{32 \times 12 \times 512 \times 64}$</p>
+
+<p>Attention scores: $\mA = \mQ\mK\transpose \in \R^{32 \times 12 \times 512 \times 512}$</p>
+
+<p>This requires $B \times h \times 2n^2d_k = 32 \times 12 \times 2 \times 512^2 \times 64 = 12{,}884{,}901{,}888 \approx 12.9$ GFLOPs.
+</div>
+
+<div class="keypoint">
+<strong>Broadcasting in PyTorch/NumPy:</strong> When dimensions don't match, broadcasting rules automatically expand dimensions by aligning them from the right, stretching size-1 dimensions to match, and adding missing dimensions as size-1. For example, adding a bias vector $\R^{768}$ to a tensor $\R^{32 \times 512 \times 768}$ broadcasts the bias across batch and sequence dimensions, effectively treating it as $\R^{1 \times 1 \times 768}$ and expanding it to match the full shape.
+</div>
+
+<h3>Transpose</h3>
+
+<div class="definition"><strong>Definition:</strong> The <strong>transpose</strong> of $\mA \in \R^{m \times n}$, denoted $\mA\transpose \in \R^{n \times m}$, swaps rows and columns:
+<div class="equation">
+$$
+[\mA\transpose]_{i,j} = a_{j,i}
+$$
+</div>
+</div>
+
+<p>Important properties:
+<div class="equation">
+$$\begin{align}
+(\mA\transpose)\transpose &= \mA \\
+(\mA\mB)\transpose &= \mB\transpose \mA\transpose
+\end{align}$$
+</div>
+
+<h3>Hardware Context for Matrix Operations</h3>
+
+<p>Understanding how matrix operations map to hardware is crucial for writing efficient deep learning code.</p>
+
+<h4>Memory Layout: Row-Major vs Column-Major</h4>
+
+<p>Matrices are stored in memory as one-dimensional arrays, and the layout significantly affects performance. In row-major order, used by C and PyTorch, rows are stored consecutively in memory. In column-major order, used by Fortran and MATLAB, columns are stored consecutively. For a matrix $\mA = \begin{bmatrix} a & b \\ c & d \end{bmatrix}$, row-major storage produces the sequence $[a, b, c, d]$ while column-major storage produces $[a, c, b, d]$.</p>
+
+<div class="keypoint">
+<strong>Cache Efficiency:</strong> Accessing memory sequentially is 10-100$\times$ faster than random access due to CPU cache lines, which typically hold 64 bytes of consecutive memory. This means you should always iterate in the storage order. For row-major matrices, iterate rows in the outer loop to access consecutive memory locations, avoiding strided access patterns that jump across rows and cause cache misses.
+
+<p>For row-major matrices, iterate rows in the outer loop:
+<pre><code># Good: Sequential memory access
+for i in range(m):
+    for j in range(n):
+        result += A[i, j]  # Accesses consecutive memory</p>
+
+<p># Bad: Strided memory access  
+for j in range(n):
+    for i in range(m):
+        result += A[i, j]  # Jumps across rows
+</code></pre>
+</div>
+
+<h4>GPU Acceleration and BLAS Libraries</h4>
+
+<p>Modern deep learning relies on highly optimized linear algebra libraries that provide standardized interfaces for common operations. The Basic Linear Algebra Subprograms (BLAS) standard defines three levels of operations: Level 1 for vector operations like dot products and norms with $O(n)$ complexity, Level 2 for matrix-vector operations like $\mA\vx$ with $O(n^2)$ complexity, and Level 3 for matrix-matrix operations like $\mA\mB$ with $O(n^3)$ complexity. Common CPU implementations include Intel MKL, OpenBLAS, and Apple Accelerate, while GPU implementations include NVIDIA cuBLAS and AMD rocBLAS. These libraries achieve near-peak hardware performance through careful optimization of memory access patterns, instruction scheduling, and hardware-specific features.</p>
+
+<div class="example"><strong>Example:</strong> 
+NVIDIA GPUs use specialized Tensor Cores for accelerated matrix multiplication, achieving dramatically higher throughput than standard CUDA cores. The A100 GPU delivers 312 TFLOPS peak performance for FP16 operations with Tensor Cores, has 1.6 TB/s memory bandwidth, and includes 40 MB of L2 cache to reduce memory access latency.
+
+<p>For matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{4096 \times 4096}$, we need $2 \times 4096^3 = 137{,}438{,}953{,}472 \approx 137.4$ GFLOPs of computation and must transfer $3 \times 4096^2 \times 4 = 201{,}326{,}592 \approx 192$ MB of data (three matrices at 4 bytes per float). On an A100, this takes approximately $\frac{137.4 \text{ GFLOPS}}{312{,}000 \text{ GFLOPS}} \approx 0.44$ ms, making it compute-bound since the computation time exceeds the memory transfer time of $\frac{192 \text{ MB}}{1{,}600{,}000 \text{ MB/s}} \approx 0.12$ ms.
+</div>
+
+<h4>Compute-Bound vs Memory-Bound Operations</h4>
+
+<div class="definition"><strong>Definition:</strong> 
+<strong>Arithmetic intensity</strong> measures the ratio of computation to memory access:
+<div class="equation">
+$$
+\text{Arithmetic Intensity} = \frac{\text{FLOPs}}{\text{Bytes Transferred}}
+$$
+</div>
+
+<p>Operations with high arithmetic intensity are <strong>compute-bound</strong>, meaning they are limited by computational throughput, while operations with low arithmetic intensity are <strong>memory-bound</strong>, meaning they are limited by memory bandwidth.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Element-wise operations like ReLU, which computes $\vy = \max(0, \vx)$, perform $n$ comparisons while transferring $2n$ elements at 4 bytes each for a total of $8n$ bytes, yielding an arithmetic intensity of only $\frac{n}{8n} = 0.125$ FLOP/byte. This makes element-wise operations memory-bound, as the GPU spends more time waiting for data than computing.
+
+<p>In contrast, matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{n \times n}$ performs $2n^3$ FLOPs while transferring $3n^2 \times 4 = 12n^2$ bytes, yielding an arithmetic intensity of $\frac{2n^3}{12n^2} = \frac{n}{6}$ FLOP/byte. For $n = 1024$, this gives 170.7 FLOP/byte, making the operation compute-bound and well-suited for GPU acceleration. For smaller matrices with $n = 64$, the arithmetic intensity drops to 10.7 FLOP/byte, placing it in a transitional regime where both compute and memory bandwidth matter.
+</div>
+
+<div class="keypoint">
+<strong>Matrix Blocking for Cache Efficiency:</strong> Large matrix multiplications are broken into smaller blocks that fit in cache, computing $\mC_{ij} = \sum_{k} \mA_{ik} \mB_{kj}$ where each block is typically $32 \times 32$ or $64 \times 64$ elements. This blocking strategy reduces cache misses from $O(n^3)$ to $O(n^3/\sqrt{M})$ where $M$ is the cache size, dramatically improving performance by ensuring that frequently accessed data remains in fast cache memory rather than requiring slow main memory accesses.
+</div>
+
+<h2>Dot Products and Similarity</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+For vectors $\vx, \vy \in \R^n$, the <strong>dot product</strong> is:
+<div class="equation">
+$$
+\vx\transpose \vy = \sum_{i=1}^{n} x_i y_i
+$$
+</div>
+</div>
+
+<div class="theorem"><strong>Theorem:</strong> 
+For non-zero vectors $\vx, \vy \in \R^n$:
+<div class="equation">
+$$
+\vx\transpose \vy = \norm{\vx}_2 \norm{\vy}_2 \cos(\theta)
+$$
+</div>
+where $\theta$ is the angle between vectors and $\norm{\vx}_2 = \sqrt{\vx\transpose \vx}$ is the Euclidean norm.
+</div>
+
+<div class="corollary"><strong>Corollary:</strong> 
+The <strong>cosine similarity</strong> between two non-zero vectors is:
+<div class="equation">
+$$
+\text{sim}(\vx, \vy) = \frac{\vx\transpose \vy}{\norm{\vx}_2 \norm{\vy}_2} = \cos(\theta) \in [-1, 1]
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+In transformer attention, we compute similarity between query and key vectors using dot products:
+<div class="equation">
+$$
+\vq = \begin{bmatrix} 0.5 \\ 0.8 \\ 0.3 \end{bmatrix}, \quad 
+\vk_1 = \begin{bmatrix} 0.6 \\ 0.7 \\ 0.2 \end{bmatrix}, \quad
+\vk_2 = \begin{bmatrix} -0.3 \\ 0.1 \\ 0.9 \end{bmatrix}
+$$
+</div>
+
+<p>Computing similarities:
+<div class="equation">
+$$\begin{align}
+\vq\transpose \vk_1 &= 0.5(0.6) + 0.8(0.7) + 0.3(0.2) = 0.92 \\
+\vq\transpose \vk_2 &= 0.5(-0.3) + 0.8(0.1) + 0.3(0.9) = 0.20
+\end{align}$$
+</div>
+
+<p>The query $\vq$ is more similar to $\vk_1$ (score 0.92) than to $\vk_2$ (score 0.20). These scores determine attention weights.
+</div>
+
+<h2>Matrix Decompositions</h2>
+
+<h3>Eigenvalues and Eigenvectors</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+For a square matrix $\mA \in \R^{n \times n}$, a non-zero vector $\vv \in \R^n$ is an <strong>eigenvector</strong> with corresponding <strong>eigenvalue</strong> $\lambda \in \R$ if:
+<div class="equation">
+$$
+\mA \vv = \lambda \vv
+$$
+</div>
+</div>
+
+<p>Geometrically, an eigenvector is only scaled (not rotated) when $\mA$ is applied. The eigenvalue $\lambda$ is the scaling factor.</p>
+
+<div class="example"><strong>Example:</strong> 
+Find eigenvalues of:
+<div class="equation">
+$$
+\mA = \begin{bmatrix} 3 & 1 \\ 1 & 3 \end{bmatrix}
+$$
+</div>
+
+<p>Solving $\det(\mA - \lambda \mI) = 0$:
+<div class="equation">
+$$\begin{align}
+\det\begin{bmatrix} 3-\lambda & 1 \\ 1 & 3-\lambda \end{bmatrix} &= (3-\lambda)^2 - 1 = \lambda^2 - 6\lambda + 8 = 0\\
+&= (\lambda - 4)(\lambda - 2) = 0
+\end{align}$$
+</div>
+
+<p>Eigenvalues: $\lambda_1 = 4$, $\lambda_2 = 2$</p>
+
+<p>For $\lambda_1 = 4$, eigenvector: $\vv_1 = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ 1 \end{bmatrix}$</p>
+
+<p>For $\lambda_2 = 2$, eigenvector: $\vv_2 = \frac{1}{\sqrt{2}}\begin{bmatrix} 1 \\ -1 \end{bmatrix}$
+</div>
+
+<h3>Singular Value Decomposition</h3>
+
+<div class="theorem"><strong>Theorem:</strong> 
+Any matrix $\mA \in \R^{m \times n}$ can be decomposed as:
+<div class="equation">
+$$
+\mA = \mU \boldsymbol{\Sigma} \mV\transpose
+$$
+</div>
+where $\mU \in \R^{m \times m}$ is an orthogonal matrix of left singular vectors, $\boldsymbol{\Sigma} \in \R^{m \times n}$ is a diagonal matrix with singular values $\sigma_1 \geq \sigma_2 \geq \cdots \geq 0$, and $\mV \in \R^{n \times n}$ is an orthogonal matrix of right singular vectors.
+</div>
+
+<div class="keypoint">
+SVD always exists for any matrix, unlike eigendecomposition which requires special conditions.
+</div>
+
+<h4>Low-Rank Approximation and Model Compression</h4>
+
+<p>SVD enables efficient model compression by approximating matrices with lower-rank factorizations.</p>
+
+<div class="theorem"><strong>Theorem:</strong> 
+The best rank-$k$ approximation to $\mA$ in Frobenius norm is:
+<div class="equation">
+$$
+\mA_k = \sum_{i=1}^{k} \sigma_i \vu_i \vv_i\transpose
+$$
+</div>
+where $\sigma_i$ are the $k$ largest singular values with corresponding singular vectors $\vu_i, \vv_i$.
+
+<p>The approximation error is:
+<div class="equation">
+$$
+\norm{\mA - \mA_k}_F = \sqrt{\sum_{i=k+1}^{r} \sigma_i^2}
+$$
+</div>
+where $r = \min(m, n)$ is the rank of $\mA$.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Consider weight matrix $\mW \in \R^{512 \times 2048}$ containing $1{,}048{,}576$ parameters. The full SVD gives $\mW = \mU \boldsymbol{\Sigma} \mV\transpose$ where $\mU \in \R^{512 \times 512}$, $\boldsymbol{\Sigma} \in \R^{512 \times 2048}$, and $\mV \in \R^{2048 \times 2048}$.
+
+<p>For a rank-$k$ approximation, we keep only the top $k$ singular values to obtain $\mW \approx \mW_1 \mW_2 = \mU_k \boldsymbol{\Sigma}_k \mV_k\transpose$ where $\mU_k \in \R^{512 \times k}$, $\boldsymbol{\Sigma}_k \in \R^{k \times k}$, and $\mV_k \in \R^{k \times 2048}$. We can absorb the diagonal matrix $\boldsymbol{\Sigma}_k$ into either factor, giving $\mW_1 = \mU_k \boldsymbol{\Sigma}_k \in \R^{512 \times k}$ and $\mW_2 = \mV_k\transpose \in \R^{k \times 2048}$.</p>
+
+<p>The original matrix has $512 \times 2048 = 1{,}048{,}576$ parameters, while the compressed form has $512k + 2048k = 2560k$ parameters, yielding a compression ratio of $\frac{2560k}{1{,}048{,}576} = \frac{k}{409.6}$. For $k = 64$, we have $2560 \times 64 = 163{,}840$ parameters, achieving 84.4\% compression. For $k = 128$, we have $327{,}680$ parameters, achieving 68.8\% compression.</p>
+
+<p>In terms of memory savings with 32-bit floats, the original matrix requires $1{,}048{,}576 \times 4 = 4{,}194{,}304$ bytes or approximately 4.0 MB. The compressed version with $k=64$ requires only $163{,}840 \times 4 = 655{,}360$ bytes or approximately 0.625 MB, saving 3.375 MB per layer. For a model with 100 such layers, this yields a total savings of 337.5 MB, significantly reducing memory footprint and enabling deployment on resource-constrained devices.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Consider a weight matrix with singular values that decay exponentially:
+<div class="equation">
+$$
+\sigma_i = \sigma_1 \cdot e^{-\alpha i}
+$$
+</div>
+
+<p>The relative approximation error for rank-$k$ approximation is:
+<div class="equation">
+$$
+\frac{\norm{\mW - \mW_k}_F}{\norm{\mW}_F} = \sqrt{\frac{\sum_{i=k+1}^{r} \sigma_i^2}{\sum_{i=1}^{r} \sigma_i^2}}
+$$
+</div>
+
+<p><strong>Typical results for transformer feed-forward layers:</strong>
+<div style="text-align: center;"></p>
+
+<table>
+<tr><th>Rank $k$</th><th>Compression</th><th>Relative Error</th><th>Accuracy Drop</th></tr>
+<tr><td>256</td><td>50\%</td><td>0.05</td><td>$<$0.1\%</td></tr>
+<tr><td>128</td><td>75\%</td><td>0.12</td><td>0.3\%</td></tr>
+<tr><td>64</td><td>87.5\%</td><td>0.25</td><td>1.2\%</td></tr>
+<tr><td>32</td><td>93.75\%</td><td>0.45</td><td>3.5\%</td></tr>
+</table>
+
+<p></div>
+
+<p>Sweet spot: 50-75\% compression with minimal accuracy loss.
+</div>
+
+<h4>SVD in Modern Architectures</h4>
+
+<div class="keypoint">
+<strong>LoRA (Low-Rank Adaptation):</strong> Instead of fine-tuning all parameters in a pre-trained model, LoRA adds low-rank updates through the decomposition $\mW' = \mW + \Delta \mW = \mW + \mB\mA$, where the original weights $\mW \in \R^{d \times k}$ remain frozen, and only the low-rank factors $\mB \in \R^{d \times r}$ and $\mA \in \R^{r \times k}$ with $r \ll \min(d, k)$ are trained. For a layer with $d = 4096$ and $k = 4096$, full fine-tuning requires updating $16{,}777{,}216$ parameters, while LoRA with rank $r = 8$ requires only $8 \times (4096 + 4096) = 65{,}536$ trainable parameters, achieving a 99.6\% parameter reduction while maintaining comparable performance.
+</div>
+
+<div class="implementation">
+Computing SVD and low-rank approximation in PyTorch:
+<pre><code>import torch
+
+<p># Original weight matrix
+W = torch.randn(512, 2048)</p>
+
+<p># Compute SVD
+U, S, Vt = torch.linalg.svd(W, full_matrices=False)</p>
+
+<p># Rank-k approximation
+k = 64
+W_compressed = U[:, :k] @ torch.diag(S[:k]) @ Vt[:k, :]</p>
+
+<p># Factored form for efficient computation
+W1 = U[:, :k] @ torch.diag(S[:k])  # 512 x 64
+W2 = Vt[:k, :]                       # 64 x 2048</p>
+
+<p># Verify approximation
+error = torch.norm(W - W_compressed, p='fro')
+relative_error = error / torch.norm(W, p='fro')
+print(f"Relative error: {relative_error:.4f}")</p>
+
+<p># Memory comparison
+original_params = W.numel()
+compressed_params = W1.numel() + W2.numel()
+compression_ratio = compressed_params / original_params
+print(f"Compression: {(1-compression_ratio)*100:.1f}
+</code></pre>
+</div>
+
+<h2>Norms and Distance Metrics</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+For vector $\vx \in \R^n$:
+<div class="equation">
+$$\begin{align}
+\text{L1 norm (Manhattan):} \quad &\norm{\vx}_1 = \sum_{i=1}^n |x_i| \\
+\text{L2 norm (Euclidean):} \quad &\norm{\vx}_2 = \sqrt{\sum_{i=1}^n x_i^2} \\
+\text{L}\infty \text{ norm (Max):} \quad &\norm{\vx}_\infty = \max_i |x_i|
+\end{align}$$
+</div>
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+For matrix $\mA \in \R^{m \times n}$:
+<div class="equation">
+$$
+\text{Frobenius norm:} \quad \norm{\mA}_F = \sqrt{\sum_{i=1}^m \sum_{j=1}^n a_{i,j}^2} = \sqrt{\text{tr}(\mA\transpose \mA)}
+$$
+</div>
+</div>
+
+<p>Norms are used in regularization to prevent overfitting by penalizing large weights.</p>
+
+<div class="implementation">
+In PyTorch:
+<pre><code>import torch
+
+<p># Vector norms
+x = torch.tensor([3.0, 4.0])
+l2_norm = torch.norm(x, p=2)  # 5.0
+l1_norm = torch.norm(x, p=1)  # 7.0</p>
+
+<p># Matrix Frobenius norm
+W = torch.randn(256, 784)
+frob_norm = torch.norm(W, p='fro')
+</code></pre>
+</div>
+
+<h2>Practical Deep Learning Examples</h2>
+
+<h3>Embedding Layers and Memory Requirements</h3>
+
+<div class="example"><strong>Example:</strong> 
+Large language models use embedding layers to map discrete tokens to continuous vector representations. For GPT-3, the vocabulary contains $V = 50{,}257$ tokens, each mapped to a vector of dimension $d_{\text{model}} = 12{,}288$, requiring an embedding matrix $\mE \in \R^{50257 \times 12288}$ with $50{,}257 \times 12{,}288 = 617{,}558{,}016$ parameters. Storing these embeddings in 32-bit floating-point format requires $617{,}558{,}016 \times 4 = 2{,}470{,}232{,}064$ bytes or approximately 2.3 GB of memory, while 16-bit format reduces this to approximately 1.15 GB.
+
+<p>For a batch of $B = 32$ sequences of length $n = 2048$, the input consists of integer token IDs in $\R^{32 \times 2048}$, which the embedding layer transforms into dense representations in $\R^{32 \times 2048 \times 12288}$, requiring $32 \times 2048 \times 12288 \times 4 = 3{,}221{,}225{,}472$ bytes or approximately 3.0 GB of memory. This demonstrates why large batch sizes and long sequences quickly exhaust GPU memory, necessitating techniques like gradient checkpointing and mixed-precision training.
+</div>
+
+<h3>Complete Transformer Layer Analysis</h3>
+
+<div class="example"><strong>Example:</strong> 
+Consider a single transformer layer with $d_{\text{model}} = 768$, $h = 12$ attention heads, $d_k = d_v = 64$ per head, and feed-forward dimension $d_{ff} = 3072$. The multi-head attention mechanism requires four weight matrices: $\mW_Q, \mW_K, \mW_V \in \R^{768 \times 768}$ for projecting to queries, keys, and values, plus $\mW_O \in \R^{768 \times 768}$ for the output projection, totaling $4 \times 768^2 = 2{,}359{,}296$ parameters. The feed-forward network uses $\mW_1 \in \R^{3072 \times 768}$ with bias $\vb_1 \in \R^{3072}$ for the expansion, and $\mW_2 \in \R^{768 \times 3072}$ with bias $\vb_2 \in \R^{768}$ for the projection back, totaling $2 \times (768 \times 3072) + 3072 + 768 = 4{,}722{,}432$ parameters. Two layer normalization operations add $2 \times 2 \times 768 = 3{,}072$ parameters (scale and shift for each), bringing the total per layer to $2{,}359{,}296 + 4{,}722{,}432 + 3{,}072 = 7{,}084{,}800$ parameters.
+
+<p>For BERT-base with 12 such layers, the transformer stack contains $12 \times 7{,}084{,}800 = 85{,}017{,}600$ parameters (excluding embeddings), requiring $85{,}017{,}600 \times 4 = 340{,}070{,}400$ bytes or approximately 324 MB of memory for 32-bit weights. The computational cost for processing a batch of $B=32$ sequences of length $n=512$ includes approximately 154.6 GFLOPs for attention (from $4Bnd_{\text{model}}^2 + 2Bn^2d_{\text{model}}$) and 154.6 GFLOPs for the feed-forward network (from $4Bnd_{\text{model}}d_{ff}$), totaling approximately 309 GFLOPs per layer or 3.7 TFLOPs for all 12 layers. On an NVIDIA A100 GPU with 312 TFLOPS peak performance, a forward pass takes approximately 12 ms, though actual performance depends on memory bandwidth, kernel launch overhead, and other factors.
+</div>
+
+<h3>Common Dimension Errors and Debugging</h3>
+
+<div class="keypoint">
+<strong>Dimension Mismatch Errors:</strong> The most common bugs in deep learning involve incompatible tensor dimensions. When debugging dimension errors, start by printing tensor shapes using <code>print(x.shape)</code> to verify actual dimensions against expected values. Check whether the batch dimension is present (is it $\R^{B \times \ldots}$ or just $\R^{\ldots}$?), verify the sequence length dimension (is it $\R^{B \times n \times d}$ or $\R^{B \times d \times n}$?), confirm that matrix multiplication has compatible inner dimensions, and watch for unintentional broadcasting that may hide shape mismatches. These systematic checks quickly identify the source of dimension errors and guide appropriate fixes.
+</div>
+
+<div class="implementation">
+Common dimension fixes in PyTorch:
+<pre><code>import torch
+
+<p># Problem: Shape mismatch in matrix multiplication
+Q = torch.randn(32, 512, 768)  # [batch, seq_len, d_model]
+K = torch.randn(32, 512, 768)</p>
+
+<p># Wrong: Q @ K gives error (768 != 512)
+# scores = Q @ K  # Error!</p>
+
+<p># Correct: Transpose last two dimensions of K
+scores = Q @ K.transpose(-2, -1)  # [32, 512, 512]</p>
+
+<p># Problem: Missing batch dimension
+x = torch.randn(512, 768)  # Missing batch dimension
+W = torch.randn(768, 3072)</p>
+
+<p># Add batch dimension
+x = x.unsqueeze(0)  # [1, 512, 768]
+output = x @ W      # [1, 512, 3072]</p>
+
+<p># Problem: Broadcasting confusion
+x = torch.randn(32, 512, 768)
+bias = torch.randn(768)</p>
+
+<p># This works due to broadcasting
+output = x + bias  # bias broadcasts to [32, 512, 768]</p>
+
+<p># Explicit broadcasting (clearer)
+output = x + bias.view(1, 1, 768)
+</code></pre>
+</div>
+
+<h2>Exercises</h2>
+
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> 
+Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$, compute:
+<ol>
+    <li>The dot product $\vx\transpose \vy$
+    <li>The L2 norms $\norm{\vx}_2$ and $\norm{\vy}_2$
+    <li>The cosine similarity between $\vx$ and $\vy$
+</ol>
+</div>
+
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> 
+For a transformer layer with $d_{\text{model}} = 768$ and feed-forward dimension $d_{ff} = 3072$:
+<ol>
+    <li>Calculate the number of parameters in the two linear transformations
+    <li>If processing a batch of $B = 32$ sequences of length $n = 512$, what are the dimensions of the input tensor?
+    <li>How many floating-point operations (FLOPs) are required for one forward pass through this layer?
+</ol>
+</div>
+
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> 
+Prove that for symmetric matrix $\mA = \mA\transpose$, eigenvectors corresponding to distinct eigenvalues are orthogonal.
+</div>
+
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> 
+A weight matrix $\mW \in \R^{1024 \times 4096}$ is approximated using SVD with rank $r$.
+<ol>
+    <li>Express the number of parameters as a function of $r$
+    <li>What value of $r$ achieves 75\% compression?
+    <li>What is the memory savings in MB (assuming 32-bit floats)?
+</ol>
+</div>
+
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> 
+Consider computing attention scores $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in \R^{B \times n \times d_k}$ with $B = 16$, $n = 1024$, $d_k = 64$.
+<ol>
+    <li>What are the dimensions of the output $\mA$?
+    <li>Calculate the total FLOPs required
+    <li>Compute the arithmetic intensity (FLOPs per byte transferred, assuming 32-bit floats)
+    <li>Is this operation compute-bound or memory-bound on a GPU with 312 TFLOPS and 1.6 TB/s bandwidth?
+</ol>
+</div>
+
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> 
+An embedding layer has vocabulary size $V = 32{,}000$ and embedding dimension $d = 512$.
+<ol>
+    <li>How many parameters does the embedding matrix contain?
+    <li>What is the memory requirement in MB for 32-bit floats?
+    <li>For a batch of $B = 64$ sequences of length $n = 256$, what is the memory required for the embedded representations?
+    <li>If we use LoRA with rank $r = 16$ to adapt the embeddings, how many trainable parameters are needed?
+</ol>
+</div>
+
+<div class="exercise" id="exercise-7"><strong>Exercise 7:</strong> 
+Compare the computational cost of two equivalent operations:
+<ol>
+    <li>Computing $(\mA\mB)\vx$ where $\mA \in \R^{m \times n}$, $\mB \in \R^{n \times p}$, $\vx \in \R^p$
+    <li>Computing $\mA(\mB\vx)$
+</ol>
+For $m = 512$, $n = 2048$, $p = 512$, which order is more efficient and by what factor?
+</div>
+
+<div class="exercise" id="exercise-8"><strong>Exercise 8:</strong> 
+A matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$ is performed on a GPU.
+<ol>
+    <li>Calculate the total FLOPs
+    <li>Calculate the memory transferred (assuming matrices are read once and result written once)
+    <li>Compute the arithmetic intensity
+    <li>If the GPU has 100 TFLOPS compute and 900 GB/s memory bandwidth, what is the theoretical execution time assuming perfect utilization?
+    <li>Which resource (compute or memory) is the bottleneck?
+</ol>
+</div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution to Exercise 1:</strong> Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$:
+
+<p><strong>(1) Dot product:</strong>
+<div class="equation">
+$$
+\vx\transpose \vy = 2(1) + (-1)(4) + 3(-2) = 2 - 4 - 6 = -8
+$$
+</div>
+
+<p><strong>(2) L2 norms:</strong>
+<div class="equation">
+$$\begin{align}
+\norm{\vx}_2 &= \sqrt{2^2 + (-1)^2 + 3^2} = \sqrt{4 + 1 + 9} = \sqrt{14} \approx 3.742 \\
+\norm{\vy}_2 &= \sqrt{1^2 + 4^2 + (-2)^2} = \sqrt{1 + 16 + 4} = \sqrt{21} \approx 4.583
+\end{align}$$
+</div>
+
+<p><strong>(3) Cosine similarity:</strong>
+<div class="equation">
+$$
+\text{sim}(\vx, \vy) = \frac{\vx\transpose \vy}{\norm{\vx}_2 \norm{\vy}_2} = \frac{-8}{\sqrt{14} \cdot \sqrt{21}} = \frac{-8}{\sqrt{294}} \approx -0.466
+$$
+</div>
+
+<p>The negative cosine similarity indicates the vectors point in somewhat opposite directions.
+</div>
+
+<div class="solution"><strong>Solution to Exercise 2:</strong> For transformer layer with $d_{\text{model}} = 768$ and $d_{ff} = 3072$:
+
+<p><strong>(1) Parameters in feed-forward network:</strong>
+<ul>
+    <li>First linear: $\mW_1 \in \R^{3072 \times 768}$ has $3072 \times 768 = 2{,}359{,}296$ weights, plus bias $\vb_1 \in \R^{3072}$ has $3{,}072$ parameters
+    <li>Second linear: $\mW_2 \in \R^{768 \times 3072}$ has $768 \times 3072 = 2{,}359{,}296$ weights, plus bias $\vb_2 \in \R^{768}$ has $768$ parameters
+    <li>Total: $2{,}359{,}296 + 3{,}072 + 2{,}359{,}296 + 768 = 4{,}722{,}432$ parameters
+</ul>
+
+<p><strong>(2) Input tensor dimensions:</strong>
+For batch size $B = 32$ and sequence length $n = 512$, the input tensor has shape:
+<div class="equation">
+$$
+\R^{B \times n \times d_{\text{model}}} = \R^{32 \times 512 \times 768}
+$$
+</div>
+
+<p><strong>(3) FLOPs for forward pass:</strong>
+<ul>
+    <li>First transformation: $2 \times (Bn) \times d_{\text{model}} \times d_{ff} = 2 \times (32 \times 512) \times 768 \times 3072 = 77{,}309{,}411{,}328$ FLOPs
+    <li>Second transformation: $2 \times (Bn) \times d_{ff} \times d_{\text{model}} = 77{,}309{,}411{,}328$ FLOPs
+    <li>Total: $154{,}618{,}822{,}656 \approx 154.6$ GFLOPs
+</ul>
+</div>
+
+<div class="solution"><strong>Solution to Exercise 3:</strong> <strong>Proof:</strong> Let $\mA = \mA\transpose$ be symmetric with eigenvectors $\vv_1, \vv_2$ corresponding to distinct eigenvalues $\lambda_1 \neq \lambda_2$.
+
+<p>We have:
+<div class="equation">
+$$\begin{align}
+\mA\vv_1 &= \lambda_1 \vv_1 \\
+\mA\vv_2 &= \lambda_2 \vv_2
+\end{align}$$
+</div>
+
+<p>Consider $\vv_1\transpose \mA \vv_2$:
+<div class="equation">
+$$\begin{align}
+\vv_1\transpose \mA \vv_2 &= \vv_1\transpose (\lambda_2 \vv_2) = \lambda_2 (\vv_1\transpose \vv_2) \\
+\vv_1\transpose \mA \vv_2 &= (\mA\vv_1)\transpose \vv_2 = (\lambda_1 \vv_1)\transpose \vv_2 = \lambda_1 (\vv_1\transpose \vv_2)
+\end{align}$$
+</div>
+
+<p>where we used $\mA\transpose = \mA$ in the second line. Therefore:
+<div class="equation">
+$$
+\lambda_2 (\vv_1\transpose \vv_2) = \lambda_1 (\vv_1\transpose \vv_2)
+$$
+</div>
+
+<p>Rearranging:
+<div class="equation">
+$$
+(\lambda_1 - \lambda_2)(\vv_1\transpose \vv_2) = 0
+$$
+</div>
+
+<p>Since $\lambda_1 \neq \lambda_2$, we must have $\vv_1\transpose \vv_2 = 0$, proving orthogonality.
+</div>
+
+<div class="solution"><strong>Solution to Exercise 4:</strong> For weight matrix $\mW \in \R^{1024 \times 4096}$ with rank-$r$ SVD approximation:
+
+<p><strong>(1) Parameters as function of $r$:</strong>
+The factored form requires:
+<ul>
+    <li>$\mW_1 = \mU_r \boldsymbol{\Sigma}_r \in \R^{1024 \times r}$: $1024r$ parameters
+    <li>$\mW_2 = \mV_r\transpose \in \R^{r \times 4096}$: $4096r$ parameters
+    <li>Total: $1024r + 4096r = 5120r$ parameters
+</ul>
+
+<p><strong>(2) Value of $r$ for 75\% compression:</strong>
+Original parameters: $1024 \times 4096 = 4{,}194{,}304$</p>
+
+<p>For 75\% compression, we want 25\% of original:
+<div class="equation">
+$$\begin{align}
+5120r &= 0.25 \times 4{,}194{,}304 \\
+5120r &= 1{,}048{,}576 \\
+r &= 204.8 \approx 205
+\end{align}$$
+</div>
+
+<p><strong>(3) Memory savings:</strong>
+<ul>
+    <li>Original: $4{,}194{,}304 \times 4 \text{ bytes} = 16{,}777{,}216 \text{ bytes} \approx 16.0$ MB
+    <li>Compressed: $1{,}048{,}576 \times 4 \text{ bytes} = 4{,}194{,}304 \text{ bytes} \approx 4.0$ MB
+    <li>Savings: $16.0 - 4.0 = 12.0$ MB
+</ul>
+</div>
+
+<div class="solution"><strong>Solution to Exercise 5:</strong> For attention scores $\mA = \mQ\mK\transpose$ with $\mQ, \mK \in \R^{B \times n \times d_k}$, $B = 16$, $n = 1024$, $d_k = 64$:
+
+<p><strong>(1) Output dimensions:</strong>
+<div class="equation">
+$$
+\mA = \underbrace{\mQ}_{\R^{16 \times 1024 \times 64}} \underbrace{\mK\transpose}_{\R^{16 \times 64 \times 1024}} = \underbrace{\mA}_{\R^{16 \times 1024 \times 1024}}
+$$
+</div>
+
+<p><strong>(2) Total FLOPs:</strong>
+For each batch element, we compute $\mQ_b \mK_b\transpose$ where $\mQ_b, \mK_b \in \R^{1024 \times 64}$:
+<div class="equation">
+$$
+\text{FLOPs} = B \times 2n^2d_k = 16 \times 2 \times 1024^2 \times 64 = 2{,}147{,}483{,}648 \approx 2.15 \text{ GFLOPs}
+$$
+</div>
+
+<p><strong>(3) Arithmetic intensity:</strong>
+Memory transferred:
+<ul>
+    <li>Read $\mQ$: $16 \times 1024 \times 64 \times 4 = 4{,}194{,}304$ bytes
+    <li>Read $\mK$: $16 \times 1024 \times 64 \times 4 = 4{,}194{,}304$ bytes
+    <li>Write $\mA$: $16 \times 1024 \times 1024 \times 4 = 67{,}108{,}864$ bytes
+    <li>Total: $75{,}497{,}472$ bytes $\approx 72$ MB
+</ul>
+
+<p>Arithmetic intensity:
+<div class="equation">
+$$
+\frac{2{,}147{,}483{,}648 \text{ FLOPs}}{75{,}497{,}472 \text{ bytes}} \approx 28.4 \text{ FLOP/byte}
+$$
+</div>
+
+<p><strong>(4) Compute-bound or memory-bound:</strong>
+<ul>
+    <li>Compute time: $\frac{2.15 \text{ GFLOPs}}{312 \text{ TFLOPs}} \approx 6.9$ microseconds
+    <li>Memory time: $\frac{72 \text{ MB}}{1{,}600{,}000 \text{ MB/s}} \approx 45$ microseconds
+    <li>The operation is <strong>memory-bound</strong> by a factor of $45/6.9 \approx 6.5\times$
+</ul>
+</div>
+
+<div class="solution"><strong>Solution to Exercise 6:</strong> For embedding layer with $V = 32{,}000$ and $d = 512$:
+
+<p><strong>(1) Number of parameters:</strong>
+<div class="equation">
+$$
+V \times d = 32{,}000 \times 512 = 16{,}384{,}000 \text{ parameters}
+$$
+</div>
+
+<p><strong>(2) Memory requirement:</strong>
+<div class="equation">
+$$
+16{,}384{,}000 \times 4 \text{ bytes} = 65{,}536{,}000 \text{ bytes} \approx 62.5 \text{ MB}
+$$
+</div>
+
+<p><strong>(3) Memory for embedded representations:</strong>
+For batch $B = 64$, sequence length $n = 256$:
+<div class="equation">
+$$
+B \times n \times d \times 4 = 64 \times 256 \times 512 \times 4 = 33{,}554{,}432 \text{ bytes} \approx 32 \text{ MB}
+$$
+</div>
+
+<p><strong>(4) LoRA trainable parameters:</strong>
+LoRA adds two matrices: $\mB \in \R^{d \times r}$ and $\mA \in \R^{r \times V}$:
+<div class="equation">
+$$
+dr + rV = 512 \times 16 + 16 \times 32{,}000 = 8{,}192 + 512{,}000 = 520{,}192 \text{ parameters}
+$$
+</div>
+
+<p>This is only $\frac{520{,}192}{16{,}384{,}000} \approx 3.2\%$ of the original parameters!
+</div>
+
+<div class="solution"><strong>Solution to Exercise 7:</strong> For $\mA \in \R^{512 \times 2048}$, $\mB \in \R^{2048 \times 512}$, $\vx \in \R^{512}$:
+
+<p><strong>Option 1: $(\mA\mB)\vx$</strong>
+<ul>
+    <li>Compute $\mC = \mA\mB \in \R^{512 \times 512}$: $2 \times 512 \times 2048 \times 512 = 1{,}073{,}741{,}824$ FLOPs
+    <li>Compute $\mC\vx \in \R^{512}$: $2 \times 512 \times 512 = 524{,}288$ FLOPs
+    <li>Total: $1{,}074{,}266{,}112$ FLOPs
+</ul>
+
+<p><strong>Option 2: $\mA(\mB\vx)$</strong>
+<ul>
+    <li>Compute $\vy = \mB\vx \in \R^{2048}$: $2 \times 2048 \times 512 = 2{,}097{,}152$ FLOPs
+    <li>Compute $\mA\vy \in \R^{512}$: $2 \times 512 \times 2048 = 2{,}097{,}152$ FLOPs
+    <li>Total: $4{,}194{,}304$ FLOPs
+</ul>
+
+<p><strong>Efficiency comparison:</strong>
+<div class="equation">
+$$
+\text{Speedup} = \frac{1{,}074{,}266{,}112}{4{,}194{,}304} \approx 256\times
+$$
+</div>
+
+<p>Option 2 is 256× more efficient! This demonstrates the importance of operation ordering in linear algebra.
+</div>
+
+<div class="solution"><strong>Solution to Exercise 8:</strong> For $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$:
+
+<p><strong>(1) Total FLOPs:</strong>
+<div class="equation">
+$$
+2 \times 2048^3 = 2 \times 8{,}589{,}934{,}592 = 17{,}179{,}869{,}184 \approx 17.2 \text{ GFLOPs}
+$$
+</div>
+
+<p><strong>(2) Memory transferred:</strong>
+<ul>
+    <li>Read $\mA$: $2048^2 \times 4 = 16{,}777{,}216$ bytes
+    <li>Read $\mB$: $2048^2 \times 4 = 16{,}777{,}216$ bytes
+    <li>Write $\mC$: $2048^2 \times 4 = 16{,}777{,}216$ bytes
+    <li>Total: $50{,}331{,}648$ bytes $\approx 48$ MB
+</ul>
+
+<p><strong>(3) Arithmetic intensity:</strong>
+<div class="equation">
+$$
+\frac{17{,}179{,}869{,}184 \text{ FLOPs}}{50{,}331{,}648 \text{ bytes}} \approx 341.3 \text{ FLOP/byte}
+$$
+</div>
+
+<p><strong>(4) Theoretical execution time:</strong>
+<ul>
+    <li>Compute time: $\frac{17.2 \text{ GFLOPs}}{100 \text{ TFLOPs}} = 0.172$ ms
+    <li>Memory time: $\frac{48 \text{ MB}}{900{,}000 \text{ MB/s}} = 0.053$ ms
+    <li>Execution time: $\max(0.172, 0.053) = 0.172$ ms
+</ul>
+
+<p><strong>(5) Bottleneck:</strong>
+The operation is <strong>compute-bound</strong> since compute time (0.172 ms) exceeds memory time (0.053 ms). The high arithmetic intensity (341 FLOP/byte) makes this operation well-suited for GPU acceleration.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="notation.html">← Notation and Conventions</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter02_calculus_optimization.html">Chapter 2: Calculus and Optimization →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
