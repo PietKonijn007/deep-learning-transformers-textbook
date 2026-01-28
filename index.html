@@ -3,87 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deep Learning and Transformers - A Graduate-Level Course</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <meta name="description" content="Interactive textbook on Deep Learning and Transformers with mathematical rigor and practical implementation">
+    <title>Deep Learning and Transformers - Interactive Textbook</title>
+    
+    <!-- Preconnect to CDN for faster loading -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true,
+                tags: 'ams',
+                packages: {'[+]': ['ams', 'newcommand', 'configmacros']},
+                macros: {
+                    R: '{\\mathbb{R}}',
+                    N: '{\\mathbb{N}}',
+                    Z: '{\\mathbb{Z}}',
+                    C: '{\\mathbb{C}}',
+                    vx: '{\\mathbf{x}}',
+                    vy: '{\\mathbf{y}}',
+                    vz: '{\\mathbf{z}}',
+                    vh: '{\\mathbf{h}}',
+                    vw: '{\\mathbf{w}}',
+                    vb: '{\\mathbf{b}}',
+                    vq: '{\\mathbf{q}}',
+                    vk: '{\\mathbf{k}}',
+                    vv: '{\\mathbf{v}}',
+                    mA: '{\\mathbf{A}}',
+                    mB: '{\\mathbf{B}}',
+                    mC: '{\\mathbf{C}}',
+                    mW: '{\\mathbf{W}}',
+                    mX: '{\\mathbf{X}}',
+                    mY: '{\\mathbf{Y}}',
+                    mQ: '{\\mathbf{Q}}',
+                    mK: '{\\mathbf{K}}',
+                    mV: '{\\mathbf{V}}',
+                    mH: '{\\mathbf{H}}',
+                    mI: '{\\mathbf{I}}',
+                    mU: '{\\mathbf{U}}',
+                    mM: '{\\mathbf{M}}',
+                    transpose: '{^\\top}',
+                    norm: ['\\left\\|#1\\right\\|', 1],
+                    abs: ['\\left|#1\\right|', 1]
+                }
+            },
+            svg: {
+                fontCache: 'global'
+            },
+            startup: {
+                pageReady: () => {
+                    console.log('MathJax loaded and ready');
+                    return MathJax.startup.defaultPageReady();
+                }
+            }
+        };
+    </script>
+    <!-- Load MathJax only when needed, not on initial page load -->
+    <script>
+        // Defer MathJax loading until after page is interactive
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+                script.async = true;
+                document.head.appendChild(script);
+            }, 100);
+        });
+    </script>
 </head>
 <body>
-    <header>
-        <h1>Deep Learning and Transformers</h1>
-        <p style="font-size: 1.2em; text-align: center; color: #666;">
-            Theory, Mathematics, and Implementation<br>
-            <em>A Graduate-Level Course</em>
-        </p>
-    </header>
+    <!-- Loading indicator -->
+    <div id="loading-bar" class="loading-bar"></div>
+    
+    <!-- Mobile Menu Button (always visible on mobile) -->
+    <button id="mobile-menu-btn" class="mobile-menu-btn" aria-label="Open menu" 
+            style="display: block; position: fixed; top: 1rem; left: 1rem; width: 50px; height: 50px; 
+                   background: #003366; color: white; border: none; border-radius: 8px; font-size: 1.5rem; 
+                   z-index: 9999; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">☰</button>
+    
+    <div id="app">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h1>Deep Learning & Transformers</h1>
+                <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+            </div>
+            <div class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="search" placeholder="Search chapters..." />
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+            </div>
+            <nav id="chapter-list" class="chapter-list">
+                <div class="loading">Loading chapters...</div>
+            </nav>
+            <div class="sidebar-footer">
+                <small>Use ← → keys to navigate</small>
+            </div>
+        </aside>
 
-    <main>
-        <div class="toc">
-            <h2>Table of Contents</h2>
+        <!-- Main Content Area -->
+        <main id="main-content" class="main-content">
+            <!-- Table of Contents Button -->
+            <button id="toc-toggle" class="toc-toggle" title="Table of Contents">📑</button>
             
-            <h3>Front Matter</h3>
-            <ul>
-                <li><a href="chapters/preface.html">Preface</a></li>
-                <li><a href="chapters/notation.html">Notation and Conventions</a></li>
-            </ul>
+            <div class="content-wrapper">
+                <div id="chapter-content">
+                    <div class="welcome">
+                        <h1>Welcome to Deep Learning and Transformers</h1>
+                        <p class="subtitle">Theory, Mathematics, and Implementation</p>
+                        <p>Select a chapter from the sidebar to begin reading.</p>
+                        
+                        <div class="features">
+                            <div class="feature">
+                                <h3>📐 Mathematical Rigor</h3>
+                                <p>Complete derivations with geometric intuition</p>
+                            </div>
+                            <div class="feature">
+                                <h3>💻 Practical Focus</h3>
+                                <p>Theory grounded in implementation details</p>
+                            </div>
+                            <div class="feature">
+                                <h3>🚀 Progressive Learning</h3>
+                                <p>Systematic knowledge building from foundations</p>
+                            </div>
+                            <div class="feature">
+                                <h3>⚡ Fast & Responsive</h3>
+                                <p>Optimized for quick loading and smooth navigation</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chapter TOC Overlay -->
+            <div id="chapter-toc" class="chapter-toc hidden">
+                <div class="toc-header">
+                    <h3>In This Chapter</h3>
+                    <button id="toc-close" class="toc-close">✕</button>
+                </div>
+                <div id="toc-content" class="toc-content"></div>
+            </div>
+            
+            <!-- Navigation Controls -->
+            <div class="nav-controls">
+                <button id="prev-chapter" class="nav-btn" disabled>← Previous</button>
+                <button id="next-chapter" class="nav-btn" disabled>Next →</button>
+            </div>
+        </main>
+    </div>
 
-            <h3>Part I: Mathematical Foundations</h3>
-            <ul>
-                <li><a href="chapters/chapter01_linear_algebra.html">Chapter 1: Linear Algebra for Deep Learning</a></li>
-                <li><a href="chapters/chapter02_calculus_optimization.html">Chapter 2: Calculus and Optimization</a></li>
-                <li><a href="chapters/chapter03_probability_information.html">Chapter 3: Probability and Information Theory</a></li>
-            </ul>
-
-            <h3>Part II: Neural Network Fundamentals</h3>
-            <ul>
-                <li><a href="chapters/chapter04_feedforward_networks.html">Chapter 4: Feed-Forward Neural Networks</a></li>
-                <li><a href="chapters/chapter05_convolutional_networks.html">Chapter 5: Convolutional Neural Networks</a></li>
-                <li><a href="chapters/chapter06_recurrent_networks.html">Chapter 6: Recurrent Neural Networks</a></li>
-            </ul>
-
-            <h3>Part III: Attention Mechanisms</h3>
-            <ul>
-                <li><a href="chapters/chapter07_attention_fundamentals.html">Chapter 7: Attention Mechanisms: Fundamentals</a></li>
-                <li><a href="chapters/chapter08_self_attention.html">Chapter 8: Self-Attention and Multi-Head Attention</a></li>
-                <li><a href="chapters/chapter09_attention_variants.html">Chapter 9: Attention Variants and Mechanisms</a></li>
-            </ul>
-
-            <h3>Part IV-VII: Coming Soon</h3>
-            <ul>
-                <li>Part IV: Transformer Architecture</li>
-                <li>Part V: Modern Transformer Variants</li>
-                <li>Part VI: Advanced Topics</li>
-                <li>Part VII: Practical Implementation</li>
-            </ul>
-        </div>
-
-        <div style="margin-top: 3em; padding: 2em; background-color: #f8f9fa; border-radius: 5px;">
-            <h2>About This Book</h2>
-            <p>
-                This textbook provides a comprehensive, graduate-level treatment of deep learning and transformer architectures.
-                It emphasizes mathematical rigor while maintaining practical relevance, with complete derivations,
-                concrete numerical examples, and implementation guidance.
-            </p>
-            <p>
-                <strong>Key Features:</strong>
-            </p>
-            <ul>
-                <li>Complete mathematical derivations with geometric intuition</li>
-                <li>Explicit dimension tracking for all operations</li>
-                <li>Concrete numerical examples from real models (BERT, GPT, etc.)</li>
-                <li>Implementation notes and code examples</li>
-                <li>Progressive complexity building from foundations</li>
-            </ul>
-        </div>
-    </main>
-
-    <footer>
-        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
-        <p>
-            <a href="https://github.com/PietKonijn007/deep-learning-transformers-textbook">View on GitHub</a>
-        </p>
-    </footer>
-
-    <script src="js/main.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

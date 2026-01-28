@@ -729,69 +729,27 @@ def fix_algorithms_in_dir(output_dir):
 
 def main():
     """Main conversion function"""
-    print("Converting LaTeX textbook to HTML...")
+    print("Converting LaTeX textbook chapters to HTML...")
     
-    # Define output directories
-    output_dirs = [
-        Path("."),  # Repository root - this is what gets deployed to Vercel
-    ]
-    
-    # Create output directories
-    for base_dir in output_dirs:
-        (base_dir / "chapters").mkdir(parents=True, exist_ok=True)
-        (base_dir / "css").mkdir(parents=True, exist_ok=True)
-        (base_dir / "js").mkdir(parents=True, exist_ok=True)
-    
-    # Copy CSS and JS - use absolute paths from project root
-    import shutil
-    project_root = Path(__file__).parent.parent
-    
-    # Copy the correct CSS file
-    source_css = project_root / "docs" / "css" / "style.css"
-    
-    if source_css.exists():
-        for base_dir in output_dirs:
-            dest_css = base_dir / "css" / "style.css"
-            shutil.copy(source_css, dest_css)
-        print(f"✓ Copied CSS from {source_css}")
-    else:
-        print(f"⚠ Warning: CSS file not found at {source_css}")
-    
-    # Copy JS if it exists
-    source_js = project_root / "docs" / "js" / "main.js"
-    
-    if source_js.exists():
-        for base_dir in output_dirs:
-            dest_js = base_dir / "js" / "main.js"
-            shutil.copy(source_js, dest_js)
-        print(f"✓ Copied JS from {source_js}")
-    else:
-        # Create a minimal main.js if it doesn't exist
-        for base_dir in output_dirs:
-            dest_js = base_dir / "js" / "main.js"
-            dest_js.write_text("// Main JavaScript file\nconsole.log('Deep Learning Textbook loaded');")
-        print(f"✓ Created minimal JS file")
+    # Define output directory - only chapters go to root
+    output_dir = Path(".")
+    chapters_dir = output_dir / "chapters"
+    chapters_dir.mkdir(parents=True, exist_ok=True)
     
     # Convert each chapter
     for i, (chapter_file, chapter_title) in enumerate(CHAPTERS):
         prev_chapter = CHAPTERS[i-1] if i > 0 else None
         next_chapter = CHAPTERS[i+1] if i < len(CHAPTERS)-1 else None
-        create_chapter_html(chapter_file, chapter_title, prev_chapter, next_chapter, output_dirs)
-    
-    # Create index
-    create_index_html(output_dirs)
+        create_chapter_html(chapter_file, chapter_title, prev_chapter, next_chapter, [output_dir])
     
     # Fix algorithm formatting
     print("\nFixing algorithm formatting...")
-    for base_dir in output_dirs:
-        fix_algorithms_in_dir(base_dir / "chapters")
+    fix_algorithms_in_dir(chapters_dir)
     
-    print("\n✅ Conversion complete!")
-    print("📂 Output directories:")
-    for base_dir in output_dirs:
-        print(f"   - {base_dir}/")
-    print("🌐 Primary deployment: nodejs-version/public/")
-    print("🌐 Reference copy: output/")
+    print("\n✅ Chapter conversion complete!")
+    print(f"📂 Chapters output to: {chapters_dir}/")
+    print("⚠️  Note: index.html, app.js, and styles.css are NOT modified")
+    print("    These files are maintained separately in the repository root")
 
 if __name__ == "__main__":
     main()
