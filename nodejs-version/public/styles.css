@@ -54,6 +54,20 @@ body {
     z-index: 100;
 }
 
+/* Mobile-first: hide sidebar by default on small screens */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 280px;
+        transform: translateX(-100%);
+        z-index: 10000;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+}
+
 .sidebar-header {
     padding: 1.5rem;
     background: var(--primary-color);
@@ -576,18 +590,7 @@ mjx-container[display="true"] {
 @media (max-width: 768px) {
     /* Mobile menu button already visible by default */
     
-    .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        height: 100vh;
-        width: 280px;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 10000;
-        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-    }
-
+    /* Sidebar open state */
     .sidebar.open {
         transform: translateX(0);
     }
