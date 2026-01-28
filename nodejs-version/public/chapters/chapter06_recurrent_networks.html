@@ -428,22 +428,22 @@ While RNNs were dominant for sequences, transformers now excel in most NLP tasks
 
 <h2>Exercises</h2>
 
-<div class="exercise"><strong>Exercise:</strong> For vanilla RNN with input dim $d=128$, hidden dim $h=256$, and sequence length $T=50$: (1) Count total parameters in $\mW_{hh}$, $\mW_{xh}$, and $\mW_{hy}$, (2) Compute total FLOPs for forward pass through all time steps, (3) Estimate GPU utilization on an A100 (312 TFLOPS peak) with batch size 32, assuming each time step achieves 2\% of peak throughput. Why is utilization so low?
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> For vanilla RNN with input dim $d=128$, hidden dim $h=256$, and sequence length $T=50$: (1) Count total parameters in $\mW_{hh}$, $\mW_{xh}$, and $\mW_{hy}$, (2) Compute total FLOPs for forward pass through all time steps, (3) Estimate GPU utilization on an A100 (312 TFLOPS peak) with batch size 32, assuming each time step achieves 2\% of peak throughput. Why is utilization so low?
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Derive the gradient $\frac{\partial L}{\partial \mW_{hh}}$ for a 3-step sequence. Show how the gradient involves products of Jacobians $\frac{\partial \vh_t}{\partial \vh_{t-1}}$. If $\norm{\mW_{hh}} = 0.9$ and $\tanh'$ averages 0.5, compute the gradient magnitude decay factor from time step 3 to time step 0. At what sequence length would gradients vanish below FP32 precision ($10^{-38}$)?
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Derive the gradient $\frac{\partial L}{\partial \mW_{hh}}$ for a 3-step sequence. Show how the gradient involves products of Jacobians $\frac{\partial \vh_t}{\partial \vh_{t-1}}$. If $\norm{\mW_{hh}} = 0.9$ and $\tanh'$ averages 0.5, compute the gradient magnitude decay factor from time step 3 to time step 0. At what sequence length would gradients vanish below FP32 precision ($10^{-38}$)?
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Compare parameter counts and FLOPs per sequence for: (1) LSTM with $d=512$, $h=512$, $n=512$, (2) GRU with $d=512$, $h=512$, $n=512$, (3) Transformer attention layer with $d_{\text{model}}=512$, $d_k=64$, $h=8$ heads, $n=512$. Which architecture has the most parameters? Which has the most FLOPs? Which achieves the highest GPU utilization and why?
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Compare parameter counts and FLOPs per sequence for: (1) LSTM with $d=512$, $h=512$, $n=512$, (2) GRU with $d=512$, $h=512$, $n=512$, (3) Transformer attention layer with $d_{\text{model}}=512$, $d_k=64$, $h=8$ heads, $n=512$. Which architecture has the most parameters? Which has the most FLOPs? Which achieves the highest GPU utilization and why?
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Implement bidirectional LSTM in PyTorch for sequence "The cat sat on the mat" with vocabulary size 10, embedding dim 16, hidden dim 32. Process the sequence and show output dimensions. Compute the total memory required for hidden states and cell states in FP32. How does this compare to the memory required for attention scores in a transformer with the same dimensions?
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Implement bidirectional LSTM in PyTorch for sequence "The cat sat on the mat" with vocabulary size 10, embedding dim 16, hidden dim 32. Process the sequence and show output dimensions. Compute the total memory required for hidden states and cell states in FP32. How does this compare to the memory required for attention scores in a transformer with the same dimensions?
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> For BERT-base dimensions ($d=768$, $n=512$), compute: (1) Memory required for LSTM hidden and cell states across 12 layers with batch size 32, (2) Memory required for transformer attention scores across 12 layers with batch size 32 and 12 attention heads, (3) The sequence length at which LSTM memory equals transformer memory. Explain why transformers are memory-limited for long sequences while LSTMs are compute-limited.
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> For BERT-base dimensions ($d=768$, $n=512$), compute: (1) Memory required for LSTM hidden and cell states across 12 layers with batch size 32, (2) Memory required for transformer attention scores across 12 layers with batch size 32 and 12 attention heads, (3) The sequence length at which LSTM memory equals transformer memory. Explain why transformers are memory-limited for long sequences while LSTMs are compute-limited.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Estimate the training time for a 110M parameter LSTM on 16 billion tokens (sequence length 512) using 64 TPU cores with 2,880 TFLOPS total peak throughput. Assume the LSTM achieves 3\% of peak throughput due to sequential processing. Compare this to BERT-base training time of 4 days on the same hardware. What is the speedup factor? Explain the three main reasons for the difference: parallelization, memory bandwidth, and GPU utilization.
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> Estimate the training time for a 110M parameter LSTM on 16 billion tokens (sequence length 512) using 64 TPU cores with 2,880 TFLOPS total peak throughput. Assume the LSTM achieves 3\% of peak throughput due to sequential processing. Compare this to BERT-base training time of 4 days on the same hardware. What is the speedup factor? Explain the three main reasons for the difference: parallelization, memory bandwidth, and GPU utilization.
 </div>
 
 <h2>Solutions</h2>

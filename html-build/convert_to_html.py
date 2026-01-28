@@ -59,6 +59,17 @@ def convert_latex_to_html(latex_content):
     
     html = latex_content
     
+    # Build a label-to-number mapping for exercises
+    label_map = {}
+    exercise_counter = 0
+    
+    # Find all exercise labels and assign numbers
+    exercise_pattern = r'\\begin\{exercise\}.*?\\label\{([^}]+)\}'
+    for match in re.finditer(exercise_pattern, html, re.DOTALL):
+        exercise_counter += 1
+        label = match.group(1)
+        label_map[label] = exercise_counter
+    
     # Remove LaTeX comments
     html = re.sub(r'(?<!\\)%.*$', '', html, flags=re.MULTILINE)
     
@@ -139,11 +150,32 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\begin\{example\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="example"><strong>Example:</strong> ', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{example\}', r'</div>', html)
     
-    html = re.sub(r'\\begin\{exercise\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="exercise"><strong>Exercise:</strong> ', html, flags=re.DOTALL)
+    # Convert exercise environment with numbering
+    exercise_num = 0
+    def format_exercise(match):
+        nonlocal exercise_num
+        exercise_num += 1
+        return f'<div class="exercise" id="exercise-{exercise_num}"><strong>Exercise {exercise_num}:</strong> '
+    
+    html = re.sub(r'\\begin\{exercise\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', format_exercise, html, flags=re.DOTALL)
     html = re.sub(r'\\end\{exercise\}', r'</div>', html)
     
-    # Convert solution environment
-    html = re.sub(r'\\begin\{solution\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="solution"><strong>Solution:</strong> ', html, flags=re.DOTALL)
+    # Convert solution environment with reference to exercise number
+    def format_solution(match):
+        optional_ref = match.group(2) if match.group(2) else ''
+        
+        # Try to extract exercise reference
+        ref_match = re.search(r'\\ref\{([^}]+)\}', optional_ref)
+        if ref_match:
+            label = ref_match.group(1)
+            if label in label_map:
+                exercise_num = label_map[label]
+                return f'<div class="solution"><strong>Solution to Exercise {exercise_num}:</strong> '
+        
+        # Fallback if no reference found
+        return '<div class="solution"><strong>Solution:</strong> '
+    
+    html = re.sub(r'\\begin\{solution\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', format_solution, html, flags=re.DOTALL)
     html = re.sub(r'\\end\{solution\}', r'</div>', html)
     
     # Convert proof environment

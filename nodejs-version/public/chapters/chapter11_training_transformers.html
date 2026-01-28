@@ -1514,28 +1514,28 @@ where $d_{\text{in}}$ and $d_{\text{out}}$ are the input and output dimensions. 
 
 <h2>Exercises</h2>
 
-<div class="exercise"><strong>Exercise:</strong> Implement the complete mixed precision training algorithm for a small transformer. Compare memory consumption and training time with FP32 training. Experiment with different loss scaling factors and observe their impact on training stability.
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> Implement the complete mixed precision training algorithm for a small transformer. Compare memory consumption and training time with FP32 training. Experiment with different loss scaling factors and observe their impact on training stability.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> For BERT-base with batch size 32 and sequence length 512, calculate the exact memory requirements for: (a) parameters and optimizer states (AdamW), (b) activations for each layer type, (c) total memory with and without gradient checkpointing. Verify your calculations by profiling actual memory usage during training.
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> For BERT-base with batch size 32 and sequence length 512, calculate the exact memory requirements for: (a) parameters and optimizer states (AdamW), (b) activations for each layer type, (c) total memory with and without gradient checkpointing. Verify your calculations by profiling actual memory usage during training.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Implement gradient accumulation to achieve an effective batch size of 512 with physical batch size 32. Measure the training time overhead compared to true batch size 512 (if it fits in memory). Verify that the training dynamics are identical by comparing loss curves.
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Implement gradient accumulation to achieve an effective batch size of 512 with physical batch size 32. Measure the training time overhead compared to true batch size 512 (if it fits in memory). Verify that the training dynamics are identical by comparing loss curves.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Train a small transformer (6 layers, $d_{\text{model}} = 256$) with different learning rate schedules: (a) warmup + linear decay, (b) warmup + inverse square root decay, (c) warmup + cosine annealing. Compare convergence speed and final performance. Plot the learning rate curves and loss curves.
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Train a small transformer (6 layers, $d_{\text{model}} = 256$) with different learning rate schedules: (a) warmup + linear decay, (b) warmup + inverse square root decay, (c) warmup + cosine annealing. Compare convergence speed and final performance. Plot the learning rate curves and loss curves.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Implement data parallelism for training on 4 GPUs. Measure the speedup compared to single-GPU training. Calculate the communication overhead by comparing the time spent in AllReduce operations versus computation. Experiment with different batch sizes and observe how they affect the computation-to-communication ratio.
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> Implement data parallelism for training on 4 GPUs. Measure the speedup compared to single-GPU training. Calculate the communication overhead by comparing the time spent in AllReduce operations versus computation. Experiment with different batch sizes and observe how they affect the computation-to-communication ratio.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Analyze the impact of different regularization techniques on a small transformer trained on a limited dataset (10,000 examples). Compare: (a) no regularization, (b) dropout only, (c) weight decay only, (d) dropout + weight decay, (e) dropout + weight decay + label smoothing. Measure training loss, validation loss, and generalization gap.
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> Analyze the impact of different regularization techniques on a small transformer trained on a limited dataset (10,000 examples). Compare: (a) no regularization, (b) dropout only, (c) weight decay only, (d) dropout + weight decay, (e) dropout + weight decay + label smoothing. Measure training loss, validation loss, and generalization gap.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Estimate the training time and cost for a GPT-2 medium model (345M parameters) on your available hardware. Calculate: (a) FLOPs per training step, (b) expected throughput (tokens/sec), (c) total training time for 10B tokens, (d) estimated cost on cloud platforms. Compare your estimates with actual training runs.
+<div class="exercise" id="exercise-7"><strong>Exercise 7:</strong> Estimate the training time and cost for a GPT-2 medium model (345M parameters) on your available hardware. Calculate: (a) FLOPs per training step, (b) expected throughput (tokens/sec), (c) total training time for 10B tokens, (d) estimated cost on cloud platforms. Compare your estimates with actual training runs.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> Implement dynamic batching to minimize padding waste. Compare throughput (tokens/sec) with and without dynamic batching on a dataset with variable-length sequences. Measure the padding fraction in each case and calculate the theoretical maximum speedup from eliminating padding.
+<div class="exercise" id="exercise-8"><strong>Exercise 8:</strong> Implement dynamic batching to minimize padding waste. Compare throughput (tokens/sec) with and without dynamic batching on a dataset with variable-length sequences. Measure the padding fraction in each case and calculate the theoretical maximum speedup from eliminating padding.
 </div>
 
 <h2>Solutions</h2>

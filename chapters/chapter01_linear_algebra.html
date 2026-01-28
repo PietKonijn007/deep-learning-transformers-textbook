@@ -753,7 +753,7 @@ output = x + bias.view(1, 1, 768)
 
 <h2>Exercises</h2>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> 
 Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$, compute:
 <ol>
     <li>The dot product $\vx\transpose \vy$
@@ -762,7 +762,7 @@ Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$, compute:
 </ol>
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> 
 For a transformer layer with $d_{\text{model}} = 768$ and feed-forward dimension $d_{ff} = 3072$:
 <ol>
     <li>Calculate the number of parameters in the two linear transformations
@@ -771,11 +771,11 @@ For a transformer layer with $d_{\text{model}} = 768$ and feed-forward dimension
 </ol>
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> 
 Prove that for symmetric matrix $\mA = \mA\transpose$, eigenvectors corresponding to distinct eigenvalues are orthogonal.
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> 
 A weight matrix $\mW \in \R^{1024 \times 4096}$ is approximated using SVD with rank $r$.
 <ol>
     <li>Express the number of parameters as a function of $r$
@@ -784,7 +784,7 @@ A weight matrix $\mW \in \R^{1024 \times 4096}$ is approximated using SVD with r
 </ol>
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> 
 Consider computing attention scores $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in \R^{B \times n \times d_k}$ with $B = 16$, $n = 1024$, $d_k = 64$.
 <ol>
     <li>What are the dimensions of the output $\mA$?
@@ -794,7 +794,7 @@ Consider computing attention scores $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in
 </ol>
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> 
 An embedding layer has vocabulary size $V = 32{,}000$ and embedding dimension $d = 512$.
 <ol>
     <li>How many parameters does the embedding matrix contain?
@@ -804,7 +804,7 @@ An embedding layer has vocabulary size $V = 32{,}000$ and embedding dimension $d
 </ol>
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-7"><strong>Exercise 7:</strong> 
 Compare the computational cost of two equivalent operations:
 <ol>
     <li>Computing $(\mA\mB)\vx$ where $\mA \in \R^{m \times n}$, $\mB \in \R^{n \times p}$, $\vx \in \R^p$
@@ -813,7 +813,7 @@ Compare the computational cost of two equivalent operations:
 For $m = 512$, $n = 2048$, $p = 512$, which order is more efficient and by what factor?
 </div>
 
-<div class="exercise"><strong>Exercise:</strong> 
+<div class="exercise" id="exercise-8"><strong>Exercise 8:</strong> 
 A matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$ is performed on a GPU.
 <ol>
     <li>Calculate the total FLOPs
@@ -826,7 +826,7 @@ A matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$
 
 <h2>Solutions</h2>
 
-<div class="solution"><strong>Solution:</strong> Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$:
+<div class="solution"><strong>Solution to Exercise 1:</strong> Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$:
 
 <p><strong>(1) Dot product:</strong>
 <div class="equation">
@@ -853,7 +853,7 @@ $$
 <p>The negative cosine similarity indicates the vectors point in somewhat opposite directions.
 </div>
 
-<div class="solution"><strong>Solution:</strong> For transformer layer with $d_{\text{model}} = 768$ and $d_{ff} = 3072$:
+<div class="solution"><strong>Solution to Exercise 2:</strong> For transformer layer with $d_{\text{model}} = 768$ and $d_{ff} = 3072$:
 
 <p><strong>(1) Parameters in feed-forward network:</strong>
 <ul>
@@ -878,7 +878,7 @@ $$
 </ul>
 </div>
 
-<div class="solution"><strong>Solution:</strong> <strong>Proof:</strong> Let $\mA = \mA\transpose$ be symmetric with eigenvectors $\vv_1, \vv_2$ corresponding to distinct eigenvalues $\lambda_1 \neq \lambda_2$.
+<div class="solution"><strong>Solution to Exercise 3:</strong> <strong>Proof:</strong> Let $\mA = \mA\transpose$ be symmetric with eigenvectors $\vv_1, \vv_2$ corresponding to distinct eigenvalues $\lambda_1 \neq \lambda_2$.
 
 <p>We have:
 <div class="equation">
@@ -913,7 +913,7 @@ $$
 <p>Since $\lambda_1 \neq \lambda_2$, we must have $\vv_1\transpose \vv_2 = 0$, proving orthogonality.
 </div>
 
-<div class="solution"><strong>Solution:</strong> For weight matrix $\mW \in \R^{1024 \times 4096}$ with rank-$r$ SVD approximation:
+<div class="solution"><strong>Solution to Exercise 4:</strong> For weight matrix $\mW \in \R^{1024 \times 4096}$ with rank-$r$ SVD approximation:
 
 <p><strong>(1) Parameters as function of $r$:</strong>
 The factored form requires:
@@ -943,7 +943,7 @@ r &= 204.8 \approx 205
 </ul>
 </div>
 
-<div class="solution"><strong>Solution:</strong> For attention scores $\mA = \mQ\mK\transpose$ with $\mQ, \mK \in \R^{B \times n \times d_k}$, $B = 16$, $n = 1024$, $d_k = 64$:
+<div class="solution"><strong>Solution to Exercise 5:</strong> For attention scores $\mA = \mQ\mK\transpose$ with $\mQ, \mK \in \R^{B \times n \times d_k}$, $B = 16$, $n = 1024$, $d_k = 64$:
 
 <p><strong>(1) Output dimensions:</strong>
 <div class="equation">
@@ -984,7 +984,7 @@ $$
 </ul>
 </div>
 
-<div class="solution"><strong>Solution:</strong> For embedding layer with $V = 32{,}000$ and $d = 512$:
+<div class="solution"><strong>Solution to Exercise 6:</strong> For embedding layer with $V = 32{,}000$ and $d = 512$:
 
 <p><strong>(1) Number of parameters:</strong>
 <div class="equation">
@@ -1019,7 +1019,7 @@ $$
 <p>This is only $\frac{520{,}192}{16{,}384{,}000} \approx 3.2\%$ of the original parameters!
 </div>
 
-<div class="solution"><strong>Solution:</strong> For $\mA \in \R^{512 \times 2048}$, $\mB \in \R^{2048 \times 512}$, $\vx \in \R^{512}$:
+<div class="solution"><strong>Solution to Exercise 7:</strong> For $\mA \in \R^{512 \times 2048}$, $\mB \in \R^{2048 \times 512}$, $\vx \in \R^{512}$:
 
 <p><strong>Option 1: $(\mA\mB)\vx$</strong>
 <ul>
@@ -1045,7 +1045,7 @@ $$
 <p>Option 2 is 256× more efficient! This demonstrates the importance of operation ordering in linear algebra.
 </div>
 
-<div class="solution"><strong>Solution:</strong> For $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$:
+<div class="solution"><strong>Solution to Exercise 8:</strong> For $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$:
 
 <p><strong>(1) Total FLOPs:</strong>
 <div class="equation">
