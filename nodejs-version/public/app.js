@@ -206,14 +206,22 @@ function setupEventListeners() {
     elements.nextBtn.addEventListener('click', () => navigateChapter(1));
 
     // Sidebar toggle for mobile
-    elements.sidebarToggle.addEventListener('click', () => {
-        elements.sidebar.classList.toggle('open');
-    });
+    if (elements.sidebarToggle) {
+        elements.sidebarToggle.addEventListener('click', () => {
+            elements.sidebar.classList.toggle('open');
+        });
+    }
     
     // Mobile menu button
-    elements.mobileMenuBtn.addEventListener('click', () => {
-        elements.sidebar.classList.toggle('open');
-    });
+    if (elements.mobileMenuBtn) {
+        elements.mobileMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.sidebar.classList.toggle('open');
+            console.log('Mobile menu clicked, sidebar open:', elements.sidebar.classList.contains('open'));
+        });
+    } else {
+        console.error('Mobile menu button not found!');
+    }
     
     // Close sidebar when clicking outside on mobile
     document.addEventListener('click', (e) => {

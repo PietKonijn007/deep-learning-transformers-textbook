@@ -491,9 +491,9 @@ mjx-container[display="true"] {
     width: 100%;
 }
 
-/* Mobile menu button (always visible on mobile) */
+/* Mobile menu button - visible by default, hidden on desktop */
 .mobile-menu-btn {
-    display: none;
+    display: block;
     position: fixed;
     top: 1rem;
     left: 1rem;
@@ -505,9 +505,10 @@ mjx-container[display="true"] {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    z-index: 999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
     transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-menu-btn:hover {
@@ -560,11 +561,20 @@ mjx-container[display="true"] {
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
-    /* Show mobile menu button */
+@media (min-width: 769px) {
+    /* Hide mobile menu button on desktop */
     .mobile-menu-btn {
-        display: block;
+        display: none;
     }
+    
+    /* Ensure sidebar is always visible on desktop */
+    .sidebar {
+        transform: translateX(0) !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Mobile menu button already visible by default */
     
     .sidebar {
         position: fixed;
@@ -574,7 +584,7 @@ mjx-container[display="true"] {
         width: 280px;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
-        z-index: 1000;
+        z-index: 10000;
         box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
     }
 
@@ -583,7 +593,7 @@ mjx-container[display="true"] {
     }
     
     /* Overlay when sidebar is open */
-    .sidebar.open::before {
+    .sidebar.open::after {
         content: '';
         position: fixed;
         top: 0;
