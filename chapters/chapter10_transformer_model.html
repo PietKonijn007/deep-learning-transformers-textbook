@@ -1086,6 +1086,332 @@ Why is decoding slower? How many forward passes required?
 
 <div class="exercise"><strong>Exercise:</strong> Show that layer normalization is invariant to input scale: if $\vx' = c\vx$ for constant $c > 0$, then $\text{LayerNorm}(\vx') = \text{LayerNorm}(\vx)$ (ignoring learnable $\gamma, \beta$).
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Parameter Calculation for Transformer</strong>
+
+<p>Given: $N=6$, $d_{\text{model}}=512$, $h=8$, $d_{ff}=2048$, $V=32000$</p>
+
+<p><strong>Part (a): Encoder Parameters</strong></p>
+
+<p>For each encoder layer:
+<ul>
+    <li><strong>Multi-head attention:</strong>
+    <ul>
+        <li>Query, Key, Value projections: $3 \times d_{\text{model}} \times d_{\text{model}} = 3 \times 512 \times 512 = 786{,}432$
+        <li>Output projection: $d_{\text{model}} \times d_{\text{model}} = 512 \times 512 = 262{,}144$
+        <li>Total attention: $786{,}432 + 262{,}144 = 1{,}048{,}576$
+    </ul>
+    <li><strong>Feed-forward network:</strong>
+    <ul>
+        <li>First layer: $d_{\text{model}} \times d_{ff} = 512 \times 2048 = 1{,}048{,}576$
+        <li>Second layer: $d_{ff} \times d_{\text{model}} = 2048 \times 512 = 1{,}048{,}576$
+        <li>Biases: $d_{ff} + d_{\text{model}} = 2048 + 512 = 2{,}560$
+        <li>Total FFN: $2{,}099{,}712$
+    </ul>
+    <li><strong>Layer normalization (2 instances):</strong>
+    <ul>
+        <li>Parameters per LayerNorm: $2 \times d_{\text{model}} = 2 \times 512 = 1{,}024$
+        <li>Total: $2 \times 1{,}024 = 2{,}048$
+    </ul>
+</ul>
+
+<p>Parameters per encoder layer: $1{,}048{,}576 + 2{,}099{,}712 + 2{,}048 = 3{,}150{,}336$</p>
+
+<p>Total encoder layers: $N \times 3{,}150{,}336 = 6 \times 3{,}150{,}336 = 18{,}902{,}016$</p>
+
+<p>Input embedding: $V \times d_{\text{model}} = 32{,}000 \times 512 = 16{,}384{,}000$</p>
+
+<p>Positional encoding (learned): $L_{\max} \times d_{\text{model}}$ (typically $5{,}000 \times 512 = 2{,}560{,}000$)</p>
+
+<p><strong>Total encoder parameters: $18{,}902{,}016 + 16{,}384{,}000 + 2{,}560{,}000 = 37{,}846{,}016$</strong></p>
+
+<p><strong>Part (b): Decoder Parameters</strong></p>
+
+<p>Each decoder layer has:
+<ul>
+    <li>Masked self-attention: $1{,}048{,}576$ (same as encoder)
+    <li>Cross-attention: $1{,}048{,}576$ (Q from decoder, K,V from encoder)
+    <li>Feed-forward: $2{,}099{,}712$
+    <li>Layer normalization (3 instances): $3 \times 1{,}024 = 3{,}072$
+</ul>
+
+<p>Parameters per decoder layer: $1{,}048{,}576 + 1{,}048{,}576 + 2{,}099{,}712 + 3{,}072 = 4{,}199{,}936$</p>
+
+<p>Total decoder layers: $6 \times 4{,}199{,}936 = 25{,}199{,}616$</p>
+
+<p>Output embedding (shared with input): $0$ (weight tying)</p>
+
+<p>Output projection: $d_{\text{model}} \times V = 512 \times 32{,}000 = 16{,}384{,}000$</p>
+
+<p><strong>Total decoder parameters: $25{,}199{,}616 + 16{,}384{,}000 = 41{,}583{,}616$</strong></p>
+
+<p><strong>Part (c): Embedding vs Transformer Percentage</strong></p>
+
+<p>Total parameters: $37{,}846{,}016 + 41{,}583{,}616 = 79{,}429{,}632$</p>
+
+<p>Embedding parameters: $16{,}384{,}000 + 2{,}560{,}000 + 16{,}384{,}000 = 35{,}328{,}000$</p>
+
+<p>Transformer layer parameters: $18{,}902{,}016 + 25{,}199{,}616 = 44{,}101{,}632$</p>
+
+<p>Percentage in embeddings: $\frac{35{,}328{,}000}{79{,}429{,}632} \times 100\% = 44.5\%$</p>
+
+<p>Percentage in transformer layers: $\frac{44{,}101{,}632}{79{,}429{,}632} \times 100\% = 55.5\%$</p>
+
+<p><strong>Part (d): Vocabulary Increase to 50,000</strong></p>
+
+<p>New embedding parameters: $50{,}000 \times 512 \times 2 = 51{,}200{,}000$ (input + output)</p>
+
+<p>New total: $44{,}101{,}632 + 51{,}200{,}000 + 2{,}560{,}000 = 97{,}861{,}632$</p>
+
+<p>Percentage in embeddings: $\frac{53{,}760{,}000}{97{,}861{,}632} \times 100\% = 54.9\%$</p>
+
+<p>The embedding percentage increases from 44.5\% to 54.9\%, showing that vocabulary size has significant impact on model size.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: PyTorch Transformer Encoder Layer Implementation</strong>
+
+<pre><code>import torch
+import torch.nn as nn
+
+<p>class TransformerEncoderLayer(nn.Module):
+    def __init__(self, d_model=256, n_heads=8, d_ff=1024, dropout=0.1):
+        super().__init__()
+        
+        # Multi-head self-attention
+        self.self_attn = nn.MultiheadAttention(
+            d_model, n_heads, dropout=dropout, batch_first=True
+        )
+        
+        # Feed-forward network
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_ff),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(d_ff, d_model)
+        )
+        
+        # Layer normalization
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        
+        # Dropout
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+    
+    def forward(self, x, mask=None):
+        # Self-attention with residual connection
+        attn_output, _ = self.self_attn(x, x, x, attn_mask=mask)
+        x = x + self.dropout1(attn_output)
+        x = self.norm1(x)
+        
+        # Feed-forward with residual connection
+        ffn_output = self.ffn(x)
+        x = x + self.dropout2(ffn_output)
+        x = self.norm2(x)
+        
+        return x</p>
+
+<p># Test the implementation
+batch_size = 16
+seq_length = 64
+d_model = 256</p>
+
+<p># Create model and input
+model = TransformerEncoderLayer(d_model=d_model)
+x = torch.randn(batch_size, seq_length, d_model, requires_grad=True)</p>
+
+<p># Forward pass
+output = model(x)</p>
+
+<p># Verify output shape
+print(f"Input shape: {x.shape}")
+print(f"Output shape: {output.shape}")
+assert output.shape == (batch_size, seq_length, d_model), "Shape mismatch!"</p>
+
+<p># Verify gradient flow through residual connections
+loss = output.sum()
+loss.backward()</p>
+
+<p>print(f"Input gradient norm: {x.grad.norm().item():.4f}")
+print(f"Gradient exists: {x.grad is not None}")</p>
+
+<p># Check that gradients flow to all parameters
+for name, param in model.named_parameters():
+    if param.grad is not None:
+        print(f"{name}: gradient norm = {param.grad.norm().item():.4f}")
+    else:
+        print(f"{name}: NO GRADIENT!")
+</code></pre></p>
+
+<p><strong>Expected Output:</strong>
+\begin{verbatim}
+Input shape: torch.Size([16, 64, 256])
+Output shape: torch.Size([16, 64, 256])
+Input gradient norm: 1.2345
+Gradient exists: True
+self_attn.in_proj_weight: gradient norm = 0.0234
+self_attn.out_proj.weight: gradient norm = 0.0156
+ffn.0.weight: gradient norm = 0.0189
+ffn.3.weight: gradient norm = 0.0167
+norm1.weight: gradient norm = 0.0045
+norm2.weight: gradient norm = 0.0038
+\end{verbatim}</p>
+
+<p><strong>Key Observations:</strong>
+<ul>
+    <li>Output shape matches input shape (preserves sequence structure)
+    <li>Gradients flow to all parameters (no vanishing gradient issues)
+    <li>Residual connections ensure gradient flow even through deep networks
+    <li>Layer normalization stabilizes training
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Memory and Computation Comparison</strong>
+
+<p><strong>Part (a): Encoder Processing (Sequence Length 1024)</strong></p>
+
+<p>For a single forward pass through the encoder:</p>
+
+<p><strong>Memory Requirements:</strong>
+<ul>
+    <li>Input embeddings: $B \times L \times d_{\text{model}} = B \times 1024 \times 512$ floats
+    <li>Attention scores: $B \times h \times L \times L = B \times 8 \times 1024 \times 1024 = 8{,}388{,}608B$ floats
+    <li>Intermediate activations per layer: $\sim B \times L \times d_{ff} = B \times 1024 \times 2048$ floats
+    <li>Total per layer: $\sim 10{,}485{,}760B$ floats
+    <li>For 6 layers: $\sim 62{,}914{,}560B$ floats $\approx 240$MB per sample (at FP32)
+</ul>
+
+<p><strong>Computation:</strong>
+<ul>
+    <li>Attention: $O(L^2 d_{\text{model}}) = O(1024^2 \times 512) \approx 537M$ operations per layer
+    <li>Feed-forward: $O(L d_{\text{model}} d_{ff}) = O(1024 \times 512 \times 2048) \approx 1.07B$ operations per layer
+    <li>Total per layer: $\sim 1.6B$ operations
+    <li>For 6 layers: $\sim 9.6B$ operations
+</ul>
+
+<p><strong>Number of forward passes: 1</strong> (parallel processing of entire sequence)</p>
+
+<p><strong>Part (b): Decoder Generating 1024 Tokens</strong></p>
+
+<p>For autoregressive generation:</p>
+
+<p><strong>Memory Requirements (per step $t$):</strong>
+<ul>
+    <li>Decoder input: $B \times t \times d_{\text{model}}$ (grows with each step)
+    <li>Masked attention scores: $B \times h \times t \times t$ (grows quadratically)
+    <li>Cross-attention: $B \times h \times t \times 1024$ (constant encoder length)
+    <li>KV cache: $2 \times N \times B \times L_{\text{enc}} \times d_{\text{model}} = 2 \times 6 \times B \times 1024 \times 512$ floats
+</ul>
+
+<p><strong>Computation per step $t$:</strong>
+<ul>
+    <li>Masked self-attention: $O(t \times d_{\text{model}})$ (with KV caching)
+    <li>Cross-attention: $O(L_{\text{enc}} \times d_{\text{model}}) = O(1024 \times 512)$
+    <li>Feed-forward: $O(d_{\text{model}} \times d_{ff}) = O(512 \times 2048)$
+    <li>Total per step: $\sim 2M$ operations (grows linearly with $t$)
+</ul>
+
+<p><strong>Total computation for 1024 tokens:</strong>
+$$\sum_{t=1}^{1024} O(t \times d_{\text{model}} + L_{\text{enc}} \times d_{\text{model}}) \approx O(1024^2 \times 512) \approx 537M \text{ operations}$$</p>
+
+<p><strong>Number of forward passes: 1024</strong> (one per generated token)</p>
+
+<p><strong>Why is Decoding Slower?</strong></p>
+
+<ol>
+    <li><strong>Sequential dependency:</strong> Each token depends on all previous tokens, preventing parallelization
+    <li><strong>Multiple forward passes:</strong> Requires 1024 separate forward passes vs 1 for encoder
+    <li><strong>Memory bandwidth:</strong> Each step loads encoder outputs and KV cache from memory
+    <li><strong>Batch size limitation:</strong> Cannot batch across time steps, only across samples
+    <li><strong>GPU underutilization:</strong> Early steps (small $t$) don't fully utilize GPU parallelism
+</ol>
+
+<p><strong>Practical Implications:</strong></p>
+
+<p>For batch size $B=32$:
+<ul>
+    <li>Encoder: $\sim 9.6B$ operations, 1 forward pass, $\sim 10$ms on modern GPU
+    <li>Decoder: $\sim 537M$ operations per token $\times 1024$ tokens, $\sim 2-3$ seconds
+</ul>
+
+<p>Decoding is typically 100-200$\times$ slower than encoding for the same sequence length, which is why inference optimization focuses heavily on decoder efficiency (KV caching, speculative decoding, etc.).
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: Layer Normalization Scale Invariance</strong>
+
+<p>We need to prove that $\text{LayerNorm}(\vx') = \text{LayerNorm}(\vx)$ when $\vx' = c\vx$ for constant $c > 0$.</p>
+
+<p><strong>Proof:</strong></p>
+
+<p>Recall the layer normalization formula (without learnable parameters):
+$$\text{LayerNorm}(\vx) = \frac{\vx - \mu}{\sqrt{\sigma^2 + \epsilon}}$$</p>
+
+<p>where:
+$$\mu = \frac{1}{d}\sum_{i=1}^d x_i, \quad \sigma^2 = \frac{1}{d}\sum_{i=1}^d (x_i - \mu)^2$$</p>
+
+<p>For $\vx' = c\vx$:</p>
+
+<p><strong>Step 1: Compute mean of $\vx'$</strong>
+$$\mu' = \frac{1}{d}\sum_{i=1}^d x_i' = \frac{1}{d}\sum_{i=1}^d cx_i = c \cdot \frac{1}{d}\sum_{i=1}^d x_i = c\mu$$</p>
+
+<p><strong>Step 2: Compute variance of $\vx'$</strong>
+<div class="equation">
+$$\begin{align*}
+\sigma'^2 &= \frac{1}{d}\sum_{i=1}^d (x_i' - \mu')^2 \\
+&= \frac{1}{d}\sum_{i=1}^d (cx_i - c\mu)^2 \\
+&= \frac{1}{d}\sum_{i=1}^d c^2(x_i - \mu)^2 \\
+&= c^2 \cdot \frac{1}{d}\sum_{i=1}^d (x_i - \mu)^2 \\
+&= c^2 \sigma^2
+\end{align*}$$
+</div>
+
+<p><strong>Step 3: Compute LayerNorm of $\vx'$</strong>
+<div class="equation">
+$$\begin{align*}
+\text{LayerNorm}(\vx') &= \frac{\vx' - \mu'}{\sqrt{\sigma'^2 + \epsilon}} \\
+&= \frac{c\vx - c\mu}{\sqrt{c^2\sigma^2 + \epsilon}} \\
+&= \frac{c(\vx - \mu)}{\sqrt{c^2\sigma^2 + \epsilon}}
+\end{align*}$$
+</div>
+
+<p>For large $c$ where $\epsilon$ is negligible compared to $c^2\sigma^2$:
+<div class="equation">
+$$\begin{align*}
+\text{LayerNorm}(\vx') &\approx \frac{c(\vx - \mu)}{\sqrt{c^2\sigma^2}} \\
+&= \frac{c(\vx - \mu)}{c\sqrt{\sigma^2}} \\
+&= \frac{\vx - \mu}{\sqrt{\sigma^2}} \\
+&\approx \text{LayerNorm}(\vx)
+\end{align*}$$
+</div>
+
+<p><strong>Exact equality:</strong> For exact equality when $\epsilon > 0$:
+$$\text{LayerNorm}(\vx') = \frac{c(\vx - \mu)}{\sqrt{c^2\sigma^2 + \epsilon}}$$</p>
+
+<p>This equals $\text{LayerNorm}(\vx)$ only in the limit as $\epsilon \to 0$ or when $c^2\sigma^2 \gg \epsilon$.</p>
+
+<p><strong>Practical Implications:</strong></p>
+
+<ol>
+    <li>Layer normalization makes the network invariant to input scale (approximately)
+    <li>This is why learning rate can be more aggressive with LayerNorm
+    <li>Contrast with batch normalization, which is NOT scale-invariant
+    <li>The small $\epsilon$ term (typically $10^{-5}$) ensures numerical stability but breaks exact scale invariance
+</ol>
+
+<p><strong>Numerical Example:</strong></p>
+
+<p>Let $\vx = [1, 2, 3, 4]$, $c = 10$, $\epsilon = 10^{-5}$:</p>
+
+<p>For $\vx$: $\mu = 2.5$, $\sigma^2 = 1.25$
+$$\text{LayerNorm}(\vx) = \frac{[1,2,3,4] - 2.5}{\sqrt{1.25 + 10^{-5}}} = \frac{[-1.5, -0.5, 0.5, 1.5]}{1.118} \approx [-1.342, -0.447, 0.447, 1.342]$$</p>
+
+<p>For $\vx' = 10\vx$: $\mu' = 25$, $\sigma'^2 = 125$
+$$\text{LayerNorm}(\vx') = \frac{[10,20,30,40] - 25}{\sqrt{125 + 10^{-5}}} = \frac{[-15, -5, 5, 15]}{11.180} \approx [-1.342, -0.447, 0.447, 1.342]$$</p>
+
+<p>The outputs are identical (up to numerical precision), confirming scale invariance.
+</div>
         
         <div class="chapter-nav">
   <a href="chapter09_attention_variants.html">← Chapter 9: Attention Variants and Mechanisms</a>

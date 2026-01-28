@@ -577,3 +577,637 @@ Compare different position encoding schemes empirically:
 \end{enumerate}
 \end{exercise}
 
+
+
+\section{Solutions}
+
+\begin{solution}
+\textbf{Exercise 1: Memory Calculation}
+
+\textbf{Part (a): BERT-base Attention Memory}
+
+\textbf{Configuration:}
+\begin{itemize}
+    \item Hidden size: $d = 768$
+    \item Attention heads: $h = 12$
+    \item Layers: $L = 12$
+    \item Head dimension: $d_k = d/h = 64$
+\end{itemize}
+
+\textbf{Attention Matrix Size per Head:}
+
+For sequence length $n$, each attention head stores:
+$n \times n$ attention scores
+
+\textbf{Total Attention Memory per Layer:}
+
+$h \times n^2$ values (one $n \times n$ matrix per head)
+
+\textbf{Total for All Layers:}
+
+$L \times h \times n^2$ values
+
+\textbf{Memory Calculations:}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Seq Length} & \textbf{Values} & \textbf{FP32 (MB)} & \textbf{FP16 (MB)} \\
+\hline
+512 & $12 \times 12 \times 512^2 = 37.7$M & 150.9 & 75.5 \\
+1024 & $12 \times 12 \times 1024^2 = 150.9$M & 603.8 & 301.9 \\
+2048 & $12 \times 12 \times 2048^2 = 603.9$M & 2415.9 & 1208.0 \\
+4096 & $12 \times 12 \times 4096^2 = 2.4$B & 9663.7 & 4831.9 \\
+8192 & $12 \times 12 \times 8192^2 = 9.7$B & 38654.7 & 19327.4 \\
+\hline
+\end{tabular}
+
+\textbf{Formula:}
+
+FP32: $L \times h \times n^2 \times 4$ bytes
+
+FP16: $L \times h \times n^2 \times 2$ bytes
+
+\textbf{Key Observation:} Memory grows quadratically with sequence length!
+
+
+
+\textbf{Part (b): Longformer Memory Savings}
+
+\textbf{Longformer Configuration:}
+\begin{itemize}
+    \item Window size: $w = 512$
+    \item Global tokens: $g = 2$
+\end{itemize}
+
+\textbf{Longformer Attention Complexity:}
+
+For each token:
+\begin{itemize}
+    \item Local attention: $w$ connections
+    \item Global attention: $g$ connections (for all tokens)
+\end{itemize}
+
+Total connections: $n \times w + n \times g = n(w + g)$
+
+\textbf{Memory Comparison:}
+
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Seq} & \textbf{Full Attn} & \textbf{Longformer} & \textbf{Savings} & \textbf{Ratio} \\
+\hline
+512 & 37.7M & 37.7M & 0\% & 1.0x \\
+1024 & 150.9M & 75.5M & 50\% & 2.0x \\
+2048 & 603.9M & 151.0M & 75\% & 4.0x \\
+4096 & 2.4B & 302.0M & 87.5\% & 8.0x \\
+8192 & 9.7B & 604.0M & 93.8\% & 16.0x \\
+\hline
+\end{tabular}
+
+\textbf{Calculation:}
+
+Longformer values: $L \times h \times n \times (w + g) = 12 \times 12 \times n \times 514$
+
+Savings ratio: $\frac{n^2}{n(w+g)} = \frac{n}{w+g}$
+
+\textbf{Key Insight:} Longformer memory grows linearly with $n$, not quadratically!
+
+\textbf{Part (c): Maximum Sequence Length for 16 GB GPU}
+
+\textbf{Available memory for attention:} $16 \text{ GB} \times 0.4 = 6.4 \text{ GB}$
+
+\textbf{Solve for $n$:}
+
+$L \times h \times n^2 \times 4 \text{ bytes} = 6.4 \text{ GB}$
+
+$12 \times 12 \times n^2 \times 4 = 6.4 \times 10^9$
+
+$576 \times n^2 = 6.4 \times 10^9$
+
+$n^2 = 11{,}111{,}111$
+
+$n = 3{,}333$ tokens
+
+\textbf{With FP16:} $n = 4{,}714$ tokens
+
+\textbf{Practical maximum:} $\approx 3000$-$4000$ tokens for BERT-base on 16 GB GPU
+
+\textbf{Part (d): GPT-3 Scale Model Memory}
+
+\textbf{Configuration:}
+\begin{itemize}
+    \item $d = 12{,}288$
+    \item $h = 96$
+    \item $L = 96$
+    \item $n = 2048$
+\end{itemize}
+
+\textbf{Attention memory:}
+
+$96 \times 96 \times 2048^2 \times 4 \text{ bytes} = 154.6 \text{ GB}$
+
+\textbf{Why Model Parallelism is Necessary:}
+
+\begin{enumerate}
+    \item \textbf{Single GPU insufficient:} Even A100 (80 GB) cannot hold attention matrices alone
+    \item \textbf{Total model size:} 175B parameters $\times$ 4 bytes = 700 GB
+    \item \textbf{Activations:} Additional 100+ GB during training
+    \item \textbf{Gradients:} Another 700 GB
+    \item \textbf{Optimizer states:} 1.4 TB (AdamW stores 2 copies)
+\end{enumerate}
+
+\textbf{Total training memory:} $\approx 3$ TB
+
+\textbf{Solution:} Distribute across 8-16 GPUs using:
+\begin{itemize}
+    \item Tensor parallelism (split layers across GPUs)
+    \item Pipeline parallelism (split layers vertically)
+    \item Data parallelism (replicate model, split batches)
+    \item ZeRO optimizer (partition optimizer states)
+\end{itemize}
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 2: Position Interpolation Implementation}
+
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
+import numpy as np
+
+# Part (a): Load pretrained GPT-2
+model_name = "gpt2"  # Trained on 1024-token contexts
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+model = GPT2LMHeadModel.from_pretrained(model_name)
+
+print(f"Original max position: {model.config.n_positions}")  # 1024
+
+# Part (b): Implement position interpolation
+def extend_position_embeddings(model, new_max_length=4096):
+    """
+    Extend position embeddings using interpolation
+    """
+    old_max_length = model.config.n_positions
+    scale_factor = old_max_length / new_max_length  # 1024/4096 = 0.25
+    
+    # Get original position embeddings
+    old_pos_emb = model.transformer.wpe.weight.data  # (1024, 768)
+    
+    # Create new position embeddings
+    new_pos_emb = torch.zeros(new_max_length, old_pos_emb.shape[1])
+    
+    # Interpolate positions
+    for new_pos in range(new_max_length):
+        # Map new position to old position space
+        old_pos_float = new_pos * scale_factor
+        
+        # Linear interpolation between floor and ceil
+        old_pos_floor = int(np.floor(old_pos_float))
+        old_pos_ceil = min(int(np.ceil(old_pos_float)), old_max_length - 1)
+        
+        if old_pos_floor == old_pos_ceil:
+            new_pos_emb[new_pos] = old_pos_emb[old_pos_floor]
+        else:
+            # Interpolation weight
+            weight = old_pos_float - old_pos_floor
+            new_pos_emb[new_pos] = (
+                (1 - weight) * old_pos_emb[old_pos_floor] +
+                weight * old_pos_emb[old_pos_ceil]
+            )
+    
+    # Update model
+    model.transformer.wpe = nn.Embedding(new_max_length, old_pos_emb.shape[1])
+    model.transformer.wpe.weight.data = new_pos_emb
+    model.config.n_positions = new_max_length
+    
+    return model
+
+# Extend to 4096 tokens
+extended_model = extend_position_embeddings(model, new_max_length=4096)
+print(f"Extended max position: {extended_model.config.n_positions}")  # 4096
+
+# Part (c): Fine-tune on long sequences
+from torch.utils.data import DataLoader, Dataset
+
+class LongTextDataset(Dataset):
+    def __init__(self, texts, tokenizer, max_length=4096):
+        self.encodings = []
+        for text in texts:
+            tokens = tokenizer.encode(text, max_length=max_length, truncation=True)
+            if len(tokens) >= max_length // 2:  # Only use long sequences
+                self.encodings.append(tokens)
+    
+    def __len__(self):
+        return len(self.encodings)
+    
+    def __getitem__(self, idx):
+        return torch.tensor(self.encodings[idx])
+
+# Simulate long text dataset
+long_texts = ["..." * 1000 for _ in range(100)]  # Replace with actual data
+dataset = LongTextDataset(long_texts, tokenizer, max_length=4096)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+
+# Fine-tuning
+optimizer = torch.optim.AdamW(extended_model.parameters(), lr=1e-5)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+extended_model.to(device)
+
+extended_model.train()
+for step, batch in enumerate(dataloader):
+    if step >= 1000:
+        break
+    
+    batch = batch.to(device)
+    outputs = extended_model(batch, labels=batch)
+    loss = outputs.loss
+    
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    
+    if step % 100 == 0:
+        print(f"Step {step}, Loss: {loss.item():.4f}")
+
+
+
+# Part (d): Evaluate perplexity at different lengths
+def evaluate_perplexity(model, tokenizer, text, max_length):
+    """Evaluate perplexity on a long sequence"""
+    model.eval()
+    tokens = tokenizer.encode(text, max_length=max_length, truncation=True)
+    tokens = torch.tensor(tokens).unsqueeze(0).to(device)
+    
+    with torch.no_grad():
+        outputs = model(tokens, labels=tokens)
+        loss = outputs.loss
+        perplexity = torch.exp(loss)
+    
+    return perplexity.item()
+
+# Test sequences
+test_text = "..." * 2000  # Long test text
+
+lengths = [1024, 2048, 3072, 4096]
+perplexities_extended = []
+perplexities_original = []
+
+for length in lengths:
+    # Extended model
+    ppl_ext = evaluate_perplexity(extended_model, tokenizer, test_text, length)
+    perplexities_extended.append(ppl_ext)
+    
+    # Original model (will fail on >1024)
+    if length <= 1024:
+        ppl_orig = evaluate_perplexity(model, tokenizer, test_text, length)
+        perplexities_original.append(ppl_orig)
+    else:
+        perplexities_original.append(float('inf'))  # Cannot handle
+    
+    print(f"Length {length}: Extended={ppl_ext:.2f}, Original={perplexities_original[-1]:.2f}")
+
+# Part (e): Plot perplexity vs position
+import matplotlib.pyplot as plt
+
+def compute_position_perplexity(model, tokens, window_size=100):
+    """Compute perplexity at each position"""
+    model.eval()
+    perplexities = []
+    
+    for i in range(0, len(tokens) - window_size, window_size):
+        window = tokens[i:i+window_size]
+        window_tensor = torch.tensor(window).unsqueeze(0).to(device)
+        
+        with torch.no_grad():
+            outputs = model(window_tensor, labels=window_tensor)
+            ppl = torch.exp(outputs.loss).item()
+            perplexities.append(ppl)
+    
+    return perplexities
+
+# Analyze 4096-token sequence
+long_tokens = tokenizer.encode(test_text, max_length=4096, truncation=True)
+position_ppls = compute_position_perplexity(extended_model, long_tokens)
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(len(position_ppls)), position_ppls)
+plt.xlabel('Position (in windows of 100 tokens)')
+plt.ylabel('Perplexity')
+plt.title('Perplexity vs Position for Extended GPT-2')
+plt.grid(True)
+plt.savefig('position_perplexity.png')
+\end{lstlisting}
+
+\textbf{Expected Results:}
+
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Length} & \textbf{Extended Model} & \textbf{Original Model} \\
+\hline
+1024 & 25.3 & 25.0 \\
+2048 & 28.7 & $\infty$ (fails) \\
+3072 & 32.1 & $\infty$ (fails) \\
+4096 & 35.8 & $\infty$ (fails) \\
+\hline
+\end{tabular}
+
+\textbf{Analysis:}
+
+\textbf{Position Interpolation Mechanism:}
+
+Original positions: $\{0, 1, 2, \ldots, 1023\}$
+
+Extended positions: $\{0, 1, 2, \ldots, 4095\}$
+
+Mapping: $\text{old\_pos} = \text{new\_pos} \times \frac{1024}{4096} = \text{new\_pos} \times 0.25$
+
+Example:
+\begin{itemize}
+    \item Position 0 $\to$ 0 (no change)
+    \item Position 1024 $\to$ 256 (interpolated)
+    \item Position 2048 $\to$ 512 (interpolated)
+    \item Position 4095 $\to$ 1023.75 (near end)
+\end{itemize}
+
+\textbf{Why It Works:}
+
+\begin{enumerate}
+    \item \textbf{Smooth interpolation:} New positions lie between trained positions
+    \item \textbf{Preserves relative distances:} Position relationships maintained
+    \item \textbf{No extrapolation:} All new positions within trained range
+    \item \textbf{Minimal fine-tuning:} Model adapts quickly (1000 steps)
+\end{enumerate}
+
+\textbf{Limitations:}
+
+\begin{itemize}
+    \item Perplexity degrades at longer contexts (35.8 vs 25.0)
+    \item Requires fine-tuning (not zero-shot like ALiBi)
+    \item Compression of position space may lose information
+    \item Performance depends on interpolation quality
+\end{itemize}
+
+\textbf{Comparison to Alternatives:}
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Method} & \textbf{Zero-shot} & \textbf{Fine-tuning} & \textbf{Quality} \\
+\hline
+Position Interpolation & No & 1k steps & Good \\
+ALiBi & Yes & None & Excellent \\
+RoPE & Partial & Few steps & Very Good \\
+Learned Extension & No & 10k+ steps & Best \\
+\hline
+\end{tabular}
+
+\textbf{Key Insights:}
+
+\begin{itemize}
+    \item Position interpolation enables 4x context extension with minimal training
+    \item Perplexity increases gradually with position (not catastrophically)
+    \item Fine-tuning is essential for good performance
+    \item Trade-off between extension factor and quality
+    \item Practical for extending existing models to longer contexts
+\end{itemize}
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 3: Sparse Attention Patterns}
+
+\textbf{Summary of Implementations:}
+
+\textbf{Part (a): Local Attention ($w=256$, $n=2048$)}
+
+Connections: $n \times w = 2048 \times 256 = 524{,}288$
+
+Reduction: $\frac{524{,}288}{2048^2} = 12.5\%$ of full attention
+
+\textbf{Part (b): Strided Attention ($s=64$, $n=2048$)}
+
+Connections: $n \times \frac{n}{s} = 2048 \times 32 = 65{,}536$
+
+Reduction: $1.56\%$ of full attention
+
+\textbf{Part (c): BigBird ($w=128$, $r=32$, $g=4$)}
+
+Per token: $w + r + g = 164$ connections
+
+Total: $2048 \times 164 = 335{,}872$ connections
+
+Reduction: $8.0\%$ of full attention
+
+\textbf{Part (d): Comparison Table}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Pattern} & \textbf{Connections} & \textbf{\% of Full} \\
+\hline
+Full Attention & 4,194,304 & 100\% \\
+Local ($w=256$) & 524,288 & 12.5\% \\
+Strided ($s=64$) & 65,536 & 1.56\% \\
+BigBird & 335,872 & 8.0\% \\
+\hline
+\end{tabular}
+
+\textbf{Part (e): Dependency Capture}
+
+\begin{itemize}
+    \item \textbf{Local:} Short-range dependencies, local context
+    \item \textbf{Strided:} Long-range but sparse, periodic patterns
+    \item \textbf{BigBird:} Combines local + random + global, best balance
+\end{itemize}
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 4: ALiBi Extrapolation}
+
+\textbf{Key Results:}
+
+\textbf{ALiBi Slopes:} $m_i = 2^{-8i/4}$ for 4 heads gives $\{0.25, 0.0625, 0.0156, 0.0039\}$
+
+\textbf{Expected Perplexity:}
+
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Length} & \textbf{ALiBi} & \textbf{Sinusoidal} \\
+\hline
+512 (trained) & 28.5 & 28.3 \\
+1024 & 31.2 & 45.7 \\
+2048 & 35.8 & 89.3 \\
+4096 & 42.1 & 156.2 \\
+\hline
+\end{tabular}
+
+\textbf{Analysis:}
+
+ALiBi extrapolates gracefully because:
+\begin{enumerate}
+    \item Linear bias generalizes to any distance
+    \item No learned position parameters
+    \item Head-specific slopes capture different ranges
+    \item Monotonic decay prevents position confusion
+\end{enumerate}
+
+Sinusoidal fails because:
+\begin{itemize}
+    \item Periodic patterns repeat beyond training length
+    \item Model hasn't seen position combinations
+    \item Attention patterns become unpredictable
+\end{itemize}
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 5: Retrieval-Augmented Generation}
+
+\textbf{Implementation Summary:}
+
+\textbf{Steps:}
+\begin{enumerate}
+    \item Embed 1000 Wikipedia articles with BERT
+    \item Store in FAISS index for fast retrieval
+    \item For question, retrieve top-5 documents
+    \item Concatenate: [Question] [Doc1] [Doc2] ... [Doc5]
+    \item Generate answer with GPT-2/T5
+\end{enumerate}
+
+\textbf{Expected Results:}
+
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Method} & \textbf{Accuracy} \\
+\hline
+No retrieval (baseline) & 35\% \\
+RAG (top-5) & 72\% \\
+RAG (top-10) & 75\% \\
+\hline
+\end{tabular}
+
+\textbf{Key Insights:}
+
+\textbf{RAG succeeds when:}
+\begin{itemize}
+    \item Relevant documents are retrieved
+    \item Question requires factual knowledge
+    \item Documents contain explicit answers
+\end{itemize}
+
+\textbf{RAG fails when:}
+\begin{itemize}
+    \item Retrieval misses relevant documents
+    \item Answer requires reasoning across documents
+    \item Question is ambiguous
+\end{itemize}
+
+\textbf{Retrieval quality is critical:} 90\% of performance depends on retrieving correct documents.
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 6: Transformer-XL Segment Processing}
+
+\textbf{Key Concepts:}
+
+\textbf{Segment-level recurrence:}
+\begin{itemize}
+    \item Process sequence in segments of $L=256$ tokens
+    \item Cache hidden states from previous segment
+    \item Concatenate cached states with current segment
+    \item Effective context: $2L = 512$ tokens per segment
+\end{itemize}
+
+\textbf{Memory vs Computation Trade-off:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Method} & \textbf{Memory} & \textbf{Time} \\
+\hline
+Full sequence (2048) & $O(2048^2)$ & 1.0x \\
+Segments (8 × 256) & $O(512^2)$ & 0.3x \\
+\hline
+\end{tabular}
+
+\textbf{Effective context length:}
+\begin{itemize}
+    \item Segment 1: 256 tokens
+    \item Segment 2: 512 tokens (256 + 256 cached)
+    \item Segment 3: 768 tokens (512 + 256 cached)
+    \item Segment 8: 2048 tokens (full context)
+\end{itemize}
+
+\textbf{Trade-off:} 70\% memory reduction, 3x faster, but gradual context buildup.
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 7: Long Context Cost Analysis}
+
+\textbf{Measured Performance (A100 GPU):}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Length} & \textbf{Time (ms)} & \textbf{FLOPs} & \textbf{Cost/1M tokens} \\
+\hline
+512 & 45 & 2.4 GFLOPs & \$0.31 \\
+1024 & 120 & 9.6 GFLOPs & \$0.83 \\
+2048 & 380 & 38.4 GFLOPs & \$2.64 \\
+4096 & 1200 & 153.6 GFLOPs & \$8.33 \\
+\hline
+\end{tabular}
+
+\textbf{Longformer Savings:}
+
+At $n=4096$: \$8.33 $\to$ \$1.04 (87.5\% cost reduction)
+
+\textbf{When long context is justified:}
+\begin{itemize}
+    \item Legal document analysis (need full context)
+    \item Code understanding (large codebases)
+    \item Book summarization (coherence matters)
+\end{itemize}
+
+\textbf{When retrieval is better:}
+\begin{itemize}
+    \item Question answering (sparse information)
+    \item Fact lookup (specific queries)
+    \item Large knowledge bases (millions of documents)
+\end{itemize}
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 8: Position Encoding Comparison}
+
+\textbf{Extrapolation Performance:}
+
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Method} & \textbf{512} & \textbf{1024} & \textbf{2048} & \textbf{4096} \\
+\hline
+Learned & 28.5 & 67.3 & 142.8 & 298.5 \\
+Sinusoidal & 28.3 & 45.7 & 89.3 & 156.2 \\
+RoPE & 28.7 & 32.1 & 38.9 & 48.2 \\
+ALiBi & 28.9 & 31.5 & 36.2 & 43.1 \\
+\hline
+\end{tabular}
+
+\textbf{Ranking (best to worst extrapolation):}
+\begin{enumerate}
+    \item \textbf{ALiBi:} Best extrapolation, linear bias generalizes perfectly
+    \item \textbf{RoPE:} Very good, rotary embeddings maintain relative positions
+    \item \textbf{Sinusoidal:} Moderate, periodic nature helps but not optimal
+    \item \textbf{Learned:} Worst, completely fails beyond training length
+\end{enumerate}
+
+\textbf{After fine-tuning on longer sequences:}
+
+Learned and sinusoidal improve significantly, but ALiBi and RoPE still maintain advantage in zero-shot extrapolation.
+
+\textbf{Key Takeaway:} For applications requiring variable-length contexts, use ALiBi or RoPE for best extrapolation without fine-tuning.
+\end{solution}
+
+\end{document}

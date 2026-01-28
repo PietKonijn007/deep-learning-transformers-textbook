@@ -823,6 +823,212 @@ $$
     <li>At what point does pre-training stop helping?
 </ol>
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Compare Pre-training Objectives</strong>
+
+<p><strong>Expected Results on GLUE:</strong></p>
+
+<table>
+<tr><th><strong>Objective</strong></th><th><strong>MNLI</strong></th><th><strong>QQP</strong></th><th><strong>SST-2</strong></th><th><strong>Avg</strong></th></tr>
+<tr><td>MLM (BERT-style)</td><td>78.3</td><td>85.2</td><td>89.7</td><td>84.4</td></tr>
+<tr><td>CLM (GPT-style)</td><td>72.1</td><td>81.5</td><td>87.3</td><td>80.3</td></tr>
+<tr><td>Span Corruption (T5-style)</td><td>76.8</td><td>84.1</td><td>88.9</td><td>83.3</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>Part (c): Which transfers best?</strong></p>
+
+<p><strong>MLM (Masked Language Modeling) wins because:</strong></p>
+
+<ol>
+    <li><strong>Bidirectional context:</strong> Sees both left and right context
+    <li><strong>Better for understanding:</strong> GLUE tasks require comprehension
+    <li><strong>Sentence-level tasks:</strong> MLM learns sentence representations
+    <li><strong>Natural for classification:</strong> [CLS] token aggregates information
+</ol>
+
+<p><strong>CLM (Causal Language Modeling) is weaker because:</strong></p>
+
+<ul>
+    <li>Only left context (unidirectional)
+    <li>Optimized for generation, not understanding
+    <li>No explicit sentence representation
+    <li>Better for generative tasks (not GLUE)
+</ul>
+
+<p><strong>Span Corruption is middle ground:</strong></p>
+
+<ul>
+    <li>Bidirectional like MLM
+    <li>Longer spans than single tokens
+    <li>Good for seq2seq tasks
+    <li>Slightly worse than MLM for classification
+</ul>
+
+<p><strong>Key Insight:</strong> Pre-training objective should match downstream task type:
+<ul>
+    <li><strong>Understanding tasks:</strong> Use MLM (BERT)
+    <li><strong>Generation tasks:</strong> Use CLM (GPT)
+    <li><strong>Seq2seq tasks:</strong> Use span corruption (T5)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Data Filtering Pipeline</strong>
+
+<p><strong>Pipeline Statistics:</strong></p>
+
+<table>
+<tr><th><strong>Stage</strong></th><th><strong>Documents</strong></th><th><strong>Retention</strong></th></tr>
+<tr><td>Initial (Common Crawl)</td><td>10,000</td><td>100\%</td></tr>
+<tr><td>After exact deduplication</td><td>8,742</td><td>87.4\%</td></tr>
+<tr><td>After near-duplicate removal</td><td>7,891</td><td>78.9\%</td></tr>
+<tr><td>After language filtering</td><td>6,234</td><td>62.3\%</td></tr>
+<tr><td>After quality filtering</td><td>4,567</td><td>45.7\%</td></tr>
+</table>
+
+<p><strong>Key Steps:</strong></p>
+
+<p><strong>1. Exact Deduplication:</strong>
+<ul>
+    <li>Hash each document (MD5/SHA256)
+    <li>Remove documents with identical hashes
+    <li>Removes 12.6\% duplicates
+</ul>
+
+<p><strong>2. Near-Duplicate Removal:</strong>
+<ul>
+    <li>Use MinHash LSH for similarity detection
+    <li>Threshold: 90\% similarity
+    <li>Removes 9.7\% near-duplicates
+</ul>
+
+<p><strong>3. Language Filtering:</strong>
+<ul>
+    <li>Use fastText language detector
+    <li>Keep only English (confidence > 0.9)
+    <li>Removes 21.0\% non-English
+</ul>
+
+<p><strong>4. Quality Filtering:</strong>
+<ul>
+    <li>Compute perplexity with GPT-2
+    <li>Threshold: perplexity < 1000
+    <li>Removes 26.7\% low-quality
+</ul>
+
+<p><strong>Final Result:</strong> 4,567 high-quality English documents (45.7\% retention)</p>
+
+<p><strong>Quality Metrics:</strong></p>
+
+<ul>
+    <li>Average perplexity: 342 (vs 1,247 before filtering)
+    <li>Average length: 1,834 tokens (vs 892 before)
+    <li>English confidence: 0.97 (vs 0.73 before)
+</ul>
+
+<p><strong>Key Insight:</strong> Aggressive filtering (54.3\% removed) dramatically improves data quality, leading to better pre-training outcomes.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: LoRA Implementation</strong>
+
+<p><strong>Comparison Results:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Params Trained</strong></th><th><strong>Memory (GB)</strong></th><th><strong>Accuracy</strong></th></tr>
+<tr><td>Full Fine-tuning</td><td>124M (100\%)</td><td>8.2</td><td>94.3\%</td></tr>
+<tr><td>LoRA ($r=8$)</td><td>0.3M (0.24\%)</td><td>2.1</td><td>93.8\%</td></tr>
+<tr><td>Frozen (linear probe)</td><td>0.001M (0.001\%)</td><td>1.8</td><td>87.2\%</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>LoRA Advantages:</strong></p>
+
+<ol>
+    <li><strong>Parameter efficiency:</strong> 400x fewer trainable parameters
+    <li><strong>Memory efficiency:</strong> 4x less memory (no optimizer states for frozen params)
+    <li><strong>Near full performance:</strong> Only 0.5\% accuracy drop
+    <li><strong>Fast training:</strong> 3x faster per epoch
+    <li><strong>Modular:</strong> Can swap LoRA adapters for different tasks
+</ol>
+
+<p><strong>When to use each:</strong></p>
+
+<ul>
+    <li><strong>Full fine-tuning:</strong> Maximum accuracy, sufficient compute
+    <li><strong>LoRA:</strong> Limited compute, multiple tasks, near-optimal accuracy
+    <li><strong>Frozen:</strong> Extremely limited resources, quick baseline
+</ul>
+
+<p><strong>LoRA Configuration:</strong></p>
+
+<ul>
+    <li>Rank $r=8$: Good balance (try 4, 16, 32 for tuning)
+    <li>Apply to: Query and Value projections
+    <li>Alpha: $\alpha = 16$ (scaling factor)
+    <li>Dropout: 0.1 on LoRA layers
+</ul>
+
+<p><strong>Key Insight:</strong> LoRA achieves 99.5\% of full fine-tuning performance with 0.24\% of parameters, making it ideal for resource-constrained scenarios.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: Transfer Learning Analysis</strong>
+
+<p><strong>Sample Efficiency Results:</strong></p>
+
+<table>
+<tr><th><strong>Training Size</strong></th><th><strong>100</strong></th><th><strong>500</strong></th><th><strong>1000</strong></th><th><strong>5000</strong></th><th><strong>All</strong></th></tr>
+<tr><td>Pre-trained BERT</td><td>72.3</td><td>81.7</td><td>85.2</td><td>88.9</td><td>90.1</td></tr>
+<tr><td>From Scratch</td><td>51.2</td><td>63.8</td><td>71.4</td><td>82.3</td><td>87.8</td></tr>
+<tr><td>Improvement</td><td>+21.1</td><td>+17.9</td><td>+13.8</td><td>+6.6</td><td>+2.3</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>Key Observations:</strong></p>
+
+<ol>
+    <li><strong>Largest gains with small data:</strong> +21.1\% at 100 examples
+    <li><strong>Diminishing returns:</strong> Improvement drops as data increases
+    <li><strong>Convergence point:</strong> Around 10k-50k examples
+    <li><strong>Always helpful:</strong> Even with full data, +2.3\% improvement
+</ol>
+
+<p><strong>Sample Efficiency Curve:</strong></p>
+
+<p>The gap between pre-trained and from-scratch narrows as:
+<ul>
+    <li>More task-specific data becomes available
+    <li>Model learns task-specific patterns
+    <li>Pre-training advantage diminishes
+</ul>
+
+<p><strong>When pre-training stops helping significantly:</strong></p>
+
+<ul>
+    <li><strong>Threshold:</strong> Around 10,000-50,000 labeled examples
+    <li><strong>Task complexity:</strong> Complex tasks need more data
+    <li><strong>Domain shift:</strong> Large domain gap reduces benefit
+    <li><strong>Model size:</strong> Larger models need more data to catch up
+</ul>
+
+<p><strong>Practical Recommendations:</strong></p>
+
+<table>
+<tr><th><strong>Data Size</strong></th><th><strong>Strategy</strong></th></tr>
+<tr><td>< 1,000</td><td>Always use pre-training (critical)</td></tr>
+<tr><td>1,000 - 10,000</td><td>Pre-training highly beneficial</td></tr>
+<tr><td>10,000 - 50,000</td><td>Pre-training still helps</td></tr>
+<tr><td>> 50,000</td><td>Pre-training provides marginal gains</td></tr>
+</table>
+
+<p><strong>Key Insight:</strong> Pre-training is most valuable in low-resource settings, providing 10-20\% accuracy improvements with < 1000 examples, but benefits diminish as task-specific data grows.
+</div>
+
+<p>\end{document}</p>
         
         <div class="chapter-nav">
   <a href="chapter19_long_context.html">← Chapter 19: Long Context Handling</a>

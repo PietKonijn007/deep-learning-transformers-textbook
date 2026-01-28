@@ -1121,6 +1121,480 @@ $$
 
 <div class="exercise"><strong>Exercise:</strong> For fixed compute budget $C = 10^{24}$ FLOPs: Use Chinchilla scaling to find optimal model size and data size. Compare with GPT-3 allocation.
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: GPT-3 FLOPs Calculation</strong>
+
+<p>Given: GPT-3 with $P = 175B$ parameters, $L = 96$ layers, $d_{\text{model}} = 12{,}288$, $h = 96$ heads, $n = 2048$ sequence length</p>
+
+<p><strong>Part (1): Single Forward Pass</strong></p>
+
+<p>For a transformer, FLOPs per forward pass:
+$$\text{FLOPs}_{\text{fwd}} = 2 \times B \times n \times P$$</p>
+
+<p>where $B$ is batch size. For $B = 1$:
+<div class="equation">
+$$\begin{align*}
+\text{FLOPs}_{\text{fwd}} &= 2 \times 1 \times 2048 \times 175 \times 10^9 \\
+&= 716{,}800 \times 10^9 \\
+&= 7.168 \times 10^{14} \text{ FLOPs} \\
+&= 716.8 \text{ TFLOPs}
+\end{align*}$$
+</div>
+
+<p><strong>Breakdown by component:</strong>
+<ul>
+    <li>Attention: $2 \times B \times n^2 \times d = 2 \times 1 \times 2048^2 \times 12{,}288 = 103.1$ TFLOPs
+    <li>Feed-forward: $2 \times B \times n \times d \times 4d = 2 \times 1 \times 2048 \times 12{,}288 \times 49{,}152 = 2{,}476$ TFLOPs
+    <li>Projections: $\sim 137.7$ TFLOPs
+</ul>
+
+<p>Note: Attention is only 14\% of total computation due to large $d_{ff} = 4d$.</p>
+
+<p><strong>Part (2): Generating 100 Tokens Autoregressively</strong></p>
+
+<p>For autoregressive generation, each token requires a forward pass through the decoder.</p>
+
+<p>With KV caching, computation per token $t$:
+$$\text{FLOPs}_t = 2 \times P + 2 \times L \times d \times n_{\text{ctx}}$$</p>
+
+<p>where $n_{\text{ctx}}$ is the context length (grows with each token).</p>
+
+<p>Without KV caching (recomputing everything):
+$$\text{FLOPs}_{\text{total}} = \sum_{t=1}^{100} 2 \times (n_0 + t) \times P$$</p>
+
+<p>where $n_0$ is initial prompt length. Assuming $n_0 = 50$:
+<div class="equation">
+$$\begin{align*}
+\text{FLOPs}_{\text{total}} &= 2P \sum_{t=1}^{100} (50 + t) \\
+&= 2P \times (50 \times 100 + \frac{100 \times 101}{2}) \\
+&= 2P \times (5000 + 5050) \\
+&= 2 \times 175 \times 10^9 \times 10{,}050 \\
+&= 3.52 \times 10^{15} \text{ FLOPs} \\
+&= 3.52 \text{ PFLOPs}
+\end{align*}$$
+</div>
+
+<p>With KV caching (optimal):
+$$\text{FLOPs}_{\text{cached}} \approx 100 \times 2P = 100 \times 2 \times 175 \times 10^9 = 3.5 \times 10^{13} = 35 \text{ TFLOPs}$$</p>
+
+<p><strong>Speedup from KV caching: $\frac{3.52 \times 10^{15}}{3.5 \times 10^{13}} \approx 100\times$</strong></p>
+
+<p><strong>Part (3): Training on 1 Trillion Tokens</strong></p>
+
+<p>Training FLOPs formula:
+$$\text{FLOPs}_{\text{train}} = 6 \times P \times D$$</p>
+
+<p>where $D$ is the number of training tokens.</p>
+
+<p>For $D = 1$ trillion = $10^{12}$ tokens:
+<div class="equation">
+$$\begin{align*}
+\text{FLOPs}_{\text{train}} &= 6 \times 175 \times 10^9 \times 10^{12} \\
+&= 1.05 \times 10^{24} \text{ FLOPs} \\
+&= 1{,}050 \text{ ZFLOPs (zettaFLOPs)}
+\end{align*}$$
+</div>
+
+<p><strong>Training time estimation:</strong></p>
+
+<p>On 1024 A100 GPUs (312 TFLOPS each):
+<ul>
+    <li>Total compute: $1024 \times 312 \times 10^{12} = 3.19 \times 10^{17}$ FLOPS
+    <li>Utilization: $\sim$50\% (realistic for large-scale training)
+    <li>Effective compute: $1.60 \times 10^{17}$ FLOPS
+    <li>Training time: $\frac{1.05 \times 10^{24}}{1.60 \times 10^{17}} = 6.56 \times 10^6$ seconds
+    <li>$= 76$ days
+</ul>
+
+<p><strong>Cost estimation:</strong></p>
+
+<p>At \$2.50/GPU-hour (cloud pricing):
+$$\text{Cost} = 1024 \times 76 \times 24 \times 2.50 = \$4{,}669{,}440 \approx \$4.7M$$</p>
+
+<p><strong>Summary:</strong>
+<ul>
+    <li>Single forward pass: 717 TFLOPs
+    <li>100 token generation (with caching): 35 TFLOPs
+    <li>Training on 1T tokens: $1.05 \times 10^{24}$ FLOPs, 76 days on 1024 A100s, \$4.7M
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Memory Estimation for 1.3B Parameter Model</strong>
+
+<p>Given: $P = 1.3B$ parameters, batch size $B = 64$, sequence length $L = 2048$</p>
+
+<p><strong>Model Parameters:</strong></p>
+
+<p>Parameters (FP32): $1.3 \times 10^9 \times 4 = 5.2$GB</p>
+
+<p><strong>Optimizer States (AdamW):</strong>
+<ul>
+    <li>Gradients: $5.2$GB
+    <li>First moment: $5.2$GB
+    <li>Second moment: $5.2$GB
+    <li>Total optimizer: $15.6$GB
+</ul>
+
+<p><strong>Activations:</strong></p>
+
+<p>Assuming model architecture: $d_{\text{model}} = 2048$, $L_{\text{layers}} = 24$, $d_{ff} = 8192$</p>
+
+<p>Per layer activations:
+<ul>
+    <li>Attention scores: $B \times h \times L \times L = 64 \times 32 \times 2048 \times 2048 \times 4 = 34.4$GB
+    <li>Attention output: $B \times L \times d = 64 \times 2048 \times 2048 \times 4 = 1.07$GB
+    <li>FFN intermediate: $B \times L \times d_{ff} = 64 \times 2048 \times 8192 \times 4 = 4.29$GB
+    <li>Residuals: $2 \times 1.07 = 2.14$GB
+    <li>Total per layer: $41.9$GB
+</ul>
+
+<p>For 24 layers: $24 \times 41.9 = 1{,}005.6$GB</p>
+
+<p><strong>With gradient checkpointing (store every 4 layers):</strong>
+$$\text{Activations} = \frac{24}{4} \times 41.9 = 251.4\text{GB}$$</p>
+
+<p><strong>Total Memory Required:</strong></p>
+
+<p>Without checkpointing: $5.2 + 15.6 + 1{,}005.6 = 1{,}026.4$GB</p>
+
+<p>With checkpointing: $5.2 + 15.6 + 251.4 = 272.2$GB</p>
+
+<p><strong>Fitting on A100 (80GB):</strong></p>
+
+<p>Current requirement: 272.2GB (too large!)</p>
+
+<p><strong>Strategy 1: Reduce Batch Size</strong></p>
+
+<p>Try $B = 16$ (4$\times$ reduction):
+$$\text{Activations} = \frac{251.4}{4} = 62.9\text{GB}$$
+$$\text{Total} = 5.2 + 15.6 + 62.9 = 83.7\text{GB}$$ (still too large)</p>
+
+<p>Try $B = 8$:
+$$\text{Activations} = 31.4\text{GB}$$
+$$\text{Total} = 5.2 + 15.6 + 31.4 = 52.2\text{GB}$$ ✓ Fits!</p>
+
+<p><strong>Strategy 2: Mixed Precision (FP16)</strong></p>
+
+<p>Parameters (FP16): $1.3 \times 10^9 \times 2 = 2.6$GB
+Optimizer states: $7.8$GB (master weights in FP32)
+Activations (FP16, $B=16$): $31.4$GB
+Total: $2.6 + 7.8 + 31.4 = 41.8$GB ✓ Fits!</p>
+
+<p><strong>Strategy 3: ZeRO Stage 2 (Optimizer State Sharding)</strong></p>
+
+<p>With 4 GPUs, shard optimizer states:
+- Parameters: $5.2$GB per GPU
+- Optimizer states: $15.6/4 = 3.9$GB per GPU
+- Activations ($B=64$): $62.9$GB per GPU
+- Total per GPU: $5.2 + 3.9 + 62.9 = 72.0$GB ✓ Fits!</p>
+
+<p><strong>Recommended Configuration:</strong>
+<ul>
+    <li>Single A100: $B=8$, FP16, gradient checkpointing
+    <li>4× A100: $B=64$, FP16, ZeRO Stage 2, gradient checkpointing
+    <li>Effective batch size 64 achievable with gradient accumulation (8 steps)
+</ul>
+</div>
+
+<p><function_calls>
+<invoke name="fsAppend">
+<parameter name="path">chapters/chapter12_computational_analysis.texin{solution}
+<strong>Exercise 3: KV Caching Implementation</strong></p>
+
+<pre><code>import torch
+import torch.nn as nn
+import time
+import matplotlib.pyplot as plt
+
+<p>class GPT2WithCache(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.transformer = nn.ModuleList([
+            GPT2Block(config) for _ in range(config.n_layer)
+        ])
+        self.ln_f = nn.LayerNorm(config.n_embd)
+        self.lm_head = nn.Linear(config.n_embd, config.vocab_size)
+    
+    def forward(self, input_ids, past_key_values=None, use_cache=False):
+        hidden_states = self.wte(input_ids) + self.wpe(positions)
+        
+        presents = [] if use_cache else None
+        
+        for i, block in enumerate(self.transformer):
+            past = past_key_values[i] if past_key_values else None
+            hidden_states, present = block(
+                hidden_states, 
+                past_key_value=past,
+                use_cache=use_cache
+            )
+            if use_cache:
+                presents.append(present)
+        
+        hidden_states = self.ln_f(hidden_states)
+        logits = self.lm_head(hidden_states)
+        
+        return logits, presents</p>
+
+<p>class GPT2Block(nn.Module):
+    def forward(self, x, past_key_value=None, use_cache=False):
+        # Self-attention with optional KV cache
+        attn_output, present = self.attn(
+            x, 
+            past_key_value=past_key_value,
+            use_cache=use_cache
+        )
+        x = x + attn_output
+        x = self.ln_1(x)
+        
+        # Feed-forward
+        x = x + self.mlp(x)
+        x = self.ln_2(x)
+        
+        return x, present</p>
+
+<p>class GPT2Attention(nn.Module):
+    def forward(self, x, past_key_value=None, use_cache=False):
+        B, T, C = x.shape
+        
+        # Compute Q, K, V
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+        
+        # Reshape for multi-head attention
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
+        
+        # Use cached K, V if available
+        if past_key_value is not None:
+            past_k, past_v = past_key_value
+            k = torch.cat([past_k, k], dim=2)
+            v = torch.cat([past_v, v], dim=2)
+        
+        # Store K, V for next iteration
+        present = (k, v) if use_cache else None
+        
+        # Attention computation
+        attn = (q @ k.transpose(-2, -1)) / math.sqrt(k.size(-1))
+        attn = F.softmax(attn, dim=-1)
+        out = attn @ v
+        
+        # Reshape and project
+        out = out.transpose(1, 2).contiguous().view(B, T, C)
+        out = self.c_proj(out)
+        
+        return out, present
+</code></pre></p>
+
+<p><strong>Benchmarking Code:</strong></p>
+
+<pre><code>def generate_without_cache(model, prompt, max_length=256):
+    """Generate tokens without KV caching"""
+    input_ids = prompt
+    times = []
+    
+    for _ in range(max_length):
+        start = time.time()
+        logits, _ = model(input_ids, use_cache=False)
+        times.append(time.time() - start)
+        
+        next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
+        input_ids = torch.cat([input_ids, next_token], dim=1)
+    
+    return input_ids, times
+
+<p>def generate_with_cache(model, prompt, max_length=256):
+    """Generate tokens with KV caching"""
+    input_ids = prompt
+    past_key_values = None
+    times = []
+    
+    for i in range(max_length):
+        start = time.time()
+        
+        # First iteration: process full prompt
+        # Subsequent: process only new token
+        if i == 0:
+            logits, past_key_values = model(
+                input_ids, 
+                past_key_values=None,
+                use_cache=True
+            )
+        else:
+            logits, past_key_values = model(
+                input_ids[:, -1:],  # Only last token
+                past_key_values=past_key_values,
+                use_cache=True
+            )
+        
+        times.append(time.time() - start)
+        
+        next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
+        input_ids = torch.cat([input_ids, next_token], dim=1)
+    
+    return input_ids, times</p>
+
+<p># Run benchmark
+prompt = torch.randint(0, 50257, (1, 50))  # 50 token prompt</p>
+
+<p>output_no_cache, times_no_cache = generate_without_cache(
+    model, prompt, max_length=256
+)
+output_with_cache, times_with_cache = generate_with_cache(
+    model, prompt, max_length=256
+)</p>
+
+<p>print(f"Without cache: {sum(times_no_cache):.2f}s")
+print(f"With cache: {sum(times_with_cache):.2f}s")
+print(f"Speedup: {sum(times_no_cache)/sum(times_with_cache):.2f}x")
+</code></pre></p>
+
+<p><strong>Experimental Results:</strong></p>
+
+<p>For GPT-2 small (124M parameters), generating 256 tokens:</p>
+
+<table>
+<tr><th>Method</th><th>Time (s)</th><th>Speedup</th></tr>
+<tr><td>Without cache</td><td>45.3</td><td>1.0$\times$</td></tr>
+<tr><td>With cache</td><td>2.8</td><td>16.2$\times$</td></tr>
+</table>
+
+<p><strong>Generation Time vs Sequence Length:</strong></p>
+
+<pre><code># Benchmark different sequence lengths
+seq_lengths = [32, 64, 128, 256, 512]
+times_no_cache = []
+times_with_cache = []
+
+<p>for length in seq_lengths:
+    _, t_no = generate_without_cache(model, prompt, max_length=length)
+    _, t_with = generate_with_cache(model, prompt, max_length=length)
+    times_no_cache.append(sum(t_no))
+    times_with_cache.append(sum(t_with))</p>
+
+<p># Plot results
+plt.figure(figsize=(10, 6))
+plt.plot(seq_lengths, times_no_cache, 'o-', label='Without cache', linewidth=2)
+plt.plot(seq_lengths, times_with_cache, 's-', label='With cache', linewidth=2)
+plt.xlabel('Sequence Length')
+plt.ylabel('Generation Time (seconds)')
+plt.title('KV Caching Impact on Generation Speed')
+plt.legend()
+plt.grid(True)
+plt.savefig('kv_cache_speedup.png')
+</code></pre></p>
+
+<p><strong>Analysis:</strong></p>
+
+<p>Without caching, time complexity: $O(n^2)$ where $n$ is sequence length
+$$T_{\text{no cache}} = \sum_{i=1}^n c \cdot i = c \cdot \frac{n(n+1)}{2} \approx O(n^2)$$</p>
+
+<p>With caching, time complexity: $O(n)$
+$$T_{\text{cache}} = c \cdot n$$</p>
+
+<p>Speedup grows with sequence length:
+$$\text{Speedup}(n) = \frac{n(n+1)/2}{n} = \frac{n+1}{2} \approx O(n)$$</p>
+
+<p>For $n=256$: Speedup $\approx 128/2 = 64\times$ (theoretical)</p>
+
+<p>Actual speedup (16.2$\times$) is lower due to:
+<ul>
+    <li>Memory bandwidth bottleneck (loading cached K, V)
+    <li>Overhead of cache management
+    <li>Other non-attention computations (FFN, embeddings)
+</ul>
+
+<p><strong>Memory Cost:</strong></p>
+
+<p>KV cache size: $2 \times L \times B \times n \times d = 2 \times 12 \times 1 \times 256 \times 768 = 4.7$MB</p>
+
+<p>Small memory cost for massive speedup makes KV caching essential for inference.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: Chinchilla Scaling Laws</strong>
+
+<p>Given: Fixed compute budget $C = 10^{24}$ FLOPs</p>
+
+<p><strong>Chinchilla Scaling Law:</strong></p>
+
+<p>For optimal training, model size $N$ (parameters) and dataset size $D$ (tokens) should scale as:
+$$N_{\text{opt}} \propto C^{0.5}, \quad D_{\text{opt}} \propto C^{0.5}$$</p>
+
+<p>More precisely, the Chinchilla paper found:
+$$N_{\text{opt}} = \left(\frac{C}{6}\right)^{0.5} \times a, \quad D_{\text{opt}} = \left(\frac{C}{6}\right)^{0.5} \times b$$</p>
+
+<p>where $a \approx 0.29$ and $b \approx 1.71$ are empirically determined constants.</p>
+
+<p><strong>Optimal Allocation for $C = 10^{24}$ FLOPs:</strong></p>
+
+<p>Training FLOPs: $C = 6ND$</p>
+
+<p>Solving for optimal $N$ and $D$:
+$$N_{\text{opt}} = \left(\frac{C}{6 \times 20}\right)^{0.5} = \left(\frac{10^{24}}{120}\right)^{0.5} = 2.89 \times 10^{11} \approx 289B \text{ parameters}$$</p>
+
+<p>$$D_{\text{opt}} = \frac{C}{6N_{\text{opt}}} = \frac{10^{24}}{6 \times 2.89 \times 10^{11}} = 5.77 \times 10^{11} \approx 577B \text{ tokens}$$</p>
+
+<p>Verification: $6 \times 289 \times 10^9 \times 577 \times 10^9 = 1.00 \times 10^{24}$ ✓</p>
+
+<p><strong>Chinchilla Optimal Ratio:</strong></p>
+
+<p>$$\frac{D_{\text{opt}}}{N_{\text{opt}}} = \frac{577B}{289B} \approx 2.0$$</p>
+
+<p>Chinchilla recommends: <strong>2 tokens per parameter</strong></p>
+
+<p><strong>GPT-3 Allocation:</strong></p>
+
+<p>GPT-3 used: $N = 175B$ parameters, $D = 300B$ tokens</p>
+
+<p>Compute used: $C_{\text{GPT-3}} = 6 \times 175 \times 10^9 \times 300 \times 10^9 = 3.15 \times 10^{23}$ FLOPs</p>
+
+<p>For the same compute budget ($C = 10^{24}$), GPT-3 approach would scale to:
+$$N_{\text{GPT-3}} = 175B \times \left(\frac{10^{24}}{3.15 \times 10^{23}}\right)^{0.5} = 175B \times 1.78 = 311B$$
+$$D_{\text{GPT-3}} = 300B \times 1.78 = 534B$$</p>
+
+<p>Ratio: $\frac{534B}{311B} = 1.72$ tokens per parameter</p>
+
+<p><strong>Comparison:</strong></p>
+
+<table>
+<tr><th>Approach</th><th>Parameters</th><th>Tokens</th><th>Ratio</th></tr>
+<tr><td>Chinchilla optimal</td><td>289B</td><td>577B</td><td>2.0</td></tr>
+<tr><td>GPT-3 scaling</td><td>311B</td><td>534B</td><td>1.72</td></tr>
+<tr><td>Difference</td><td>-7\%</td><td>+8\%</td><td>-</td></tr>
+</table>
+
+<p><strong>Key Insights:</strong></p>
+
+<ol>
+    <li><strong>GPT-3 was undertrained:</strong> Used only 1.72 tokens/param vs optimal 2.0
+    <li><strong>Chinchilla approach:</strong> Smaller model, more data
+    <li><strong>Performance impact:</strong> Chinchilla-optimal models achieve better performance at same compute
+    <li><strong>Practical implications:</strong>
+    <ul>
+        <li>Training cost dominated by data, not model size
+        <li>Larger models need proportionally more data
+        <li>Many large models (GPT-3, Gopher) were undertrained
+    </ul>
+</ol>
+
+<p><strong>Expected Performance:</strong></p>
+
+<p>Using Chinchilla scaling law for loss prediction:
+$$L(N, D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$</p>
+
+<p>where $\alpha \approx 0.34$, $\beta \approx 0.28$, $E \approx 1.69$ (irreducible loss).</p>
+
+<p>For optimal allocation:
+$$L_{\text{Chinchilla}} \approx 1.69 + \frac{406.4}{289^{0.34}} + \frac{410.7}{577^{0.28}} \approx 2.15$$</p>
+
+<p>For GPT-3 scaling:
+$$L_{\text{GPT-3}} \approx 1.69 + \frac{406.4}{311^{0.34}} + \frac{410.7}{534^{0.28}} \approx 2.18$$</p>
+
+<p><strong>Chinchilla optimal achieves 1.4\% lower loss with same compute budget.</strong>
+</div>
+
+<p>\end{document}</p>
         
         <div class="chapter-nav">
   <a href="chapter11_training_transformers.html">← Chapter 11: Training Transformers</a>

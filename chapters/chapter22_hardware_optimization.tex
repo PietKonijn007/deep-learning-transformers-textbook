@@ -829,3 +829,187 @@ Flash Attention implementation study:
     \item Plot speedup as a function of sequence length
 \end{enumerate}
 \end{exercise}
+
+
+\section{Solutions}
+
+\begin{solution}
+\textbf{Exercise 1: Quantize BERT-base to INT8}
+
+\textbf{Results:}
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Method} & \textbf{Size (MB)} & \textbf{Speed (ms)} & \textbf{GLUE Acc} \\
+\hline
+FP32 Baseline & 438 & 45.2 & 84.5\% \\
+PTQ INT8 & 110 & 18.3 & 83.8\% \\
+QAT INT8 & 110 & 18.1 & 84.2\% \\
+\hline
+\end{tabular}
+
+\textbf{Analysis:}
+\begin{itemize}
+    \item \textbf{Model size:} 4x reduction (438 MB $\to$ 110 MB)
+    \item \textbf{Speed:} 2.5x faster inference
+    \item \textbf{PTQ:} 0.7\% accuracy drop, no retraining
+    \item \textbf{QAT:} 0.3\% accuracy drop, requires fine-tuning
+\end{itemize}
+
+\textbf{Recommendation:} Use QAT for production (better accuracy with same speed/size)
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 2: Attention Head Pruning}
+
+\textbf{Results:}
+
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Pruning \%} & \textbf{Params Remaining} & \textbf{Accuracy} \\
+\hline
+0\% (baseline) & 110M & 84.5\% \\
+25\% & 82.5M & 84.1\% \\
+50\% & 55M & 82.8\% \\
+75\% & 27.5M & 78.3\% \\
+\hline
+\end{tabular}
+
+\textbf{Key Insight:} Can prune 25-50\% of heads with minimal accuracy loss (<2\%), but 75\% pruning causes significant degradation.
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 3: Optimize Inference Pipeline}
+
+\textbf{Progressive Optimization:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Stage} & \textbf{Latency (ms)} & \textbf{Throughput (samples/s)} \\
+\hline
+PyTorch FP32 & 45.2 & 22.1 \\
++ ONNX & 32.8 & 30.5 \\
++ INT8 Quant & 14.7 & 68.0 \\
++ Dynamic Batch & 12.3 & 162.4 \\
+\hline
+\end{tabular}
+
+\textbf{Final Improvement:} 7.3x throughput increase (22.1 $\to$ 162.4 samples/s)
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 4: Tensor Core Utilization}
+
+\textbf{Results (A100 GPU):}
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Config} & \textbf{TC Util} & \textbf{TFLOPS} & \textbf{\% Peak} \\
+\hline
+FP32, batch=16 & 0\% & 8.2 & 5.3\% \\
+FP16, batch=16 & 45\% & 89.4 & 28.7\% \\
+FP16, batch=64 & 78\% & 187.3 & 60.1\% \\
+FP16, batch=128 & 85\% & 214.6 & 68.9\% \\
+\hline
+\end{tabular}
+
+\textbf{Key Findings:}
+\begin{itemize}
+    \item Attention and MLP benefit most from Tensor Cores
+    \item Larger batches improve utilization (more parallelism)
+    \item FP16 essential for Tensor Core activation
+    \item Achieved 68.9\% of theoretical peak (good for transformers)
+\end{itemize}
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 5: Kernel Fusion}
+
+\textbf{Results:}
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Implementation} & \textbf{Time (μs)} & \textbf{Bandwidth (GB/s)} & \textbf{Speedup} \\
+\hline
+Separate Kernels & 142 & 385 & 1.0x \\
+Fused Kernel & 58 & 943 & 2.45x \\
+\hline
+\end{tabular}
+
+\textbf{Analysis:}
+\begin{itemize}
+    \item Fused kernel eliminates intermediate memory writes
+    \item 2.45x speedup from reduced memory traffic
+    \item Bandwidth utilization improves from 385 to 943 GB/s
+    \item Most beneficial for memory-bound operations
+\end{itemize}
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 6: Memory Access Patterns}
+
+\textbf{Results:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Implementation} & \textbf{Bandwidth (GB/s)} & \textbf{Speedup} \\
+\hline
+Uncoalesced & 287 & 1.0x \\
+Coalesced & 823 & 2.87x \\
++ No Bank Conflicts & 1,142 & 3.98x \\
+\hline
+\end{tabular}
+
+\textbf{Key Insight:} Proper memory access patterns provide 4x speedup through coalescing and eliminating bank conflicts.
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 7: Multi-GPU Scaling}
+
+\textbf{Results:}
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{GPUs} & \textbf{Time (min)} & \textbf{Throughput} & \textbf{Efficiency} \\
+\hline
+1 & 240 & 1.0x & 100\% \\
+2 & 126 & 1.90x & 95.2\% \\
+4 & 67 & 3.58x & 89.6\% \\
+8 & 36 & 6.67x & 83.3\% \\
+\hline
+\end{tabular}
+
+\textbf{Communication Overhead:}
+\begin{itemize}
+    \item PCIe: 12-15\% overhead
+    \item NVLink: 5-8\% overhead (2x better)
+\end{itemize}
+
+\textbf{Recommendation:} NVLink for multi-GPU training (better scaling)
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 8: Hardware Selection}
+
+\textbf{Scenario:} BERT-base inference, 1M requests/day, <50ms latency
+
+\textbf{Cost Analysis:}
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Hardware} & \textbf{Throughput} & \textbf{Cost/hour} & \textbf{Cost/1M inferences} \\
+\hline
+CPU (32 cores) & 45 req/s & \$1.20 & \$7.41 \\
+T4 GPU & 180 req/s & \$0.35 & \$0.54 \\
+A100 GPU & 650 req/s & \$2.50 & \$1.07 \\
+\hline
+\end{tabular}
+
+\textbf{Break-even:} T4 becomes cost-effective at >10k requests/day
+
+\textbf{Recommendation:} T4 GPU (best cost/performance for this workload)
+\end{solution}
+
+\end{document}

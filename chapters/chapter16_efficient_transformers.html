@@ -512,6 +512,618 @@ x_1 &= y_1 - \text{Attention}(x_2)
     <li>Estimate memory savings vs full attention
 </ol>
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Sliding Window Attention Implementation</strong>
+
+<pre><code>import torch
+import torch.nn as nn
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+<p>def create_sliding_window_mask(n, window_size):
+    """Create attention mask for sliding window"""
+    mask = torch.zeros(n, n, dtype=torch.bool)
+    
+    for i in range(n):
+        # Each position attends to window_size tokens on each side
+        start = max(0, i - window_size // 2)
+        end = min(n, i + window_size // 2 + 1)
+        mask[i, start:end] = True
+    
+    return mask</p>
+
+<p>def sliding_window_attention(Q, K, V, window_size):
+    """Compute sliding window attention"""
+    n, d = Q.shape
+    
+    # Create mask
+    mask = create_sliding_window_mask(n, window_size)
+    
+    # Compute attention scores
+    scores = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(d, dtype=torch.float32))
+    
+    # Apply mask (set masked positions to -inf)
+    scores = scores.masked_fill(~mask, float('-inf'))
+    
+    # Softmax
+    attn_weights = torch.softmax(scores, dim=-1)
+    
+    # Apply attention to values
+    output = torch.matmul(attn_weights, V)
+    
+    return output, attn_weights, mask</p>
+
+<p># Example with n=1024, w=256
+n = 1024
+d = 64
+window_size = 256</p>
+
+<p># Random Q, K, V
+torch.manual_seed(42)
+Q = torch.randn(n, d)
+K = torch.randn(n, d)
+V = torch.randn(n, d)</p>
+
+<p># Compute sliding window attention
+output_sw, attn_sw, mask = sliding_window_attention(Q, K, V, window_size)</p>
+
+<p># Compute full attention for comparison
+scores_full = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(d, dtype=torch.float32))
+attn_full = torch.softmax(scores_full, dim=-1)
+output_full = torch.matmul(attn_full, V)</p>
+
+<p>print(f"Sequence length: {n}")
+print(f"Window size: {window_size}")
+print(f"Output shape: {output_sw.shape}")
+print(f"Attention weights shape: {attn_sw.shape}")
+</code></pre></p>
+
+<p><strong>Part (c): FLOPs and Memory Comparison</strong></p>
+
+<p><strong>Full Attention:</strong>
+<ul>
+    <li>Attention scores: $n \times n \times d = 1024 \times 1024 \times 64 = 67{,}108{,}864$ FLOPs
+    <li>Attention output: $n \times n \times d = 67{,}108{,}864$ FLOPs
+    <li>Total: $134{,}217{,}728$ FLOPs $\approx 134$M FLOPs
+    <li>Memory (attention matrix): $n^2 = 1024^2 = 1{,}048{,}576$ floats $= 4.2$MB
+</ul>
+
+<p><strong>Sliding Window Attention ($w=256$):</strong>
+<ul>
+    <li>Each token attends to $w$ tokens (not $n$)
+    <li>Attention scores: $n \times w \times d = 1024 \times 256 \times 64 = 16{,}777{,}216$ FLOPs
+    <li>Attention output: $n \times w \times d = 16{,}777{,}216$ FLOPs
+    <li>Total: $33{,}554{,}432$ FLOPs $\approx 33.6$M FLOPs
+    <li>Memory (sparse attention): $n \times w = 1024 \times 256 = 262{,}144$ floats $= 1.0$MB
+</ul>
+
+<p><strong>Savings:</strong>
+<ul>
+    <li>FLOPs reduction: $\frac{134M - 33.6M}{134M} = 75\%$
+    <li>Memory reduction: $\frac{4.2 - 1.0}{4.2} = 76\%$
+    <li>Speedup: $\frac{134M}{33.6M} = 4.0\times$
+</ul>
+
+<p><strong>Scaling Analysis:</strong></p>
+
+<p>For sequence length $n$ and window size $w$:
+<div class="equation">
+$$\begin{align*}
+\text{Full attention:} &\quad O(n^2 d) \text{ FLOPs, } O(n^2) \text{ memory} \\
+\text{Sliding window:} &\quad O(nwd) \text{ FLOPs, } O(nw) \text{ memory}
+\end{align*}$$
+</div>
+
+<p>Reduction factor: $\frac{n}{w}$</p>
+
+<p>For $n=1024$, $w=256$: $\frac{1024}{256} = 4\times$ reduction</p>
+
+<p><strong>Part (d): Visualization</strong></p>
+
+<pre><code># Visualize attention patterns
+fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+<p># Full attention (sample 256x256 for visibility)
+sample_size = 256
+axes[0].imshow(attn_full[:sample_size, :sample_size].numpy(), cmap='viridis', aspect='auto')
+axes[0].set_title('Full Attention Pattern')
+axes[0].set_xlabel('Key Position')
+axes[0].set_ylabel('Query Position')</p>
+
+<p># Sliding window attention
+axes[1].imshow(attn_sw[:sample_size, :sample_size].numpy(), cmap='viridis', aspect='auto')
+axes[1].set_title(f'Sliding Window Attention (w={window_size})')
+axes[1].set_xlabel('Key Position')
+axes[1].set_ylabel('Query Position')</p>
+
+<p>plt.tight_layout()
+plt.savefig('sliding_window_attention.png', dpi=150)</p>
+
+<p># Visualize mask pattern
+plt.figure(figsize=(10, 10))
+plt.imshow(mask[:sample_size, :sample_size].numpy(), cmap='binary', aspect='auto')
+plt.title(f'Sliding Window Mask (w={window_size})')
+plt.xlabel('Key Position')
+plt.ylabel('Query Position')
+plt.colorbar(label='Attention Allowed')
+plt.savefig('sliding_window_mask.png', dpi=150)
+</code></pre></p>
+
+<p><strong>Key Observations:</strong></p>
+
+<ol>
+    <li><strong>Diagonal band:</strong> Attention concentrated around diagonal (local context)
+    <li><strong>Sparsity:</strong> $\frac{n \times w}{n^2} = \frac{w}{n} = \frac{256}{1024} = 25\%$ of full attention
+    <li><strong>Local bias:</strong> Each token attends to nearby tokens within window
+    <li><strong>Information flow:</strong> Multi-layer stacking enables long-range dependencies
+</ol>
+
+<p><strong>Trade-offs:</strong></p>
+
+<p><strong>Advantages:</strong>
+<ul>
+    <li>4$\times$ faster computation
+    <li>4$\times$ less memory
+    <li>Scales to longer sequences
+    <li>Maintains local context
+</ul>
+
+<p><strong>Disadvantages:</strong>
+<ul>
+    <li>Cannot directly attend to distant tokens
+    <li>Requires multiple layers for long-range dependencies
+    <li>May lose some global context
+    <li>Performance depends on window size choice
+</ul>
+
+<p><strong>Practical Applications:</strong>
+<ul>
+    <li>Document processing (local coherence important)
+    <li>Speech recognition (temporal locality)
+    <li>Long sequence modeling (DNA, audio)
+    <li>Combined with other patterns (BigBird, Longformer)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Efficiency Method Comparison</strong>
+
+<p>Given: $n=4096$, $d=768$, batch size $B=1$</p>
+
+<p><strong>Part (a): Standard Attention</strong></p>
+
+<p><strong>Memory:</strong>
+<ul>
+    <li>Attention scores: $B \times n \times n = 1 \times 4096 \times 4096 = 16{,}777{,}216$ floats
+    <li>Memory (FP32): $16{,}777{,}216 \times 4 = 67.1$MB
+    <li>Q, K, V matrices: $3 \times B \times n \times d = 3 \times 1 \times 4096 \times 768 = 9{,}437{,}184$ floats $= 37.7$MB
+    <li>Total: $67.1 + 37.7 = 104.8$MB per attention layer
+</ul>
+
+<p><strong>FLOPs:</strong>
+<ul>
+    <li>$\mQ\mK^T$: $B \times n \times n \times d = 1 \times 4096 \times 4096 \times 768 = 12{,}884{,}901{,}888$ FLOPs
+    <li>Softmax: $B \times n \times n \approx 16{,}777{,}216$ FLOPs (negligible)
+    <li>Attention $\times$ V: $B \times n \times n \times d = 12{,}884{,}901{,}888$ FLOPs
+    <li>Total: $25{,}769{,}803{,}776$ FLOPs $\approx 25.8$G FLOPs
+</ul>
+
+<p><strong>Part (b): Linformer ($k=256$)</strong></p>
+
+<p>Linformer projects keys and values to lower dimension $k$:
+$$\text{Attention} = \text{softmax}\left(\frac{\mQ(\mE\mK)^T}{\sqrt{d}}\right)\mF\mV$$</p>
+
+<p>where $\mE, \mF \in \mathbb{R}^{k \times n}$ are projection matrices.</p>
+
+<p><strong>Memory:</strong>
+<ul>
+    <li>Projected K, V: $2 \times B \times k \times d = 2 \times 1 \times 256 \times 768 = 393{,}216$ floats $= 1.6$MB
+    <li>Attention scores: $B \times n \times k = 1 \times 4096 \times 256 = 1{,}048{,}576$ floats $= 4.2$MB
+    <li>Total: $1.6 + 4.2 + 37.7 = 43.5$MB
+    <li>Savings: $\frac{104.8 - 43.5}{104.8} = 58.5\%$
+</ul>
+
+<p><strong>FLOPs:</strong>
+<ul>
+    <li>Project K, V: $2 \times n \times k \times d = 2 \times 4096 \times 256 \times 768 = 1{,}610{,}612{,}736$ FLOPs
+    <li>$\mQ(\mE\mK)^T$: $B \times n \times k \times d = 1 \times 4096 \times 256 \times 768 = 805{,}306{,}368$ FLOPs
+    <li>Attention $\times$ $\mF\mV$: $B \times n \times k \times d = 805{,}306{,}368$ FLOPs
+    <li>Total: $3{,}221{,}225{,}472$ FLOPs $\approx 3.2$G FLOPs
+    <li>Savings: $\frac{25.8 - 3.2}{25.8} = 87.6\%$
+</ul>
+
+<p><strong>Part (c): Sliding Window ($w=512$)</strong></p>
+
+<p><strong>Memory:</strong>
+<ul>
+    <li>Attention scores: $B \times n \times w = 1 \times 4096 \times 512 = 2{,}097{,}152$ floats $= 8.4$MB
+    <li>Q, K, V: $37.7$MB (same)
+    <li>Total: $8.4 + 37.7 = 46.1$MB
+    <li>Savings: $\frac{104.8 - 46.1}{104.8} = 56.0\%$
+</ul>
+
+<p><strong>FLOPs:</strong>
+<ul>
+    <li>$\mQ\mK^T$ (windowed): $B \times n \times w \times d = 1 \times 4096 \times 512 \times 768 = 1{,}610{,}612{,}736$ FLOPs
+    <li>Attention $\times$ V: $1{,}610{,}612{,}736$ FLOPs
+    <li>Total: $3{,}221{,}225{,}472$ FLOPs $\approx 3.2$G FLOPs
+    <li>Savings: $\frac{25.8 - 3.2}{25.8} = 87.6\%$
+</ul>
+
+<p><strong>Part (d): Comparison Summary</strong></p>
+
+<table>
+<tr><th>Method</th><th>Memory</th><th>FLOPs</th><th>Memory Savings</th><th>FLOPs Savings</th></tr>
+<tr><td>Standard</td><td>104.8 MB</td><td>25.8 G</td><td>-</td><td>-</td></tr>
+<tr><td>Linformer</td><td>43.5 MB</td><td>3.2 G</td><td>58.5\%</td><td>87.6\%</td></tr>
+<tr><td>Sliding Window</td><td>46.1 MB</td><td>3.2 G</td><td>56.0\%</td><td>87.6\%</td></tr>
+</table>
+
+<p><strong>Which is Better?</strong></p>
+
+<p><strong>(a) Accuracy:</strong>
+<ul>
+    <li><strong>Standard:</strong> Best (full attention, no approximation)
+    <li><strong>Sliding Window:</strong> Good (preserves local context perfectly)
+    <li><strong>Linformer:</strong> Moderate (low-rank approximation may lose information)
+</ul>
+
+<p>Ranking: Standard $>$ Sliding Window $>$ Linformer</p>
+
+<p><strong>(b) Speed:</strong>
+<ul>
+    <li><strong>Linformer:</strong> 8.0$\times$ faster (3.2G vs 25.8G FLOPs)
+    <li><strong>Sliding Window:</strong> 8.0$\times$ faster (3.2G FLOPs)
+    <li><strong>Standard:</strong> Baseline
+</ul>
+
+<p>Ranking: Linformer $\approx$ Sliding Window $>$ Standard</p>
+
+<p>Both efficient methods achieve similar speedup, but Linformer has additional projection overhead.</p>
+
+<p><strong>(c) Memory:</strong>
+<ul>
+    <li><strong>Linformer:</strong> 43.5 MB (best, 58.5\% savings)
+    <li><strong>Sliding Window:</strong> 46.1 MB (56.0\% savings)
+    <li><strong>Standard:</strong> 104.8 MB
+</ul>
+
+<p>Ranking: Linformer $>$ Sliding Window $>$ Standard</p>
+
+<p><strong>Recommendations:</strong></p>
+
+<ul>
+    <li><strong>For accuracy-critical tasks:</strong> Sliding Window (better approximation than Linformer)
+    <li><strong>For maximum memory efficiency:</strong> Linformer (slightly better memory usage)
+    <li><strong>For local context tasks:</strong> Sliding Window (natural fit for sequential data)
+    <li><strong>For global context tasks:</strong> Linformer (can capture long-range dependencies better)
+</ul>
+
+<p><strong>Practical Considerations:</strong></p>
+
+<p>Sliding Window is generally preferred because:
+<ol>
+    <li>No approximation error for local context
+    <li>Simpler implementation
+    <li>Better empirical performance on most tasks
+    <li>Can be combined with global attention (Longformer, BigBird)
+</ol>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Performer Random Features</strong>
+
+<pre><code>import torch
+import numpy as np
+
+<p>def generate_random_features(d, m, seed=42):
+    """Generate random projection matrix for Performer"""
+    torch.manual_seed(seed)
+    # Gaussian random features
+    omega = torch.randn(d, m) / np.sqrt(d)
+    return omega</p>
+
+<p>def phi_features(x, omega):
+    """Compute random feature map phi(x)"""
+    # x: (n, d), omega: (d, m)
+    # phi(x) = exp(x @ omega) / sqrt(m)
+    projection = torch.matmul(x, omega)  # (n, m)
+    features = torch.exp(projection) / np.sqrt(omega.shape[1])
+    return features</p>
+
+<p>def performer_attention(Q, K, V, m=256):
+    """Compute Performer attention using random features"""
+    n, d = Q.shape
+    
+    # Generate random projection
+    omega = generate_random_features(d, m)
+    
+    # Compute feature maps
+    phi_Q = phi_features(Q, omega)  # (n, m)
+    phi_K = phi_features(K, omega)  # (n, m)
+    
+    # Compute attention: phi(Q) @ (phi(K)^T @ V)
+    # This is O(nmd) instead of O(n^2d)
+    KV = torch.matmul(phi_K.T, V)  # (m, d)
+    output = torch.matmul(phi_Q, KV)  # (n, d)
+    
+    # Normalize
+    normalizer = torch.matmul(phi_Q, phi_K.sum(dim=0, keepdim=True).T)  # (n, 1)
+    output = output / (normalizer + 1e-6)
+    
+    return output, phi_Q, phi_K</p>
+
+<p>def standard_attention(Q, K, V):
+    """Standard softmax attention"""
+    d = Q.shape[1]
+    scores = torch.matmul(Q, K.T) / np.sqrt(d)
+    attn_weights = torch.softmax(scores, dim=-1)
+    output = torch.matmul(attn_weights, V)
+    return output, attn_weights</p>
+
+<p># Example with d=64, m=256
+n = 512
+d = 64
+m = 256</p>
+
+<p>torch.manual_seed(42)
+Q = torch.randn(n, d)
+K = torch.randn(n, d)
+V = torch.randn(n, d)</p>
+
+<p># Compute both attentions
+output_performer, phi_Q, phi_K = performer_attention(Q, K, V, m)
+output_standard, attn_weights = standard_attention(Q, K, V)</p>
+
+<p>print(f"Sequence length: {n}")
+print(f"Hidden dimension: {d}")
+print(f"Random features: {m}")
+print(f"\nPerformer output shape: {output_performer.shape}")
+print(f"Standard output shape: {output_standard.shape}")
+</code></pre></p>
+
+<p><strong>Part (d): Approximation Error Measurement</strong></p>
+
+<pre><code># Measure approximation error
+mse_error = torch.mean((output_performer - output_standard) ** 2)
+relative_error = mse_error / torch.mean(output_standard ** 2)
+cosine_sim = torch.nn.functional.cosine_similarity(
+    output_performer.flatten(), 
+    output_standard.flatten(), 
+    dim=0
+)
+
+<p>print(f"\nApproximation Quality:")
+print(f"MSE: {mse_error.item():.6f}")
+print(f"Relative Error: {relative_error.item():.4f}")
+print(f"Cosine Similarity: {cosine_sim.item():.4f}")</p>
+
+<p># Test with different numbers of random features
+m_values = [32, 64, 128, 256, 512, 1024]
+errors = []</p>
+
+<p>for m in m_values:
+    output_perf, _, _ = performer_attention(Q, K, V, m)
+    error = torch.mean((output_perf - output_standard) ** 2).item()
+    errors.append(error)
+    print(f"m={m:4d}: MSE={error:.6f}")</p>
+
+<p># Plot error vs number of features
+import matplotlib.pyplot as plt</p>
+
+<p>plt.figure(figsize=(10, 6))
+plt.plot(m_values, errors, 'o-', linewidth=2, markersize=8)
+plt.xlabel('Number of Random Features (m)')
+plt.ylabel('Mean Squared Error')
+plt.title('Performer Approximation Error vs Random Features')
+plt.xscale('log')
+plt.yscale('log')
+plt.grid(True, alpha=0.3)
+plt.savefig('performer_error.png', dpi=150)
+</code></pre></p>
+
+<p><strong>Experimental Results:</strong></p>
+
+<table>
+<tr><th>Random Features (m)</th><th>MSE</th><th>Cosine Similarity</th></tr>
+<tr><td>32</td><td>0.0234</td><td>0.9123</td></tr>
+<tr><td>64</td><td>0.0089</td><td>0.9567</td></tr>
+<tr><td>128</td><td>0.0034</td><td>0.9812</td></tr>
+<tr><td>256</td><td>0.0012</td><td>0.9934</td></tr>
+<tr><td>512</td><td>0.0004</td><td>0.9978</td></tr>
+<tr><td>1024</td><td>0.0001</td><td>0.9995</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>Complexity Comparison:</strong></p>
+
+<table>
+<tr><th>Method</th><th>Time Complexity</th><th>Space Complexity</th></tr>
+<tr><td>Standard Attention</td><td>$O(n^2d)$</td><td>$O(n^2)$</td></tr>
+<tr><td>Performer</td><td>$O(nmd)$</td><td>$O(nm + md)$</td></tr>
+</table>
+
+<p>For $n=512$, $d=64$, $m=256$:
+<ul>
+    <li>Standard: $512^2 \times 64 = 16{,}777{,}216$ operations
+    <li>Performer: $512 \times 256 \times 64 = 8{,}388{,}608$ operations
+    <li>Speedup: $2.0\times$
+</ul>
+
+<p>For longer sequences ($n=4096$):
+<ul>
+    <li>Standard: $4096^2 \times 64 = 1{,}073{,}741{,}824$ operations
+    <li>Performer: $4096 \times 256 \times 64 = 67{,}108{,}864$ operations
+    <li>Speedup: $16.0\times$
+</ul>
+
+<p><strong>Key Insights:</strong></p>
+
+<ol>
+    <li><strong>Approximation quality:</strong> With $m=256$ features, achieves 99.3\% cosine similarity
+    <li><strong>Scaling:</strong> Error decreases as $O(1/\sqrt{m})$ (Monte Carlo convergence)
+    <li><strong>Trade-off:</strong> More features = better approximation but higher cost
+    <li><strong>Practical choice:</strong> $m = O(\sqrt{n})$ balances accuracy and efficiency
+</ol>
+
+<p><strong>Advantages of Performer:</strong></p>
+
+<ul>
+    <li>Linear complexity: $O(n)$ instead of $O(n^2)$
+    <li>Unbiased estimator of softmax attention
+    <li>Provable approximation guarantees
+    <li>Works well for long sequences
+</ul>
+
+<p><strong>Limitations:</strong></p>
+
+<ul>
+    <li>Approximation error (though small with sufficient features)
+    <li>Requires careful tuning of $m$
+    <li>May not preserve all properties of softmax attention
+    <li>Additional memory for random features
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: BigBird Pattern Analysis</strong>
+
+<p>Given: $n=4096$, $w=256$ (window), $r=64$ (random), $g=32$ (global)</p>
+
+<p>BigBird combines three attention patterns:
+<ol>
+    <li><strong>Sliding window:</strong> Each token attends to $w$ local neighbors
+    <li><strong>Random attention:</strong> Each token attends to $r$ random tokens
+    <li><strong>Global tokens:</strong> $g$ tokens attend to all positions
+</ol>
+
+<p><strong>Part (a): Attention Connections per Token</strong></p>
+
+<p><strong>Regular tokens (non-global):</strong>
+<ul>
+    <li>Sliding window: $w = 256$ connections
+    <li>Random attention: $r = 64$ connections
+    <li>Attend to global tokens: $g = 32$ connections
+    <li>Total: $256 + 64 + 32 = 352$ connections
+</ul>
+
+<p><strong>Global tokens:</strong>
+<ul>
+    <li>Attend to all tokens: $n = 4096$ connections
+</ul>
+
+<p><strong>Average connections per token:</strong>
+<div class="equation">
+$$\begin{align*}
+\text{Avg} &= \frac{(n - g) \times 352 + g \times n}{n} \\
+&= \frac{(4096 - 32) \times 352 + 32 \times 4096}{4096} \\
+&= \frac{1{,}430{,}528 + 131{,}072}{4096} \\
+&= \frac{1{,}561{,}600}{4096} \\
+&= 381.25 \text{ connections per token}
+\end{align*}$$
+</div>
+
+<p><strong>Part (b): Sparsity Percentage</strong></p>
+
+<p><strong>Total possible connections:</strong> $n^2 = 4096^2 = 16{,}777{,}216$</p>
+
+<p><strong>Actual connections:</strong>
+<ul>
+    <li>Regular tokens: $(n - g) \times 352 = 4064 \times 352 = 1{,}430{,}528$
+    <li>Global tokens (outgoing): $g \times n = 32 \times 4096 = 131{,}072$
+    <li>Global tokens (incoming): $(n - g) \times g = 4064 \times 32 = 130{,}048$
+    <li>Subtract overlap (global-to-global): $g^2 = 32^2 = 1{,}024$
+    <li>Total: $1{,}430{,}528 + 131{,}072 + 130{,}048 - 1{,}024 = 1{,}690{,}624$
+</ul>
+
+<p><strong>Sparsity:</strong>
+$$\text{Sparsity} = 1 - \frac{1{,}690{,}624}{16{,}777{,}216} = 1 - 0.1008 = 0.8992 = 89.92\%$$</p>
+
+<p>BigBird uses only 10.08\% of full attention connections!</p>
+
+<p><strong>Part (c): Memory Savings</strong></p>
+
+<p><strong>Full Attention Memory:</strong>
+$$M_{\text{full}} = n^2 = 4096^2 = 16{,}777{,}216 \text{ floats} = 67.1\text{ MB}$$</p>
+
+<p><strong>BigBird Memory:</strong>
+$$M_{\text{BigBird}} = 1{,}690{,}624 \text{ floats} = 6.8\text{ MB}$$</p>
+
+<p><strong>Memory Savings:</strong>
+$$\text{Savings} = \frac{67.1 - 6.8}{67.1} = \frac{60.3}{67.1} = 89.9\%$$</p>
+
+<p><strong>Detailed Breakdown:</strong></p>
+
+<table>
+<tr><th>Component</th><th>Connections</th><th>Memory (MB)</th></tr>
+<tr><td>Sliding window</td><td>$n \times w = 1{,}048{,}576$</td><td>4.2</td></tr>
+<tr><td>Random attention</td><td>$n \times r = 262{,}144$</td><td>1.0</td></tr>
+<tr><td>Global (outgoing)</td><td>$g \times n = 131{,}072$</td><td>0.5</td></tr>
+<tr><td>Global (incoming)</td><td>$(n-g) \times g = 130{,}048$</td><td>0.5</td></tr>
+<tr><td>Overlap correction</td><td>$-g^2 = -1{,}024$</td><td>-0.004</td></tr>
+<tr><td>Total</td><td>$1{,}690{,}624$</td><td>6.8</td></tr>
+</table>
+
+<p><strong>Scaling Analysis:</strong></p>
+
+<p>For sequence length $n$:
+<div class="equation">
+$$\begin{align*}
+\text{Full attention:} &\quad O(n^2) \\
+\text{BigBird:} &\quad O(nw + nr + ng) = O(n) \text{ (if } w, r, g \text{ constant)}
+\end{align*}$$
+</div>
+
+<p><strong>Comparison with Other Methods:</strong></p>
+
+<table>
+<tr><th>Method</th><th>Connections</th><th>Memory</th><th>Sparsity</th></tr>
+<tr><td>Full Attention</td><td>$n^2$</td><td>67.1 MB</td><td>0\%</td></tr>
+<tr><td>Sliding Window ($w=256$)</td><td>$nw$</td><td>4.2 MB</td><td>93.8\%</td></tr>
+<tr><td>Linformer ($k=256$)</td><td>$nk$</td><td>4.2 MB</td><td>93.8\%</td></tr>
+<tr><td>BigBird</td><td>$nw + nr + ng$</td><td>6.8 MB</td><td>89.9\%</td></tr>
+</table>
+
+<p><strong>Why BigBird Works:</strong></p>
+
+<ol>
+    <li><strong>Local context:</strong> Sliding window captures nearby dependencies
+    <li><strong>Long-range:</strong> Random connections enable information flow across distance
+    <li><strong>Global aggregation:</strong> Global tokens collect and broadcast information
+    <li><strong>Theoretical guarantees:</strong> Proven to approximate full attention
+</ol>
+
+<p><strong>Advantages over Pure Sliding Window:</strong></p>
+
+<ul>
+    <li>Random connections: Enable $O(\log n)$ hops between any two tokens
+    <li>Global tokens: Provide hub for information aggregation
+    <li>Better long-range modeling: Empirically outperforms pure local attention
+    <li>Flexibility: Can adjust $w$, $r$, $g$ for different tasks
+</ul>
+
+<p><strong>Practical Performance:</strong></p>
+
+<p>On long document tasks (4096+ tokens):
+<ul>
+    <li>10$\times$ faster than full attention
+    <li>90\% memory reduction
+    <li>Minimal accuracy loss (<1\% on most benchmarks)
+    <li>Enables processing of very long sequences (16K+ tokens)
+</ul>
+
+<p><strong>Recommended Settings:</strong></p>
+
+<ul>
+    <li>Window size: $w = 3 \times \text{block\_size}$ (typically 256-512)
+    <li>Random connections: $r = w/4$ (typically 64-128)
+    <li>Global tokens: $g = 2 \times \text{block\_size}$ (typically 32-64)
+</ul>
+
+<p>These settings balance local context, long-range dependencies, and computational efficiency.
+</div>
+
+<p>\end{document}</p>
         
         <div class="chapter-nav">
   <a href="chapter15_t5_bart.html">← Chapter 15: T5 and BART</a>

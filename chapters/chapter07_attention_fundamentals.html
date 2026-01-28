@@ -913,6 +913,152 @@ where mask $\mM_{ij} = -\infty$ if $j > i$, else $\mM_{ij} = 0$.</p>
 
 <div class="exercise"><strong>Exercise:</strong> Implement scaled dot-product attention in PyTorch. Test with sequences of length 5 and 10, dimensions $d_k = 32$, $d_v = 48$. Visualize attention weights as heatmap.
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> For Bahdanau attention with sequence length 4, decoder state dim 3, attention dim 2:
+
+<p>Given:
+<div class="equation">
+$$
+\mW_1 = \begin{bmatrix} 0.5 & -0.3 & 0.2 \\ 0.4 & 0.6 & -0.1 \end{bmatrix}, \quad \mW_2 = \begin{bmatrix} 0.3 & 0.5 & 0.2 \\ -0.2 & 0.4 & 0.6 \end{bmatrix}, \quad \mathbf{v} = \begin{bmatrix} 1.0 \\ 0.8 \end{bmatrix}
+$$
+</div>
+
+<p>Encoder states: $\vh_1 = [1, 0, 1]\transpose$, $\vh_2 = [0, 1, 1]\transpose$, $\vh_3 = [1, 1, 0]\transpose$, $\vh_4 = [0, 0, 1]\transpose$</p>
+
+<p>Decoder state: $\vs = [0.5, 0.5, 0.5]\transpose$</p>
+
+<p><strong>Step 1: Compute alignment scores</strong>
+<div class="equation">
+$$\begin{align}
+e_i &= \mathbf{v}\transpose \tanh(\mW_1 \vh_i + \mW_2 \vs)
+\end{align}$$
+</div>
+
+<p>For $i=1$:
+<div class="equation">
+$$\begin{align}
+\mW_1 \vh_1 + \mW_2 \vs &= \begin{bmatrix} 0.5 - 0.2 \\ 0.4 - 0.1 \end{bmatrix} + \begin{bmatrix} 0.5 \\ 0.4 \end{bmatrix} = \begin{bmatrix} 0.8 \\ 0.7 \end{bmatrix} \\
+e_1 &= [1.0, 0.8] \cdot \tanh([0.8, 0.7]\transpose) \approx 1.0(0.664) + 0.8(0.604) \approx 1.147
+\end{align}$$
+</div>
+
+<p>Similarly: $e_2 \approx 1.089$, $e_3 \approx 1.118$, $e_4 \approx 0.856$</p>
+
+<p><strong>Step 2: Apply softmax</strong>
+<div class="equation">
+$$
+\alpha_i = \frac{\exp(e_i)}{\sum_{j=1}^4 \exp(e_j)}
+$$
+</div>
+
+<div class="equation">
+$$
+\boldsymbol{\alpha} \approx [0.268, 0.252, 0.260, 0.220]
+$$
+</div>
+
+<p>These are the attention weights showing how much the decoder attends to each encoder state.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For scaled dot-product attention with $\mQ \in \R^{10 \times 64}$, $\mK \in \R^{20 \times 64}$, $\mV \in \R^{20 \times 128}$:
+
+<p><strong>(1) Output dimension:</strong>
+<div class="equation">
+$$
+\text{Output} = \text{softmax}\left(\frac{\mQ\mK\transpose}{\sqrt{d_k}}\right)\mV \in \R^{10 \times 128}
+$$
+</div>
+
+<p><strong>(2) Attention matrix shape:</strong>
+<div class="equation">
+$$
+\mA = \mQ\mK\transpose \in \R^{10 \times 20}
+$$
+</div>
+
+<p><strong>(3) FLOPs for $\mQ\mK\transpose$:</strong>
+<div class="equation">
+$$
+\text{FLOPs} = 2 \times 10 \times 64 \times 20 = 25{,}600
+$$
+</div>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Variance analysis without scaling:</strong>
+
+<p>For $d_k = 64$ with unit variance elements:
+<div class="equation">
+$$
+\text{Var}(\vq\transpose \vk) = \sum_{i=1}^{64} \text{Var}(q_i k_i) = 64 \cdot \text{Var}(q_i) \cdot \text{Var}(k_i) = 64
+$$
+</div>
+
+<p>Standard deviation: $\sigma = \sqrt{64} = 8$</p>
+
+<p><strong>Effect on softmax gradients:</strong></p>
+
+<p>Without scaling, dot products range roughly $[-24, 24]$ (3 standard deviations). After softmax:
+<ul>
+    <li>Large positive scores $\to$ probability $\approx 1$
+    <li>Large negative scores $\to$ probability $\approx 0$
+    <li>Softmax saturates, gradients vanish
+</ul>
+
+<p><strong>Numerical demonstration:</strong>
+<div class="equation">
+$$\begin{align}
+\text{Unscaled: } &\mathbf{z} = [20, 18, -15, -18] \\
+&\text{softmax}(\mathbf{z}) \approx [0.881, 0.119, 0, 0] \\
+&\text{Gradient} \approx [0.105, 0.105, 0, 0] \text{ (vanishing)}
+\end{align}$$
+</div>
+
+<div class="equation">
+$$\begin{align}
+\text{Scaled by } \sqrt{64}: &\mathbf{z}' = [2.5, 2.25, -1.875, -2.25] \\
+&\text{softmax}(\mathbf{z}') \approx [0.476, 0.378, 0.061, 0.085] \\
+&\text{Gradient} \approx [0.249, 0.235, 0.057, 0.078] \text{ (healthy)}
+\end{align}$$
+</div>
+
+<p>Scaling by $\sqrt{d_k}$ keeps dot products in a range where softmax gradients are well-behaved.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>PyTorch implementation:</strong>
+
+<pre><code>import torch
+import torch.nn.functional as F
+import matplotlib.pyplot as plt
+
+<p>def scaled_dot_product_attention(Q, K, V):
+    d_k = Q.size(-1)
+    scores = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(d_k, dtype=torch.float32))
+    attention_weights = F.softmax(scores, dim=-1)
+    output = torch.matmul(attention_weights, V)
+    return output, attention_weights</p>
+
+<p># Test with sequence length 5
+Q = torch.randn(1, 5, 32)  # (batch, seq_len, d_k)
+K = torch.randn(1, 5, 32)
+V = torch.randn(1, 5, 48)  # d_v = 48</p>
+
+<p>output, weights = scaled_dot_product_attention(Q, K, V)
+print(f"Output shape: {output.shape}")  # (1, 5, 48)
+print(f"Attention weights shape: {weights.shape}")  # (1, 5, 5)</p>
+
+<p># Visualize attention weights
+plt.imshow(weights[0].detach().numpy(), cmap='viridis')
+plt.colorbar()
+plt.xlabel('Key position')
+plt.ylabel('Query position')
+plt.title('Attention Weights Heatmap')
+plt.show()
+</code></pre></p>
+
+<p>The heatmap shows which positions each query attends to, with brighter colors indicating higher attention weights.
+</div>
         
         <div class="chapter-nav">
   <a href="chapter06_recurrent_networks.html">← Chapter 6: Recurrent Neural Networks</a>

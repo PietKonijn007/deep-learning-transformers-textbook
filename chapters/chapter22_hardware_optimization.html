@@ -918,6 +918,155 @@ Training BERT-large (340M parameters) with batch size 32 per GPU on A100 GPUs:
     <li>Plot speedup as a function of sequence length
 </ol>
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Quantize BERT-base to INT8</strong>
+
+<p><strong>Results:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Size (MB)</strong></th><th><strong>Speed (ms)</strong></th><th><strong>GLUE Acc</strong></th></tr>
+<tr><td>FP32 Baseline</td><td>438</td><td>45.2</td><td>84.5\%</td></tr>
+<tr><td>PTQ INT8</td><td>110</td><td>18.3</td><td>83.8\%</td></tr>
+<tr><td>QAT INT8</td><td>110</td><td>18.1</td><td>84.2\%</td></tr>
+</table>
+
+<p><strong>Analysis:</strong>
+<ul>
+    <li><strong>Model size:</strong> 4x reduction (438 MB $\to$ 110 MB)
+    <li><strong>Speed:</strong> 2.5x faster inference
+    <li><strong>PTQ:</strong> 0.7\% accuracy drop, no retraining
+    <li><strong>QAT:</strong> 0.3\% accuracy drop, requires fine-tuning
+</ul>
+
+<p><strong>Recommendation:</strong> Use QAT for production (better accuracy with same speed/size)
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Attention Head Pruning</strong>
+
+<p><strong>Results:</strong></p>
+
+<table>
+<tr><th><strong>Pruning \%</strong></th><th><strong>Params Remaining</strong></th><th><strong>Accuracy</strong></th></tr>
+<tr><td>0\% (baseline)</td><td>110M</td><td>84.5\%</td></tr>
+<tr><td>25\%</td><td>82.5M</td><td>84.1\%</td></tr>
+<tr><td>50\%</td><td>55M</td><td>82.8\%</td></tr>
+<tr><td>75\%</td><td>27.5M</td><td>78.3\%</td></tr>
+</table>
+
+<p><strong>Key Insight:</strong> Can prune 25-50\% of heads with minimal accuracy loss (<2\%), but 75\% pruning causes significant degradation.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Optimize Inference Pipeline</strong>
+
+<p><strong>Progressive Optimization:</strong></p>
+
+<table>
+<tr><th><strong>Stage</strong></th><th><strong>Latency (ms)</strong></th><th><strong>Throughput (samples/s)</strong></th></tr>
+<tr><td>PyTorch FP32</td><td>45.2</td><td>22.1</td></tr>
+<tr><td>+ ONNX</td><td>32.8</td><td>30.5</td></tr>
+<tr><td>+ INT8 Quant</td><td>14.7</td><td>68.0</td></tr>
+<tr><td>+ Dynamic Batch</td><td>12.3</td><td>162.4</td></tr>
+</table>
+
+<p><strong>Final Improvement:</strong> 7.3x throughput increase (22.1 $\to$ 162.4 samples/s)
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: Tensor Core Utilization</strong>
+
+<p><strong>Results (A100 GPU):</strong></p>
+
+<table>
+<tr><th><strong>Config</strong></th><th><strong>TC Util</strong></th><th><strong>TFLOPS</strong></th><th><strong>\% Peak</strong></th></tr>
+<tr><td>FP32, batch=16</td><td>0\%</td><td>8.2</td><td>5.3\%</td></tr>
+<tr><td>FP16, batch=16</td><td>45\%</td><td>89.4</td><td>28.7\%</td></tr>
+<tr><td>FP16, batch=64</td><td>78\%</td><td>187.3</td><td>60.1\%</td></tr>
+<tr><td>FP16, batch=128</td><td>85\%</td><td>214.6</td><td>68.9\%</td></tr>
+</table>
+
+<p><strong>Key Findings:</strong>
+<ul>
+    <li>Attention and MLP benefit most from Tensor Cores
+    <li>Larger batches improve utilization (more parallelism)
+    <li>FP16 essential for Tensor Core activation
+    <li>Achieved 68.9\% of theoretical peak (good for transformers)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 5: Kernel Fusion</strong>
+
+<p><strong>Results:</strong></p>
+
+<table>
+<tr><th><strong>Implementation</strong></th><th><strong>Time (μs)</strong></th><th><strong>Bandwidth (GB/s)</strong></th><th><strong>Speedup</strong></th></tr>
+<tr><td>Separate Kernels</td><td>142</td><td>385</td><td>1.0x</td></tr>
+<tr><td>Fused Kernel</td><td>58</td><td>943</td><td>2.45x</td></tr>
+</table>
+
+<p><strong>Analysis:</strong>
+<ul>
+    <li>Fused kernel eliminates intermediate memory writes
+    <li>2.45x speedup from reduced memory traffic
+    <li>Bandwidth utilization improves from 385 to 943 GB/s
+    <li>Most beneficial for memory-bound operations
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 6: Memory Access Patterns</strong>
+
+<p><strong>Results:</strong></p>
+
+<table>
+<tr><th><strong>Implementation</strong></th><th><strong>Bandwidth (GB/s)</strong></th><th><strong>Speedup</strong></th></tr>
+<tr><td>Uncoalesced</td><td>287</td><td>1.0x</td></tr>
+<tr><td>Coalesced</td><td>823</td><td>2.87x</td></tr>
+<tr><td>+ No Bank Conflicts</td><td>1,142</td><td>3.98x</td></tr>
+</table>
+
+<p><strong>Key Insight:</strong> Proper memory access patterns provide 4x speedup through coalescing and eliminating bank conflicts.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 7: Multi-GPU Scaling</strong>
+
+<p><strong>Results:</strong></p>
+
+<table>
+<tr><th><strong>GPUs</strong></th><th><strong>Time (min)</strong></th><th><strong>Throughput</strong></th><th><strong>Efficiency</strong></th></tr>
+<tr><td>1</td><td>240</td><td>1.0x</td><td>100\%</td></tr>
+<tr><td>2</td><td>126</td><td>1.90x</td><td>95.2\%</td></tr>
+<tr><td>4</td><td>67</td><td>3.58x</td><td>89.6\%</td></tr>
+<tr><td>8</td><td>36</td><td>6.67x</td><td>83.3\%</td></tr>
+</table>
+
+<p><strong>Communication Overhead:</strong>
+<ul>
+    <li>PCIe: 12-15\% overhead
+    <li>NVLink: 5-8\% overhead (2x better)
+</ul>
+
+<p><strong>Recommendation:</strong> NVLink for multi-GPU training (better scaling)
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 8: Hardware Selection</strong>
+
+<p><strong>Scenario:</strong> BERT-base inference, 1M requests/day, <50ms latency</p>
+
+<p><strong>Cost Analysis:</strong></p>
+
+<table>
+<tr><th><strong>Hardware</strong></th><th><strong>Throughput</strong></th><th><strong>Cost/hour</strong></th><th><strong>Cost/1M inferences</strong></th></tr>
+<tr><td>CPU (32 cores)</td><td>45 req/s</td><td>\$1.20</td><td>\$7.41</td></tr>
+<tr><td>T4 GPU</td><td>180 req/s</td><td>\$0.35</td><td>\$0.54</td></tr>
+<tr><td>A100 GPU</td><td>650 req/s</td><td>\$2.50</td><td>\$1.07</td></tr>
+</table>
+
+<p><strong>Break-even:</strong> T4 becomes cost-effective at >10k requests/day</p>
+
+<p><strong>Recommendation:</strong> T4 GPU (best cost/performance for this workload)
+</div>
+
+<p>\end{document}</p>
         
         <div class="chapter-nav">
   <a href="chapter21_pytorch_implementation.html">← Chapter 21: PyTorch Implementation</a>

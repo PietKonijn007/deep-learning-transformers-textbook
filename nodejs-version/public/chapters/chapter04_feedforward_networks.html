@@ -477,6 +477,140 @@ During training, randomly set activations to zero with probability p. During inf
 
 <div class="exercise"><strong>Exercise:</strong> Prove that without nonlinear activations, L-layer network equivalent to single layer.
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>3-layer MLP design for binary classification:</strong>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Input layer: 100 dimensions
+    <li>Hidden layer 1: 100 $\to$ 64 with ReLU activation
+    <li>Hidden layer 2: 64 $\to$ 32 with ReLU activation
+    <li>Output layer: 32 $\to$ 1 with sigmoid activation
+</ul>
+
+<p><strong>Parameter count:</strong>
+<ul>
+    <li>Layer 1: $\mW^{(1)} \in \R^{64 \times 100}$ has $6{,}400$ weights, $\vb^{(1)} \in \R^{64}$ has $64$ biases
+    <li>Layer 2: $\mW^{(2)} \in \R^{32 \times 64}$ has $2{,}048$ weights, $\vb^{(2)} \in \R^{32}$ has $32$ biases
+    <li>Layer 3: $\mW^{(3)} \in \R^{1 \times 32}$ has $32$ weights, $b^{(3)} \in \R$ has $1$ bias
+    <li>Total: $6{,}400 + 64 + 2{,}048 + 32 + 32 + 1 = 8{,}577$ parameters
+</ul>
+
+<p><strong>Forward pass equations:</strong>
+<div class="equation">
+$$\begin{align}
+\vh^{(1)} &= \text{ReLU}(\mW^{(1)}\vx + \vb^{(1)}) \\
+\vh^{(2)} &= \text{ReLU}(\mW^{(2)}\vh^{(1)} + \vb^{(2)}) \\
+\hat{y} &= \sigma(\mW^{(3)}\vh^{(2)} + b^{(3)})
+\end{align}$$
+</div>
+
+<p>where $\sigma(z) = \frac{1}{1 + e^{-z}}$ is the sigmoid function.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Forward pass computation:</strong>
+
+<p>Given weights:
+<div class="equation">
+$$
+\mW^{(1)} = \begin{bmatrix} 0.5 & -0.3 \\ 0.2 & 0.6 \end{bmatrix}, \quad \vb^{(1)} = \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix}, \quad \mW^{(2)} = \begin{bmatrix} 1.0 & -0.5 \end{bmatrix}, \quad b^{(2)} = 0.3
+$$
+</div>
+
+<p>Input: $\vx = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}$</p>
+
+<p><strong>Layer 1:</strong>
+<div class="equation">
+$$\begin{align}
+\vz^{(1)} &= \mW^{(1)}\vx + \vb^{(1)} = \begin{bmatrix} 0.5(2.0) - 0.3(1.0) \\ 0.2(2.0) + 0.6(1.0) \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix} = \begin{bmatrix} 0.8 \\ 0.8 \end{bmatrix} \\
+\vh^{(1)} &= \text{ReLU}(\vz^{(1)}) = \begin{bmatrix} 0.8 \\ 0.8 \end{bmatrix}
+\end{align}$$
+</div>
+
+<p><strong>Layer 2:</strong>
+<div class="equation">
+$$\begin{align}
+z^{(2)} &= \mW^{(2)}\vh^{(1)} + b^{(2)} = 1.0(0.8) - 0.5(0.8) + 0.3 = 0.7 \\
+\hat{y} &= z^{(2)} = 0.7 \quad \text{(no activation for regression)}
+\end{align}$$
+</div>
+
+<p>Final output: $\hat{y} = 0.7$
+</div>
+
+<div class="solution"><strong>Solution:</strong> For layer with 512 inputs and 256 outputs using ReLU:
+
+<p><strong>(1) He initialization variance:</strong>
+<div class="equation">
+$$
+\text{Var}(w_{ij}) = \frac{2}{n_{\text{in}}} = \frac{2}{512} = 0.00391
+$$
+</div>
+
+<p>Standard deviation: $\sigma = \sqrt{0.00391} \approx 0.0625$</p>
+
+<p><strong>(2) Why different from Xavier:</strong>
+<ul>
+    <li>Xavier initialization: $\text{Var}(w) = \frac{1}{n_{\text{in}}}$ (for tanh/sigmoid)
+    <li>He initialization: $\text{Var}(w) = \frac{2}{n_{\text{in}}}$ (for ReLU)
+    <li>ReLU zeros out half the activations, reducing variance by factor of 2
+    <li>He initialization compensates by doubling the initial variance
+    <li>This maintains signal variance through deep networks with ReLU
+</ul>
+
+<p><strong>(3) Zero initialization problem:</strong>
+If all weights are initialized to zero:
+<ul>
+    <li>All neurons in a layer compute identical outputs
+    <li>All gradients are identical (symmetry)
+    <li>Neurons never differentiate during training
+    <li>Network effectively has only one neuron per layer
+    <li>Learning fails completely
+</ul>
+
+<p>Random initialization breaks symmetry, allowing neurons to learn different features.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Proof that L-layer linear network equals single layer:</strong>
+
+<p>Consider an $L$-layer network without nonlinear activations:
+<div class="equation">
+$$\begin{align}
+\vh^{(1)} &= \mW^{(1)}\vx + \vb^{(1)} \\
+\vh^{(2)} &= \mW^{(2)}\vh^{(1)} + \vb^{(2)} \\
+&\vdots \\
+\vh^{(L)} &= \mW^{(L)}\vh^{(L-1)} + \vb^{(L)}
+\end{align}$$
+</div>
+
+<p>Substituting recursively:
+<div class="equation">
+$$\begin{align}
+\vh^{(2)} &= \mW^{(2)}(\mW^{(1)}\vx + \vb^{(1)}) + \vb^{(2)} \\
+&= \mW^{(2)}\mW^{(1)}\vx + \mW^{(2)}\vb^{(1)} + \vb^{(2)}
+\end{align}$$
+</div>
+
+<p>Continuing to layer $L$:
+<div class="equation">
+$$\begin{align}
+\vh^{(L)} &= \mW^{(L)}\mW^{(L-1)}\cdots\mW^{(1)}\vx + \text{(bias terms)} \\
+&= \mW_{\text{eff}}\vx + \vb_{\text{eff}}
+\end{align}$$
+</div>
+
+<p>where:
+<div class="equation">
+$$\begin{align}
+\mW_{\text{eff}} &= \mW^{(L)}\mW^{(L-1)}\cdots\mW^{(1)} \\
+\vb_{\text{eff}} &= \sum_{i=1}^{L} \left(\prod_{j=i+1}^{L} \mW^{(j)}\right) \vb^{(i)}
+\end{align}$$
+</div>
+
+<p>This is equivalent to a single linear layer with weights $\mW_{\text{eff}}$ and bias $\vb_{\text{eff}}$. Therefore, without nonlinear activations, depth provides no additional representational power—the network can only learn linear functions regardless of depth.
+</div>
         
         <div class="chapter-nav">
   <a href="chapter03_probability_information.html">← Chapter 3: Probability and Information Theory</a>

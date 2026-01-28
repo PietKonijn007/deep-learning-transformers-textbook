@@ -323,3 +323,147 @@ For BERT-base dimensions ($d=768$, $n=512$), compute: (1) Memory required for LS
 Estimate the training time for a 110M parameter LSTM on 16 billion tokens (sequence length 512) using 64 TPU cores with 2,880 TFLOPS total peak throughput. Assume the LSTM achieves 3\% of peak throughput due to sequential processing. Compare this to BERT-base training time of 4 days on the same hardware. What is the speedup factor? Explain the three main reasons for the difference: parallelization, memory bandwidth, and GPU utilization.
 \end{exercise}
 
+
+
+\section{Solutions}
+
+\begin{solution}[Exercise 1]
+For vanilla RNN with $d=128$, $h=256$, $T=50$:
+
+\textbf{(1) Parameter count:}
+\begin{itemize}
+    \item $\mW_{xh} \in \R^{h \times d}$: $256 \times 128 = 32{,}768$ parameters
+    \item $\mW_{hh} \in \R^{h \times h}$: $256 \times 256 = 65{,}536$ parameters
+    \item $\mW_{hy} \in \R^{V \times h}$: Assuming vocabulary $V=10{,}000$: $10{,}000 \times 256 = 2{,}560{,}000$ parameters
+    \item Biases: $h + h + V = 256 + 256 + 10{,}000 = 10{,}512$ parameters
+    \item Total: $32{,}768 + 65{,}536 + 2{,}560{,}000 + 10{,}512 = 2{,}668{,}816$ parameters
+\end{itemize}
+
+\textbf{(2) FLOPs for forward pass:}
+Per time step:
+\begin{itemize}
+    \item $\mW_{xh}\vx_t$: $2 \times h \times d = 2 \times 256 \times 128 = 65{,}536$ FLOPs
+    \item $\mW_{hh}\vh_{t-1}$: $2 \times h \times h = 2 \times 256 \times 256 = 131{,}072$ FLOPs
+    \item $\tanh$ activation: $h = 256$ FLOPs
+    \item Per time step total: $\approx 196{,}864$ FLOPs
+\end{itemize}
+
+For $T=50$ time steps: $50 \times 196{,}864 = 9{,}843{,}200 \approx 9.8$ MFLOPs
+
+\textbf{(3) GPU utilization with batch size 32:}
+\begin{itemize}
+    \item Total FLOPs per batch: $32 \times 9.8 \text{ MFLOPs} = 313.6$ MFLOPs
+    \item At 2\% peak throughput: $0.02 \times 312 \text{ TFLOPS} = 6.24$ TFLOPS
+    \item Time per batch: $\frac{313.6 \text{ MFLOPs}}{6.24 \text{ TFLOPS}} = 0.05$ ms
+\end{itemize}
+
+\textbf{Why utilization is so low:}
+\begin{itemize}
+    \item Sequential dependency: Each time step depends on previous, preventing parallelization
+    \item Small matrix operations: $256\times256$ matrices don't saturate GPU
+    \item Memory-bound: Constantly loading/storing hidden states
+    \item Low arithmetic intensity: Few operations per memory access
+    \item Kernel launch overhead dominates for small operations
+\end{itemize}
+\end{solution}
+
+\begin{solution}[Exercise 2]
+For 3-step RNN sequence, the gradient involves backpropagation through time (BPTT):
+
+\textbf{Forward pass:}
+\begin{align}
+\vh_1 &= \tanh(\mW_{hh}\vh_0 + \mW_{xh}\vx_1) \\
+\vh_2 &= \tanh(\mW_{hh}\vh_1 + \mW_{xh}\vx_2) \\
+\vh_3 &= \tanh(\mW_{hh}\vh_2 + \mW_{xh}\vx_3)
+\end{align}
+
+\textbf{Gradient derivation:}
+\begin{align}
+\frac{\partial L}{\partial \mW_{hh}} &= \sum_{t=1}^{3} \frac{\partial L}{\partial \vh_t} \frac{\partial \vh_t}{\partial \mW_{hh}}
+\end{align}
+
+The gradient involves products of Jacobians:
+\begin{equation}
+\frac{\partial \vh_t}{\partial \vh_{t-1}} = \text{diag}(\tanh'(\vz_t)) \mW_{hh}
+\end{equation}
+
+\textbf{Gradient magnitude decay:}
+With $\norm{\mW_{hh}} = 0.9$ and $\tanh'$ averaging 0.5:
+\begin{equation}
+\norm{\frac{\partial \vh_t}{\partial \vh_{t-1}}} \approx 0.5 \times 0.9 = 0.45
+\end{equation}
+
+From time step 3 to 0 (3 steps back):
+\begin{equation}
+\text{Decay factor} = 0.45^3 \approx 0.091
+\end{equation}
+
+\textbf{Vanishing gradient threshold:}
+For gradients to vanish below $10^{-38}$:
+\begin{align}
+0.45^T &< 10^{-38} \\
+T &> \frac{-38 \log(10)}{\log(0.45)} \approx 110 \text{ steps}
+\end{align}
+
+Gradients vanish below FP32 precision after approximately 110 time steps.
+\end{solution}
+
+\begin{solution}[Exercise 3]
+For $d=512$, $h=512$, $n=512$:
+
+\textbf{(1) LSTM:} $2{,}099{,}200$ parameters, $2.15$ GFLOPs
+
+\textbf{(2) GRU:} $1{,}574{,}400$ parameters, $1.61$ GFLOPs
+
+\textbf{(3) Transformer:} $1{,}048{,}576$ parameters, $1.61$ GFLOPs
+
+\textbf{Most parameters:} LSTM (2.1M)
+
+\textbf{Most FLOPs:} LSTM (2.15 GFLOPs)
+
+\textbf{Highest GPU utilization:} Transformer (40-60\% vs 2-5\% for RNNs) due to full parallelization across sequence length and large matrix operations.
+\end{solution}
+
+\begin{solution}[Exercise 4]
+For bidirectional LSTM with 6 tokens, embedding dim 16, hidden dim 32:
+
+\textbf{Output dimensions:} $6 \times 64$ (concatenated forward and backward)
+
+\textbf{Memory for LSTM states:}
+\begin{itemize}
+    \item Forward hidden + cell: $2 \times 6 \times 32 \times 4 = 1{,}536$ bytes
+    \item Backward hidden + cell: $1{,}536$ bytes
+    \item Total: $3{,}072$ bytes $\approx 3$ KB
+\end{itemize}
+
+\textbf{Transformer attention scores (8 heads):} $8 \times 6 \times 6 \times 4 = 1{,}152$ bytes
+
+LSTM requires 2.7× more memory for this small sequence, but attention scales as $O(n^2)$ vs $O(n)$ for LSTM.
+\end{solution}
+
+\begin{solution}[Exercise 5]
+For BERT-base ($d=768$, $n=512$), batch size 32:
+
+\textbf{(1) LSTM memory (12 layers):} $\approx 1.13$ GB
+
+\textbf{(2) Transformer attention (12 layers):} $\approx 4.5$ GB
+
+\textbf{(3) Equal memory at:} $n = 128$ tokens
+
+For $n>128$, transformers use more memory due to $O(n^2)$ attention scores. Transformers are memory-limited for long sequences, while LSTMs are compute-limited due to sequential processing.
+\end{solution}
+
+\begin{solution}[Exercise 6]
+\textbf{LSTM training time:} $\approx 8.4$ days
+
+\textbf{BERT training time:} 4 days
+
+\textbf{Speedup:} 2.1× (BERT is faster)
+
+\textbf{Three main reasons:}
+\begin{enumerate}
+    \item Parallelization: BERT processes all tokens in parallel ($\approx 10\times$ speedup)
+    \item Memory bandwidth: BERT has higher arithmetic intensity ($\approx 3\times$ better)
+    \item GPU utilization: BERT achieves 40-60\% vs 2-5\% for LSTM ($\approx 17\times$ better)
+\end{enumerate}
+\end{solution}

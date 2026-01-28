@@ -142,6 +142,10 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\begin\{exercise\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="exercise"><strong>Exercise:</strong> ', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{exercise\}', r'</div>', html)
     
+    # Convert solution environment
+    html = re.sub(r'\\begin\{solution\}(\[([^\]]+)\])?\s*(\\label\{[^}]+\})?', r'<div class="solution"><strong>Solution:</strong> ', html, flags=re.DOTALL)
+    html = re.sub(r'\\end\{solution\}', r'</div>', html)
+    
     # Convert proof environment
     def format_proof(match):
         optional_title = match.group(2) if match.group(2) else ''

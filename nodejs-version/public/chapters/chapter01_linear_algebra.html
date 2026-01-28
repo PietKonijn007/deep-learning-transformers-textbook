@@ -823,6 +823,262 @@ A matrix multiplication $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$
     <li>Which resource (compute or memory) is the bottleneck?
 </ol>
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> Given $\vx = [2, -1, 3]\transpose$ and $\vy = [1, 4, -2]\transpose$:
+
+<p><strong>(1) Dot product:</strong>
+<div class="equation">
+$$
+\vx\transpose \vy = 2(1) + (-1)(4) + 3(-2) = 2 - 4 - 6 = -8
+$$
+</div>
+
+<p><strong>(2) L2 norms:</strong>
+<div class="equation">
+$$\begin{align}
+\norm{\vx}_2 &= \sqrt{2^2 + (-1)^2 + 3^2} = \sqrt{4 + 1 + 9} = \sqrt{14} \approx 3.742 \\
+\norm{\vy}_2 &= \sqrt{1^2 + 4^2 + (-2)^2} = \sqrt{1 + 16 + 4} = \sqrt{21} \approx 4.583
+\end{align}$$
+</div>
+
+<p><strong>(3) Cosine similarity:</strong>
+<div class="equation">
+$$
+\text{sim}(\vx, \vy) = \frac{\vx\transpose \vy}{\norm{\vx}_2 \norm{\vy}_2} = \frac{-8}{\sqrt{14} \cdot \sqrt{21}} = \frac{-8}{\sqrt{294}} \approx -0.466
+$$
+</div>
+
+<p>The negative cosine similarity indicates the vectors point in somewhat opposite directions.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For transformer layer with $d_{\text{model}} = 768$ and $d_{ff} = 3072$:
+
+<p><strong>(1) Parameters in feed-forward network:</strong>
+<ul>
+    <li>First linear: $\mW_1 \in \R^{3072 \times 768}$ has $3072 \times 768 = 2{,}359{,}296$ weights, plus bias $\vb_1 \in \R^{3072}$ has $3{,}072$ parameters
+    <li>Second linear: $\mW_2 \in \R^{768 \times 3072}$ has $768 \times 3072 = 2{,}359{,}296$ weights, plus bias $\vb_2 \in \R^{768}$ has $768$ parameters
+    <li>Total: $2{,}359{,}296 + 3{,}072 + 2{,}359{,}296 + 768 = 4{,}722{,}432$ parameters
+</ul>
+
+<p><strong>(2) Input tensor dimensions:</strong>
+For batch size $B = 32$ and sequence length $n = 512$, the input tensor has shape:
+<div class="equation">
+$$
+\R^{B \times n \times d_{\text{model}}} = \R^{32 \times 512 \times 768}
+$$
+</div>
+
+<p><strong>(3) FLOPs for forward pass:</strong>
+<ul>
+    <li>First transformation: $2 \times (Bn) \times d_{\text{model}} \times d_{ff} = 2 \times (32 \times 512) \times 768 \times 3072 = 77{,}309{,}411{,}328$ FLOPs
+    <li>Second transformation: $2 \times (Bn) \times d_{ff} \times d_{\text{model}} = 77{,}309{,}411{,}328$ FLOPs
+    <li>Total: $154{,}618{,}822{,}656 \approx 154.6$ GFLOPs
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Proof:</strong> Let $\mA = \mA\transpose$ be symmetric with eigenvectors $\vv_1, \vv_2$ corresponding to distinct eigenvalues $\lambda_1 \neq \lambda_2$.
+
+<p>We have:
+<div class="equation">
+$$\begin{align}
+\mA\vv_1 &= \lambda_1 \vv_1 \\
+\mA\vv_2 &= \lambda_2 \vv_2
+\end{align}$$
+</div>
+
+<p>Consider $\vv_1\transpose \mA \vv_2$:
+<div class="equation">
+$$\begin{align}
+\vv_1\transpose \mA \vv_2 &= \vv_1\transpose (\lambda_2 \vv_2) = \lambda_2 (\vv_1\transpose \vv_2) \\
+\vv_1\transpose \mA \vv_2 &= (\mA\vv_1)\transpose \vv_2 = (\lambda_1 \vv_1)\transpose \vv_2 = \lambda_1 (\vv_1\transpose \vv_2)
+\end{align}$$
+</div>
+
+<p>where we used $\mA\transpose = \mA$ in the second line. Therefore:
+<div class="equation">
+$$
+\lambda_2 (\vv_1\transpose \vv_2) = \lambda_1 (\vv_1\transpose \vv_2)
+$$
+</div>
+
+<p>Rearranging:
+<div class="equation">
+$$
+(\lambda_1 - \lambda_2)(\vv_1\transpose \vv_2) = 0
+$$
+</div>
+
+<p>Since $\lambda_1 \neq \lambda_2$, we must have $\vv_1\transpose \vv_2 = 0$, proving orthogonality.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For weight matrix $\mW \in \R^{1024 \times 4096}$ with rank-$r$ SVD approximation:
+
+<p><strong>(1) Parameters as function of $r$:</strong>
+The factored form requires:
+<ul>
+    <li>$\mW_1 = \mU_r \boldsymbol{\Sigma}_r \in \R^{1024 \times r}$: $1024r$ parameters
+    <li>$\mW_2 = \mV_r\transpose \in \R^{r \times 4096}$: $4096r$ parameters
+    <li>Total: $1024r + 4096r = 5120r$ parameters
+</ul>
+
+<p><strong>(2) Value of $r$ for 75\% compression:</strong>
+Original parameters: $1024 \times 4096 = 4{,}194{,}304$</p>
+
+<p>For 75\% compression, we want 25\% of original:
+<div class="equation">
+$$\begin{align}
+5120r &= 0.25 \times 4{,}194{,}304 \\
+5120r &= 1{,}048{,}576 \\
+r &= 204.8 \approx 205
+\end{align}$$
+</div>
+
+<p><strong>(3) Memory savings:</strong>
+<ul>
+    <li>Original: $4{,}194{,}304 \times 4 \text{ bytes} = 16{,}777{,}216 \text{ bytes} \approx 16.0$ MB
+    <li>Compressed: $1{,}048{,}576 \times 4 \text{ bytes} = 4{,}194{,}304 \text{ bytes} \approx 4.0$ MB
+    <li>Savings: $16.0 - 4.0 = 12.0$ MB
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For attention scores $\mA = \mQ\mK\transpose$ with $\mQ, \mK \in \R^{B \times n \times d_k}$, $B = 16$, $n = 1024$, $d_k = 64$:
+
+<p><strong>(1) Output dimensions:</strong>
+<div class="equation">
+$$
+\mA = \underbrace{\mQ}_{\R^{16 \times 1024 \times 64}} \underbrace{\mK\transpose}_{\R^{16 \times 64 \times 1024}} = \underbrace{\mA}_{\R^{16 \times 1024 \times 1024}}
+$$
+</div>
+
+<p><strong>(2) Total FLOPs:</strong>
+For each batch element, we compute $\mQ_b \mK_b\transpose$ where $\mQ_b, \mK_b \in \R^{1024 \times 64}$:
+<div class="equation">
+$$
+\text{FLOPs} = B \times 2n^2d_k = 16 \times 2 \times 1024^2 \times 64 = 2{,}147{,}483{,}648 \approx 2.15 \text{ GFLOPs}
+$$
+</div>
+
+<p><strong>(3) Arithmetic intensity:</strong>
+Memory transferred:
+<ul>
+    <li>Read $\mQ$: $16 \times 1024 \times 64 \times 4 = 4{,}194{,}304$ bytes
+    <li>Read $\mK$: $16 \times 1024 \times 64 \times 4 = 4{,}194{,}304$ bytes
+    <li>Write $\mA$: $16 \times 1024 \times 1024 \times 4 = 67{,}108{,}864$ bytes
+    <li>Total: $75{,}497{,}472$ bytes $\approx 72$ MB
+</ul>
+
+<p>Arithmetic intensity:
+<div class="equation">
+$$
+\frac{2{,}147{,}483{,}648 \text{ FLOPs}}{75{,}497{,}472 \text{ bytes}} \approx 28.4 \text{ FLOP/byte}
+$$
+</div>
+
+<p><strong>(4) Compute-bound or memory-bound:</strong>
+<ul>
+    <li>Compute time: $\frac{2.15 \text{ GFLOPs}}{312 \text{ TFLOPs}} \approx 6.9$ microseconds
+    <li>Memory time: $\frac{72 \text{ MB}}{1{,}600{,}000 \text{ MB/s}} \approx 45$ microseconds
+    <li>The operation is <strong>memory-bound</strong> by a factor of $45/6.9 \approx 6.5\times$
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For embedding layer with $V = 32{,}000$ and $d = 512$:
+
+<p><strong>(1) Number of parameters:</strong>
+<div class="equation">
+$$
+V \times d = 32{,}000 \times 512 = 16{,}384{,}000 \text{ parameters}
+$$
+</div>
+
+<p><strong>(2) Memory requirement:</strong>
+<div class="equation">
+$$
+16{,}384{,}000 \times 4 \text{ bytes} = 65{,}536{,}000 \text{ bytes} \approx 62.5 \text{ MB}
+$$
+</div>
+
+<p><strong>(3) Memory for embedded representations:</strong>
+For batch $B = 64$, sequence length $n = 256$:
+<div class="equation">
+$$
+B \times n \times d \times 4 = 64 \times 256 \times 512 \times 4 = 33{,}554{,}432 \text{ bytes} \approx 32 \text{ MB}
+$$
+</div>
+
+<p><strong>(4) LoRA trainable parameters:</strong>
+LoRA adds two matrices: $\mB \in \R^{d \times r}$ and $\mA \in \R^{r \times V}$:
+<div class="equation">
+$$
+dr + rV = 512 \times 16 + 16 \times 32{,}000 = 8{,}192 + 512{,}000 = 520{,}192 \text{ parameters}
+$$
+</div>
+
+<p>This is only $\frac{520{,}192}{16{,}384{,}000} \approx 3.2\%$ of the original parameters!
+</div>
+
+<div class="solution"><strong>Solution:</strong> For $\mA \in \R^{512 \times 2048}$, $\mB \in \R^{2048 \times 512}$, $\vx \in \R^{512}$:
+
+<p><strong>Option 1: $(\mA\mB)\vx$</strong>
+<ul>
+    <li>Compute $\mC = \mA\mB \in \R^{512 \times 512}$: $2 \times 512 \times 2048 \times 512 = 1{,}073{,}741{,}824$ FLOPs
+    <li>Compute $\mC\vx \in \R^{512}$: $2 \times 512 \times 512 = 524{,}288$ FLOPs
+    <li>Total: $1{,}074{,}266{,}112$ FLOPs
+</ul>
+
+<p><strong>Option 2: $\mA(\mB\vx)$</strong>
+<ul>
+    <li>Compute $\vy = \mB\vx \in \R^{2048}$: $2 \times 2048 \times 512 = 2{,}097{,}152$ FLOPs
+    <li>Compute $\mA\vy \in \R^{512}$: $2 \times 512 \times 2048 = 2{,}097{,}152$ FLOPs
+    <li>Total: $4{,}194{,}304$ FLOPs
+</ul>
+
+<p><strong>Efficiency comparison:</strong>
+<div class="equation">
+$$
+\text{Speedup} = \frac{1{,}074{,}266{,}112}{4{,}194{,}304} \approx 256\times
+$$
+</div>
+
+<p>Option 2 is 256× more efficient! This demonstrates the importance of operation ordering in linear algebra.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For $\mC = \mA\mB$ with $\mA, \mB \in \R^{2048 \times 2048}$:
+
+<p><strong>(1) Total FLOPs:</strong>
+<div class="equation">
+$$
+2 \times 2048^3 = 2 \times 8{,}589{,}934{,}592 = 17{,}179{,}869{,}184 \approx 17.2 \text{ GFLOPs}
+$$
+</div>
+
+<p><strong>(2) Memory transferred:</strong>
+<ul>
+    <li>Read $\mA$: $2048^2 \times 4 = 16{,}777{,}216$ bytes
+    <li>Read $\mB$: $2048^2 \times 4 = 16{,}777{,}216$ bytes
+    <li>Write $\mC$: $2048^2 \times 4 = 16{,}777{,}216$ bytes
+    <li>Total: $50{,}331{,}648$ bytes $\approx 48$ MB
+</ul>
+
+<p><strong>(3) Arithmetic intensity:</strong>
+<div class="equation">
+$$
+\frac{17{,}179{,}869{,}184 \text{ FLOPs}}{50{,}331{,}648 \text{ bytes}} \approx 341.3 \text{ FLOP/byte}
+$$
+</div>
+
+<p><strong>(4) Theoretical execution time:</strong>
+<ul>
+    <li>Compute time: $\frac{17.2 \text{ GFLOPs}}{100 \text{ TFLOPs}} = 0.172$ ms
+    <li>Memory time: $\frac{48 \text{ MB}}{900{,}000 \text{ MB/s}} = 0.053$ ms
+    <li>Execution time: $\max(0.172, 0.053) = 0.172$ ms
+</ul>
+
+<p><strong>(5) Bottleneck:</strong>
+The operation is <strong>compute-bound</strong> since compute time (0.172 ms) exceeds memory time (0.053 ms). The high arithmetic intensity (341 FLOP/byte) makes this operation well-suited for GPU acceleration.
+</div>
         
         <div class="chapter-nav">
   <a href="notation.html">← Notation and Conventions</a>

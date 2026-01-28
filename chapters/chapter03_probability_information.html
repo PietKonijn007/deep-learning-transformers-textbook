@@ -462,6 +462,215 @@ $$
 
 <div class="exercise"><strong>Exercise:</strong> In knowledge distillation, the KL divergence loss is scaled by $T^2$ where $T$ is the temperature parameter. Explain why this scaling is necessary by: (1) Showing how temperature affects the magnitude of gradients, (2) Deriving the gradient of $D_{\text{KL}}(\text{softmax}(\mathbf{z}/T) \| \text{softmax}(\mathbf{z}'/T))$ with respect to $\mathbf{z}'$, (3) Demonstrating that without $T^2$ scaling, the distillation loss would vanish as $T \to \infty$.
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> For neural network output $\hat{\mathbf{p}} = [0.15, 0.60, 0.20, 0.05]$:
+
+<p><strong>(1) Entropy:</strong>
+<div class="equation">
+$$\begin{align}
+H(\hat{\mathbf{p}}) &= -\sum_{i=1}^4 \hat{p}_i \log_2 \hat{p}_i \\
+&= -(0.15 \log_2 0.15 + 0.60 \log_2 0.60 + 0.20 \log_2 0.20 + 0.05 \log_2 0.05) \\
+&= -(0.15(-2.737) + 0.60(-0.737) + 0.20(-2.322) + 0.05(-4.322)) \\
+&= -(-0.411 - 0.442 - 0.464 - 0.216) \\
+&= 1.533 \text{ bits}
+\end{align}$$
+</div>
+
+<p><strong>(2) Cross-entropy loss for true label class 2:</strong>
+<div class="equation">
+$$
+L = -\log \hat{p}_2 = -\log 0.60 \approx 0.511 \text{ nats} \quad \text{or} \quad -\log_2 0.60 \approx 0.737 \text{ bits}
+$$
+</div>
+
+<p><strong>(3) Optimal output distribution:</strong>
+The optimal distribution assigns probability 1 to the correct class:
+<div class="equation">
+$$
+\mathbf{p}^* = [0, 1, 0, 0]
+$$
+</div>
+
+<p>This gives entropy $H(\mathbf{p}^*) = 0$ (no uncertainty) and cross-entropy loss $L = -\log 1 = 0$ (perfect prediction).
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Proof that $H(p, q) = H(p) + D_{\text{KL}}(p \| q)$:</strong>
+
+<p>Starting with the definition of cross-entropy:
+<div class="equation">
+$$\begin{align}
+H(p, q) &= -\sum_x p(x) \log q(x) \\
+&= -\sum_x p(x) \log q(x) + \sum_x p(x) \log p(x) - \sum_x p(x) \log p(x) \\
+&= -\sum_x p(x) \log p(x) + \sum_x p(x) \log \frac{p(x)}{q(x)} \\
+&= H(p) + D_{\text{KL}}(p \| q)
+\end{align}$$
+</div>
+
+<p>Since $H(p)$ is constant with respect to $q$, minimizing $H(p, q)$ is equivalent to minimizing $D_{\text{KL}}(p \| q)$. This shows that training with cross-entropy loss is equivalent to minimizing the KL divergence between the true distribution and the predicted distribution.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For binary classifier with $\hat{p} = 0.8$ and true label class 1:
+
+<p><strong>(1) Binary cross-entropy loss:</strong>
+<div class="equation">
+$$
+L = -[y \log \hat{p} + (1-y) \log(1-\hat{p})] = -[1 \cdot \log 0.8 + 0 \cdot \log 0.2] = -\log 0.8 \approx 0.223
+$$
+</div>
+
+<p><strong>(2) Gradient:</strong>
+<div class="equation">
+$$\begin{align}
+\frac{\partial L}{\partial \hat{p}} &= \frac{\partial}{\partial \hat{p}}[-y \log \hat{p} - (1-y) \log(1-\hat{p})] \\
+&= -\frac{y}{\hat{p}} + \frac{1-y}{1-\hat{p}} \\
+&= -\frac{1}{0.8} + \frac{0}{0.2} = -1.25
+\end{align}$$
+</div>
+
+<p><strong>(3) Loss comparison:</strong>
+<ul>
+    <li>$\hat{p} = 0.99$: $L = -\log 0.99 \approx 0.010$ (very confident, correct)
+    <li>$\hat{p} = 0.2$: $L = -\log 0.2 \approx 1.609$ (low confidence, incorrect)
+</ul>
+
+<p>The loss heavily penalizes confident wrong predictions, encouraging the model to be calibrated.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For GPT-2 with $V = 50{,}257$, $B = 16$, $n = 1024$:
+
+<p><strong>Memory for logits:</strong>
+<div class="equation">
+$$
+B \times n \times V \times 4 \text{ bytes} = 16 \times 1024 \times 50{,}257 \times 4 = 3{,}280{,}838{,}144 \text{ bytes} \approx 3.06 \text{ GB}
+$$
+</div>
+
+<p><strong>Memory with FP16:</strong>
+<div class="equation">
+$$
+16 \times 1024 \times 50{,}257 \times 2 = 1{,}640{,}419{,}072 \text{ bytes} \approx 1.53 \text{ GB}
+$$
+</div>
+
+<p>Savings: $3.06 - 1.53 = 1.53$ GB (50\% reduction)</p>
+
+<p><strong>Maximum batch size with 25\% memory budget:</strong>
+Available memory: $0.25 \times 40{,}000 \text{ MB} = 10{,}000$ MB</p>
+
+<p>For FP16 logits:
+<div class="equation">
+$$
+B = \frac{10{,}000 \text{ MB}}{n \times V \times 2 \text{ bytes}} = \frac{10{,}000 \times 10^6}{1024 \times 50{,}257 \times 2} \approx 97 \text{ sequences}
+$$
+</div>
+
+<p>With FP32, maximum batch size would be only 48 sequences.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For sampled softmax with $K = 5{,}000$ and $V = 100{,}000$:
+
+<p><strong>(1) Speedup factor:</strong>
+<ul>
+    <li>Full softmax: $O(V) = 100{,}000$ operations per token
+    <li>Sampled softmax: $O(K+1) = 5{,}001$ operations per token
+    <li>Speedup: $\frac{100{,}000}{5{,}001} \approx 20\times$
+</ul>
+
+<p><strong>(2) Memory reduction:</strong>
+For batch of 32 sequences with 512 tokens:
+<ul>
+    <li>Full softmax logits: $32 \times 512 \times 100{,}000 \times 4 = 6{,}553{,}600{,}000$ bytes $\approx 6.1$ GB
+    <li>Sampled softmax logits: $32 \times 512 \times 5{,}001 \times 4 = 327{,}745{,}536$ bytes $\approx 312$ MB
+    <li>Reduction: $\frac{6.1 \text{ GB}}{312 \text{ MB}} \approx 20\times$
+</ul>
+
+<p><strong>(3) Why sampled softmax introduces bias:</strong>
+<ul>
+    <li>The gradient estimate is unbiased only if we sample from the true distribution
+    <li>In practice, we sample from a proposal distribution (e.g., unigram frequency)
+    <li>This creates importance sampling bias in the gradient
+    <li>The normalization constant is approximated, not exact
+    <li>Bias decreases as $K$ increases, but never reaches zero
+    <li>For large $K$ (e.g., 10,000), bias is negligible for most applications
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For A100 GPU with 1.5 TB/s bandwidth and 312 TFLOPS FP16 throughput, softmax over $V = 30{,}000$:
+
+<p><strong>(1) Memory transfer time:</strong>
+<div class="equation">
+$$
+\text{Time} = \frac{400 \text{ KB}}{1{,}500{,}000{,}000 \text{ KB/s}} = \frac{400}{1{,}500{,}000{,}000} \approx 0.267 \text{ microseconds}
+$$
+</div>
+
+<p><strong>(2) Compute time:</strong>
+For 30,000 exponentials and 30,000 divisions:
+<div class="equation">
+$$
+\text{Time} = \frac{60{,}000 \text{ ops}}{312 \times 10^{12} \text{ ops/s}} \approx 0.000192 \text{ microseconds}
+$$
+</div>
+
+<p><strong>(3) Bottleneck analysis:</strong>
+<ul>
+    <li>Memory time: 0.267 microseconds
+    <li>Compute time: 0.000192 microseconds
+    <li>The operation is <strong>memory-bound</strong> by a factor of $\frac{0.267}{0.000192} \approx 1{,}390\times$
+</ul>
+
+<p>This extreme memory-bandwidth bottleneck explains why vocabulary size has such a direct impact on training speed, and why reducing precision from FP32 to FP16 provides nearly 2× speedup for softmax operations.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For knowledge distillation with temperature $T$:
+
+<p><strong>(1) Temperature effect on gradient magnitude:</strong>
+The softmax with temperature is:
+<div class="equation">
+$$
+p_i = \frac{\exp(z_i/T)}{\sum_j \exp(z_j/T)}
+$$
+</div>
+
+<p>As $T$ increases, the distribution becomes more uniform (softer). The gradient magnitude scales as $O(1/T)$ because:
+<div class="equation">
+$$
+\frac{\partial p_i}{\partial z_j} = \frac{1}{T} p_i(\delta_{ij} - p_j)
+$$
+</div>
+
+<p><strong>(2) Gradient derivation:</strong>
+For KL divergence $D_{\text{KL}}(p_{\text{teacher}} \| p_{\text{student}})$ where both use temperature $T$:
+<div class="equation">
+$$\begin{align}
+\frac{\partial D_{\text{KL}}}{\partial z'_i} &= \frac{\partial}{\partial z'_i} \sum_j p_j^T \log \frac{p_j^T}{q_j^T} \\
+&= -\sum_j p_j^T \frac{\partial \log q_j^T}{\partial z'_i} \\
+&= -\sum_j p_j^T \frac{1}{q_j^T} \frac{\partial q_j^T}{\partial z'_i} \\
+&= -\sum_j p_j^T \frac{1}{q_j^T} \cdot \frac{1}{T} q_j^T(\delta_{ij} - q_i^T) \\
+&= -\frac{1}{T} \sum_j p_j^T(\delta_{ij} - q_i^T) \\
+&= \frac{1}{T}(q_i^T - p_i^T)
+\end{align}$$
+</div>
+
+<p><strong>(3) Why $T^2$ scaling is necessary:</strong>
+Without $T^2$ scaling, the gradient is $O(1/T)$, which vanishes as $T \to \infty$:
+<div class="equation">
+$$
+\lim_{T \to \infty} \frac{1}{T}(q_i^T - p_i^T) = 0
+$$
+</div>
+
+<p>With $T^2$ scaling, the effective gradient becomes:
+<div class="equation">
+$$
+T^2 \cdot \frac{1}{T}(q_i^T - p_i^T) = T(q_i^T - p_i^T)
+$$
+</div>
+
+<p>This compensates for the $1/T$ factor from the softmax derivative, maintaining meaningful gradients even for large $T$. The $T^2$ factor ensures that the distillation loss has the same scale as the hard label loss, allowing proper balancing between the two objectives.
+</div>
         
         <div class="chapter-nav">
   <a href="chapter02_calculus_optimization.html">← Chapter 2: Calculus and Optimization</a>

@@ -585,6 +585,142 @@ The attention matrix has shape $n \times r$ instead of $n \times n$, reducing me
 
 <div class="exercise"><strong>Exercise:</strong> Compare attention weights with and without positional encoding. Show numerically how word order affects attention without PE.
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> For GPT-2 ($d_{\text{model}} = 1024$, $h = 16$, $n = 1024$):
+
+<p><strong>(1) Attention matrix memory:</strong>
+<div class="equation">
+$$
+h \times n \times n \times 4 \text{ bytes} = 16 \times 1024 \times 1024 \times 4 = 67{,}108{,}864 \text{ bytes} \approx 64 \text{ MB}
+$$
+</div>
+
+<p><strong>(2) Parameters in multi-head attention:</strong>
+<ul>
+    <li>$\mW_Q, \mW_K, \mW_V$: $3 \times d^2 = 3 \times 1024^2 = 3{,}145{,}728$
+    <li>$\mW_O$: $d^2 = 1{,}048{,}576$
+    <li>Total: $4{,}194{,}304$ parameters
+</ul>
+
+<p><strong>(3) FLOPs for forward pass:</strong>
+<ul>
+    <li>QKV projections: $3 \times 2nd^2 = 6{,}442{,}450{,}944$ FLOPs
+    <li>Attention scores: $2hn^2d_k = 2{,}147{,}483{,}648$ FLOPs
+    <li>Attention output: $2hn^2d_k = 2{,}147{,}483{,}648$ FLOPs
+    <li>Output projection: $2nd^2 = 2{,}147{,}483{,}648$ FLOPs
+    <li>Total: $\approx 12.9$ GFLOPs
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>PyTorch implementation:</strong>
+
+<pre><code>import torch
+import torch.nn as nn
+
+<p>class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        assert d_model 
+        self.d_k = d_model // num_heads
+        self.num_heads = num_heads
+        
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.W_o = nn.Linear(d_model, d_model)
+        
+    def forward(self, x):
+        batch_size, seq_len, d_model = x.size()
+        
+        # Project and reshape
+        Q = self.W_q(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        K = self.W_k(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        V = self.W_v(x).view(batch_size, seq_len, self.num_heads, self.d_k).transpose(1, 2)
+        
+        # Attention
+        scores = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.d_k, dtype=torch.float32))
+        attn = torch.softmax(scores, dim=-1)
+        out = torch.matmul(attn, V)
+        
+        # Concatenate and project
+        out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
+        return self.W_o(out)</p>
+
+<p># Test
+mha = MultiHeadAttention(d_model=128, num_heads=4)
+x = torch.randn(32, 20, 128)
+output = mha(x)
+print(f"Output shape: {output.shape}")  # (32, 20, 128)
+print(f"Parameters: {sum(p.numel() for p in mha.parameters())}")  # 66,048
+</code></pre></p>
+
+<p>Expected parameters: $4 \times 128^2 = 65{,}536$ (matches implementation).
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Proof that sinusoidal PE allows relative position computation:</strong>
+
+<p>For position $\text{pos}$ and dimension $2i$:
+<div class="equation">
+$$
+\text{PE}_{\text{pos}, 2i} = \sin\left(\frac{\text{pos}}{10000^{2i/d}}\right)
+$$
+</div>
+
+<p>For position $\text{pos}+k$:
+<div class="equation">
+$$\begin{align}
+\text{PE}_{\text{pos}+k, 2i} &= \sin\left(\frac{\text{pos}+k}{10000^{2i/d}}\right) \\
+&= \sin\left(\frac{\text{pos}}{10000^{2i/d}} + \frac{k}{10000^{2i/d}}\right)
+\end{align}$$
+</div>
+
+<p>Using trigonometric identity:
+<div class="equation">
+$$\begin{align}
+\sin(\alpha + \beta) &= \sin(\alpha)\cos(\beta) + \cos(\alpha)\sin(\beta)
+\end{align}$$
+</div>
+
+<p>Therefore:
+<div class="equation">
+$$
+\text{PE}_{\text{pos}+k} = \mM_k \cdot \text{PE}_{\text{pos}}
+$$
+</div>
+
+<p>where $\mM_k$ is a linear transformation matrix depending only on $k$. This allows the model to learn relative positions through linear transformations.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Effect of positional encoding on attention:</strong>
+
+<p>Without PE, attention is permutation-invariant:
+<div class="equation">
+$$
+\text{Attention}([w_1, w_2, w_3]) = \text{Attention}([w_3, w_1, w_2])
+$$
+</div>
+
+<p><strong>Numerical example:</strong>
+Sentence: "cat sat mat"</p>
+
+<p>Without PE:
+<div class="equation">
+$$
+\text{Attention weights} \approx \begin{bmatrix} 0.33 & 0.33 & 0.34 \\ 0.33 & 0.33 & 0.34 \\ 0.33 & 0.33 & 0.34 \end{bmatrix}
+$$
+</div>
+
+<p>With PE:
+<div class="equation">
+$$
+\text{Attention weights} \approx \begin{bmatrix} 0.45 & 0.35 & 0.20 \\ 0.30 & 0.45 & 0.25 \\ 0.20 & 0.30 & 0.50 \end{bmatrix}
+$$
+</div>
+
+<p>With PE, each token attends more strongly to nearby positions, capturing word order information.
+</div>
         
         <div class="chapter-nav">
   <a href="chapter07_attention_fundamentals.html">← Chapter 7: Attention Mechanisms: Fundamentals</a>

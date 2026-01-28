@@ -306,3 +306,134 @@ Show two $3\times3$ convolutions equal one $5\times5$ receptive field. Compare p
 Design CNN for CIFAR-10 with 3 blocks, channels [64, 128, 256]. Calculate total parameters.
 \end{exercise}
 
+\section{Solutions}
+
+\begin{solution}[Exercise 1]
+Starting with input $32\times32\times3$:
+
+\textbf{Conv1 (64 filters, $5\times5$, stride=1, padding=2):}
+\begin{equation}
+H_{\text{out}} = \frac{32 + 2(2) - 5}{1} + 1 = \frac{32 + 4 - 5}{1} + 1 = 32
+\end{equation}
+Output: $32\times32\times64$
+
+Parameters: $(5 \times 5 \times 3 + 1) \times 64 = 76 \times 64 = 4{,}864$
+
+\textbf{MaxPool1 ($2\times2$, stride=2):}
+\begin{equation}
+H_{\text{out}} = \frac{32 - 2}{2} + 1 = 16
+\end{equation}
+Output: $16\times16\times64$
+
+Parameters: 0 (pooling has no learnable parameters)
+
+\textbf{Conv2 (128 filters, $3\times3$, stride=1, padding=1):}
+\begin{equation}
+H_{\text{out}} = \frac{16 + 2(1) - 3}{1} + 1 = 16
+\end{equation}
+Output: $16\times16\times128$
+
+Parameters: $(3 \times 3 \times 64 + 1) \times 128 = 577 \times 128 = 73{,}856$
+
+\textbf{MaxPool2 ($2\times2$, stride=2):}
+\begin{equation}
+H_{\text{out}} = \frac{16 - 2}{2} + 1 = 8
+\end{equation}
+Output: $8\times8\times128$
+
+\textbf{Total parameters:} $4{,}864 + 73{,}856 = 78{,}720$
+\end{solution}
+
+\begin{solution}[Exercise 2]
+\textbf{Receptive field analysis:}
+
+\textbf{Single $5\times5$ convolution:}
+\begin{itemize}
+    \item Receptive field: $5\times5 = 25$ pixels
+    \item Parameters per output channel: $5 \times 5 \times C_{\text{in}} + 1$
+    \item For $C_{\text{in}} = C_{\text{out}} = 64$: $(25 \times 64 + 1) \times 64 = 102{,}464$ parameters
+\end{itemize}
+
+\textbf{Two $3\times3$ convolutions:}
+\begin{itemize}
+    \item First $3\times3$ conv: receptive field $3\times3$
+    \item Second $3\times3$ conv: each output pixel sees $3\times3$ region of previous layer
+    \item Each pixel in previous layer sees $3\times3$ region of input
+    \item Total receptive field: $3 + (3-1) = 5$ in each dimension, so $5\times5$
+\end{itemize}
+
+\textbf{Parameter count for two $3\times3$ convolutions:}
+\begin{itemize}
+    \item First conv: $(3 \times 3 \times 64 + 1) \times 64 = 36{,}928$ parameters
+    \item Second conv: $(3 \times 3 \times 64 + 1) \times 64 = 36{,}928$ parameters
+    \item Total: $73{,}856$ parameters
+\end{itemize}
+
+\textbf{Comparison:}
+\begin{equation}
+\text{Reduction} = \frac{102{,}464 - 73{,}856}{102{,}464} \approx 28\%
+\end{equation}
+
+Two $3\times3$ convolutions achieve the same receptive field as one $5\times5$ with 28\% fewer parameters, plus an additional nonlinearity between them, increasing representational power.
+\end{solution}
+
+\begin{solution}[Exercise 3]
+\textbf{CNN architecture for CIFAR-10 (10 classes):}
+
+Input: $32\times32\times3$
+
+\textbf{Block 1 (64 channels):}
+\begin{itemize}
+    \item Conv: $3\times3$, 64 filters, stride=1, padding=1 $\to$ $32\times32\times64$
+    \item Conv: $3\times3$, 64 filters, stride=1, padding=1 $\to$ $32\times32\times64$
+    \item MaxPool: $2\times2$, stride=2 $\to$ $16\times16\times64$
+\end{itemize}
+
+Parameters:
+\begin{itemize}
+    \item Conv1: $(3 \times 3 \times 3 + 1) \times 64 = 1{,}792$
+    \item Conv2: $(3 \times 3 \times 64 + 1) \times 64 = 36{,}928$
+    \item Block 1 total: $38{,}720$
+\end{itemize}
+
+\textbf{Block 2 (128 channels):}
+\begin{itemize}
+    \item Conv: $3\times3$, 128 filters, stride=1, padding=1 $\to$ $16\times16\times128$
+    \item Conv: $3\times3$, 128 filters, stride=1, padding=1 $\to$ $16\times16\times128$
+    \item MaxPool: $2\times2$, stride=2 $\to$ $8\times8\times128$
+\end{itemize}
+
+Parameters:
+\begin{itemize}
+    \item Conv1: $(3 \times 3 \times 64 + 1) \times 128 = 73{,}856$
+    \item Conv2: $(3 \times 3 \times 128 + 1) \times 128 = 147{,}584$
+    \item Block 2 total: $221{,}440$
+\end{itemize}
+
+\textbf{Block 3 (256 channels):}
+\begin{itemize}
+    \item Conv: $3\times3$, 256 filters, stride=1, padding=1 $\to$ $8\times8\times256$
+    \item Conv: $3\times3$, 256 filters, stride=1, padding=1 $\to$ $8\times8\times256$
+    \item MaxPool: $2\times2$, stride=2 $\to$ $4\times4\times256$
+\end{itemize}
+
+Parameters:
+\begin{itemize}
+    \item Conv1: $(3 \times 3 \times 128 + 1) \times 256 = 295{,}168$
+    \item Conv2: $(3 \times 3 \times 256 + 1) \times 256 = 590{,}080$
+    \item Block 3 total: $885{,}248$
+\end{itemize}
+
+\textbf{Classifier:}
+\begin{itemize}
+    \item Global Average Pooling: $4\times4\times256 \to 1\times1\times256$
+    \item Fully connected: $256 \to 10$
+    \item Parameters: $256 \times 10 + 10 = 2{,}570$
+\end{itemize}
+
+\textbf{Total parameters:}
+\begin{equation}
+38{,}720 + 221{,}440 + 885{,}248 + 2{,}570 = 1{,}147{,}978 \approx 1.15\text{M parameters}
+\end{equation}
+\end{solution}
+

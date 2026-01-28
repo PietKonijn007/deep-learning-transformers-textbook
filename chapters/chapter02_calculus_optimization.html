@@ -1065,6 +1065,292 @@ For large models, gradient synchronization can become a bottleneck. Techniques l
     <li>When does gradient compression become beneficial?
 </ol>
 </div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> For $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA$ is symmetric:
+
+<p>Using the gradient rules:
+<ul>
+    <li>$\nabla_{\vw}(\vw\transpose \mA \vw) = 2\mA\vw$ (since $\mA$ is symmetric)
+    <li>$\nabla_{\vw}(\vb\transpose \vw) = \vb$
+    <li>$\nabla_{\vw}(c) = \mathbf{0}$
+</ul>
+
+<p>Therefore:
+<div class="equation">
+$$
+\nabla_{\vw} f = 2\mA\vw + \vb
+$$
+</div>
+</div>
+
+<div class="solution"><strong>Solution:</strong> Given: $\vx = [1.0, 0.5]\transpose$, target $y = 2.0$, ReLU activation.
+
+<p>Let's use specific weights:
+<div class="equation">
+$$
+\mW^{(1)} = \begin{bmatrix} 0.5 & -0.3 \\ 0.2 & 0.6 \\ -0.4 & 0.8 \end{bmatrix}, \quad \mW^{(2)} = \begin{bmatrix} 1.0 & -0.5 & 0.7 \end{bmatrix}
+$$
+</div>
+
+<p><strong>Forward pass:</strong>
+<div class="equation">
+$$\begin{align}
+\vz^{(1)} &= \mW^{(1)}\vx = \begin{bmatrix} 0.5(1.0) - 0.3(0.5) \\ 0.2(1.0) + 0.6(0.5) \\ -0.4(1.0) + 0.8(0.5) \end{bmatrix} = \begin{bmatrix} 0.35 \\ 0.50 \\ 0.00 \end{bmatrix} \\
+\vh^{(1)} &= \text{ReLU}(\vz^{(1)}) = \begin{bmatrix} 0.35 \\ 0.50 \\ 0.00 \end{bmatrix} \\
+z^{(2)} &= \mW^{(2)}\vh^{(1)} = 1.0(0.35) - 0.5(0.50) + 0.7(0.00) = 0.10 \\
+L &= \frac{1}{2}(y - z^{(2)})^2 = \frac{1}{2}(2.0 - 0.10)^2 = 1.805
+\end{align}$$
+</div>
+
+<p><strong>Backward pass:</strong>
+<div class="equation">
+$$\begin{align}
+\frac{\partial L}{\partial z^{(2)}} &= -(y - z^{(2)}) = -(2.0 - 0.10) = -1.90 \\
+\frac{\partial L}{\partial \mW^{(2)}} &= \frac{\partial L}{\partial z^{(2)}} \vh^{(1)\transpose} = -1.90 \begin{bmatrix} 0.35 & 0.50 & 0.00 \end{bmatrix} = \begin{bmatrix} -0.665 & -0.950 & 0.000 \end{bmatrix} \\
+\frac{\partial L}{\partial \vh^{(1)}} &= \mW^{(2)\transpose} \frac{\partial L}{\partial z^{(2)}} = \begin{bmatrix} 1.0 \\ -0.5 \\ 0.7 \end{bmatrix}(-1.90) = \begin{bmatrix} -1.90 \\ 0.95 \\ -1.33 \end{bmatrix} \\
+\frac{\partial L}{\partial \vz^{(1)}} &= \frac{\partial L}{\partial \vh^{(1)}} \odot \text{ReLU}'(\vz^{(1)}) = \begin{bmatrix} -1.90 \\ 0.95 \\ -1.33 \end{bmatrix} \odot \begin{bmatrix} 1 \\ 1 \\ 0 \end{bmatrix} = \begin{bmatrix} -1.90 \\ 0.95 \\ 0.00 \end{bmatrix} \\
+\frac{\partial L}{\partial \mW^{(1)}} &= \frac{\partial L}{\partial \vz^{(1)}} \vx\transpose = \begin{bmatrix} -1.90 \\ 0.95 \\ 0.00 \end{bmatrix} \begin{bmatrix} 1.0 & 0.5 \end{bmatrix} = \begin{bmatrix} -1.90 & -0.95 \\ 0.95 & 0.475 \\ 0.00 & 0.00 \end{bmatrix}
+\end{align}$$
+</div>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For Adam optimizer with $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\alpha = 0.001$:
+
+<p><strong>(1) Why bias correction is necessary:</strong>
+The first and second moment estimates are initialized to zero, creating a bias toward zero in early iterations. Without correction, the effective learning rate would be too small initially. Bias correction factors $\frac{1}{1-\beta_1^t}$ and $\frac{1}{1-\beta_2^t}$ compensate for this initialization bias.</p>
+
+<p><strong>(2) Effective learning rates:</strong>
+The effective learning rate is $\alpha_{\text{eff}} = \alpha \frac{\sqrt{1-\beta_2^t}}{1-\beta_1^t}$:</p>
+
+<ul>
+    <li>$t=1$: $\alpha_{\text{eff}} = 0.001 \times \frac{\sqrt{1-0.999}}{1-0.9} = 0.001 \times \frac{0.0316}{0.1} \approx 0.000316$
+    <li>$t=10$: $\alpha_{\text{eff}} = 0.001 \times \frac{\sqrt{1-0.999^{10}}}{1-0.9^{10}} \approx 0.001 \times \frac{0.0998}{0.651} \approx 0.000153$
+    <li>$t=100$: $\alpha_{\text{eff}} = 0.001 \times \frac{\sqrt{1-0.999^{100}}}{1-0.9^{100}} \approx 0.001 \times \frac{0.302}{1.000} \approx 0.000302$
+    <li>$t=1000$: $\alpha_{\text{eff}} \approx 0.001$ (bias correction negligible)
+</ul>
+
+<p><strong>(3) Handling sparse gradients:</strong>
+Adam maintains separate adaptive learning rates for each parameter through the second moment estimate $\mathbf{v}$. For sparse gradients, parameters with infrequent updates have smaller $v_i$ values, resulting in larger effective learning rates. This allows Adam to make larger updates to rarely-updated parameters, unlike SGD which treats all parameters equally. This is particularly beneficial for embedding layers and natural language processing tasks.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For transformer with $d_{\text{model}} = 512$ and warmup over 4000 steps:
+
+<p>The learning rate schedule is:
+<div class="equation">
+$$
+\eta(t) = d_{\text{model}}^{-0.5} \cdot \min(t^{-0.5}, t \cdot \text{warmup}^{-1.5})
+$$
+</div>
+
+<p><strong>(1) Plot description:</strong>
+The schedule has two phases:
+<ul>
+    <li>Warmup ($t \leq 4000$): Linear increase $\eta(t) = \frac{t}{4000} \cdot 512^{-0.5} \approx 0.0011 \cdot t$
+    <li>Decay ($t > 4000$): Inverse square root $\eta(t) = 512^{-0.5} \cdot t^{-0.5} \approx \frac{1.414}{\sqrt{t}}$
+</ul>
+
+<p><strong>(2) Learning rates at specific steps:</strong>
+<ul>
+    <li>$t=1$: $\eta = 512^{-0.5} \cdot 1 \cdot 4000^{-1.5} \approx 0.0000111$
+    <li>$t=4000$: $\eta = 512^{-0.5} \cdot 4000^{-0.5} \approx 0.0222$ (peak)
+    <li>$t=10000$: $\eta = 512^{-0.5} \cdot 10000^{-0.5} \approx 0.0141$
+</ul>
+
+<p><strong>(3) Why warmup is beneficial:</strong>
+<ul>
+    <li>Prevents instability from large gradients in early training when parameters are randomly initialized
+    <li>Allows the optimizer's momentum statistics to stabilize
+    <li>Particularly important for Adam, where the second moment estimate needs time to accumulate
+    <li>Without warmup, large initial learning rates can cause divergence or poor local minima
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For GPT-2 with 1.5B parameters and Adam optimizer:
+
+<p><strong>(1) Model parameters in FP16:</strong>
+<div class="equation">
+$$
+1.5 \times 10^9 \times 2 \text{ bytes} = 3 \times 10^9 \text{ bytes} = 3 \text{ GB}
+$$
+</div>
+
+<p><strong>(2) Optimizer states:</strong>
+<ul>
+    <li>FP32 master copy: $1.5 \times 10^9 \times 4 = 6$ GB
+    <li>First moment $\mathbf{m}$ (FP32): $1.5 \times 10^9 \times 4 = 6$ GB
+    <li>Second moment $\mathbf{v}$ (FP32): $1.5 \times 10^9 \times 4 = 6$ GB
+    <li>Total optimizer states: $18$ GB
+</ul>
+
+<p><strong>(3) Gradients in FP16:</strong>
+<div class="equation">
+$$
+1.5 \times 10^9 \times 2 \text{ bytes} = 3 \text{ GB}
+$$
+</div>
+
+<p><strong>(4) Total memory:</strong>
+<div class="equation">
+$$
+\text{Model (FP16)} + \text{Optimizer states} + \text{Gradients} = 3 + 18 + 3 = 24 \text{ GB}
+$$
+</div>
+
+<p><strong>(5) Number of A100 GPUs needed:</strong>
+<div class="equation">
+$$
+\frac{24 \text{ GB}}{80 \text{ GB per GPU}} = 0.3 \text{ GPUs}
+$$
+</div>
+
+<p>One A100 GPU is sufficient for the model and optimizer states alone. However, activations during training require additional memory, so 1-2 GPUs would be needed in practice depending on batch size.
+</div>
+
+<div class="solution"><strong>Solution:</strong> For BERT-base with sequence length 512 and batch size 64:
+
+<p><strong>(1) Total FLOPs per training step:</strong>
+From Example~[ref]:
+<ul>
+    <li>Forward pass: $\approx 96$ GFLOPs per sample
+    <li>Backward pass: $\approx 193$ GFLOPs per sample
+    <li>Total per sample: $289$ GFLOPs
+    <li>For batch of 64: $289 \times 64 = 18{,}496$ GFLOPs $\approx 18.5$ TFLOPs
+</ul>
+
+<p><strong>(2) Time per step on A100:</strong>
+<div class="equation">
+$$
+\frac{18.5 \text{ TFLOPs}}{312 \text{ TFLOPs}} \approx 59 \text{ ms}
+$$
+</div>
+
+<p>In practice, memory bandwidth and kernel launch overhead increase this to $\approx 80$-$100$ ms.</p>
+
+<p><strong>(3) Mixed precision impact:</strong>
+<ul>
+    <li>FP16 Tensor Cores provide 2× speedup: $\approx 30$ ms theoretical
+    <li>Reduced memory traffic (2× less bandwidth): enables larger batches
+    <li>Practical speedup: 1.8-2.2× including overhead
+    <li>Throughput increase: $\approx 3.5$-$4$× due to larger batch sizes
+</ul>
+
+<p><strong>(4) Maximum batch size in 80 GB:</strong>
+Memory breakdown:
+<ul>
+    <li>Model + optimizer: $\approx 1.7$ GB
+    <li>Activations per sample: $\approx 130$ MB
+    <li>Gradients: $\approx 0.44$ GB
+    <li>Framework overhead: $\approx 2$ GB
+</ul>
+
+<p>Available for activations: $80 - 1.7 - 0.44 - 2 = 75.86$ GB</p>
+
+<p>Maximum batch size: $\frac{75{,}860 \text{ MB}}{130 \text{ MB/sample}} \approx 583$ samples
+</div>
+
+<div class="solution"><strong>Solution:</strong> For network with $10^7$ parameters:
+
+<p><strong>(1) Finite differences forward passes:</strong>
+Requires one forward pass per parameter: $10^7$ forward passes</p>
+
+<p><strong>(2) Backpropagation passes:</strong>
+Requires 1 forward pass + 1 backward pass = 2 passes total</p>
+
+<p><strong>(3) Time comparison:</strong>
+<ul>
+    <li>Finite differences: $10^7 \times 10 \text{ ms} = 10^8 \text{ ms} = 100{,}000 \text{ seconds} \approx 27.8 \text{ hours}$
+    <li>Backpropagation: $2 \times 10 \text{ ms} = 20 \text{ ms}$
+    <li>Speedup: $\frac{10^8}{20} = 5 \times 10^6 = 5$ million×
+</ul>
+
+<p><strong>(4) Why reverse mode AD is preferred:</strong>
+<ul>
+    <li>For $n$ parameters and scalar loss, forward mode requires $O(n)$ passes while reverse mode requires $O(1)$ passes
+    <li>Reverse mode exploits the structure of neural networks: many parameters, one loss
+    <li>Memory cost is higher (must store activations) but computational savings are enormous
+    <li>Forward mode would be preferred only if we had many outputs and few inputs (rare in deep learning)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For 24-layer transformer with gradient checkpointing:
+
+<p><strong>(1) Activation memory without checkpointing:</strong>
+Assuming $\approx 700$ MB per layer (from Example~[ref]):
+<div class="equation">
+$$
+24 \times 700 \text{ MB} = 16{,}800 \text{ MB} \approx 16.4 \text{ GB}
+$$
+</div>
+
+<p><strong>(2) Memory reduction with checkpointing every 6 layers:</strong>
+We save only 4 checkpoints (layers 6, 12, 18, 24):
+<div class="equation">
+$$
+\text{Memory} = 4 \times 700 \text{ MB} = 2{,}800 \text{ MB} \approx 2.7 \text{ GB}
+$$
+</div>
+
+<p>Reduction factor: $\frac{16.4}{2.7} \approx 6\times$</p>
+
+<p><strong>(3) Computational overhead:</strong>
+For each checkpoint interval, we recompute the forward pass once during backward:
+<ul>
+    <li>Original: 1 forward + 1 backward
+    <li>With checkpointing: 1 forward + 1 backward + 0.75 forward (recompute 18 of 24 layers)
+    <li>Overhead: $\frac{1.75}{2} = 87.5\%$ increase, or 1.875× total time
+</ul>
+
+<p><strong>(4) When checkpointing becomes necessary:</strong>
+Checkpointing is essential when:
+<ul>
+    <li>Activation memory exceeds available GPU memory
+    <li>For GPT-3 scale (175B parameters), activations can exceed 100 GB
+    <li>Rule of thumb: Use checkpointing when activations $>$ 50\% of GPU memory
+    <li>Trade-off: 1.5-2× slower training for 4-8× memory reduction
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> For distributed training with 8 GPUs:
+
+<p><strong>(1) Scaling efficiency:</strong>
+<ul>
+    <li>Time per step (single GPU): 100 ms
+    <li>Time per step (8 GPUs): $\frac{100}{8} + 15 = 12.5 + 15 = 27.5$ ms
+    <li>Ideal time (perfect scaling): $\frac{100}{8} = 12.5$ ms
+    <li>Scaling efficiency: $\frac{12.5}{27.5} \approx 45.5\%$
+</ul>
+
+<p><strong>(2) Batch size effect on communication:</strong>
+<ul>
+    <li>Communication time is independent of batch size (same gradient size)
+    <li>Larger batches increase computation time, reducing communication overhead percentage
+    <li>For batch size $B$: efficiency $\approx \frac{100B/8}{100B/8 + 15}$
+    <li>Doubling batch size: $\frac{25}{40} = 62.5\%$ efficiency
+    <li>4× batch size: $\frac{50}{65} = 76.9\%$ efficiency
+</ul>
+
+<p><strong>(3) Ring vs tree all-reduce for 64 GPUs:</strong>
+<ul>
+    <li>Ring all-reduce: $O(N)$ communication steps, bandwidth-optimal
+    <li>Tree all-reduce: $O(\log N)$ communication steps, latency-optimal
+    <li>For 64 GPUs: Ring has 64 steps, tree has $\log_2(64) = 6$ steps
+    <li>Ring is better for large messages (bandwidth-bound)
+    <li>Tree is better for small messages (latency-bound)
+    <li>Typical gradient sizes favor ring all-reduce
+</ul>
+
+<p><strong>(4) When gradient compression is beneficial:</strong>
+<ul>
+    <li>When communication time $>$ compression time
+    <li>For slow networks (inter-node communication)
+    <li>Typical compression: 8-bit quantization or top-k sparsification
+    <li>Compression ratio: 4× (FP32 to 8-bit)
+    <li>Beneficial when: $\frac{\text{gradient size}}{\text{bandwidth}} > \frac{\text{gradient size}}{\text{compression throughput}} + \frac{\text{compressed size}}{\text{bandwidth}}$
+    <li>Usually beneficial for $>$8 GPUs across multiple nodes
+</ul>
+</div>
         
         <div class="chapter-nav">
   <a href="chapter01_linear_algebra.html">← Chapter 1: Linear Algebra for Deep Learning</a>

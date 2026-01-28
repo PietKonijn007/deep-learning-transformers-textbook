@@ -335,3 +335,187 @@ An NVIDIA A100 GPU has memory bandwidth of 1.5 TB/s and FP16 compute throughput 
 In knowledge distillation, the KL divergence loss is scaled by $T^2$ where $T$ is the temperature parameter. Explain why this scaling is necessary by: (1) Showing how temperature affects the magnitude of gradients, (2) Deriving the gradient of $D_{\text{KL}}(\text{softmax}(\mathbf{z}/T) \| \text{softmax}(\mathbf{z}'/T))$ with respect to $\mathbf{z}'$, (3) Demonstrating that without $T^2$ scaling, the distillation loss would vanish as $T \to \infty$.
 \end{exercise}
 
+\section{Solutions}
+
+\begin{solution}[Exercise 1]
+For neural network output $\hat{\mathbf{p}} = [0.15, 0.60, 0.20, 0.05]$:
+
+\textbf{(1) Entropy:}
+\begin{align}
+H(\hat{\mathbf{p}}) &= -\sum_{i=1}^4 \hat{p}_i \log_2 \hat{p}_i \\
+&= -(0.15 \log_2 0.15 + 0.60 \log_2 0.60 + 0.20 \log_2 0.20 + 0.05 \log_2 0.05) \\
+&= -(0.15(-2.737) + 0.60(-0.737) + 0.20(-2.322) + 0.05(-4.322)) \\
+&= -(-0.411 - 0.442 - 0.464 - 0.216) \\
+&= 1.533 \text{ bits}
+\end{align}
+
+\textbf{(2) Cross-entropy loss for true label class 2:}
+\begin{equation}
+L = -\log \hat{p}_2 = -\log 0.60 \approx 0.511 \text{ nats} \quad \text{or} \quad -\log_2 0.60 \approx 0.737 \text{ bits}
+\end{equation}
+
+\textbf{(3) Optimal output distribution:}
+The optimal distribution assigns probability 1 to the correct class:
+\begin{equation}
+\mathbf{p}^* = [0, 1, 0, 0]
+\end{equation}
+
+This gives entropy $H(\mathbf{p}^*) = 0$ (no uncertainty) and cross-entropy loss $L = -\log 1 = 0$ (perfect prediction).
+\end{solution}
+
+\begin{solution}[Exercise 2]
+\textbf{Proof that $H(p, q) = H(p) + D_{\text{KL}}(p \| q)$:}
+
+Starting with the definition of cross-entropy:
+\begin{align}
+H(p, q) &= -\sum_x p(x) \log q(x) \\
+&= -\sum_x p(x) \log q(x) + \sum_x p(x) \log p(x) - \sum_x p(x) \log p(x) \\
+&= -\sum_x p(x) \log p(x) + \sum_x p(x) \log \frac{p(x)}{q(x)} \\
+&= H(p) + D_{\text{KL}}(p \| q)
+\end{align}
+
+Since $H(p)$ is constant with respect to $q$, minimizing $H(p, q)$ is equivalent to minimizing $D_{\text{KL}}(p \| q)$. This shows that training with cross-entropy loss is equivalent to minimizing the KL divergence between the true distribution and the predicted distribution.
+\end{solution}
+
+\begin{solution}[Exercise 3]
+For binary classifier with $\hat{p} = 0.8$ and true label class 1:
+
+\textbf{(1) Binary cross-entropy loss:}
+\begin{equation}
+L = -[y \log \hat{p} + (1-y) \log(1-\hat{p})] = -[1 \cdot \log 0.8 + 0 \cdot \log 0.2] = -\log 0.8 \approx 0.223
+\end{equation}
+
+\textbf{(2) Gradient:}
+\begin{align}
+\frac{\partial L}{\partial \hat{p}} &= \frac{\partial}{\partial \hat{p}}[-y \log \hat{p} - (1-y) \log(1-\hat{p})] \\
+&= -\frac{y}{\hat{p}} + \frac{1-y}{1-\hat{p}} \\
+&= -\frac{1}{0.8} + \frac{0}{0.2} = -1.25
+\end{align}
+
+\textbf{(3) Loss comparison:}
+\begin{itemize}
+    \item $\hat{p} = 0.99$: $L = -\log 0.99 \approx 0.010$ (very confident, correct)
+    \item $\hat{p} = 0.2$: $L = -\log 0.2 \approx 1.609$ (low confidence, incorrect)
+\end{itemize}
+
+The loss heavily penalizes confident wrong predictions, encouraging the model to be calibrated.
+\end{solution}
+
+\begin{solution}[Exercise 4]
+For GPT-2 with $V = 50{,}257$, $B = 16$, $n = 1024$:
+
+\textbf{Memory for logits:}
+\begin{equation}
+B \times n \times V \times 4 \text{ bytes} = 16 \times 1024 \times 50{,}257 \times 4 = 3{,}280{,}838{,}144 \text{ bytes} \approx 3.06 \text{ GB}
+\end{equation}
+
+\textbf{Memory with FP16:}
+\begin{equation}
+16 \times 1024 \times 50{,}257 \times 2 = 1{,}640{,}419{,}072 \text{ bytes} \approx 1.53 \text{ GB}
+\end{equation}
+
+Savings: $3.06 - 1.53 = 1.53$ GB (50\% reduction)
+
+\textbf{Maximum batch size with 25\% memory budget:}
+Available memory: $0.25 \times 40{,}000 \text{ MB} = 10{,}000$ MB
+
+For FP16 logits:
+\begin{equation}
+B = \frac{10{,}000 \text{ MB}}{n \times V \times 2 \text{ bytes}} = \frac{10{,}000 \times 10^6}{1024 \times 50{,}257 \times 2} \approx 97 \text{ sequences}
+\end{equation}
+
+With FP32, maximum batch size would be only 48 sequences.
+\end{solution}
+
+\begin{solution}[Exercise 5]
+For sampled softmax with $K = 5{,}000$ and $V = 100{,}000$:
+
+\textbf{(1) Speedup factor:}
+\begin{itemize}
+    \item Full softmax: $O(V) = 100{,}000$ operations per token
+    \item Sampled softmax: $O(K+1) = 5{,}001$ operations per token
+    \item Speedup: $\frac{100{,}000}{5{,}001} \approx 20\times$
+\end{itemize}
+
+\textbf{(2) Memory reduction:}
+For batch of 32 sequences with 512 tokens:
+\begin{itemize}
+    \item Full softmax logits: $32 \times 512 \times 100{,}000 \times 4 = 6{,}553{,}600{,}000$ bytes $\approx 6.1$ GB
+    \item Sampled softmax logits: $32 \times 512 \times 5{,}001 \times 4 = 327{,}745{,}536$ bytes $\approx 312$ MB
+    \item Reduction: $\frac{6.1 \text{ GB}}{312 \text{ MB}} \approx 20\times$
+\end{itemize}
+
+\textbf{(3) Why sampled softmax introduces bias:}
+\begin{itemize}
+    \item The gradient estimate is unbiased only if we sample from the true distribution
+    \item In practice, we sample from a proposal distribution (e.g., unigram frequency)
+    \item This creates importance sampling bias in the gradient
+    \item The normalization constant is approximated, not exact
+    \item Bias decreases as $K$ increases, but never reaches zero
+    \item For large $K$ (e.g., 10,000), bias is negligible for most applications
+\end{itemize}
+\end{solution}
+
+\begin{solution}[Exercise 6]
+For A100 GPU with 1.5 TB/s bandwidth and 312 TFLOPS FP16 throughput, softmax over $V = 30{,}000$:
+
+\textbf{(1) Memory transfer time:}
+\begin{equation}
+\text{Time} = \frac{400 \text{ KB}}{1{,}500{,}000{,}000 \text{ KB/s}} = \frac{400}{1{,}500{,}000{,}000} \approx 0.267 \text{ microseconds}
+\end{equation}
+
+\textbf{(2) Compute time:}
+For 30,000 exponentials and 30,000 divisions:
+\begin{equation}
+\text{Time} = \frac{60{,}000 \text{ ops}}{312 \times 10^{12} \text{ ops/s}} \approx 0.000192 \text{ microseconds}
+\end{equation}
+
+\textbf{(3) Bottleneck analysis:}
+\begin{itemize}
+    \item Memory time: 0.267 microseconds
+    \item Compute time: 0.000192 microseconds
+    \item The operation is \textbf{memory-bound} by a factor of $\frac{0.267}{0.000192} \approx 1{,}390\times$
+\end{itemize}
+
+This extreme memory-bandwidth bottleneck explains why vocabulary size has such a direct impact on training speed, and why reducing precision from FP32 to FP16 provides nearly 2× speedup for softmax operations.
+\end{solution}
+
+\begin{solution}[Exercise 7]
+For knowledge distillation with temperature $T$:
+
+\textbf{(1) Temperature effect on gradient magnitude:}
+The softmax with temperature is:
+\begin{equation}
+p_i = \frac{\exp(z_i/T)}{\sum_j \exp(z_j/T)}
+\end{equation}
+
+As $T$ increases, the distribution becomes more uniform (softer). The gradient magnitude scales as $O(1/T)$ because:
+\begin{equation}
+\frac{\partial p_i}{\partial z_j} = \frac{1}{T} p_i(\delta_{ij} - p_j)
+\end{equation}
+
+\textbf{(2) Gradient derivation:}
+For KL divergence $D_{\text{KL}}(p_{\text{teacher}} \| p_{\text{student}})$ where both use temperature $T$:
+\begin{align}
+\frac{\partial D_{\text{KL}}}{\partial z'_i} &= \frac{\partial}{\partial z'_i} \sum_j p_j^T \log \frac{p_j^T}{q_j^T} \\
+&= -\sum_j p_j^T \frac{\partial \log q_j^T}{\partial z'_i} \\
+&= -\sum_j p_j^T \frac{1}{q_j^T} \frac{\partial q_j^T}{\partial z'_i} \\
+&= -\sum_j p_j^T \frac{1}{q_j^T} \cdot \frac{1}{T} q_j^T(\delta_{ij} - q_i^T) \\
+&= -\frac{1}{T} \sum_j p_j^T(\delta_{ij} - q_i^T) \\
+&= \frac{1}{T}(q_i^T - p_i^T)
+\end{align}
+
+\textbf{(3) Why $T^2$ scaling is necessary:}
+Without $T^2$ scaling, the gradient is $O(1/T)$, which vanishes as $T \to \infty$:
+\begin{equation}
+\lim_{T \to \infty} \frac{1}{T}(q_i^T - p_i^T) = 0
+\end{equation}
+
+With $T^2$ scaling, the effective gradient becomes:
+\begin{equation}
+T^2 \cdot \frac{1}{T}(q_i^T - p_i^T) = T(q_i^T - p_i^T)
+\end{equation}
+
+This compensates for the $1/T$ factor from the softmax derivative, maintaining meaningful gradients even for large $T$. The $T^2$ factor ensures that the distillation loss has the same scale as the hard label loss, allowing proper balancing between the two objectives.
+\end{solution}
+

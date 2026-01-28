@@ -463,3 +463,1304 @@ Design multimodal fusion strategy for video understanding (visual + audio + capt
 \end{enumerate}
 \end{exercise}
 
+
+
+\section{Solutions}
+
+\begin{solution}
+\textbf{Exercise 1: CLIP Contrastive Loss Implementation}
+
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+def clip_contrastive_loss(image_embeddings, text_embeddings, temperature=0.07):
+    """
+    Compute CLIP contrastive loss
+    Args:
+        image_embeddings: (B, D) normalized image embeddings
+        text_embeddings: (B, D) normalized text embeddings
+        temperature: temperature parameter tau
+    Returns:
+        loss: scalar contrastive loss
+    """
+    # Normalize embeddings
+    image_embeddings = F.normalize(image_embeddings, dim=-1)
+    text_embeddings = F.normalize(text_embeddings, dim=-1)
+    
+    # Compute similarity matrix (B, B)
+    logits = torch.matmul(image_embeddings, text_embeddings.t()) / temperature
+    
+    # Labels: diagonal elements are positive pairs
+    batch_size = image_embeddings.shape[0]
+    labels = torch.arange(batch_size, device=image_embeddings.device)
+    
+    # Symmetric loss: image-to-text + text-to-image
+    loss_i2t = F.cross_entropy(logits, labels)
+    loss_t2i = F.cross_entropy(logits.t(), labels)
+    
+    loss = (loss_i2t + loss_t2i) / 2
+    
+    return loss, logits
+
+# Part (a): Generate random embeddings
+batch_size = 8
+embed_dim = 512
+
+image_embeddings = torch.randn(batch_size, embed_dim)
+text_embeddings = torch.randn(batch_size, embed_dim)
+
+print(f"Image embeddings shape: {image_embeddings.shape}")
+print(f"Text embeddings shape: {text_embeddings.shape}")
+
+# Part (b): Normalize embeddings
+image_embeddings = F.normalize(image_embeddings, dim=-1)
+text_embeddings = F.normalize(text_embeddings, dim=-1)
+
+print(f"\nAfter normalization:")
+print(f"Image embedding norms: {torch.norm(image_embeddings, dim=-1)}")
+print(f"Text embedding norms: {torch.norm(text_embeddings, dim=-1)}")
+
+# Part (c): Compute similarity matrix
+temperature = 0.07
+similarity_matrix = torch.matmul(image_embeddings, text_embeddings.t()) / temperature
+
+print(f"\nSimilarity matrix shape: {similarity_matrix.shape}")
+print(f"Similarity matrix:\n{similarity_matrix}")
+
+# Part (d): Calculate contrastive loss
+loss, logits = clip_contrastive_loss(image_embeddings, text_embeddings, temperature)
+
+print(f"\nContrastive loss: {loss.item():.4f}")
+print(f"Logits shape: {logits.shape}")
+
+# Analyze the loss
+labels = torch.arange(batch_size)
+predictions_i2t = logits.argmax(dim=1)
+predictions_t2i = logits.t().argmax(dim=1)
+
+accuracy_i2t = (predictions_i2t == labels).float().mean()
+accuracy_t2i = (predictions_t2i == labels).float().mean()
+
+print(f"\nImage-to-Text accuracy: {accuracy_i2t.item():.2%}")
+print(f"Text-to-Image accuracy: {accuracy_t2i.item():.2%}")
+\end{lstlisting}
+
+
+
+\textbf{Mathematical Derivation:}
+
+\textbf{Part (a) \& (b): Embeddings}
+
+Image embeddings: $\vI = [\vi_1, \vi_2, \ldots, \vi_8] \in \mathbb{R}^{8 \times 512}$
+
+Text embeddings: $\vT = [\vt_1, \vt_2, \ldots, \vt_8] \in \mathbb{R}^{8 \times 512}$
+
+Normalize to unit sphere:
+$\hat{\vi}_i = \frac{\vi_i}{\|\vi_i\|_2}, \quad \hat{\vt}_i = \frac{\vt_i}{\|\vt_i\|_2}$
+
+\textbf{Part (c): Similarity Matrix}
+
+Cosine similarity matrix:
+$\vS_{ij} = \frac{\hat{\vi}_i \cdot \hat{\vt}_j}{\tau}$
+
+where $\tau = 0.07$ is the temperature parameter.
+
+Full matrix:
+$\vS = \frac{1}{\tau} \hat{\vI} \hat{\vT}^T \in \mathbb{R}^{8 \times 8}$
+
+Example:
+\[
+\vS = \begin{bmatrix}
+s_{11} & s_{12} & \cdots & s_{18} \\
+s_{21} & s_{22} & \cdots & s_{28} \\
+\vdots & \vdots & \ddots & \vdots \\
+s_{81} & s_{82} & \cdots & s_{88}
+\end{bmatrix}
+\]
+
+Diagonal elements $s_{ii}$ are positive pairs (matched image-text).
+
+Off-diagonal elements $s_{ij}$ ($i \neq j$) are negative pairs.
+
+\textbf{Part (d): Contrastive Loss}
+
+\textbf{Image-to-Text Loss:}
+
+For each image $i$, predict its matching text from 8 candidates:
+
+$\mathcal{L}_{i2t} = -\frac{1}{8} \sum_{i=1}^{8} \log \frac{\exp(s_{ii})}{\sum_{j=1}^{8} \exp(s_{ij})}$
+
+This is cross-entropy with labels $y_i = i$ (diagonal).
+
+\textbf{Text-to-Image Loss:}
+
+For each text $j$, predict its matching image from 8 candidates:
+
+$\mathcal{L}_{t2i} = -\frac{1}{8} \sum_{j=1}^{8} \log \frac{\exp(s_{jj})}{\sum_{i=1}^{8} \exp(s_{ij})}$
+
+\textbf{Total CLIP Loss:}
+
+$\mathcal{L}_{\text{CLIP}} = \frac{1}{2}(\mathcal{L}_{i2t} + \mathcal{L}_{t2i})$
+
+Symmetric loss ensures both modalities learn aligned representations.
+
+\textbf{Why Temperature $\tau = 0.07$?}
+
+\begin{itemize}
+    \item \textbf{Sharpens distribution:} Small $\tau$ makes softmax more peaked
+    \item \textbf{Emphasizes hard negatives:} Distinguishes similar but incorrect pairs
+    \item \textbf{Empirically optimal:} Found through hyperparameter search
+    \item \textbf{Typical range:} $\tau \in [0.01, 0.1]$
+\end{itemize}
+
+Effect of temperature:
+\begin{itemize}
+    \item $\tau \to 0$: Approaches hard assignment (argmax)
+    \item $\tau \to \infty$: Uniform distribution (no learning)
+    \item $\tau = 0.07$: Good balance for contrastive learning
+\end{itemize}
+
+\textbf{Numerical Example:}
+
+Suppose for image 1:
+\begin{itemize}
+    \item $s_{11} = 0.9$ (correct text)
+    \item $s_{12} = 0.3, s_{13} = 0.2, \ldots, s_{18} = 0.1$ (incorrect texts)
+\end{itemize}
+
+Softmax probabilities:
+$p_1 = \frac{\exp(0.9/0.07)}{\exp(0.9/0.07) + \sum_{j=2}^{8} \exp(s_{1j}/0.07)}$
+
+Loss for image 1:
+$\ell_1 = -\log p_1$
+
+If $p_1 \approx 1$, then $\ell_1 \approx 0$ (good alignment).
+
+If $p_1 \approx 0.125$ (uniform), then $\ell_1 \approx 2.08$ (poor alignment).
+
+\textbf{Training Dynamics:}
+
+\begin{enumerate}
+    \item \textbf{Initial:} Random embeddings, $\mathcal{L} \approx \log(8) = 2.08$
+    \item \textbf{Training:} Embeddings align, diagonal elements increase
+    \item \textbf{Converged:} $s_{ii} \gg s_{ij}$ for $i \neq j$, $\mathcal{L} \to 0$
+\end{enumerate}
+
+\textbf{Key Insights:}
+
+\begin{itemize}
+    \item Batch size acts as number of negative samples
+    \item Larger batches improve contrastive learning (more negatives)
+    \item CLIP uses batch sizes up to 32,768 in practice
+    \item Symmetric loss prevents modality collapse
+    \item Temperature is a critical hyperparameter
+\end{itemize}
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 2: CLIP Zero-Shot Classification on CIFAR-10}
+
+\begin{lstlisting}[language=Python]
+import torch
+import clip
+from PIL import Image
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+# Part (a): Load pre-trained CLIP model
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model, preprocess = clip.load("ViT-B/32", device=device)
+
+print(f"CLIP model loaded on {device}")
+print(f"Model: ViT-B/32")
+
+# Part (b): Create text prompts for 10 CIFAR-10 classes
+cifar10_classes = [
+    "airplane", "automobile", "bird", "cat", "deer",
+    "dog", "frog", "horse", "ship", "truck"
+]
+
+# Template-based prompts (improves accuracy)
+templates = [
+    "a photo of a {}.",
+    "a blurry photo of a {}.",
+    "a photo of many {}.",
+    "a photo of the small {}.",
+    "a photo of the large {}.",
+]
+
+# Encode text prompts
+def encode_text_prompts(model, classes, templates):
+    """Encode text prompts with multiple templates"""
+    text_features = []
+    
+    for classname in classes:
+        # Create prompts from templates
+        texts = [template.format(classname) for template in templates]
+        texts = clip.tokenize(texts).to(device)
+        
+        # Encode texts
+        with torch.no_grad():
+            class_embeddings = model.encode_text(texts)
+            class_embeddings = class_embeddings / class_embeddings.norm(dim=-1, keepdim=True)
+            
+            # Average over templates
+            class_embedding = class_embeddings.mean(dim=0)
+            class_embedding = class_embedding / class_embedding.norm()
+            
+            text_features.append(class_embedding)
+    
+    text_features = torch.stack(text_features, dim=0)
+    return text_features
+
+text_features = encode_text_prompts(model, cifar10_classes, templates)
+print(f"\nText features shape: {text_features.shape}")  # (10, 512)
+
+# Part (c): Load CIFAR-10 test set
+test_dataset = torchvision.datasets.CIFAR10(
+    root='./data', 
+    train=False, 
+    download=True,
+    transform=preprocess
+)
+
+test_loader = DataLoader(test_dataset, batch_size=100, shuffle=False)
+
+# Zero-shot classification
+def zero_shot_classify(model, loader, text_features):
+    """Perform zero-shot classification"""
+    correct = 0
+    total = 0
+    
+    with torch.no_grad():
+        for images, labels in tqdm(loader):
+            images = images.to(device)
+            labels = labels.to(device)
+            
+            # Encode images
+            image_features = model.encode_image(images)
+            image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+            
+            # Compute similarity with text features
+            similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+            
+            # Predict
+            predictions = similarity.argmax(dim=-1)
+            
+            correct += (predictions == labels).sum().item()
+            total += labels.size(0)
+    
+    accuracy = 100.0 * correct / total
+    return accuracy
+
+# Part (d): Compute accuracy
+zero_shot_accuracy = zero_shot_classify(model, test_loader, text_features)
+print(f"\nZero-shot accuracy: {zero_shot_accuracy:.2f}%")
+
+
+
+# Part (e): Compare to supervised baseline
+# Train a simple supervised classifier
+class SimpleCNN(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = torch.nn.Conv2d(3, 32, 3, padding=1)
+        self.conv2 = torch.nn.Conv2d(32, 64, 3, padding=1)
+        self.pool = torch.nn.MaxPool2d(2, 2)
+        self.fc1 = torch.nn.Linear(64 * 8 * 8, 128)
+        self.fc2 = torch.nn.Linear(128, 10)
+    
+    def forward(self, x):
+        x = self.pool(torch.relu(self.conv1(x)))
+        x = self.pool(torch.relu(self.conv2(x)))
+        x = x.view(-1, 64 * 8 * 8)
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+# Train supervised model (simplified)
+supervised_model = SimpleCNN().to(device)
+criterion = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(supervised_model.parameters(), lr=0.001)
+
+# Training loop (10 epochs for quick comparison)
+train_dataset = torchvision.datasets.CIFAR10(
+    root='./data', train=True, download=True,
+    transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+)
+train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+
+for epoch in range(10):
+    supervised_model.train()
+    for images, labels in train_loader:
+        images, labels = images.to(device), labels.to(device)
+        optimizer.zero_grad()
+        outputs = supervised_model(images)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+# Evaluate supervised model
+supervised_model.eval()
+correct = 0
+total = 0
+with torch.no_grad():
+    for images, labels in test_loader:
+        images, labels = images.to(device), labels.to(device)
+        outputs = supervised_model(images)
+        _, predicted = outputs.max(1)
+        total += labels.size(0)
+        correct += predicted.eq(labels).sum().item()
+
+supervised_accuracy = 100.0 * correct / total
+
+print(f"\nComparison:")
+print(f"CLIP Zero-shot: {zero_shot_accuracy:.2f}%")
+print(f"Supervised CNN (10 epochs): {supervised_accuracy:.2f}%")
+\end{lstlisting}
+
+\textbf{Expected Results:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Method} & \textbf{Accuracy} & \textbf{Training Data} \\
+\hline
+CLIP Zero-shot (ViT-B/32) & 89-91\% & 0 (CIFAR-10) \\
+CLIP Zero-shot (ViT-L/14) & 93-95\% & 0 (CIFAR-10) \\
+Supervised CNN (10 epochs) & 70-75\% & 50k (CIFAR-10) \\
+Supervised ResNet-50 (200 epochs) & 95-96\% & 50k (CIFAR-10) \\
+\hline
+\end{tabular}
+
+\textbf{Analysis:}
+
+\textbf{Part (a): Pre-trained CLIP Model}
+
+CLIP models available:
+\begin{itemize}
+    \item \textbf{RN50:} ResNet-50 image encoder
+    \item \textbf{ViT-B/32:} ViT-Base with patch size 32
+    \item \textbf{ViT-B/16:} ViT-Base with patch size 16 (better)
+    \item \textbf{ViT-L/14:} ViT-Large with patch size 14 (best)
+\end{itemize}
+
+Pre-training:
+\begin{itemize}
+    \item Dataset: 400M image-text pairs from internet
+    \item Training: Contrastive learning for 32 epochs
+    \item Batch size: 32,768 (large-scale)
+    \item Compute: 256 V100 GPUs for 12 days
+\end{itemize}
+
+\textbf{Part (b): Text Prompts}
+
+\textbf{Simple prompts:}
+\begin{verbatim}
+"airplane", "automobile", "bird", ...
+\end{verbatim}
+
+\textbf{Template-based prompts (better):}
+\begin{verbatim}
+"a photo of a airplane."
+"a blurry photo of a airplane."
+"a photo of many airplanes."
+\end{verbatim}
+
+Why templates help:
+\begin{itemize}
+    \item Match training distribution (natural sentences)
+    \item Provide context for ambiguous classes
+    \item Ensemble over multiple descriptions
+    \item Improve robustness to variations
+\end{itemize}
+
+Prompt engineering tips:
+\begin{itemize}
+    \item Use natural language sentences
+    \item Include domain-specific context
+    \item Try multiple templates and average
+    \item Avoid overly specific descriptions
+\end{itemize}
+
+
+
+\textbf{Part (c): Encoding Process}
+
+\textbf{Image encoding:}
+\begin{enumerate}
+    \item Preprocess: Resize to $224 \times 224$, normalize
+    \item ViT encoder: Extract features
+    \item Projection: Map to shared embedding space (512-dim)
+    \item Normalize: $\hat{\vi} = \vi / \|\vi\|_2$
+\end{enumerate}
+
+\textbf{Text encoding:}
+\begin{enumerate}
+    \item Tokenize: Convert text to token IDs
+    \item Text encoder: Transformer processes tokens
+    \item Projection: Map to shared embedding space (512-dim)
+    \item Normalize: $\hat{\vt} = \vt / \|\vt\|_2$
+\end{enumerate}
+
+\textbf{Part (d): Zero-Shot Classification}
+
+\textbf{Algorithm:}
+
+For each test image $\vx$:
+\begin{enumerate}
+    \item Encode image: $\vi = \text{ImageEncoder}(\vx)$
+    \item Compute similarity with all class embeddings:
+    $s_k = \vi \cdot \vt_k$ for $k = 1, \ldots, 10$
+    \item Apply softmax: $p_k = \frac{\exp(s_k / \tau)}{\sum_{j=1}^{10} \exp(s_j / \tau)}$
+    \item Predict: $\hat{y} = \argmax_k p_k$
+\end{enumerate}
+
+Temperature $\tau = 0.01$ (learned during training).
+
+\textbf{Mathematical Formulation:}
+
+$P(y = k | \vx) = \frac{\exp(\text{sim}(\vi, \vt_k) / \tau)}{\sum_{j=1}^{10} \exp(\text{sim}(\vi, \vt_j) / \tau)}$
+
+where $\text{sim}(\vi, \vt) = \vi \cdot \vt$ (cosine similarity after normalization).
+
+\textbf{Part (e): Comparison with Supervised Baseline}
+
+\textbf{Why CLIP Zero-Shot Outperforms Supervised CNN:}
+
+\begin{enumerate}
+    \item \textbf{Pre-training scale:} 400M image-text pairs vs 50k CIFAR-10 images
+    \item \textbf{Transfer learning:} Leverages knowledge from diverse data
+    \item \textbf{Better architecture:} ViT-B/32 vs simple CNN
+    \item \textbf{Semantic understanding:} Learns concepts, not just patterns
+    \item \textbf{Robustness:} Generalizes better to distribution shifts
+\end{enumerate}
+
+\textbf{When Supervised Wins:}
+
+\begin{itemize}
+    \item \textbf{Sufficient training data:} ResNet-50 with 200 epochs reaches 95-96\%
+    \item \textbf{Domain-specific:} Fine-tuned models beat zero-shot on specialized tasks
+    \item \textbf{Computational constraints:} Smaller models are faster
+\end{itemize}
+
+\textbf{CLIP Advantages:}
+
+\begin{enumerate}
+    \item \textbf{No training required:} Instant deployment
+    \item \textbf{Flexible:} Change classes without retraining
+    \item \textbf{Interpretable:} Natural language descriptions
+    \item \textbf{Robust:} Handles distribution shifts better
+    \item \textbf{Multimodal:} Can do image-text retrieval, captioning, etc.
+\end{enumerate}
+
+\textbf{Practical Recommendations:}
+
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Scenario} & \textbf{Recommendation} \\
+\hline
+Quick prototype & CLIP zero-shot \\
+Fixed classes, lots of data & Supervised training \\
+Changing classes frequently & CLIP zero-shot \\
+Maximum accuracy & Fine-tune CLIP \\
+Limited compute & Supervised small model \\
+Interpretability needed & CLIP with prompts \\
+\hline
+\end{tabular}
+
+\textbf{Improving CLIP Zero-Shot:}
+
+\begin{enumerate}
+    \item \textbf{Better prompts:} Domain-specific templates
+    \item \textbf{Larger model:} ViT-L/14 instead of ViT-B/32
+    \item \textbf{Ensemble:} Average predictions from multiple prompts
+    \item \textbf{Few-shot:} Add a few examples with linear probe
+    \item \textbf{Fine-tuning:} Adapt to target domain
+\end{enumerate}
+
+\textbf{Key Takeaways:}
+
+\begin{itemize}
+    \item CLIP achieves strong zero-shot performance through large-scale pre-training
+    \item Natural language prompts enable flexible classification
+    \item Zero-shot CLIP often matches or exceeds supervised baselines
+    \item Prompt engineering is crucial for optimal performance
+    \item CLIP's multimodal nature enables many downstream tasks
+\end{itemize}
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 3: Whisper Architecture Analysis}
+
+\textbf{Part (a): Encoder Parameters (24 layers, $d=1024$)}
+
+\textbf{Whisper Encoder Configuration:}
+\begin{itemize}
+    \item Layers: $L = 24$
+    \item Hidden size: $d = 1024$
+    \item Attention heads: $h = 16$
+    \item MLP ratio: $4.0$ (MLP size = $4096$)
+    \item Audio features: 80-dimensional log-mel spectrogram
+    \item Sequence length: $T = 3000$ (30 seconds at 100 Hz)
+\end{itemize}
+
+\textbf{Parameter Breakdown:}
+
+\textbf{1. Input Convolution Layers:}
+\begin{itemize}
+    \item Conv1: $80 \times 3 \times 1024 = 245{,}760$
+    \item Conv2: $1024 \times 3 \times 1024 = 3{,}145{,}728$
+    \item Total: $3{,}391{,}488$ parameters
+\end{itemize}
+
+\textbf{2. Position Embeddings:}
+\begin{itemize}
+    \item Sinusoidal (not learned): 0 parameters
+\end{itemize}
+
+\textbf{3. Per Transformer Layer:}
+
+\textit{Multi-Head Attention:}
+\begin{itemize}
+    \item $Q, K, V$ projections: $3 \times 1024^2 = 3{,}145{,}728$
+    \item Output projection: $1024^2 = 1{,}048{,}576$
+    \item Total attention: $4{,}194{,}304$
+\end{itemize}
+
+\textit{MLP:}
+\begin{itemize}
+    \item First linear: $1024 \times 4096 = 4{,}194{,}304$
+    \item Second linear: $4096 \times 1024 = 4{,}194{,}304$
+    \item Total MLP: $8{,}388{,}608$
+\end{itemize}
+
+\textit{Layer Normalization:}
+\begin{itemize}
+    \item 2 LayerNorms: $2 \times 2 \times 1024 = 4{,}096$
+\end{itemize}
+
+\textbf{Total per layer: $12{,}587{,}008$ parameters}
+
+\textbf{4. All 24 Encoder Layers:}
+$24 \times 12{,}587{,}008 = 302{,}088{,}192$ parameters
+
+\textbf{Total Encoder: $\approx 305.5$M parameters}
+
+
+
+\textbf{Part (b): Decoder Parameters (24 layers)}
+
+\textbf{Whisper Decoder Configuration:}
+\begin{itemize}
+    \item Layers: $L = 24$
+    \item Hidden size: $d = 1024$
+    \item Attention heads: $h = 16$
+    \item Vocabulary size: $V = 51{,}865$
+    \item Max sequence length: $448$ tokens
+\end{itemize}
+
+\textbf{Parameter Breakdown:}
+
+\textbf{1. Token Embedding:}
+\begin{itemize}
+    \item $51{,}865 \times 1024 = 53{,}109{,}760$ parameters
+\end{itemize}
+
+\textbf{2. Position Embeddings:}
+\begin{itemize}
+    \item $448 \times 1024 = 458{,}752$ parameters
+\end{itemize}
+
+\textbf{3. Per Decoder Layer:}
+
+\textit{Masked Self-Attention:}
+\begin{itemize}
+    \item Same as encoder: $4{,}194{,}304$ parameters
+\end{itemize}
+
+\textit{Cross-Attention:}
+\begin{itemize}
+    \item $Q$ projection: $1024^2 = 1{,}048{,}576$
+    \item $K, V$ projections (from encoder): $2 \times 1024^2 = 2{,}097{,}152$
+    \item Output projection: $1024^2 = 1{,}048{,}576$
+    \item Total cross-attention: $4{,}194{,}304$
+\end{itemize}
+
+\textit{MLP:}
+\begin{itemize}
+    \item Same as encoder: $8{,}388{,}608$ parameters
+\end{itemize}
+
+\textit{Layer Normalization:}
+\begin{itemize}
+    \item 3 LayerNorms: $3 \times 2 \times 1024 = 6{,}144$
+\end{itemize}
+
+\textbf{Total per decoder layer: $16{,}783{,}360$ parameters}
+
+\textbf{4. All 24 Decoder Layers:}
+$24 \times 16{,}783{,}360 = 402{,}800{,}640$ parameters
+
+\textbf{5. Output Projection:}
+\begin{itemize}
+    \item Shared with token embedding: 0 additional parameters
+\end{itemize}
+
+\textbf{Total Decoder: $\approx 456.4$M parameters}
+
+\textbf{Total Whisper Model: $305.5 + 456.4 = 761.9$M parameters}
+
+(Actual Whisper-large: $\approx 1.55$B parameters due to additional components)
+
+
+
+\textbf{Part (c): Memory for 30-Second Audio}
+
+\textbf{Input Processing:}
+
+\textbf{1. Audio Preprocessing:}
+\begin{itemize}
+    \item Sample rate: 16 kHz
+    \item 30 seconds: $30 \times 16{,}000 = 480{,}000$ samples
+    \item Raw audio: $480{,}000 \times 4$ bytes = 1.92 MB
+\end{itemize}
+
+\textbf{2. Log-Mel Spectrogram:}
+\begin{itemize}
+    \item Window size: 25 ms (400 samples)
+    \item Hop length: 10 ms (160 samples)
+    \item Number of frames: $\frac{480{,}000}{160} = 3{,}000$
+    \item Mel bins: 80
+    \item Features: $3{,}000 \times 80 = 240{,}000$ values
+    \item Memory: $240{,}000 \times 4$ bytes = 0.96 MB
+\end{itemize}
+
+\textbf{Encoder Memory (Inference):}
+
+\textbf{1. Activations per layer:}
+\begin{itemize}
+    \item Input: $3{,}000 \times 1024 = 3{,}072{,}000$ values
+    \item Attention scores: $16 \times 3{,}000 \times 3{,}000 = 144{,}000{,}000$ values
+    \item MLP intermediate: $3{,}000 \times 4096 = 12{,}288{,}000$ values
+\end{itemize}
+
+Peak per layer: $\approx 159$M values $\times$ 4 bytes = 636 MB
+
+\textbf{2. Total encoder activations:}
+$24 \times 636$ MB = 15.3 GB (if storing all layers)
+
+With activation checkpointing: $\approx 1.3$ GB
+
+\textbf{Decoder Memory (Inference):}
+
+For generating 448 tokens:
+\begin{itemize}
+    \item Decoder activations: $448 \times 1024 = 458{,}752$ values per layer
+    \item Cross-attention: $448 \times 3{,}000 = 1{,}344{,}000$ values per layer
+    \item KV cache: $2 \times 24 \times 448 \times 1024 = 22{,}020{,}096$ values
+\end{itemize}
+
+Decoder memory: $\approx 500$ MB
+
+\textbf{Total Memory (Inference):}
+\begin{itemize}
+    \item Model parameters: $1.55$B $\times$ 4 bytes = 6.2 GB
+    \item Encoder activations: $\approx 1.3$ GB (with checkpointing)
+    \item Decoder activations: $\approx 0.5$ GB
+    \item KV cache: $\approx 0.1$ GB
+    \item \textbf{Total: $\approx 8.1$ GB}
+\end{itemize}
+
+For FP16: $\approx 4.1$ GB
+
+For INT8 quantization: $\approx 2.1$ GB
+
+
+
+\textbf{Part (d): Compare to Text-Only GPT-2}
+
+\textbf{GPT-2 (1.5B parameters):}
+\begin{itemize}
+    \item Layers: 48
+    \item Hidden size: 1600
+    \item Attention heads: 25
+    \item Vocabulary: 50,257
+    \item Context length: 1024 tokens
+\end{itemize}
+
+\textbf{Comparison Table:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Metric} & \textbf{Whisper-large} & \textbf{GPT-2 (1.5B)} \\
+\hline
+Total Parameters & 1.55B & 1.5B \\
+Encoder Layers & 24 & N/A \\
+Decoder Layers & 24 & 48 \\
+Hidden Size & 1024 & 1600 \\
+Attention Heads & 16 & 25 \\
+Input Modality & Audio & Text \\
+Output Modality & Text & Text \\
+Context Length & 3000 (audio) + 448 (text) & 1024 (text) \\
+Memory (FP32) & 8.1 GB & 6.5 GB \\
+Inference Speed & Slower (audio encoding) & Faster \\
+\hline
+\end{tabular}
+
+\textbf{Key Differences:}
+
+\begin{enumerate}
+    \item \textbf{Architecture:}
+    \begin{itemize}
+        \item Whisper: Encoder-decoder (like T5)
+        \item GPT-2: Decoder-only
+    \end{itemize}
+    
+    \item \textbf{Input Processing:}
+    \begin{itemize}
+        \item Whisper: Audio $\to$ Log-mel $\to$ Encoder
+        \item GPT-2: Text $\to$ Tokens $\to$ Decoder
+    \end{itemize}
+    
+    \item \textbf{Computational Cost:}
+    \begin{itemize}
+        \item Whisper encoder: $O(T^2 d)$ where $T = 3000$
+        \item GPT-2: $O(n^2 d)$ where $n = 1024$
+        \item Whisper is $\approx 9\times$ more expensive for encoder
+    \end{itemize}
+    
+    \item \textbf{Memory Footprint:}
+    \begin{itemize}
+        \item Whisper: Larger due to long audio sequences
+        \item GPT-2: Smaller, text-only
+    \end{itemize}
+    
+    \item \textbf{Use Cases:}
+    \begin{itemize}
+        \item Whisper: Speech recognition, translation, transcription
+        \item GPT-2: Text generation, completion, summarization
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Why Whisper Needs Encoder-Decoder:}
+
+\begin{itemize}
+    \item \textbf{Cross-modal:} Audio input, text output
+    \item \textbf{Compression:} Encoder compresses 3000 audio frames
+    \item \textbf{Attention:} Decoder attends to compressed audio
+    \item \textbf{Efficiency:} Encoder processes audio once, decoder generates text autoregressively
+\end{itemize}
+
+\textbf{Performance Comparison:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Task} & \textbf{Whisper} & \textbf{GPT-2} \\
+\hline
+Speech Recognition & Excellent & N/A \\
+Text Generation & N/A & Excellent \\
+Multilingual & 99 languages & Limited \\
+Robustness & High (noisy audio) & N/A \\
+Zero-shot & Strong & Strong \\
+\hline
+\end{tabular}
+
+\textbf{Practical Considerations:}
+
+\begin{enumerate}
+    \item \textbf{Deployment:}
+    \begin{itemize}
+        \item Whisper: Requires audio preprocessing
+        \item GPT-2: Simple tokenization
+    \end{itemize}
+    
+    \item \textbf{Latency:}
+    \begin{itemize}
+        \item Whisper: Higher (audio encoding + decoding)
+        \item GPT-2: Lower (text-only)
+    \end{itemize}
+    
+    \item \textbf{Hardware:}
+    \begin{itemize}
+        \item Whisper: Needs GPU for real-time (8+ GB VRAM)
+        \item GPT-2: Can run on CPU for small batches
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Key Insights:}
+
+\begin{itemize}
+    \item Whisper and GPT-2 have similar parameter counts but different architectures
+    \item Encoder-decoder is essential for cross-modal tasks
+    \item Audio sequences are much longer than text, requiring more memory
+    \item Both models benefit from large-scale pre-training
+    \item Whisper's multimodal nature enables speech-to-text applications
+\end{itemize}
+\end{solution}
+
+
+
+\begin{solution}
+\textbf{Exercise 4: Multimodal Fusion for Video Understanding}
+
+\textbf{Part (a): Proposed Architecture}
+
+\begin{lstlisting}[language=Python]
+import torch
+import torch.nn as nn
+
+class MultimodalVideoTransformer(nn.Module):
+    def __init__(self, 
+                 visual_dim=768,      # ViT features
+                 audio_dim=512,       # Audio features
+                 text_dim=768,        # BERT features
+                 hidden_dim=1024,     # Fusion dimension
+                 num_layers=12,       # Fusion transformer layers
+                 num_heads=16,
+                 num_classes=400):    # Action recognition classes
+        super().__init__()
+        
+        # Modality-specific encoders
+        self.visual_encoder = VisualEncoder(visual_dim, hidden_dim)
+        self.audio_encoder = AudioEncoder(audio_dim, hidden_dim)
+        self.text_encoder = TextEncoder(text_dim, hidden_dim)
+        
+        # Modality-specific tokens
+        self.visual_token = nn.Parameter(torch.randn(1, 1, hidden_dim))
+        self.audio_token = nn.Parameter(torch.randn(1, 1, hidden_dim))
+        self.text_token = nn.Parameter(torch.randn(1, 1, hidden_dim))
+        
+        # Fusion transformer
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=hidden_dim,
+            nhead=num_heads,
+            dim_feedforward=hidden_dim * 4,
+            dropout=0.1,
+            batch_first=True
+        )
+        self.fusion_transformer = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=num_layers
+        )
+        
+        # Classification head
+        self.classifier = nn.Sequential(
+            nn.LayerNorm(hidden_dim),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(hidden_dim, num_classes)
+        )
+    
+    def forward(self, visual_features, audio_features, text_features):
+        """
+        Args:
+            visual_features: (B, T_v, D_v) - video frames
+            audio_features: (B, T_a, D_a) - audio segments
+            text_features: (B, T_t, D_t) - caption tokens
+        Returns:
+            logits: (B, num_classes)
+        """
+        B = visual_features.shape[0]
+        
+        # Encode each modality
+        visual_emb = self.visual_encoder(visual_features)  # (B, T_v, H)
+        audio_emb = self.audio_encoder(audio_features)     # (B, T_a, H)
+        text_emb = self.text_encoder(text_features)        # (B, T_t, H)
+        
+        # Add modality tokens
+        visual_token = self.visual_token.expand(B, -1, -1)
+        audio_token = self.audio_token.expand(B, -1, -1)
+        text_token = self.text_token.expand(B, -1, -1)
+        
+        visual_emb = torch.cat([visual_token, visual_emb], dim=1)
+        audio_emb = torch.cat([audio_token, audio_emb], dim=1)
+        text_emb = torch.cat([text_token, text_emb], dim=1)
+        
+        # Concatenate all modalities
+        multimodal_emb = torch.cat([visual_emb, audio_emb, text_emb], dim=1)
+        # Shape: (B, 1+T_v + 1+T_a + 1+T_t, H)
+        
+        # Fusion transformer
+        fused = self.fusion_transformer(multimodal_emb)
+        
+        # Aggregate: average modality tokens
+        visual_rep = fused[:, 0, :]
+        audio_rep = fused[:, 1+visual_features.shape[1], :]
+        text_rep = fused[:, 1+visual_features.shape[1]+1+audio_features.shape[1], :]
+        
+        # Combine representations
+        combined = (visual_rep + audio_rep + text_rep) / 3
+        
+        # Classification
+        logits = self.classifier(combined)
+        
+        return logits
+
+class VisualEncoder(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.proj = nn.Linear(input_dim, output_dim)
+        self.norm = nn.LayerNorm(output_dim)
+    
+    def forward(self, x):
+        return self.norm(self.proj(x))
+
+class AudioEncoder(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.proj = nn.Linear(input_dim, output_dim)
+        self.norm = nn.LayerNorm(output_dim)
+    
+    def forward(self, x):
+        return self.norm(self.proj(x))
+
+class TextEncoder(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.proj = nn.Linear(input_dim, output_dim)
+        self.norm = nn.LayerNorm(output_dim)
+    
+    def forward(self, x):
+        return self.norm(self.proj(x))
+
+# Example usage
+model = MultimodalVideoTransformer()
+
+# Simulate inputs
+batch_size = 4
+visual = torch.randn(batch_size, 16, 768)   # 16 frames
+audio = torch.randn(batch_size, 32, 512)    # 32 audio segments
+text = torch.randn(batch_size, 20, 768)     # 20 caption tokens
+
+logits = model(visual, audio, text)
+print(f"Output shape: {logits.shape}")  # (4, 400)
+\end{lstlisting}
+
+
+
+\textbf{Part (b): Fusion Mechanism}
+
+\textbf{Architecture Overview:}
+
+\begin{verbatim}
+Input:
+  Visual: (B, 16, 768)  - 16 video frames from ViT
+  Audio:  (B, 32, 512)  - 32 audio segments from audio encoder
+  Text:   (B, 20, 768)  - 20 caption tokens from BERT
+
+Step 1: Modality-Specific Projection
+  Visual -> (B, 16, 1024)
+  Audio  -> (B, 32, 1024)
+  Text   -> (B, 20, 1024)
+
+Step 2: Add Modality Tokens
+  Visual: [V_token, v1, v2, ..., v16]  -> (B, 17, 1024)
+  Audio:  [A_token, a1, a2, ..., a32]  -> (B, 33, 1024)
+  Text:   [T_token, t1, t2, ..., t20]  -> (B, 21, 1024)
+
+Step 3: Concatenate
+  Multimodal: [V_token, v1, ..., v16, A_token, a1, ..., a32, T_token, t1, ..., t20]
+  Shape: (B, 71, 1024)
+
+Step 4: Fusion Transformer (12 layers)
+  Cross-modal attention enables interaction
+  Output: (B, 71, 1024)
+
+Step 5: Aggregate
+  Extract modality tokens: V_token, A_token, T_token
+  Average: (V_token + A_token + T_token) / 3
+  Shape: (B, 1024)
+
+Step 6: Classification
+  MLP: (B, 1024) -> (B, 400)
+\end{verbatim}
+
+\textbf{Fusion Strategies Comparison:}
+
+\begin{enumerate}
+    \item \textbf{Early Fusion (Concatenation):}
+    \begin{itemize}
+        \item Concatenate features before transformer
+        \item Simple but limited cross-modal interaction
+        \item Used in this design
+    \end{itemize}
+    
+    \item \textbf{Late Fusion (Ensemble):}
+    \begin{itemize}
+        \item Process modalities separately
+        \item Combine predictions at the end
+        \item No cross-modal learning
+    \end{itemize}
+    
+    \item \textbf{Cross-Modal Attention:}
+    \begin{itemize}
+        \item Visual attends to audio and text
+        \item Audio attends to visual and text
+        \item More complex but better interaction
+    \end{itemize}
+    
+    \item \textbf{Bottleneck Fusion:}
+    \begin{itemize}
+        \item Compress each modality to bottleneck tokens
+        \item Fuse bottlenecks
+        \item More efficient for long sequences
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Why This Design:}
+
+\begin{itemize}
+    \item \textbf{Modality tokens:} Aggregate information from each modality
+    \item \textbf{Shared transformer:} Enables cross-modal attention
+    \item \textbf{Flexible:} Can handle missing modalities
+    \item \textbf{Scalable:} Easy to add more modalities
+\end{itemize}
+
+
+
+\textbf{Part (c): Training Objective}
+
+\textbf{Primary Objective: Action Recognition}
+
+$\mathcal{L}_{\text{action}} = -\frac{1}{B} \sum_{i=1}^{B} \log P(y_i | \vv_i, \va_i, \vt_i)$
+
+where:
+\begin{itemize}
+    \item $\vv_i$: visual features for sample $i$
+    \item $\va_i$: audio features for sample $i$
+    \item $\vt_i$: text features for sample $i$
+    \item $y_i$: ground truth action class
+\end{itemize}
+
+\textbf{Auxiliary Objectives (Multi-Task Learning):}
+
+\textbf{1. Contrastive Loss (Cross-Modal Alignment):}
+
+Align visual-audio, visual-text, audio-text pairs:
+
+$\mathcal{L}_{\text{contrast}} = \mathcal{L}_{\text{VA}} + \mathcal{L}_{\text{VT}} + \mathcal{L}_{\text{AT}}$
+
+where each term is CLIP-style contrastive loss:
+
+$\mathcal{L}_{\text{VA}} = -\frac{1}{B} \sum_{i=1}^{B} \log \frac{\exp(\text{sim}(\vv_i, \va_i) / \tau)}{\sum_{j=1}^{B} \exp(\text{sim}(\vv_i, \va_j) / \tau)}$
+
+\textbf{2. Masked Modality Modeling:}
+
+Randomly mask one modality and predict it from others:
+
+$\mathcal{L}_{\text{mask}} = \mathcal{L}_{\text{mask-V}} + \mathcal{L}_{\text{mask-A}} + \mathcal{L}_{\text{mask-T}}$
+
+Example (mask visual):
+$\mathcal{L}_{\text{mask-V}} = \|\hat{\vv} - \vv\|_2^2$
+
+where $\hat{\vv} = f(\va, \vt)$ is predicted visual features.
+
+\textbf{3. Temporal Ordering:}
+
+Predict correct temporal order of video segments:
+
+$\mathcal{L}_{\text{temporal}} = -\log P(\text{order} | \vv, \va, \vt)$
+
+\textbf{Total Training Objective:}
+
+$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{action}} + \lambda_1 \mathcal{L}_{\text{contrast}} + \lambda_2 \mathcal{L}_{\text{mask}} + \lambda_3 \mathcal{L}_{\text{temporal}}$
+
+Typical weights: $\lambda_1 = 0.1$, $\lambda_2 = 0.05$, $\lambda_3 = 0.05$
+
+\textbf{Training Recipe:}
+
+\begin{lstlisting}[language=Python]
+# Optimizer
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.05)
+
+# Learning rate schedule
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100)
+
+# Training loop
+for epoch in range(100):
+    for batch in dataloader:
+        visual, audio, text, labels = batch
+        
+        # Forward pass
+        logits = model(visual, audio, text)
+        
+        # Action recognition loss
+        loss_action = F.cross_entropy(logits, labels)
+        
+        # Contrastive loss (optional)
+        visual_rep = model.get_visual_rep(visual)
+        audio_rep = model.get_audio_rep(audio)
+        loss_contrast = contrastive_loss(visual_rep, audio_rep)
+        
+        # Total loss
+        loss = loss_action + 0.1 * loss_contrast
+        
+        # Backward pass
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    
+    scheduler.step()
+\end{lstlisting}
+
+\textbf{Data Augmentation:}
+
+\begin{itemize}
+    \item \textbf{Visual:} Random crop, color jitter, temporal sampling
+    \item \textbf{Audio:} Time stretching, pitch shifting, noise injection
+    \item \textbf{Text:} Synonym replacement, back-translation
+    \item \textbf{Multimodal:} Random modality dropout (robustness)
+\end{itemize}
+
+
+
+\textbf{Part (d): Parameter Count Estimation}
+
+\textbf{Component Breakdown:}
+
+\textbf{1. Modality-Specific Encoders:}
+
+\textit{Visual Encoder:}
+\begin{itemize}
+    \item Projection: $768 \times 1024 = 786{,}432$
+    \item LayerNorm: $2 \times 1024 = 2{,}048$
+    \item Total: $788{,}480$
+\end{itemize}
+
+\textit{Audio Encoder:}
+\begin{itemize}
+    \item Projection: $512 \times 1024 = 524{,}288$
+    \item LayerNorm: $2 \times 1024 = 2{,}048$
+    \item Total: $526{,}336$
+\end{itemize}
+
+\textit{Text Encoder:}
+\begin{itemize}
+    \item Projection: $768 \times 1024 = 786{,}432$
+    \item LayerNorm: $2 \times 1024 = 2{,}048$
+    \item Total: $788{,}480$
+\end{itemize}
+
+\textbf{Encoder total: $2{,}103{,}296$ parameters}
+
+\textbf{2. Modality Tokens:}
+\begin{itemize}
+    \item 3 tokens $\times$ 1024 = $3{,}072$ parameters
+\end{itemize}
+
+\textbf{3. Fusion Transformer (12 layers):}
+
+Per layer:
+\begin{itemize}
+    \item Self-attention: $4 \times 1024^2 = 4{,}194{,}304$
+    \item MLP: $2 \times 1024 \times 4096 = 8{,}388{,}608$
+    \item LayerNorm: $2 \times 2 \times 1024 = 4{,}096$
+    \item Total per layer: $12{,}587{,}008$
+\end{itemize}
+
+12 layers: $12 \times 12{,}587{,}008 = 151{,}044{,}096$ parameters
+
+\textbf{4. Classification Head:}
+\begin{itemize}
+    \item LayerNorm: $2 \times 1024 = 2{,}048$
+    \item Linear 1: $1024 \times 1024 = 1{,}048{,}576$
+    \item Linear 2: $1024 \times 400 = 409{,}600$
+    \item Total: $1{,}460{,}224$
+\end{itemize}
+
+\textbf{Total Model Parameters:}
+
+$2{,}103{,}296 + 3{,}072 + 151{,}044{,}096 + 1{,}460{,}224 = 154{,}610{,}688$
+
+\textbf{Total: $\approx 155$M parameters}
+
+\textbf{Memory Footprint (FP32):}
+
+\begin{itemize}
+    \item Parameters: $155$M $\times$ 4 bytes = 620 MB
+    \item Activations (batch size 4):
+    \begin{itemize}
+        \item Input: $4 \times 71 \times 1024 = 290{,}816$ values
+        \item Per layer: $\approx 2$M values
+        \item Total: $\approx 24$M values $\times$ 4 bytes = 96 MB
+    \end{itemize}
+    \item Gradients: 620 MB (same as parameters)
+    \item Optimizer states (AdamW): $2 \times 620$ MB = 1.24 GB
+\end{itemize}
+
+\textbf{Total training memory: $\approx 2.6$ GB}
+
+\textbf{Comparison with Baselines:}
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Model} & \textbf{Parameters} & \textbf{Modalities} \\
+\hline
+Single-modal (visual only) & 86M & 1 \\
+Two-modal (visual + audio) & 120M & 2 \\
+Our three-modal & 155M & 3 \\
+CLIP (ViT-B/32) & 151M & 2 \\
+Whisper-large & 1.55B & 2 \\
+\hline
+\end{tabular}
+
+\textbf{Design Trade-offs:}
+
+\begin{enumerate}
+    \item \textbf{Parameter efficiency:}
+    \begin{itemize}
+        \item Shared fusion transformer reduces parameters
+        \item Modality-specific encoders are lightweight
+        \item Could use pre-trained encoders (ViT, BERT, etc.)
+    \end{itemize}
+    
+    \item \textbf{Computational cost:}
+    \begin{itemize}
+        \item Sequence length: 71 tokens (manageable)
+        \item Attention complexity: $O(71^2 \times 1024) \approx 5$M operations
+        \item Inference time: $\approx 50$ ms on GPU
+    \end{itemize}
+    
+    \item \textbf{Scalability:}
+    \begin{itemize}
+        \item Easy to add more modalities (depth, optical flow, etc.)
+        \item Can increase fusion layers for better interaction
+        \item Bottleneck fusion for longer sequences
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Practical Recommendations:}
+
+\begin{enumerate}
+    \item \textbf{Use pre-trained encoders:} ViT for visual, Wav2Vec for audio, BERT for text
+    \item \textbf{Freeze encoders initially:} Train fusion transformer first
+    \item \textbf{Fine-tune end-to-end:} Unfreeze all parameters later
+    \item \textbf{Modality dropout:} Randomly drop modalities during training for robustness
+    \item \textbf{Temporal modeling:} Add temporal attention for video sequences
+\end{enumerate}
+
+\textbf{Key Insights:}
+
+\begin{itemize}
+    \item Multimodal fusion requires careful architecture design
+    \item Modality tokens enable flexible aggregation
+    \item Shared transformer enables cross-modal learning
+    \item Multi-task learning improves representation quality
+    \item Parameter count is reasonable for modern GPUs
+    \item Pre-trained encoders significantly improve performance
+\end{itemize}
+\end{solution}
+
+\end{document}
