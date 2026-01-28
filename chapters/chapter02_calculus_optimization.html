@@ -365,7 +365,22 @@ for epoch in range(100):
 
 <h3>Momentum</h3>
 
-<p>Momentum accelerates SGD by accumulating a velocity vector:</p>
+<p>Momentum accelerates SGD by accumulating a velocity vector, drawing inspiration from physics where a ball rolling down a hill builds up speed.</p>
+
+<h4>The Intuition Behind Momentum</h4>
+
+<p>Standard SGD can be slow and oscillatory, especially in regions where the loss surface has different curvatures in different directions (ravines). Consider a loss landscape that is steep in one direction but shallow in another:</p>
+
+<ul>
+    <li><strong>Without momentum:</strong> The gradient points steeply downward, causing large oscillations perpendicular to the optimal path. Progress along the shallow direction is slow because each step only uses the current gradient.
+    <li><strong>With momentum:</strong> The velocity accumulates gradients over time. Oscillations in steep directions cancel out (positive and negative gradients average), while consistent gradients in shallow directions accumulate, accelerating progress.
+</ul>
+
+<div class="keypoint">
+Momentum acts as an exponentially weighted moving average of gradients, smoothing out noisy updates and accelerating convergence in consistent directions.
+</div>
+
+<h4>Mathematical Formulation</h4>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: SGD with Momentum</div>
 <div class="algorithm-line"><strong>Input:</strong> Learning rate $\eta$, momentum coefficient $\beta$ (typically 0.9)</div>
@@ -378,11 +393,73 @@ for epoch in range(100):
 </div>
 </div>
 
-<p>Momentum helps navigate ravines and accelerates convergence in relevant directions.</p>
+<p>The velocity update can be expanded to show its exponential weighting:
+<div class="equation">
+$$
+\mathbf{v}_t = \beta \mathbf{v}_{t-1} + \mathbf{g}_t = \mathbf{g}_t + \beta \mathbf{g}_{t-1} + \beta^2 \mathbf{g}_{t-2} + \beta^3 \mathbf{g}_{t-3} + \cdots
+$$
+</div>
+
+<p>With $\beta = 0.9$, the current gradient has weight 1, the previous gradient has weight 0.9, two steps ago has weight 0.81, and so on. This creates a "memory" of approximately $\frac{1}{1-\beta} = 10$ steps.</p>
+
+<h4>Why Momentum Works Better</h4>
+
+<ol>
+    <li><strong>Dampens oscillations:</strong> In directions with high curvature (steep gradients that change sign), the velocity accumulates opposing gradients, reducing oscillation amplitude.
+    
+    <li><strong>Accelerates in consistent directions:</strong> When gradients consistently point in the same direction, the velocity builds up, effectively increasing the learning rate in that direction.
+    
+    <li><strong>Escapes shallow local minima:</strong> The accumulated velocity can carry the optimization through small barriers, potentially escaping poor local minima.
+    
+    <li><strong>Reduces sensitivity to learning rate:</strong> The smoothing effect makes the optimization more robust to learning rate choices.
+</ol>
+
+<div class="example"><strong>Example:</strong> 
+Consider minimizing $f(w_1, w_2) = 10w_1^2 + 0.1w_2^2$ starting from $(w_1, w_2) = (1, 1)$ with $\eta = 0.01$:
+
+<p><strong>SGD without momentum:</strong>
+<div class="equation">
+$$\begin{align}
+t=0:& \quad \mathbf{g} = [20, 0.2]\transpose, \quad \vw^{(1)} = [1, 1]\transpose - 0.01[20, 0.2]\transpose = [0.8, 0.998]\transpose \\
+t=1:& \quad \mathbf{g} = [16, 0.1996]\transpose, \quad \vw^{(2)} = [0.8, 0.998]\transpose - 0.01[16, 0.1996]\transpose = [0.64, 0.996]\transpose
+\end{align}$$
+</div>
+
+<p>Progress in $w_1$ direction: $1 \to 0.8 \to 0.64$ (slow, 20\% per step)</p>
+
+<p><strong>SGD with momentum ($\beta = 0.9$):</strong>
+<div class="equation">
+$$\begin{align}
+t=0:& \quad \mathbf{g} = [20, 0.2]\transpose, \quad \mathbf{v}^{(1)} = [20, 0.2]\transpose, \quad \vw^{(1)} = [0.8, 0.998]\transpose \\
+t=1:& \quad \mathbf{g} = [16, 0.1996]\transpose, \quad \mathbf{v}^{(2)} = 0.9[20, 0.2]\transpose + [16, 0.1996]\transpose = [34, 0.38]\transpose \\
+& \quad \vw^{(2)} = [0.8, 0.998]\transpose - 0.01[34, 0.38]\transpose = [0.46, 0.994]\transpose
+\end{align}$$
+</div>
+
+<p>Progress in $w_1$ direction: $1 \to 0.8 \to 0.46$ (faster, 42.5\% in second step due to accumulated velocity)</p>
+
+<p>Momentum accelerates convergence by 2-3× in this ravine scenario.
+</div>
 
 <h3>Adam Optimizer</h3>
 
-<p>Adam (Adaptive Moment Estimation) combines momentum with adaptive learning rates:</p>
+<p>Adam (Adaptive Moment Estimation) combines momentum with adaptive learning rates, creating a powerful optimizer that adapts to the geometry of the loss landscape for each parameter individually.</p>
+
+<h4>The Intuition Behind Adam</h4>
+
+<p>Adam addresses two key limitations of standard SGD with momentum:</p>
+
+<ol>
+    <li><strong>Different parameters need different learning rates:</strong> In deep networks, some parameters (e.g., early layer weights) may have small gradients while others (e.g., output layer weights) have large gradients. A single global learning rate is suboptimal.
+    
+    <li><strong>Gradient magnitudes vary across training:</strong> Early in training, gradients may be large and noisy. Later, they become smaller and more stable. Adam adapts to these changes automatically.
+</ol>
+
+<div class="keypoint">
+Adam maintains two moving averages for each parameter: the first moment (mean of gradients, like momentum) and the second moment (uncentered variance of gradients). The second moment enables adaptive per-parameter learning rates.
+</div>
+
+<h4>Mathematical Formulation</h4>
 
 <div class="algorithm"><div class="algorithm-title">Algorithm: Adam Optimizer</div>
 <div class="algorithm-line"><strong>Input:</strong> Learning rate $\alpha$ (default 0.001), $\beta_1$ = 0.9, $\beta_2$ = 0.999, $\epsilon$ = $10^{-8}$</div>
@@ -399,7 +476,119 @@ for epoch in range(100):
 </div>
 </div>
 
-<p>Adam is the most commonly used optimizer for training transformers and large language models.</p>
+<h4>Understanding Each Component</h4>
+
+<p><strong>First moment ($\mathbf{m}_t$):</strong> Exponentially weighted average of gradients (momentum)
+<div class="equation">
+$$
+\mathbf{m}_t = \beta_1 \mathbf{m}_{t-1} + (1 - \beta_1) \mathbf{g}_t
+$$
+</div>
+This provides the direction of the update, smoothing out noisy gradients. With $\beta_1 = 0.9$, it averages over approximately $\frac{1}{1-0.9} = 10$ steps.</p>
+
+<p><strong>Second moment ($\mathbf{v}_t$):</strong> Exponentially weighted average of squared gradients
+<div class="equation">
+$$
+\mathbf{v}_t = \beta_2 \mathbf{v}_{t-1} + (1 - \beta_2) \mathbf{g}_t^2
+$$
+</div>
+This estimates the variance of gradients. With $\beta_2 = 0.999$, it averages over approximately $\frac{1}{1-0.999} = 1000$ steps, providing a stable estimate of gradient scale.</p>
+
+<p><strong>Bias correction:</strong> Since $\mathbf{m}_0 = \mathbf{v}_0 = \mathbf{0}$, early estimates are biased toward zero. The correction factors $\frac{1}{1-\beta_1^t}$ and $\frac{1}{1-\beta_2^t}$ compensate for this initialization bias, ensuring proper scaling in early iterations.</p>
+
+<p><strong>Adaptive update:</strong> The final update is:
+<div class="equation">
+$$
+\vw_t = \vw_{t-1} - \alpha \frac{\hat{\mathbf{m}}_t}{\sqrt{\hat{\mathbf{v}}_t} + \epsilon}
+$$
+</div>
+
+<p>Each parameter $w_i$ gets an effective learning rate of $\frac{\alpha}{\sqrt{\hat{v}_{i,t}} + \epsilon}$:
+<ul>
+    <li>Parameters with large, consistent gradients: $\hat{v}_{i,t}$ is large $\Rightarrow$ effective learning rate is small (prevents overshooting)
+    <li>Parameters with small, noisy gradients: $\hat{v}_{i,t}$ is small $\Rightarrow$ effective learning rate is large (accelerates learning)
+</ul>
+
+<h4>Why Adam Works Better Than SGD and Momentum</h4>
+
+<ol>
+    <li><strong>Automatic learning rate adaptation:</strong> No need to manually tune learning rates for different parameter groups. Adam automatically scales updates based on gradient history.
+    
+    <li><strong>Handles sparse gradients:</strong> For parameters that are rarely updated (e.g., embeddings for rare words), Adam maintains larger effective learning rates, enabling faster learning.
+    
+    <li><strong>Robust to hyperparameter choices:</strong> Default values ($\alpha = 0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$) work well across a wide range of problems.
+    
+    <li><strong>Combines benefits of momentum and RMSProp:</strong> Gets both the acceleration from momentum and the adaptive learning rates from RMSProp.
+    
+    <li><strong>Stable in non-stationary settings:</strong> The second moment estimate adapts to changing gradient distributions during training.
+</ol>
+
+<div class="example"><strong>Example:</strong> 
+Training a 2-layer network on MNIST with 10,000 examples:
+
+<table>
+<tr><th><strong>Optimizer</strong></th><th><strong>Steps to 95\% Accuracy</strong></th><th><strong>Final Accuracy</strong></th><th><strong>Training Time</strong></th></tr>
+<tr><td>SGD ($\eta = 0.01$)</td><td>8,500</td><td>96.2\%</td><td>12.3 min</td></tr>
+<tr><td>SGD + Momentum ($\eta = 0.01$, $\beta = 0.9$)</td><td>4,200</td><td>97.1\%</td><td>6.1 min</td></tr>
+<tr><td>Adam ($\alpha = 0.001$)</td><td>2,100</td><td>97.8\%</td><td>3.0 min</td></tr>
+</table>
+
+<p>Adam converges 4× faster than SGD and 2× faster than momentum, while achieving higher final accuracy.
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Consider two parameters with different gradient patterns over 5 steps:
+
+<p><strong>Parameter 1 (consistent large gradients):</strong>
+<div class="equation">
+$$\begin{align}
+\text{Gradients:} & \quad [10.0, 9.8, 10.2, 9.9, 10.1] \\
+\hat{m}_5 & \approx 10.0 \quad \text{(first moment)} \\
+\hat{v}_5 & \approx 100.0 \quad \text{(second moment)} \\
+\text{Effective LR:} & \quad \frac{0.001}{\sqrt{100.0}} = 0.0001
+\end{align}$$
+</div>
+
+<p><strong>Parameter 2 (small noisy gradients):</strong>
+<div class="equation">
+$$\begin{align}
+\text{Gradients:} & \quad [0.5, -0.3, 0.4, -0.2, 0.6] \\
+\hat{m}_5 & \approx 0.2 \quad \text{(first moment, noise cancels)} \\
+\hat{v}_5 & \approx 0.16 \quad \text{(second moment)} \\
+\text{Effective LR:} & \quad \frac{0.001}{\sqrt{0.16}} = 0.0025
+\end{align}$$
+</div>
+
+<p>Parameter 2 gets 25× larger effective learning rate, compensating for its smaller gradients. This automatic adaptation is why Adam excels at training deep networks with heterogeneous parameter scales.
+</div>
+
+<div class="keypoint">
+Adam is the most commonly used optimizer for training transformers and large language models due to its robustness, fast convergence, and ability to handle the diverse gradient patterns across different layers and attention heads.
+</div>
+
+<h4>Practical Considerations for Adam</h4>
+
+<p><strong>Memory overhead:</strong> Adam requires 2× more memory than SGD with momentum (stores both $\mathbf{m}$ and $\mathbf{v}$). For a model with $n$ parameters:
+<ul>
+    <li>SGD: $n$ parameters
+    <li>SGD + Momentum: $n$ parameters + $n$ velocity
+    <li>Adam: $n$ parameters + $n$ first moment + $n$ second moment
+</ul>
+
+<p><strong>Typical hyperparameters for transformers:</strong>
+<ul>
+    <li>Learning rate $\alpha$: $10^{-4}$ to $10^{-3}$ (often with warmup)
+    <li>$\beta_1$: 0.9 (rarely changed)
+    <li>$\beta_2$: 0.999 for transformers, 0.98-0.99 for RNNs
+    <li>$\epsilon$: $10^{-8}$ (numerical stability)
+</ul>
+
+<p><strong>When to use Adam vs alternatives:</strong>
+<ul>
+    <li><strong>Use Adam:</strong> Default choice for most deep learning tasks, especially transformers, NLP, and when training time is critical
+    <li><strong>Use SGD + Momentum:</strong> When memory is constrained, or for some computer vision tasks where SGD can achieve slightly better generalization
+    <li><strong>Use AdamW:</strong> Adam with decoupled weight decay, often better for transformers
+</ul>
 
 <h2>Gradient Computation Complexity</h2>
 
