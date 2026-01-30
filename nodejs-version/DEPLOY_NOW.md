@@ -57,13 +57,19 @@ git push origin main
 1. Go to [vercel.com/new](https://vercel.com/new)
 2. Click "Import Project"
 3. Select your repository
-4. Configure:
-   - **Root Directory**: `nodejs-version`
+4. **Important:** Select the root repository, then click Continue
+5. On the "Configure Project" screen:
+   - Click "Edit" next to **Root Directory**
+   - Type: `nodejs-version`
    - Leave other settings as default
-5. Click "Deploy"
+6. Click "Deploy"
+
+**Note:** If you don't see `nodejs-version` in the folder picker, that's normal. Just select the root and manually type `nodejs-version` in the Root Directory field.
 
 ### Step 3: Wait
 Deployment takes 1-2 minutes. You'll get a live URL when done!
+
+**Having UI issues?** See [VERCEL_UI_GUIDE.md](VERCEL_UI_GUIDE.md) or use the CLI method instead (it's easier!).
 
 ## What Gets Deployed?
 
