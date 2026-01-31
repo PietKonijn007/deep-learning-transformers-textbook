@@ -406,3 +406,11 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+// Expose loadChapter globally for onclick handlers
+window.navigateToChapter = function(chapterId) {
+    const index = state.chapters.findIndex(ch => ch.id === chapterId);
+    if (index !== -1) {
+        loadChapter(chapterId, index);
+    }
+};
