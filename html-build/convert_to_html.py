@@ -35,6 +35,17 @@ CHAPTERS = [
     ("chapter21_pytorch_implementation", "Chapter 21: PyTorch Implementation"),
     ("chapter22_hardware_optimization", "Chapter 22: Hardware Optimization"),
     ("chapter23_best_practices", "Chapter 23: Best Practices"),
+    ("chapter24_domain_specific_models", "Chapter 24: Domain-Specific Models"),
+    ("chapter25_enterprise_nlp", "Chapter 25: Enterprise NLP"),
+    ("chapter26_code_language", "Chapter 26: Code and Language Models"),
+    ("chapter27_video_visual", "Chapter 27: Video and Visual Understanding"),
+    ("chapter28_knowledge_graphs", "Chapter 28: Knowledge Graphs and Reasoning"),
+    ("chapter29_recommendations", "Chapter 29: Recommendation Systems"),
+    ("chapter30_healthcare", "Chapter 30: Healthcare Applications"),
+    ("chapter31_finance", "Chapter 31: Financial Applications"),
+    ("chapter32_legal", "Chapter 32: Legal and Compliance Applications"),
+    ("chapter33_observability", "Chapter 33: Observability and Monitoring"),
+    ("chapter34_dsl_agents", "Chapter 34: DSL and Agent Systems"),
 ]
 
 def read_latex_file(filepath):
@@ -503,6 +514,17 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
         <a href="chapter21_pytorch_implementation.html">Ch 21</a>
         <a href="chapter22_hardware_optimization.html">Ch 22</a>
         <a href="chapter23_best_practices.html">Ch 23</a>
+        <a href="chapter24_domain_specific_models.html">Ch 24</a>
+        <a href="chapter25_enterprise_nlp.html">Ch 25</a>
+        <a href="chapter26_code_language.html">Ch 26</a>
+        <a href="chapter27_video_visual.html">Ch 27</a>
+        <a href="chapter28_knowledge_graphs.html">Ch 28</a>
+        <a href="chapter29_recommendations.html">Ch 29</a>
+        <a href="chapter30_healthcare.html">Ch 30</a>
+        <a href="chapter31_finance.html">Ch 31</a>
+        <a href="chapter32_legal.html">Ch 32</a>
+        <a href="chapter33_observability.html">Ch 33</a>
+        <a href="chapter34_dsl_agents.html">Ch 34</a>
     </nav>
 
     <main>

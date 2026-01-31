@@ -136,7 +136,18 @@ async function loadChapters() {
             { id: 'chapter20_pretraining_strategies', title: 'Chapter 20: Pretraining Strategies', part: 'Part VI: Advanced Topics' },
             { id: 'chapter21_pytorch_implementation', title: 'Chapter 21: PyTorch Implementation', part: 'Part VII: Practical Implementation' },
             { id: 'chapter22_hardware_optimization', title: 'Chapter 22: Hardware Optimization', part: 'Part VII: Practical Implementation' },
-            { id: 'chapter23_best_practices', title: 'Chapter 23: Best Practices', part: 'Part VII: Practical Implementation' }
+            { id: 'chapter23_best_practices', title: 'Chapter 23: Best Practices', part: 'Part VII: Practical Implementation' },
+            { id: 'chapter24_domain_specific_models', title: 'Chapter 24: Domain-Specific Models', part: 'Part VIII: Domain Applications' },
+            { id: 'chapter25_enterprise_nlp', title: 'Chapter 25: Enterprise NLP', part: 'Part VIII: Domain Applications' },
+            { id: 'chapter26_code_language', title: 'Chapter 26: Code and Language Models', part: 'Part VIII: Domain Applications' },
+            { id: 'chapter27_video_visual', title: 'Chapter 27: Video and Visual Understanding', part: 'Part VIII: Domain Applications' },
+            { id: 'chapter28_knowledge_graphs', title: 'Chapter 28: Knowledge Graphs and Reasoning', part: 'Part VIII: Domain Applications' },
+            { id: 'chapter29_recommendations', title: 'Chapter 29: Recommendation Systems', part: 'Part VIII: Domain Applications' },
+            { id: 'chapter30_healthcare', title: 'Chapter 30: Healthcare Applications', part: 'Part IX: Industry Applications' },
+            { id: 'chapter31_finance', title: 'Chapter 31: Financial Applications', part: 'Part IX: Industry Applications' },
+            { id: 'chapter32_legal', title: 'Chapter 32: Legal and Compliance Applications', part: 'Part IX: Industry Applications' },
+            { id: 'chapter33_observability', title: 'Chapter 33: Observability and Monitoring', part: 'Part X: Production Systems' },
+            { id: 'chapter34_dsl_agents', title: 'Chapter 34: DSL and Agent Systems', part: 'Part X: Production Systems' }
         ];
         renderChapterList();
     } catch (error) {

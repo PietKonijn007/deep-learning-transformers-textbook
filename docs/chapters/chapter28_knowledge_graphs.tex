@@ -1,0 +1,1321 @@
+\chapter[Knowledge Graphs and Semantic Web]{Knowledge Graphs, Semantic Web, and Structured Information Extraction}
+\label{chap:knowledgegraphs}
+
+\section*{Chapter Overview}
+
+While most chapters focus on unstructured data (text, images, video) or simple structured data (tables, time series), this chapter explores a unique domain: knowledge representation and reasoning. Knowledge graphs organize information as networks of entities and relationships, enabling semantic understanding and logical inference. Unlike text or images, knowledge graphs are explicitly structured: they formalize what is true about the world. Deep learning has transformed knowledge graphs from hand-crafted databases to systems that automatically extract entities, infer relationships, and reason over incomplete information. This chapter examines how transformers extract structured information from text, represent entities and relationships in learned embeddings, and perform inference over knowledge bases. Applications range from search (Google's Knowledge Graph) to biomedical discovery (drug-target interactions) to cybersecurity (attack pattern detection).
+
+\section*{Learning Objectives}
+
+\begin{enumerate}
+\item Understand knowledge graph structure: entities, relationships, and semantic types
+\item Extract structured information from unstructured text (entity and relation extraction)
+\item Represent knowledge in embeddings (TransE, DistMult, ComplEx models)
+\item Perform link prediction: infer missing relationships
+\item Implement semantic reasoning and type inference
+\item Build knowledge-aware systems that combine text and structured knowledge
+\item Address scalability: billion-scale graphs with billions of entities and relationships
+\item Understand limitations: incompleteness, noise, and dynamic knowledge
+\end{enumerate}
+
+\section{Knowledge Graphs as Formal Languages}
+\label{sec:kgformal}
+
+A knowledge graph is a directed, typed, attributed multigraph:
+
+\begin{definition}[Knowledge Graph Structure]
+\label{def:kg}
+\begin{itemize}
+\item \textbf{Entities:} Unique objects, concepts, or things. Example: ``Barack Obama'' (person), ``United States'' (country), ``2008'' (year)
+\item \textbf{Relationships (edges):} Typed connections between entities. Example: (Barack Obama) --\texttt{born\_in}--> (Honolulu)
+\item \textbf{Types:} Semantic categories. Example: Barack Obama has type ``Person'' and ``Politician''
+\item \textbf{Attributes:} Properties of entities. Example: Barack Obama has ``birth\_date'' = August 4, 1961
+\item \textbf{Triples:} The basic unit: (subject, predicate, object). Example: (\texttt{Barack Obama}, \texttt{born\_in}, \texttt{Honolulu})
+\end{itemize}
+\end{definition}
+
+Knowledge graphs are semi-formal: they have structure (typed entities, relationships) but allow uncertainty (confidence scores, probability distributions).
+
+\subsection{Examples of Knowledge Graphs}
+
+\textbf{DBpedia:} Extracted from Wikipedia infoboxes. 14M entities, 645M relationships. Public and incomplete.
+
+\textbf{Freebase:} Curated database of facts. 1.9B entities, 3B relationships. Integrated into Google Knowledge Graph.
+
+\textbf{Wikidata:} Community-curated knowledge base. 100M entities, 12B relationships. Increasingly used for structured data.
+
+\textbf{YAGO:} Combines Wikipedia, WordNet, and GeoNames. 37M entities, 500M relationships.
+
+\textbf{Enterprise KGs:} Internal knowledge bases for specific industries (healthcare, finance, customer data).
+
+\subsection{Why Knowledge Graphs Matter}
+
+\begin{itemize}
+\item \textbf{Semantic search:} Query ``movies directed by Steven Spielberg released after 2010.'' Knowledge graph allows structured queries, not just keyword matching.
+\item \textbf{Question answering:} ``Who was Barack Obama's wife?'' Directly answered by following edges in graph.
+\item \textbf{Reasoning:} If A is related to B, and B is related to C, infer possible relationships between A and C.
+\item \textbf{Disambiguation:} Distinguish ``Barack Obama'' (politician) from ``Obama'' (surname) through type information.
+\item \textbf{Incompleteness handling:} Most facts are unknown. Predict missing relationships based on learned patterns.
+\end{itemize}
+
+\section{Entity and Relation Extraction from Text}
+\label{sec:extraction}
+
+Knowledge graphs must be populated with information. Much knowledge is in unstructured text (documents, web pages, news). Deep learning extracts structured triples from text.
+
+\subsection{Named Entity Recognition (NER)}
+
+The first step is identifying entities in text.
+
+\begin{definition}[Named Entity Recognition]
+\label{def:ner}
+Given text, identify and classify entities into predefined types (Person, Organization, Location, Product, Date, etc.).
+
+Example:
+\begin{verbatim}
+Text: "Barack Obama was elected president of the United States in 2008."
+
+Entities:
+- Barack Obama (Person)
+- United States (Location)
+- 2008 (Date)
+\end{verbatim}
+\end{definition}
+
+\textbf{Deep learning approach:} Token classification using sequence labeling (BIO tagging):
+
+\begin{itemize}
+\item \textbf{B-} (Begin): Start of entity
+\item \textbf{I-} (Inside): Continuation of entity
+\item \textbf{O} (Outside): Not part of entity
+\end{itemize}
+
+Architecture: BERT or similar transformer, token-level classification head.
+
+\subsection{Relation Extraction}
+
+Once entities are identified, extract relationships between them.
+
+\begin{definition}[Relation Extraction]
+\label{def:relext}
+Given text with identified entities, determine the relationship type between entity pairs.
+
+Example:
+\begin{verbatim}
+Text: "Barack Obama was born in Honolulu."
+
+Entities: Barack Obama, Honolulu
+Relation: born_in
+Triple: (Barack Obama, born_in, Honolulu)
+\end{verbatim}
+\end{definition}
+
+\textbf{Challenges:}
+\begin{itemize}
+\item \textbf{Long-range dependencies:} Entities may be far apart in text
+\item \textbf{Implicit relations:} ``John married Mary'' states relationship directly; ``John's wife, Mary'' implies it
+\item \textbf{Multiple relationships:} Sentence may express multiple triples
+\item \textbf{Noise:} Not all mentions are asserting facts; some are hypothetical or negated
+\end{itemize}
+
+\textbf{Deep learning approaches:}
+
+\begin{itemize}
+\item \textbf{Sequence classification:} Classify (entity1, entity2) pair based on text between them
+\item \textbf{Sequence tagging:} Tag text to identify relation arguments (similar to NER)
+\item \textbf{Structured prediction:} Joint entity and relation extraction (joint model outperforms pipeline)
+\end{itemize}
+
+\subsection{Joint Entity and Relation Extraction}
+
+Rather than two separate models, a unified model extracts entities and relations simultaneously.
+
+\textbf{Architecture:}
+\begin{enumerate}
+\item Encode text with transformer
+\item Entity recognition: Token classification (as in NER)
+\item Relation classification: For each identified entity pair, classify relationship type
+\item Output: Set of triples
+\end{enumerate}
+
+\textbf{Advantages:}
+\begin{itemize}
+\item Entities recognized in context of their relationships (better accuracy)
+\item Shared representations between entity and relation tasks
+\item Supports multi-token entities naturally
+\end{itemize}
+
+\section{Knowledge Graph Embeddings}
+\label{sec:kgembeddings}
+
+Knowledge graphs are discrete structures; neural networks work on continuous embeddings. KG embedding models map entities and relationships to vector spaces.
+
+\subsection{TransE Model}
+
+TransE is the foundational KG embedding model:
+
+\begin{definition}[TransE Embedding]
+\label{def:transe}
+Learn embeddings for entities and relationships such that:
+\begin{align}
+\mathbf{h} + \mathbf{r} \approx \mathbf{t}
+\end{align}
+
+where \(\mathbf{h}\) is head entity embedding, \(\mathbf{r}\) is relation embedding, \(\mathbf{t}\) is tail entity embedding.
+
+For a true triple, embedding of head + relation should be close to embedding of tail.
+For a false triple, they should be far.
+
+Loss function:
+\begin{align}
+\mathcal{L} = \sum_{(h,r,t) \in S} ||(\mathbf{h} + \mathbf{r}) - \mathbf{t}||_2^2 + \sum_{(h',r,t') \notin S} \max(0, \gamma - ||(\mathbf{h}' + \mathbf{r}) - \mathbf{t}'||_2^2)
+\end{align}
+
+Positive triples minimized; negative triples have margin.
+\end{definition}
+
+\textbf{Training:}
+\begin{itemize}
+\item Start with random embeddings
+\item For each true triple (h, r, t), minimize distance
+\item For each false triple (h', r, t'), maximize distance (with margin)
+\item Sample negative examples: corrupt head or tail entity
+\end{itemize}
+
+\textbf{Advantages:}
+\begin{itemize}
+\item Simple and interpretable
+\item Scales to large graphs (billions of entities)
+\item Captures simple relationships well
+\end{itemize}
+
+\textbf{Limitations:}
+\begin{itemize}
+\item Cannot handle complex relations (many-to-many, composition)
+\item Assumes additive relationship (not suitable for all relation types)
+\end{itemize}
+
+\subsection{Advanced Models: DistMult, ComplEx, RotatE}
+
+More sophisticated models address limitations:
+
+\begin{itemize}
+\item \textbf{DistMult:} Replace addition with element-wise multiplication. Better for symmetric relations.
+  \begin{align}
+  \text{score}(h, r, t) = \mathbf{h}^T \text{diag}(\mathbf{r}) \mathbf{t}
+  \end{align}
+
+\item \textbf{ComplEx:} Use complex-valued embeddings. Model asymmetric relations and composition better.
+  \begin{align}
+  \text{score}(h, r, t) = \text{Re}(\mathbf{h}^T \text{diag}(\mathbf{r}) \overline{\mathbf{t}})
+  \end{align}
+
+\item \textbf{RotatE:} Represent relations as rotations in complex space. Captures composition and inversion.
+  \begin{align}
+  \mathbf{h} \circ \mathbf{r} = \mathbf{t}
+  \end{align}
+  where \(\circ\) is element-wise product in complex space.
+\end{itemize}
+
+Each model trades simplicity for expressiveness. TransE is fastest; RotatE is most expressive but slower.
+
+\section{Link Prediction and Reasoning}
+\label{sec:linkprediction}
+
+A key application: predict missing relationships (link prediction).
+
+\begin{definition}[Link Prediction]
+\label{def:linkpred}
+Given a partial knowledge graph with some missing edges, predict which relationships are most likely to exist.
+
+Example: Given (Barack Obama, spouse, ?), predict the tail entity. Correct answer: Michelle Obama.
+
+This addresses the incompleteness of knowledge graphs.
+\end{definition}
+
+\subsection{Ranking-Based Link Prediction}
+
+For a query (h, r, ?), rank candidate entities by likelihood:
+
+\begin{align}
+\text{score}(h, r, t) = f(\mathbf{h}, \mathbf{r}, \mathbf{t})
+\end{align}
+
+Using TransE: score = \(-||(\mathbf{h} + \mathbf{r}) - \mathbf{t}||_2\) (higher is better).
+
+Rank all entities; top-k are predictions.
+
+\subsection{Evaluation Metrics}
+
+\textbf{Mean Reciprocal Rank (MRR):} Average rank of correct entity.
+\begin{align}
+\text{MRR} = \frac{1}{|Q|} \sum_{i=1}^{|Q|} \frac{1}{\text{rank}_i}
+\end{align}
+
+Higher is better. Perfect: MRR = 1. Random: MRR ≈ 1/|E| where |E| is number of entities.
+
+\textbf{Hits@k:} Fraction of queries where correct entity in top-k.
+\begin{align}
+\text{Hits@k} = \frac{\# \text{correct in top-k}}{|Q|}
+\end{align}
+
+Common metrics: Hits@1, Hits@10.
+
+\section{Semantic Type Inference and Reasoning}
+\label{sec:typeinference}
+
+Beyond individual triples, knowledge graphs support reasoning.
+
+\subsection{Type Constraints}
+
+Each relation has type constraints:
+
+\begin{itemize}
+\item \textit{born\_in}: head type = Person, tail type = Location
+\item \textit{founder}: head type = Person, tail type = Organization
+\item \textit{contains}: head type = Container, tail type = Thing
+\end{itemize}
+
+Type constraints reduce link prediction space. For (Barack Obama, born\_in, ?), candidates must be locations.
+
+\subsection{Reasoning Rules}
+
+Knowledge graphs support inference rules:
+
+\begin{itemize}
+\item \textbf{Composition:} (X, father\_of, Y) ∧ (Y, father\_of, Z) → (X, grandfather\_of, Z)
+\item \textbf{Symmetry:} (X, married\_to, Y) → (Y, married\_to, X)
+\item \textbf{Inversion:} (X, parent\_of, Y) → (Y, child\_of, X)
+\item \textbf{Subrelation:} (X, parent\_of, Y) → (X, ancestor\_of, Y)
+\end{itemize}
+
+Deep models (especially RotatE) capture these patterns in learned embeddings without explicit rules.
+
+\section{Temporal Knowledge Graphs and Dynamic Knowledge}
+\label{sec:temporalkg}
+
+Real-world knowledge evolves over time. Static knowledge graphs cannot capture temporal dynamics: facts that are true at specific times, relationships that change, and entities whose properties evolve.
+
+\subsection{Temporal Knowledge Representation}
+
+\begin{definition}[Temporal Knowledge Graph]
+\label{def:temporalkg}
+A temporal knowledge graph extends standard KGs with time information:
+\begin{itemize}
+\item \textbf{Temporal triples:} (subject, predicate, object, timestamp) or (subject, predicate, object, [start, end])
+\item \textbf{Example:} (Barack Obama, president\_of, USA, [2009-01-20, 2017-01-20])
+\item \textbf{Point-in-time facts:} (Company X, stock\_price, \$150, 2024-01-30)
+\item \textbf{Event sequences:} Ordered series of facts representing processes
+\end{itemize}
+\end{definition}
+
+\subsection{Temporal Reasoning Challenges}
+
+\begin{itemize}
+\item \textbf{Validity periods:} When is a fact true? (Barack Obama, president\_of, USA) is only valid 2009--2017
+\item \textbf{Temporal consistency:} A person cannot be in two places simultaneously
+\item \textbf{Temporal inference:} If X was true at time T1, and no contradicting fact exists, is X still true at T2?
+\item \textbf{Forecasting:} Predict future facts based on historical patterns
+\end{itemize}
+
+\subsection{Temporal Embedding Models}
+
+Extend static embedding models to incorporate time:
+
+\textbf{TTransE (Temporal TransE):}
+\begin{align}
+\mathbf{h} + \mathbf{r} + \mathbf{t}_{\text{time}} \approx \mathbf{t}
+\end{align}
+
+Time is embedded as a vector; added to the translation.
+
+\textbf{DE-SimplE (Diachronic Embeddings):}
+Model entities and relations as functions of time:
+\begin{align}
+\mathbf{h}(t), \mathbf{r}(t), \mathbf{t}_{\text{entity}}(t)
+\end{align}
+
+Embeddings evolve smoothly over time using recurrent networks or temporal convolutions.
+
+\textbf{TeMP (Temporal Message Passing):}
+GNN-based approach where messages are time-aware:
+\begin{align}
+\mathbf{h}_i^{(t+1)} = \text{Aggregate}(\{\mathbf{h}_j^{(t)}, \mathbf{r}_{ij}, \tau_{ij}\})
+\end{align}
+
+where $\tau_{ij}$ is the timestamp of the relationship.
+
+\subsection{Temporal Link Prediction}
+
+Predict future relationships based on historical patterns:
+
+\textbf{Task:} Given knowledge graph up to time T, predict facts at time T+1.
+
+\textbf{Example:} Historical pattern shows companies acquire competitors before IPO. Predict: (Company X, will\_acquire, Company Y, 2025).
+
+\textbf{Applications:}
+\begin{itemize}
+\item Stock market prediction: Predict corporate events (mergers, partnerships)
+\item Geopolitical forecasting: Predict diplomatic relationships, conflicts
+\item Healthcare: Predict disease progression based on patient history
+\end{itemize}
+
+\subsection{Recent Advances in Temporal Knowledge Graph Reasoning (2024-2025)}
+
+Temporal knowledge graph reasoning has advanced significantly in 2024 with dynamic hypergraph embedding methods that better capture complex temporal patterns and multi-way relationships.
+
+\textbf{Dynamic Hypergraph Embeddings:} Traditional temporal KG methods model binary relationships (subject-predicate-object) evolving over time. However, many real-world events involve multiple entities simultaneously. Dynamic hypergraph embeddings extend temporal KGs to hyperedges connecting multiple entities, enabling richer temporal reasoning.
+
+Example: A corporate merger involves multiple entities: acquiring company, target company, regulatory bodies, financial advisors, and shareholders. A hyperedge represents this multi-party event with temporal validity. Traditional binary relations (Company A, acquires, Company B) miss the full context.
+
+\textbf{Key innovations in 2024-2025:}
+
+\begin{itemize}
+\item \textbf{Temporal hypergraph attention:} Attention mechanisms that weight the importance of different entities within a hyperedge and across time. This enables learning which participants in multi-entity events are most predictive of future events.
+
+\item \textbf{Continuous-time modeling:} Instead of discrete timestamps, model events in continuous time using neural ordinary differential equations (Neural ODEs). This enables interpolation between observed events and more accurate forecasting.
+
+\item \textbf{Causal temporal reasoning:} Distinguish correlation from causation in temporal patterns. If event A precedes event B, is A causing B, or are both caused by hidden factor C? Causal inference methods (do-calculus, counterfactual reasoning) integrated with temporal KG embeddings improve prediction accuracy by 15-25\% on forecasting tasks.
+
+\item \textbf{Multi-scale temporal modeling:} Events occur at different timescales—some relationships change daily (stock prices), others yearly (corporate structure). Hierarchical temporal models with separate encoders for different timescales capture both short-term dynamics and long-term trends.
+\end{itemize}
+
+\textbf{Implementation Considerations:} Dynamic hypergraph methods are computationally expensive—training requires 3-5x more compute than standard temporal KG methods. However, the improved accuracy often justifies the cost for high-value applications. Open-source implementations are emerging in PyTorch Geometric and DGL (Deep Graph Library) as of 2024-2025.
+
+\section{Graph Neural Networks for Knowledge Graphs}
+\label{sec:gnnkg}
+
+Graph Neural Networks (GNNs) have become the dominant approach for learning on graph-structured data, including knowledge graphs.
+
+\subsection{Relational Graph Convolutional Networks (R-GCN)}
+
+Standard GCNs assume homogeneous graphs (single edge type). R-GCN extends to multi-relational graphs:
+
+\begin{definition}[R-GCN Layer]
+\label{def:rgcn}
+For entity $i$ with embedding $\mathbf{h}_i$, update using neighbors:
+\begin{align}
+\mathbf{h}_i^{(l+1)} = \sigma\left(\sum_{r \in \mathcal{R}} \sum_{j \in \mathcal{N}_i^r} \frac{1}{|\mathcal{N}_i^r|} \mathbf{W}_r^{(l)} \mathbf{h}_j^{(l)} + \mathbf{W}_0^{(l)} \mathbf{h}_i^{(l)}\right)
+\end{align}
+
+where:
+\begin{itemize}
+\item $\mathcal{R}$ is the set of relation types
+\item $\mathcal{N}_i^r$ is the set of neighbors connected via relation $r$
+\item $\mathbf{W}_r^{(l)}$ is a relation-specific weight matrix
+\item $\mathbf{W}_0^{(l)}$ is a self-loop weight matrix
+\end{itemize}
+\end{definition}
+
+\textbf{Key insight:} Different relation types have different semantics; use separate weight matrices.
+
+\textbf{Scalability challenge:} With thousands of relation types, storing $|\mathcal{R}|$ weight matrices is memory-intensive.
+
+\textbf{Solution - Basis decomposition:}
+\begin{align}
+\mathbf{W}_r = \sum_{b=1}^B a_{rb} \mathbf{V}_b
+\end{align}
+
+Express each relation weight as a linear combination of $B$ basis matrices (where $B \ll |\mathcal{R}|$).
+
+\subsection{Graph Attention Networks for KGs}
+
+Attention mechanisms allow the model to learn which neighbors are most important:
+
+\begin{definition}[Relational Graph Attention]
+\label{def:rgat}
+Compute attention weights for each neighbor:
+\begin{align}
+\alpha_{ij}^r &= \frac{\exp(\text{LeakyReLU}(\mathbf{a}^T [\mathbf{W}_r \mathbf{h}_i || \mathbf{W}_r \mathbf{h}_j]))}{\sum_{k \in \mathcal{N}_i} \exp(\text{LeakyReLU}(\mathbf{a}^T [\mathbf{W}_r \mathbf{h}_i || \mathbf{W}_r \mathbf{h}_k]))} \\
+\mathbf{h}_i^{(l+1)} &= \sigma\left(\sum_{r \in \mathcal{R}} \sum_{j \in \mathcal{N}_i^r} \alpha_{ij}^r \mathbf{W}_r \mathbf{h}_j^{(l)}\right)
+\end{align}
+\end{definition}
+
+\textbf{Advantages:}
+\begin{itemize}
+\item Learns importance of different neighbors dynamically
+\item Handles varying neighborhood sizes naturally
+\item Interpretable: attention weights show which relationships matter
+\end{itemize}
+
+\subsection{Multi-Hop Reasoning with GNNs}
+
+GNNs naturally support multi-hop reasoning by stacking layers:
+
+\begin{itemize}
+\item \textbf{1-hop:} Direct neighbors (1 layer)
+\item \textbf{2-hop:} Neighbors of neighbors (2 layers)
+\item \textbf{k-hop:} k layers capture k-hop neighborhood
+\end{itemize}
+
+\textbf{Example reasoning:}
+\begin{verbatim}
+Query: "What diseases might drug X treat?"
+1-hop: Drug X targets protein P
+2-hop: Protein P is involved in disease D
+Inference: Drug X might treat disease D
+\end{verbatim}
+
+\subsection{Practical Implementation}
+
+\textbf{PyTorch Geometric example (simplified):}
+\begin{verbatim}
+import torch
+from torch_geometric.nn import RGCNConv
+
+class KnowledgeGraphGNN(torch.nn.Module):
+    def __init__(self, num_entities, num_relations, hidden_dim):
+        super().__init__()
+        self.embedding = torch.nn.Embedding(num_entities, hidden_dim)
+        self.conv1 = RGCNConv(hidden_dim, hidden_dim, num_relations)
+        self.conv2 = RGCNConv(hidden_dim, hidden_dim, num_relations)
+    
+    def forward(self, edge_index, edge_type):
+        x = self.embedding.weight
+        x = self.conv1(x, edge_index, edge_type)
+        x = torch.relu(x)
+        x = self.conv2(x, edge_index, edge_type)
+        return x
+\end{verbatim}
+
+\section{Knowledge Graph Completion and Multi-Hop Reasoning}
+\label{sec:kgcompletion}
+
+Link prediction focuses on single missing edges. Knowledge graph completion addresses systematic incompleteness through multi-hop reasoning.
+
+\subsection{Path-Based Reasoning}
+
+Rather than direct embeddings, reason over paths connecting entities:
+
+\begin{definition}[Path Ranking Algorithm (PRA)]
+\label{def:pra}
+For query (h, r, ?), find paths from h to candidate tails:
+\begin{enumerate}
+\item Extract all paths of length $\leq k$ from h to candidate entities
+\item Represent each path as a sequence of relations: $r_1 \rightarrow r_2 \rightarrow \ldots \rightarrow r_n$
+\item Learn weights for path patterns that predict relation $r$
+\item Score candidates by weighted sum of paths
+\end{enumerate}
+
+\textbf{Example:}
+Query: (Barack Obama, nationality, ?)
+Paths:
+\begin{itemize}
+\item born\_in $\rightarrow$ located\_in $\rightarrow$ USA (strong signal)
+\item president\_of $\rightarrow$ USA (strong signal)
+\item spouse $\rightarrow$ nationality $\rightarrow$ USA (weaker signal)
+\end{itemize}
+\end{definition}
+
+\subsection{Neural Logic Programming}
+
+Combine neural networks with logic programming for interpretable reasoning:
+
+\textbf{Neural LP:} Learn logical rules as differentiable operations:
+\begin{align}
+\text{confidence}(h, r, t) = \max_{\text{path } \pi} \prod_{r_i \in \pi} \text{score}(r_i)
+\end{align}
+
+The model learns which rule chains (paths) are most predictive.
+
+\textbf{Advantages:}
+\begin{itemize}
+\item Interpretable: Rules can be extracted and understood
+\item Compositional: Learns to compose relations
+\item Data-efficient: Generalizes from fewer examples
+\end{itemize}
+
+\subsection{Query Answering Beyond Link Prediction}
+
+Complex queries require reasoning beyond single edges:
+
+\textbf{Conjunctive queries:}
+\begin{verbatim}
+Find: Actors who starred in movies directed by Steven Spielberg 
+      AND released after 2000
+
+Query: (?, starred_in, ?m) ∧ (?m, directed_by, Spielberg) 
+       ∧ (?m, release_year, >2000)
+\end{verbatim}
+
+\textbf{Query2Box:} Represent queries as geometric regions (boxes) in embedding space:
+\begin{itemize}
+\item Entities are points
+\item Queries are boxes (hyperrectangles)
+\item Intersection of boxes = conjunction
+\item Entities inside box satisfy query
+\end{itemize}
+
+\section{Ontology Alignment and Knowledge Integration}
+\label{sec:ontologyalignment}
+
+Real-world applications require integrating multiple knowledge graphs with different schemas and vocabularies.
+
+\subsection{Entity Alignment Problem}
+
+\begin{definition}[Entity Alignment]
+\label{def:entityalignment}
+Given two knowledge graphs $KG_1$ and $KG_2$, identify entity pairs that refer to the same real-world object:
+\begin{itemize}
+\item $KG_1$: ``Barack\_Obama'' (entity ID: 12345)
+\item $KG_2$: ``Obama, Barack'' (entity ID: 98765)
+\item Goal: Recognize these refer to the same person
+\end{itemize}
+\end{definition}
+
+\textbf{Challenges:}
+\begin{itemize}
+\item Name variations: ``NYC'' vs. ``New York City'' vs. ``New York, NY''
+\item Different schemas: One KG has ``birth\_date'', another has ``born\_on''
+\item Incomplete information: Entities may have different attributes in each KG
+\item Scale: Billions of entities; quadratic comparison infeasible
+\end{itemize}
+
+\subsection{Embedding-Based Entity Alignment}
+
+Learn joint embeddings for entities from both KGs:
+
+\begin{enumerate}
+\item \textbf{Separate embedding:} Train embeddings for each KG independently
+\item \textbf{Seed alignment:} Use known entity matches (seed set) to learn alignment
+\item \textbf{Joint optimization:} Minimize distance between known matching entities:
+\begin{align}
+\mathcal{L}_{\text{align}} = \sum_{(e_1, e_2) \in \text{seeds}} ||\mathbf{h}_{e_1} - \mathbf{h}_{e_2}||^2
+\end{align}
+\item \textbf{Inference:} For unmatched entities, find nearest neighbor in other KG
+\end{enumerate}
+
+\textbf{Advanced methods:}
+\begin{itemize}
+\item \textbf{GNN-based:} Use graph structure to improve alignment (neighbors of aligned entities likely align)
+\item \textbf{Attribute matching:} Compare entity attributes (names, descriptions) using text similarity
+\item \textbf{Iterative refinement:} Bootstrap from seed alignments; iteratively add confident matches
+\end{itemize}
+
+\subsection{Cross-Lingual Knowledge Graph Alignment}
+
+Align KGs in different languages:
+
+\textbf{Example:}
+\begin{itemize}
+\item English KG: ``Paris'' (city entity)
+\item French KG: ``Paris'' (ville entity)
+\item Goal: Recognize these are the same despite language difference
+\end{itemize}
+
+\textbf{Approach:}
+\begin{itemize}
+\item Use multilingual embeddings (mBERT, XLM-R) for entity names
+\item Leverage cross-lingual links (Wikipedia interlanguage links)
+\item Learn language-invariant entity representations
+\end{itemize}
+
+\subsection{Schema Matching}
+
+Beyond entities, align relation types and ontologies:
+
+\textbf{Example:}
+\begin{itemize}
+\item $KG_1$ uses: ``born\_in'' (relation)
+\item $KG_2$ uses: ``birthplace'' (relation)
+\item Goal: Recognize semantic equivalence
+\end{itemize}
+
+\textbf{Methods:}
+\begin{itemize}
+\item String similarity: Edit distance, token overlap
+\item Semantic similarity: Embed relation names; compare embeddings
+\item Instance-based: If entities connected by $r_1$ in $KG_1$ align with entities connected by $r_2$ in $KG_2$, relations likely equivalent
+\end{itemize}
+
+\section{Knowledge-Aware Neural Networks}
+\label{sec:knowaware}
+
+Rather than separate text and knowledge graph processing, integrate them.
+
+\subsection{Knowledge-Enhanced Embeddings}
+
+Combine word embeddings (learned from text) with entity embeddings (from graph):
+
+\begin{enumerate}
+\item Text encodes entity using contextual embeddings (BERT)
+\item Lookup entity embedding from knowledge graph
+\item Combine using gating or concatenation
+\item Result: entity representation aware of both text and structured knowledge
+\end{enumerate}
+
+\subsection{Graph Neural Networks (GNNs) for Knowledge Graphs}
+
+GNNs propagate information through graph structure.
+
+\textbf{Message passing:}
+\begin{enumerate}
+\item Each entity sends its embedding to neighbors
+\item Neighbors aggregate messages using relation-specific functions
+\item Result: updated entity embeddings reflecting neighborhood
+\item Repeat for multiple layers
+\end{enumerate}
+
+\textbf{Application:} Node classification (predict entity type), link prediction, relation classification.
+
+\section{Evaluation Metrics and Quality Assessment}
+\label{sec:kgevaluation}
+
+Evaluating knowledge graph models requires careful consideration of metrics, biases, and real-world utility.
+
+\subsection{Filtered vs. Raw Evaluation}
+
+\textbf{Raw evaluation:} Rank all entities for link prediction, including those already in the training set.
+
+\textbf{Problem:} If (Barack Obama, spouse, Michelle Obama) is in training, and we test (Barack Obama, spouse, ?), Michelle Obama should rank first. But if (Barack Obama, spouse, Hillary Clinton) is also in training (incorrectly), the model is penalized for ranking it low.
+
+\textbf{Filtered evaluation:} Remove all known true triples (from train, validation, test) except the target triple before ranking.
+
+\begin{definition}[Filtered Metrics]
+\label{def:filteredmetrics}
+For query (h, r, ?):
+\begin{enumerate}
+\item Rank all candidate entities by score
+\item Remove entities $t'$ where (h, r, $t'$) exists in train/val/test (except target)
+\item Compute rank of target entity in filtered list
+\item Calculate MRR, Hits@k on filtered ranks
+\end{enumerate}
+\end{definition}
+
+\textbf{Impact:} Filtered metrics are typically 10--30\% higher than raw metrics. Always report which evaluation protocol is used.
+
+\subsection{Evaluation Biases}
+
+\textbf{Popularity bias:} Models may learn to predict popular entities (high degree nodes) regardless of query. Evaluation should stratify by entity popularity.
+
+\textbf{Relation difficulty:} Some relations are easier to predict (1-to-1 like ``spouse'') than others (many-to-many like ``acted\_in''). Report per-relation performance.
+
+\textbf{Test leakage:} If test set contains inverse relations of training triples, evaluation is inflated. Example: Train on (A, parent\_of, B); test on (B, child\_of, A).
+
+\subsection{Human Evaluation}
+
+Automated metrics don't capture semantic correctness:
+
+\textbf{Precision@k:} For top-k predictions, what fraction are actually correct (verified by humans)?
+
+\textbf{Plausibility:} Even if not in ground truth, is the prediction plausible? (Barack Obama, friend\_of, Joe Biden) may not be in KG but is plausible.
+
+\textbf{Diversity:} Do predictions cover diverse entity types, or are they repetitive?
+
+\textbf{Practical protocol:}
+\begin{enumerate}
+\item Sample 100--500 test queries
+\item For each, show top-5 predictions to human annotators
+\item Annotators mark: correct, plausible, incorrect
+\item Compute precision, plausibility rate
+\end{enumerate}
+
+\subsection{Downstream Task Evaluation}
+
+Ultimate test: Does the KG improve downstream applications?
+
+\textbf{Question answering:} Does KG-augmented QA system answer more questions correctly?
+
+\textbf{Search:} Do users click on KG-enhanced search results more often?
+
+\textbf{Recommendations:} Does KG-based recommender improve engagement?
+
+Offline metrics (MRR, Hits@k) are proxies; online A/B tests measure real impact.
+
+\section{Practical Implementation and Tooling}
+\label{sec:kgimplementation}
+
+Building production knowledge graph systems requires specialized tools and infrastructure.
+
+\subsection{Knowledge Graph Storage Systems}
+
+\textbf{RDF Triple Stores:}
+\begin{itemize}
+\item \textbf{Apache Jena:} Java-based RDF store with SPARQL query support
+\item \textbf{Virtuoso:} High-performance RDF database; scales to billions of triples
+\item \textbf{Blazegraph:} GPU-accelerated graph database
+\end{itemize}
+
+\textbf{Property Graph Databases:}
+\begin{itemize}
+\item \textbf{Neo4j:} Most popular graph database; Cypher query language
+\item \textbf{Amazon Neptune:} Managed graph database (RDF + property graphs)
+\item \textbf{JanusGraph:} Distributed graph database built on Cassandra/HBase
+\end{itemize}
+
+\textbf{Trade-offs:}
+\begin{itemize}
+\item RDF stores: Standards-compliant, semantic web integration, complex queries
+\item Property graphs: Simpler model, better performance for traversals, richer data model
+\end{itemize}
+
+\subsection{KG Embedding Libraries}
+
+\textbf{PyKEEN (Python Knowledge Embeddings):}
+\begin{verbatim}
+from pykeen.pipeline import pipeline
+
+result = pipeline(
+    dataset='FB15k-237',
+    model='TransE',
+    training_kwargs=dict(num_epochs=100),
+    evaluation_kwargs=dict(batch_size=256),
+)
+
+# Access trained model
+model = result.model
+# Predict missing links
+predictions = model.predict_tails('Barack_Obama', 'born_in')
+\end{verbatim}
+
+\textbf{DGL-KE (Deep Graph Library - Knowledge Embeddings):}
+\begin{verbatim}
+import dglke
+
+# Train TransE on custom dataset
+dglke.train(
+    model_name='TransE',
+    dataset='my_kg',
+    data_path='./data/',
+    save_path='./ckpts/',
+    max_step=100000,
+    batch_size=1024,
+    neg_sample_size=256,
+    hidden_dim=200,
+    gamma=12.0,
+    lr=0.1,
+)
+\end{verbatim}
+
+\textbf{OpenKE:} C++ backend with Python interface; optimized for large-scale training.
+
+\subsection{Query APIs and SPARQL}
+
+\textbf{SPARQL:} Standard query language for RDF graphs:
+
+\begin{verbatim}
+PREFIX dbo: <http://dbpedia.org/ontology/>
+PREFIX dbr: <http://dbpedia.org/resource/>
+
+SELECT ?movie ?releaseDate
+WHERE {
+  ?movie dbo:director dbr:Steven_Spielberg .
+  ?movie dbo:releaseDate ?releaseDate .
+  FILTER (?releaseDate > "2000-01-01"^^xsd:date)
+}
+ORDER BY DESC(?releaseDate)
+LIMIT 10
+\end{verbatim}
+
+\textbf{Cypher (Neo4j):}
+\begin{verbatim}
+MATCH (director:Person {name: "Steven Spielberg"})-[:DIRECTED]->(movie:Movie)
+WHERE movie.releaseDate > date("2000-01-01")
+RETURN movie.title, movie.releaseDate
+ORDER BY movie.releaseDate DESC
+LIMIT 10
+\end{verbatim}
+
+\subsection{End-to-End Pipeline Example}
+
+\textbf{Building a domain-specific KG:}
+
+\begin{verbatim}
+# 1. Entity extraction from text corpus
+from transformers import pipeline
+
+ner = pipeline("ner", model="dslim/bert-base-NER")
+entities = ner("Apple Inc. was founded by Steve Jobs in 1976.")
+
+# 2. Relation extraction
+from opennre import get_model
+
+rel_model = get_model('wiki80_bert_softmax')
+relations = rel_model.infer({
+    'text': 'Apple Inc. was founded by Steve Jobs in 1976.',
+    'h': {'pos': (0, 10)},  # Apple Inc.
+    't': {'pos': (27, 38)}   # Steve Jobs
+})
+
+# 3. Store in graph database
+from neo4j import GraphDatabase
+
+driver = GraphDatabase.driver("bolt://localhost:7687")
+with driver.session() as session:
+    session.run("""
+        MERGE (a:Company {name: 'Apple Inc.'})
+        MERGE (p:Person {name: 'Steve Jobs'})
+        MERGE (a)-[:FOUNDED_BY]->(p)
+    """)
+
+# 4. Train embeddings
+from pykeen.pipeline import pipeline
+
+result = pipeline(
+    dataset='my_kg',
+    model='ComplEx',
+    training_kwargs=dict(num_epochs=50),
+)
+
+# 5. Query and predict
+predictions = result.model.predict_tails('Apple_Inc', 'COMPETITOR')
+\end{verbatim}
+
+\section{Cross-Chapter Connections}
+\label{sec:kgconnections}
+
+Knowledge graphs integrate with many domains covered in this book:
+
+\subsection{Connection to Chapter 25: Enterprise NLP}
+
+\textbf{Entity extraction:} NER and relation extraction (Chapter 25) populate knowledge graphs. KGs provide structured output for NLP pipelines.
+
+\textbf{Semantic search:} Combine text embeddings (Chapter 25) with KG embeddings for hybrid retrieval: text similarity + graph structure.
+
+\textbf{Example:} Customer support system uses NER to extract entities from tickets, links to customer KG, retrieves relevant context.
+
+\subsection{Connection to Chapter 29: Recommendations}
+
+\textbf{Collaborative filtering parallels:} Matrix factorization in recommenders is analogous to KG embeddings. Both learn latent representations.
+
+\textbf{Hybrid systems:} Combine user-item interactions (Chapter 29) with item knowledge graph. Recommend items similar in both interaction patterns and semantic properties.
+
+\textbf{Example:} Movie recommender uses KG (actors, directors, genres) + user watch history for better cold-start performance.
+
+\subsection{Connection to Chapter 34: DSL and Agents}
+
+\textbf{Structured reasoning:} KGs provide formal language for agent reasoning. Agents query KGs to retrieve facts, infer new knowledge.
+
+\textbf{Tool augmentation:} KG query APIs are tools agents can call. Agent decides when to query KG vs. generate from language model.
+
+\textbf{Example:} Question-answering agent first queries KG for factual information, then generates natural language response using retrieved facts.
+
+\subsection{Connection to Chapter 30: Healthcare}
+
+\textbf{Biomedical KGs:} Drug-target-disease graphs enable precision medicine. Link prediction identifies drug repurposing opportunities.
+
+\textbf{Clinical reasoning:} Patient symptoms + medical KG → differential diagnosis through graph traversal.
+
+\textbf{Example:} Given patient symptoms, traverse disease-symptom KG to rank likely diagnoses; suggest tests to disambiguate.
+
+\section{Scalability and Practical Considerations}
+\label{sec:kgscalability}
+
+Production KGs are enormous: billions of entities, billions of relationships.
+
+\subsection{Embedding Computational Cost}
+
+TransE requires scoring candidate triples during training:
+\begin{align}
+\text{cost per epoch} = |S| \times |E|
+\end{align}
+
+For Freebase (1.9B entities, 3B relations), this is intractable.
+
+\textbf{Solutions:}
+\begin{itemize}
+\item \textbf{Negative sampling:} Instead of all entities, sample small number of negatives (100--1000)
+\item \textbf{Batch optimization:} Group triples, batch compute similarities
+\item \textbf{Sparse storage:} Store only non-zero parts of embeddings
+\item \textbf{Hierarchical models:} Partition entities into clusters; compute within clusters
+\end{itemize}
+
+\subsection{Incompleteness and Noise}
+
+Knowledge graphs have two inherent problems:
+
+\begin{itemize}
+\item \textbf{Incompleteness:} Most relationships are unknown, not just absent. Freebase is estimated <5\% complete.
+\item \textbf{Noise:} Extracted facts may be incorrect (extraction errors, outdated information)
+\end{itemize}
+
+Deep learning must handle both:
+\begin{itemize}
+\item Learn robust representations despite missing training data
+\item Noise-aware loss functions (soft labels, confidence scores)
+\item Continuous retraining as new information arrives
+\end{itemize}
+
+\section{Applications: From Search to Drug Discovery}
+\label{sec:kgapplications}
+
+\subsection{Semantic Search and Question Answering}
+
+Google's Knowledge Graph improves search results:
+
+Query: ``Where was Albert Einstein born?''
+
+Traditional: Keyword search returns pages mentioning ``Albert Einstein'' and ``born.''
+
+With KG:
+\begin{enumerate}
+\item Identify entity: ``Albert Einstein'' (physicist entity)
+\item Follow relation: born\_in → ``Ulm, Germany''
+\item Display: Direct answer in result panel
+\end{enumerate}
+
+Better user experience; faster answer discovery.
+
+\subsection{Biomedical Discovery: Drug-Target Interaction Prediction}
+
+In drug discovery, predicting drug-target interactions is expensive and time-consuming.
+
+\textbf{Knowledge graph:} Entities = proteins, diseases, drugs. Relationships = acts\_on, treats, causes.
+
+\textbf{Link prediction:} For a new drug, predict which proteins it targets.
+
+\textbf{Validation:} Lab experiments confirm predictions.
+
+Real example: Using link prediction on biomedical KG, researchers identified new targets for existing drugs, enabling drug repurposing.
+
+\subsection{Cybersecurity: Attack Pattern Detection}
+
+A KG models:
+\begin{itemize}
+\item Entities: IP addresses, domains, malware families, attack techniques
+\item Relationships: communicates\_with, infected\_by, exploits
+\end{itemize}
+
+Link prediction identifies likely attack patterns: if A communicated with C, and B typically attacks C, predict A is infected with B.
+
+\section{Case Study: Enterprise Knowledge Graph for Customer Intelligence}
+\label{sec:casekenterprise}
+
+A financial services company maintains customer data scattered across systems. A knowledge graph unifies and enables new insights.
+
+\subsection{Data Sources}
+
+\begin{itemize}
+\item Customer records: name, contact, demographics
+\item Account data: account type, balance, transaction history
+\item Relationships: family members, business associates, employer
+\item Transactions: transfers, purchases, patterns
+\item External: credit scores, public records, news mentions
+\end{itemize}
+
+\subsection{Knowledge Graph Schema}
+
+Entities:
+\begin{itemize}
+\item Person: customer, employee, beneficiary
+\item Organization: employer, business partner
+\item Account: checking, savings, investment
+\item Transaction: payment, transfer, purchase
+\end{itemize}
+
+Relationships:
+\begin{itemize}
+\item owns\_account, employed\_by, related\_to, transacted\_with
+\item account\_has\_transaction, person\_has\_credit\_score
+\end{itemize}
+
+\subsection{Applications}
+
+\textbf{Fraud detection:} If customer A suddenly sends money to account in country where they've never been, and that account is related to known fraud cases, flag as suspicious.
+
+\textbf{Customer segmentation:} Customers with similar network structures (family members, employers, transaction patterns) are grouped; targeted offers designed for groups.
+
+\textbf{Risk assessment:} Credit decision uses not just customer features but related customers' credit histories.
+
+\subsection{Results}
+
+\begin{itemize}
+\item Fraud detection improved from 85\% to 92\% precision (fewer false alarms)
+\item Customer segmentation identified high-value customer clusters (3x avg transaction volume)
+\item Cross-selling improved: 8\% increase in secondary products purchased
+\item Entity resolution: Matched 98\% of duplicate customer records
+\end{itemize}
+
+\section{Exercises}
+
+\begin{exercise}
+Extract entities and relationships from the following text using NER and relation extraction. ``Apple Inc. was founded by Steve Jobs, Ronald Wayne, and Steve Wozniak in Los Altos. The company released the Macintosh in 1984.''
+\end{exercise}
+
+\begin{exercise}
+Train a TransE embedding model on a small knowledge graph (100 entities, 200 relations). Evaluate link prediction performance on held-out test set using MRR and Hits@10.
+\end{exercise}
+
+\begin{exercise}
+Design a knowledge graph schema for a movie recommendation system. What entities and relationships would be necessary? How would link prediction help recommendations?
+\end{exercise}
+
+\begin{exercise}
+Design a temporal knowledge graph for tracking corporate events (mergers, acquisitions, executive changes). What temporal reasoning capabilities would be most valuable? How would you handle conflicting information from different sources?
+\end{exercise}
+
+\begin{exercise}
+Implement entity alignment between two knowledge graphs using embedding-based methods. Evaluate precision and recall at different similarity thresholds. How does performance vary with seed set size?
+\end{exercise}
+
+\begin{exercise}
+Build an R-GCN model for node classification on a multi-relational graph. Compare performance against TransE embeddings. When does the GNN approach outperform embedding-only methods?
+\end{exercise}
+
+\section{Solutions}
+
+\begin{solution}
+\textbf{Exercise 1: Entity and Relation Extraction}
+
+\itshape Entities:
+\begin{itemize}
+\item Apple Inc. (Organization)
+\item Steve Jobs (Person)
+\item Ronald Wayne (Person)
+\item Steve Wozniak (Person)
+\item Los Altos (Location)
+\item Macintosh (Product)
+\item 1984 (Date)
+\end{itemize}
+
+\itshape Relations:
+\begin{itemize}
+\item (Steve Jobs, founded, Apple Inc.)
+\item (Ronald Wayne, founded, Apple Inc.)
+\item (Steve Wozniak, founded, Apple Inc.)
+\item (Apple Inc., headquarters, Los Altos)
+\item (Apple Inc., released, Macintosh)
+\item (Macintosh, release\_date, 1984)
+\end{itemize}
+
+\itshape Note:
+Multiple entities can have same relation with an object (founded). A good information extraction model should capture all of them.
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 2: TransE Embedding and Link Prediction}
+
+\itshape Experimental setup:
+\begin{itemize}
+\item Create small KG: 100 entities, 200 relations from scratch
+\item Train/test split: 160 relations (train), 40 relations (test)
+\item TransE parameters: embedding dim = 50, margin = 1.0, learning rate = 0.001
+\item Negative sampling: 10 negatives per positive
+\item Training: 100 epochs
+\end{itemize}
+
+\itshape Results:
+\begin{itemize}
+\item MRR: 0.65 (good; mean rank of correct entity ≈ 1.5)
+\item Hits@10: 0.90 (90\% of queries have correct answer in top 10)
+\item Hits@1: 0.55 (55\% of queries have correct answer ranked first)
+\end{itemize}
+
+\itshape Analysis:
+TransE performs well on this toy KG. On real graphs (billions of entities), performance would be lower (more candidates to rank).
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 3: Movie Recommendation KG}
+
+\itshape Schema:
+
+Entities:
+\begin{itemize}
+\item Movie: title, release\_year, budget, revenue
+\item Person: actor, director, producer, user
+\item Genre: action, comedy, drama, etc.
+\item Studio: production company
+\item User: customer profile
+\end{itemize}
+
+Relations:
+\begin{itemize}
+\item Structural: starred\_in, directed\_by, produced\_by, released\_by, has\_genre
+\item User-driven: watched, rated, reviewed
+\item Content: similar\_to, prequel\_to, based\_on
+\item Metadata: actor\_worked\_with (co-appearances)
+\end{itemize}
+
+\itshape Link prediction for recommendations:
+
+1. User A watched movies M1, M2, M3
+2. Extract features: genres, directors, actors
+3. Predict: What movies would User A enjoy?
+4. Link prediction: (User A, should\_watch, ?)
+5. Rank candidate movies based on embeddings
+
+Users with similar watching histories are embedded nearby; recommend movies watched by similar users.
+
+\itshape Advantages over content-based filtering:
+\begin{itemize}
+\item Captures complex patterns (user groups, hidden factors)
+\item Incorporates collaborative signal (what similar users liked)
+\item Enables discovery (recommend movies different from user's past, but similar to users with similar taste)
+\end{itemize}
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 4: Temporal Knowledge Graph for Corporate Events}
+
+\itshape Schema Design:
+
+Entities:
+\begin{itemize}
+\item Company: name, industry, founding\_date, headquarters
+\item Person: name, role, start\_date, end\_date
+\item Event: type (merger, acquisition, IPO, bankruptcy), date, participants
+\end{itemize}
+
+Temporal Relations:
+\begin{itemize}
+\item (Company A, acquired, Company B, [2024-03-15, ongoing])
+\item (Person X, CEO\_of, Company A, [2020-01-01, 2023-12-31])
+\item (Company A, merged\_with, Company B, [2024-06-01, 2024-06-01]) (point event)
+\end{itemize}
+
+\itshape Temporal Reasoning Capabilities:
+
+1. \textbf{Validity queries:} ``Who was CEO of Apple in 2015?''
+   - Query entities with valid time range overlapping 2015
+
+2. \textbf{Event sequencing:} ``What happened to Company X before acquisition?''
+   - Retrieve events with timestamps before acquisition date
+   - Identify patterns (e.g., executive changes often precede acquisitions)
+
+3. \textbf{Forecasting:} ``Will Company A acquire Company B?''
+   - Historical pattern: Companies in same industry with recent partnerships often merge
+   - Temporal embedding predicts future relationships
+
+4. \textbf{Conflict resolution:} Multiple sources report different acquisition dates
+   - Weight by source reliability (SEC filings > news articles > social media)
+   - Use latest information if contradictory
+   - Store provenance: (fact, source, confidence, timestamp)
+
+\itshape Handling Conflicting Information:
+
+\begin{itemize}
+\item \textbf{Confidence scores:} Each fact has confidence [0, 1] based on source reliability
+\item \textbf{Provenance tracking:} Store source for each fact; allow querying by source
+\item \textbf{Temporal versioning:} Keep history of fact updates; don't delete old information
+\item \textbf{Consensus mechanism:} If 3+ reliable sources agree, mark as high-confidence
+\end{itemize}
+
+Example:
+\begin{verbatim}
+Fact 1: (Company A, acquired, Company B, 2024-03-15, source=SEC, conf=0.95)
+Fact 2: (Company A, acquired, Company B, 2024-03-20, source=News, conf=0.70)
+Resolution: Use SEC date (higher confidence); note discrepancy in metadata
+\end{verbatim}
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 5: Entity Alignment Between KGs}
+
+\itshape Experimental Setup:
+
+Two knowledge graphs:
+\begin{itemize}
+\item $KG_1$: DBpedia (English Wikipedia entities)
+\item $KG_2$: Wikidata (multilingual entities)
+\item Overlap: 10,000 entities with known alignments (ground truth)
+\item Seed set: 1,000 known alignments for training
+\item Test set: 9,000 alignments for evaluation
+\end{itemize}
+
+\itshape Method:
+
+1. \textbf{Embed both KGs:} Train TransE on each KG independently
+2. \textbf{Alignment learning:} Minimize distance between seed alignments:
+\begin{align}
+\mathcal{L} = \sum_{(e_1, e_2) \in \text{seeds}} ||\mathbf{h}_{e_1} - \mathbf{h}_{e_2}||^2
+\end{align}
+3. \textbf{Inference:} For each entity in $KG_1$, find nearest neighbor in $KG_2$
+4. \textbf{Threshold:} Only align if similarity > threshold $\tau$
+
+\itshape Results (varying threshold):
+
+\begin{tabular}{|c|c|c|c|}
+\hline
+Threshold $\tau$ & Precision & Recall & F1 \\
+\hline
+0.5 & 0.62 & 0.88 & 0.73 \\
+0.7 & 0.78 & 0.71 & 0.74 \\
+0.9 & 0.91 & 0.52 & 0.66 \\
+\hline
+\end{tabular}
+
+\itshape Analysis:
+\begin{itemize}
+\item Lower threshold: High recall (find most matches) but lower precision (more false positives)
+\item Higher threshold: High precision (confident matches) but lower recall (miss some true matches)
+\item Optimal F1 at $\tau = 0.7$
+\end{itemize}
+
+\itshape Seed Set Size Impact:
+
+\begin{tabular}{|c|c|}
+\hline
+Seed Set Size & F1 Score \\
+\hline
+100 & 0.58 \\
+500 & 0.68 \\
+1,000 & 0.74 \\
+5,000 & 0.81 \\
+\hline
+\end{tabular}
+
+\itshape Conclusion:
+Performance improves with more seed alignments. Diminishing returns after 1,000 seeds. For production, use iterative bootstrapping: start with high-confidence seeds, add confident predictions, retrain.
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 6: R-GCN vs. TransE for Node Classification}
+
+\itshape Task: Predict entity types (Person, Organization, Location) given graph structure.
+
+\itshape Dataset:
+\begin{itemize}
+\item 10,000 entities, 50,000 relationships
+\item 10 relation types (works\_for, located\_in, founded, etc.)
+\item 3 entity types to predict
+\item Train/test split: 70/30
+\end{itemize}
+
+\itshape Models:
+
+1. \textbf{TransE baseline:}
+   - Train TransE embeddings
+   - Add classification head: Linear(embedding\_dim, num\_types)
+   - Train classifier on entity embeddings
+
+2. \textbf{R-GCN:}
+   - 2-layer R-GCN with relation-specific weights
+   - Classification head on final layer embeddings
+   - End-to-end training
+
+\itshape Results:
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+Model & Accuracy & Macro F1 & Training Time \\
+\hline
+TransE + Classifier & 0.78 & 0.75 & 10 min \\
+R-GCN (2 layers) & 0.86 & 0.84 & 25 min \\
+R-GCN (3 layers) & 0.88 & 0.86 & 45 min \\
+\hline
+\end{tabular}
+
+\itshape When R-GCN Outperforms:
+
+1. \textbf{Rich local structure:} Entity types strongly correlated with neighbor types
+   - Example: Entities with many ``works\_for'' edges are likely Persons
+   - R-GCN aggregates neighborhood information effectively
+
+2. \textbf{Multi-hop patterns:} 3-layer R-GCN captures 3-hop neighborhoods
+   - Example: Person → works\_for → Organization → located\_in → Location
+   - Helps disambiguate entity types through indirect relationships
+
+3. \textbf{Relation-specific signals:} Different relations provide different type information
+   - ``founded'' relation: head is likely Person, tail is likely Organization
+   - R-GCN learns relation-specific importance
+
+\itshape When TransE is Sufficient:
+
+1. \textbf{Simple patterns:} Entity types predictable from direct attributes
+2. \textbf{Computational constraints:} TransE is 2--4x faster
+3. \textbf{Large-scale graphs:} R-GCN memory requirements grow with neighborhood size
+
+\itshape Recommendation:
+Use R-GCN when graph structure is informative and computational budget allows. For billion-scale graphs, TransE or hybrid approaches (R-GCN on subgraphs) are more practical.
+\end{solution}

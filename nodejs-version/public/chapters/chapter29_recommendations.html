@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 29: Recommendation Systems - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../css/style.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../index.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+        <a href="chapter24_domain_specific_models.html">Ch 24</a>
+        <a href="chapter25_enterprise_nlp.html">Ch 25</a>
+        <a href="chapter26_code_language.html">Ch 26</a>
+        <a href="chapter27_video_visual.html">Ch 27</a>
+        <a href="chapter28_knowledge_graphs.html">Ch 28</a>
+        <a href="chapter29_recommendations.html">Ch 29</a>
+        <a href="chapter30_healthcare.html">Ch 30</a>
+        <a href="chapter31_finance.html">Ch 31</a>
+        <a href="chapter32_legal.html">Ch 32</a>
+        <a href="chapter33_observability.html">Ch 33</a>
+        <a href="chapter34_dsl_agents.html">Ch 34</a>
+    </nav>
+
+    <main>
+        <h1>Recommendation Systems and Personalization</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Recommendation systems are the economic engines of the modern internet. They drive 80\% of content consumed on Netflix, 70\% of watch time on YouTube, and 35\% of purchases on Amazon. For these platforms, recommendation quality directly translates to revenue: a 1\% improvement in recommendation accuracy can generate tens to hundreds of millions of dollars in additional revenue annually. Poor recommendations, conversely, lead to user churn, reduced engagement, and lost revenue opportunities.</p>
+
+<p>The business challenge is substantial. Platforms must serve personalized recommendations to billions of users in real-time (under 200ms latency), processing trillions of user-item interactions to learn preferences, while balancing competing objectives: immediate engagement (clicks, watch time) versus long-term retention, personalization versus diversity, and business goals (revenue, growth) versus societal concerns (fairness, filter bubbles).</p>
+
+<p>This chapter examines how transformers and sequence models have revolutionized recommendation systems by capturing temporal dynamics and complex user-item interactions that traditional methods miss. A user who watches action movies followed by documentaries has different preferences than one who watches in reverse order—sequence matters. Transformer-based recommenders capture these patterns, improving recommendation quality by 10-30\% over traditional collaborative filtering.</p>
+
+<p>However, these improvements come with challenges. Training requires processing billions of user interactions. Serving demands sub-second latency at massive scale. Model drift is severe—user preferences change daily, new items arrive constantly, and seasonal patterns shift. Fairness concerns are paramount—biased recommendations can amplify inequality and create filter bubbles that harm users and society. This chapter provides the technical foundation and business context to build recommendation systems that balance these competing demands effectively.</p>
+
+<h2>Learning Objectives</h2>
+
+<ol>
+<li>Understand sequence-based recommendation architectures using transformers
+<li>Design and optimize ranking systems for accuracy and diversity
+<li>Implement multi-task learning for recommendations (CTR, conversion, long-term engagement)
+<li>Build real-time serving systems with latency constraints
+<li>Address fairness and filter-bubble concerns in personalization
+<li>Conduct online experiments (A/B tests) to validate recommendation improvements
+<li>Optimize for business metrics beyond accuracy
+</ol>
+
+<h2>Sequence-Aware Recommenders</h2>
+
+<p>Traditional recommendation systems treat user preferences as static. Matrix factorization, the workhorse of early recommender systems, decomposes a user-item interaction matrix $M \in \mathbb{R}^{U \times I}$ into low-rank factors: user $u$ is represented by a latent vector $\mathbf{p}_u \in \mathbb{R}^k$, and item $i$ by $\mathbf{q}_i \in \mathbb{R}^k$. The predicted rating is simply $\hat{M}_{u,i} = \mathbf{p}_u^T \mathbf{q}_i$. This approach powered early Netflix and Amazon recommendations and remains computationally efficient.</p>
+
+<p>However, this static view ignores a fundamental aspect of human behavior: preferences evolve over time and depend on context. A user watching action movies in January followed by documentaries in February has different current preferences than one who watched in reverse order. A user browsing products on Monday morning (work-related) has different intent than the same user browsing Saturday evening (leisure). Matrix factorization treats these scenarios identically, missing critical temporal and contextual signals.</p>
+
+<p>The business impact of this limitation is substantial. Static recommendations become stale quickly, especially for platforms with frequent user activity. A video platform user who watches 10 videos daily has preferences that shift hour-by-hour based on mood, time of day, and recent viewing. Static recommendations might suggest content from last week's interests, reducing engagement. One major streaming platform found that incorporating sequence information improved watch time by 12\% and reduced churn by 8\%—translating to hundreds of millions in annual revenue.</p>
+
+<p>Sequence-aware models address this by treating recommendations as a language modeling problem: given a user's historical sequence of interactions, predict the next item. This framing is powerful because it leverages decades of NLP research on sequence modeling. Just as language models predict the next word given previous words, recommendation models predict the next item given previous items. The key insight is that user behavior follows patterns—watching a superhero movie increases the probability of watching another superhero movie, just as the word "New" increases the probability of "York."</p>
+
+<div class="definition"><strong>Definition:</strong> 
+Given a user's interaction sequence $(i_1, i_2, \ldots, i_t)$, a sequence model predicts the probability distribution over next items:
+<div class="equation">
+$$\begin{align}
+P(i_{t+1} \mid i_1, \ldots, i_t) &= \text{softmax}(W \text{encoder}(i_1, \ldots, i_t) + b)
+\end{align}$$
+</div>
+where <code>encoder</code> is a transformer, RNN, or other sequential model that processes the interaction history. The vocabulary is the set of all items $|I|$ (potentially millions), and the logits correspond to scores for each item. Items with higher scores are more likely to be the next interaction.
+</div>
+
+<p>This formulation enables the model to capture rich temporal patterns. If a user watches three action movies in a row, the model learns that action movies have high probability for the next interaction. If a user alternates between genres, the model learns that pattern too. The model can even capture long-range dependencies—a user who watched a TV show's first episode two weeks ago is likely interested in episode two, even if they watched other content in between.</p>
+
+<p>Historically, RNNs (LSTM, GRU) were the standard for sequence modeling in recommendations. However, transformers with self-attention provide several critical advantages that translate directly to business value:</p>
+
+<p><strong>Parallelization during training.</strong> RNNs process sequences sequentially, making training slow on long user histories. Transformers process entire sequences in parallel, reducing training time by 5-10x. For platforms retraining models daily on billions of interactions, this means the difference between 8-hour and 2-hour training jobs—enabling faster iteration and more frequent model updates.</p>
+
+<p><strong>Long-range dependency modeling.</strong> RNNs struggle with dependencies spanning hundreds of steps due to vanishing gradients. Transformers' attention mechanism directly connects any two positions in the sequence, capturing long-range patterns. For users with thousands of historical interactions, this means better recommendations based on preferences from weeks or months ago, not just recent activity.</p>
+
+<p><strong>Interpretability through attention weights.</strong> Attention weights show which past items influence the current recommendation. This interpretability helps debug model behavior, explain recommendations to users ("because you watched X"), and identify biases. For regulated industries or platforms facing scrutiny over algorithmic recommendations, this transparency is valuable.</p>
+
+<p><strong>Multi-head attention for diverse patterns.</strong> Different attention heads can learn different temporal patterns—one head might focus on recent items (short-term preferences), another on items from the same genre (topical consistency), and another on seasonal patterns (holiday content). This diversity improves recommendation quality by capturing multiple aspects of user behavior simultaneously.</p>
+
+<h3>SASRec: Self-Attentive Sequential Recommendation</h3>
+
+<p>SASRec is a transformer-based recommender that achieves state-of-the-art performance on benchmark datasets. The architecture:</p>
+
+<ol>
+<li><strong>Embedding:</strong> Each item is embedded as $\mathbf{e}_i \in \mathbb{R}^d$. Optionally, add positional encodings to capture temporal positions.
+<li><strong>Transformer layers:</strong> Stack L transformer encoder layers, each with multi-head self-attention and feed-forward networks.
+<li><strong>Causal masking:</strong> Use causal attention mask to prevent the model from attending to future items (maintaining prediction task structure).
+<li><strong>Output:</strong> The representation at position $t$ predicts the next item: 
+<div class="equation">
+$$\begin{align}
+\text{logits}_i = \mathbf{h}_t^T \mathbf{e}_i + b_i
+\end{align}$$
+</div>
+where $\mathbf{h}_t$ is the output of the transformer at step $t$.
+<li><strong>Loss:</strong> Cross-entropy loss on the correct next item, computed at each position.
+</ol>
+
+<p>SASRec significantly outperforms RNN-based recommenders and matrix factorization on benchmark datasets (MovieLens, Amazon reviews, e-commerce), especially for longer user histories.</p>
+
+<h3>Cold-Start Recommendations with Transformer-Capsule Networks (2024-2025)</h3>
+
+<p>Cold-start recommendation—providing quality recommendations for new users or new items with limited interaction history—has been a persistent challenge in recommendation systems. Traditional approaches struggle because collaborative filtering requires sufficient interaction data to learn meaningful embeddings. Recent advances in 2024-2025 using transformer-capsule networks have achieved breakthrough performance on cold-start scenarios.</p>
+
+<p><strong>Transformer-Capsule Graph (TCG-CS):</strong> The TCG-CS architecture combines transformers' sequence modeling capabilities with capsule networks' ability to capture hierarchical relationships and graph neural networks' structural reasoning. This hybrid approach achieves 94.2\% accuracy on cold-start recommendation tasks, significantly outperforming previous methods.</p>
+
+<p><strong>Key innovations:</strong></p>
+
+<ul>
+<li><strong>Capsule-based user representation:</strong> Instead of single embedding vectors, represent users as capsules (groups of neurons) that encode different aspects of preferences (genre preferences, temporal patterns, quality sensitivity). Capsules enable learning from limited data by capturing structured preference representations.
+
+<p><li><strong>Graph-based item relationships:</strong> Model items as a graph where edges represent similarities (same genre, same director, co-purchased). Graph neural networks propagate information from items with rich interaction history to cold-start items, enabling better initial embeddings for new items.</p>
+
+<p><li><strong>Meta-learning for rapid adaptation:</strong> Use meta-learning (Model-Agnostic Meta-Learning, MAML) to train models that can quickly adapt to new users with just 3-5 interactions. The model learns to learn—it discovers which features and patterns are most informative for rapid personalization.</p>
+
+<p><li><strong>Content-collaborative hybrid:</strong> Combine content features (item metadata, descriptions, images) with collaborative signals (user-item interactions). For cold-start items, rely more heavily on content features; as interactions accumulate, gradually shift weight to collaborative signals.
+</ul>
+
+<p><strong>Business Impact:</strong> Cold-start is particularly critical for platforms with high user or item churn. E-commerce platforms add thousands of new products daily. Streaming platforms onboard millions of new users monthly. Poor cold-start recommendations cause early churn—users who don't find relevant content in their first session are 3-5x more likely to abandon the platform.</p>
+
+<p>Platforms implementing TCG-CS report:
+<ul>
+<li>25-35\% improvement in new user retention (measured at day 7)
+<li>40-50\% improvement in new item discovery (fraction of new items that receive engagement)
+<li>15-20\% reduction in time-to-personalization (time until recommendations become personalized)
+</ul>
+
+<p>Example: E-commerce platform with 1M new users monthly and 30\% day-7 retention. Improving retention by 5 percentage points (to 35\%) retains 50,000 additional users. At \$50 customer lifetime value, this generates \$2.5M monthly = \$30M annually. Development cost: \$500K. ROI: 60x.</p>
+
+<p><strong>Implementation Considerations:</strong> TCG-CS is computationally more expensive than standard transformers—training requires 2-3x compute due to capsule routing and graph convolutions. However, the improved cold-start performance often justifies the cost for platforms where cold-start is a critical bottleneck. Open-source implementations are emerging in PyTorch and TensorFlow as of 2025.</p>
+
+<h2>Feature Engineering and Behavior Language</h2>
+
+<p>Recommendations depend on more than just item history. User demographics, item metadata, temporal context, and behavioral signals all influence next-item preferences.</p>
+
+<h3>DSL for Behavior Data</h3>
+
+<p>Recommendation systems process event streams: each user interaction is an event with timestamp, user ID, item ID, and contextual features. The ``language'' of recommendation is this event schema:</p>
+
+<div class="definition"><strong>Definition:</strong> Each event in a user session is:
+<div class="equation">
+$$\begin{align}
+\text{Event} = \{\text{user\_id}, \text{item\_id}, \text{timestamp}, \text{event\_type}, \text{context}\}
+\end{align}$$
+</div>
+where:
+<ul>
+<li><code>event\_type</code> $\in$ \{view, click, purchase, add-to-cart, share, rate\}
+<li><code>context</code> includes device, location, query (if applicable), etc.
+</ul>
+</div>
+
+<p>The sequence of events becomes the user's ``behavior language.'' A user's history might be:
+\begin{verbatim}
+[{item: 42, type: view, time: 10:00},
+ {item: 42, type: click, time: 10:05},
+ {item: 87, type: view, time: 10:15},
+ {item: 87, type: purchase, time: 10:25}]
+\end{verbatim}</p>
+
+<p>The model learns that viewing+clicking an item increases the likelihood of purchase; views alone do not. Different event types carry different signals.</p>
+
+<h3>Dense and Sparse Features</h3>
+
+<p>Feature engineering bridges item history with demographic and contextual signals. Dense features include:
+<ul>
+<li>User embeddings (learned during pre-training on user similarity)
+<li>Item embeddings (from product taxonomy or content embeddings)
+<li>Temporal signals: time-of-day, day-of-week, seasonality
+<li>Historical aggregates: average rating user gives, popularity of items user likes
+</ul>
+
+<p>Sparse categorical features include:
+<ul>
+<li>User demographics: age range, location, language
+<li>Item metadata: category, subcategory, brand, author
+<li>Context: device type, app vs. web, time zone
+</ul>
+
+<p>Embedding these sparse features increases model capacity. A categorical feature with 10,000 categories (e.g., user's home country) is embedded into a 16--32 dimensional vector, increasing model parameters significantly but enabling the model to learn feature interactions.</p>
+
+<h3>Multi-Task Learning for Recommendations</h3>
+
+<p>Real recommendation systems optimize multiple objectives:
+<ul>
+<li><strong>CTR (click-through rate):</strong> Will the user click this item?
+<li><strong>Conversion:</strong> Will the user purchase?
+<li><strong>Engagement time:</strong> How long will the user engage with this item (video watch time, article reading time)?
+<li><strong>Long-term value:</strong> Will this recommendation lead to sustained engagement (user retention)?
+</ul>
+
+<p>Multi-task learning trains a shared backbone with task-specific heads. The losses are combined with weights:
+<div class="equation">
+$$\begin{align}
+\text{Loss}_{\text{total}} = \lambda_{\text{ctr}} \text{Loss}_{\text{ctr}} + \lambda_{\text{conv}} \text{Loss}_{\text{conversion}} + \lambda_{\text{engagement}} \text{Loss}_{\text{engagement}}
+\end{align}$$
+</div>
+
+<p>Task weights $\lambda$ are often tuned based on business priorities. A subscription platform may weight long-term engagement more heavily than short-term CTR.</p>
+
+<h2>Real-Time Serving and Ranking</h2>
+
+<p>Training a model is just the first step. Serving recommendations to billions of users in real-time is a massive engineering challenge.</p>
+
+<h3>Two-Stage Architecture</h3>
+
+<p>Most recommendation systems use a two-stage pipeline:</p>
+
+<ol>
+<li><strong>Candidate generation (retrieval):</strong> From millions of items, retrieve a small set of candidates (100--1,000) that are relevant to the user. This stage is fast and approximate; exact ranking over all items is infeasible.
+<li><strong>Ranking:</strong> Score the candidate set with a more complex model. Return the top-k items to the user.
+</ol>
+
+<h3>Candidate Generation Strategies</h3>
+
+<p>Candidate generation uses simple, fast methods:</p>
+
+<ul>
+<li><strong>Embedding-based retrieval:</strong> Embed the user and items; retrieve items nearest to the user embedding. This is fast (milliseconds for MIPS---maximum inner product search---on GPU-accelerated indices like Faiss).
+<li><strong>Collaborative filtering:</strong> For similar users, recommend items they liked. Compute user similarity offline; retrieve candidates by finding similar users.
+<li><strong>Content-based filtering:</strong> Retrieve items similar to those the user has interacted with.
+<li><strong>Hybrid:</strong> Combine multiple signals (e.g., top-k trending items + personalized candidates + content-based candidates). Diversity of sources improves coverage and serendipity.
+</ul>
+
+<h3>Ranking Model and Latency Budget</h3>
+
+<p>The ranking model scores candidates. With a 200 ms latency budget for the entire recommendation request and 50 ms allocated to candidate generation, the ranker has 150 ms. This is enough for a small neural network (2--3 layers) but not a 24-layer transformer.</p>
+
+<p>Practical rankers are often gradient-boosted trees (e.g., XGBoost, LightGBM) or shallow neural networks. They consume hundreds of features (user features, item features, candidate-specific features like co-occurrence with items the user has rated) and output a score. The top-k candidates by score are returned.</p>
+
+<h3>Real-Time Updates and Freshness</h3>
+
+<p>Recommendation scores must be updated as new items arrive and user preferences change. Naive approaches recompute scores for all users at each step; this is prohibitively expensive. Practical approaches:</p>
+
+<ul>
+<li><strong>Batch serving:</strong> Precompute recommendations for all users nightly. Store in a cache. Serve from cache with occasional refreshes for active users.
+<li><strong>Online serving with feature caching:</strong> Compute item embeddings and candidate sets offline. At request time, fetch precomputed features and score with a fast model.
+<li><strong>Streaming updates:</strong> Track user behavior in real-time; update embeddings and candidate sets incrementally.
+</ul>
+
+<p>Freshness vs. latency is a trade-off. Highly personalized real-time recommendations are better but slower. Pre-computed recommendations are faster but stale.</p>
+
+<h2>Fairness, Diversity, and Filter Bubbles</h2>
+
+<p>Recommendation systems can amplify biases and trap users in filter bubbles---showing only content that aligns with past preferences, limiting exposure to diverse views.</p>
+
+<h3>Filter Bubble Problem</h3>
+
+<p>If a user watches many political videos from one perspective, a system optimizing for watch time may recommend only that perspective, reinforcing views and reducing exposure to alternative viewpoints. While maximizing engagement, this harms user growth and societal polarization.</p>
+
+<p>Solutions include:</p>
+
+<ul>
+<li><strong>Diversity metrics:</strong> Measure diversity of recommendations (e.g., entropy of recommended categories). Include diversity in the ranking objective.
+<li><strong>Exploration:</strong> Recommend some items outside the user's typical preferences (10\% of recommendations for discovery).
+<li><strong>Fairness constraints:</strong> Ensure underrepresented creators/items receive exposure. Dynamic allocation balances personalization with fairness.
+<li><strong>User control:</strong> Allow users to adjust recommendation diversity or opt for curated feeds.
+</ul>
+
+<h3>Handling Demographic Bias</h3>
+
+<p>Models trained on interaction data inherit biases. If women historically receive fewer views for technical content, the model may downrank women creators. Mitigation strategies:</p>
+
+<ul>
+<li><strong>Balanced datasets:</strong> Oversample interactions from underrepresented groups during training.
+<li><strong>Fairness-aware loss:</strong> Add a loss term penalizing disparate performance across demographic groups.
+<li><strong>Allocation fairness:</strong> Ensure a minimum fraction of recommendations go to creators from all demographics.
+</ul>
+
+<h3>A/B Testing for Recommendation Changes</h3>
+
+<p>Before deploying recommendation model improvements, validate with A/B tests. Randomly split users:
+<ul>
+<li>Control group: existing recommendation algorithm
+<li>Treatment group: new model
+</ul>
+
+<p>Measure metrics over 2--4 weeks:
+<ul>
+<li>Engagement: watch time, clicks, session length
+<li>Retention: return rate (fraction who return the next day/week)
+<li>Diversity: entropy of categories recommended
+<li>Fairness: recommendation volume for different creator demographics
+</ul>
+
+<p>If the treatment significantly improves key metrics without degrading others, roll out to all users. This empirical validation is critical; models that perform well on offline metrics may hurt business KPIs in practice.</p>
+
+<h2>Case Study: Video Recommendation for a Streaming Platform</h2>
+
+<p>A video streaming platform with 100 million users and 10 million videos seeks to improve watch time and retention through better recommendations.</p>
+
+<h3>System Architecture</h3>
+
+<p><strong>Candidate Generation:</strong>
+<ul>
+<li>User embedding: Pretrain using a siamese network on user-user similarity (users who watch similar videos have similar embeddings)
+<li>Item embedding: Video embeddings from a collaborative filtering model + content embeddings from video metadata
+<li>Retrieval: MIPS (maximum inner product search) using Faiss, returning top-500 candidates in 20 ms
+</ul>
+
+<p><strong>Ranking:</strong>
+<ul>
+<li>Model: XGBoost with 500 features (user features, item features, candidate-specific features)
+<li>Features: user watch time, historical CTR, video popularity, recency, user-item co-occurrence, genre match
+<li>Latency: 80 ms to score 500 candidates and rank top-10
+</ul>
+
+<p><strong>Post-processing:</strong>
+<ul>
+<li>Diversity filter: If top-10 contains 5 videos from the same genre, rerank to ensure max 3 per genre
+<li>Freshness boost: Increase score of videos uploaded < 1 week ago
+<li>Creator fairness: Ensure top-10 includes creators from different regions and demographics
+</ul>
+
+<h3>Training and Offline Evaluation</h3>
+
+<p><strong>Data:</strong> 100 billion historical events (views, clicks, shares) over 3 months</p>
+
+<p><strong>Metrics:</strong>
+<ul>
+<li>Recall@10: Among videos the user watched next, what fraction appear in top-10 recommendations? Target: $\geq 8\%$
+<li>NDCG@10: Ranking quality; videos watched (clicks) are ranked higher. Target: $\geq 0.45$
+</ul>
+
+<p><strong>Results:</strong>
+<ul>
+<li>Collaborative filtering baseline: NDCG@10 = 0.38
+<li>Sequence model (SASRec): NDCG@10 = 0.43
+<li>SASRec + multi-task learning: NDCG@10 = 0.46
+</ul>
+
+<h3>Online A/B Test</h3>
+
+<p>Deploy the improved recommender to 10\% of users.</p>
+
+<p><strong>Results over 4 weeks:</strong>
+<ul>
+<li>Watch time: +4.2\% (statistically significant)
+<li>CTR on recommendations: +3.8\%
+<li>Session length: +2.1\% (users explore more)
+<li>Retention (30-day): +1.5\% (more users return)
+<li>Diversity: +8\% (more diverse recommendations; users explore new genres)
+<li>Creator fairness: +12\% watch share for underrepresented creators (increase from 5\% to 5.6\%)
+</ul>
+
+<p>No negative impact on fairness or diversity metrics. The model improved both engagement and societal goals. Deployment proceeds to all users, expected to recover millions of hours of additional user engagement annually.</p>
+
+<h2>Model Maintenance and Drift in Recommendation Systems</h2>
+
+<p>Recommendation systems face some of the most severe drift challenges of any machine learning application. User preferences evolve constantly—daily, weekly, and seasonally. New items arrive continuously, creating cold-start problems. Content trends shift rapidly, especially on social platforms. External events (holidays, news, cultural moments) dramatically change consumption patterns. A recommendation model trained on last month's data can become obsolete within weeks, causing measurable degradation in engagement and revenue.</p>
+
+<p>The business stakes are enormous. A 1\% drop in recommendation quality can cost large platforms millions of dollars monthly in lost engagement and advertising revenue. One major video platform observed a 5\% decline in watch time over three months due to undetected model drift, costing an estimated \$30 million in revenue before the issue was identified and corrected. Effective drift management is not optional—it's essential for maintaining competitive advantage and business performance.</p>
+
+<h3>Domain-Specific Drift Patterns in Recommendations</h3>
+
+<p>Recommendation drift manifests in several distinct ways, each requiring different detection and mitigation strategies:</p>
+
+<p><strong>User preference drift.</strong> Individual users' tastes evolve over time. A user interested in action movies in January may shift to documentaries in March. A user who primarily shopped for electronics may start shopping for baby products (life event). A user's music preferences may broaden as they discover new genres. This drift is gradual but pervasive—studies show 20-40\% of users exhibit significant preference changes over 3-6 months.</p>
+
+<p>The business impact is direct: recommendations based on outdated preferences reduce engagement. A user who has moved on from action movies but continues receiving action recommendations will have lower click-through rates and watch time. At scale, even small per-user impacts compound to significant revenue losses.</p>
+
+<p><strong>Item cold-start and freshness drift.</strong> New items arrive constantly—new videos uploaded, new products listed, new songs released. These items have no interaction history, making them difficult to recommend (cold-start problem). However, users often prefer fresh content over older content, even if older content has better historical engagement. A recommendation system that doesn't adapt to new items will feel stale, reducing user satisfaction.</p>
+
+<p>The challenge is particularly acute for platforms with high content velocity. A short-form video platform might receive millions of new videos daily. A news platform's content becomes stale within hours. Recommendation systems must balance exploiting known good content (high engagement) with exploring new content (freshness, discovery).</p>
+
+<p><strong>Seasonal and event-driven drift.</strong> Consumption patterns exhibit strong seasonal patterns. Holiday shopping peaks in November-December. Sports content surges during major events. Back-to-school shopping spikes in August. Music preferences shift with seasons (upbeat in summer, mellow in winter). These patterns are predictable but must be incorporated into models.</p>
+
+<p>External events create unpredictable drift. A viral trend, breaking news, or cultural moment can shift consumption patterns overnight. During the COVID-19 pandemic, content consumption patterns changed dramatically—more home workout videos, cooking content, and educational material. Models trained on pre-pandemic data performed poorly without rapid adaptation.</p>
+
+<p><strong>Popularity and trend drift.</strong> Item popularity is highly dynamic. A video that goes viral sees 1000x increase in views within days. A product featured in a celebrity post sees massive demand spikes. A song that becomes a meme dominates listening. Recommendation systems must adapt to these popularity shifts to remain relevant.</p>
+
+<p>However, over-emphasizing popularity creates problems. Recommending only trending content reduces personalization and creates winner-take-all dynamics that harm content diversity and creator fairness. Balancing popularity signals with personalization is a key challenge.</p>
+
+<p><strong>Behavioral pattern drift.</strong> How users interact with platforms evolves. Mobile usage patterns differ from desktop. Short-form video platforms train users to expect rapid content switching. Binge-watching behavior on streaming platforms creates different engagement patterns than episodic viewing. As platform features evolve (new UI, new content formats), user behavior adapts, and recommendation models must follow.</p>
+
+<p><strong>Cross-platform and cross-device drift.</strong> Users increasingly interact with platforms across multiple devices (phone, tablet, desktop, TV) and contexts (commute, home, work). Preferences and engagement patterns differ by device and context. A user might watch short clips on mobile during commute but long-form content on TV at home. Models must adapt to these context-dependent patterns.</p>
+
+<h3>Business Impact of Recommendation Drift</h3>
+
+<p>The business consequences of unmanaged drift in recommendation systems are severe and measurable:</p>
+
+<p><strong>Engagement degradation.</strong> As models drift, recommendation quality declines, reducing click-through rates, watch time, and session length. A 2\% drop in CTR might seem small but translates to millions of lost interactions daily for large platforms. One e-commerce platform observed a 3\% decline in conversion rate over four months due to drift, costing \$15 million in lost revenue.</p>
+
+<p><strong>User churn and retention impact.</strong> Poor recommendations frustrate users, increasing churn. Users who consistently receive irrelevant recommendations are 2-3x more likely to stop using the platform. For subscription services, this directly impacts recurring revenue. For ad-supported platforms, it reduces the user base and advertising inventory. One streaming service found that users experiencing poor recommendations (measured by low engagement with recommended content) had 25\% higher churn rates.</p>
+
+<p><strong>Creator and supplier dissatisfaction.</strong> When recommendation systems drift, content distribution becomes skewed. New creators struggle to get exposure. Niche content gets buried. This frustrates creators and suppliers, potentially causing them to leave the platform or reduce content production. For platforms dependent on user-generated content or third-party suppliers, this threatens content supply and platform viability.</p>
+
+<p><strong>Revenue and monetization impact.</strong> Recommendation quality directly affects revenue. E-commerce platforms lose sales when product recommendations are poor. Advertising platforms lose revenue when ad targeting becomes less effective. Subscription platforms face churn. One major platform estimated that a 1\% improvement in recommendation quality generates \$50 million in annual revenue—conversely, 1\% degradation costs \$50 million.</p>
+
+<p><strong>Competitive disadvantage.</strong> In competitive markets, recommendation quality is a key differentiator. Users choose platforms with better personalization. If competitors adapt to drift faster, they gain market share. The platform with the best recommendations wins user attention and engagement, creating a competitive moat. Falling behind on recommendation quality can be existential for platforms in crowded markets.</p>
+
+<h3>Detecting Drift in Recommendation Systems</h3>
+
+<p>Effective drift detection requires monitoring multiple signals across different time scales:</p>
+
+<p><strong>Performance-based detection.</strong> Monitor key business metrics continuously: click-through rate, conversion rate, watch time, session length, return rate. Establish baseline performance and alert when metrics degrade beyond thresholds. Use statistical process control to distinguish normal variation from systematic drift.</p>
+
+<p>Example: If CTR drops 1\% week-over-week for three consecutive weeks, trigger drift investigation. If watch time per session declines 2\% month-over-month, investigate potential model staleness. Set up automated dashboards that track these metrics by user segment, content category, and device type to identify where drift is occurring.</p>
+
+<p><strong>Prediction confidence monitoring.</strong> Track model confidence scores over time. If average prediction confidence decreases or the proportion of low-confidence predictions increases, the model may be encountering out-of-distribution patterns. For example, if a CTR prediction model's average confidence drops from 0.75 to 0.65 over a month, investigate whether user behavior or item characteristics have shifted.</p>
+
+<p><strong>Temporal pattern analysis.</strong> Recommendation systems have strong temporal patterns (hourly, daily, weekly, seasonal). Establish baseline patterns and detect anomalies. If weekend engagement patterns suddenly differ from historical weekends, investigate. If holiday season performance differs from previous years, drift may be occurring. Use time-series anomaly detection to identify deviations from expected patterns.</p>
+
+<p><strong>Item and user distribution monitoring.</strong> Track distributions of recommended items and user interactions. If the distribution of recommended categories shifts (e.g., more action movies, fewer documentaries) without corresponding changes in user preferences, the model may be drifting. If new items receive disproportionately low recommendation rates, cold-start handling may be failing.</p>
+
+<p><strong>Cohort analysis.</strong> Track performance for different user cohorts: new users vs. long-time users, different demographics, different engagement levels. Drift often affects cohorts differently. New users might be more sensitive to poor recommendations (higher churn), while engaged users might tolerate lower quality. Identifying which cohorts are affected helps prioritize fixes.</p>
+
+<p><strong>A/B test monitoring.</strong> Continuously run A/B tests comparing current production model to recent alternatives. If a model trained on more recent data significantly outperforms the production model, drift has occurred and retraining is needed. This provides early warning before business metrics degrade significantly.</p>
+
+<p><strong>Human evaluation and feedback.</strong> Continuously sample recommendations for human review. Ask raters: "Are these recommendations relevant and high-quality?" Track agreement between model predictions and human judgments. If agreement drops from 85\% to 75\%, investigate. Collect user feedback ("Why did you recommend this?") and track negative feedback rates.</p>
+
+<h3>Strategies for Continuous Learning in Recommendation Systems</h3>
+
+<p>Managing drift in recommendation systems requires aggressive continuous learning strategies due to the rapid pace of preference and content evolution:</p>
+
+<p><strong>Frequent periodic retraining.</strong> Retrain models on a regular, frequent schedule using recent data. For high-velocity platforms (social media, news), this might mean daily or weekly retraining. For slower-moving platforms (e-commerce, streaming), monthly retraining may suffice. Use rolling windows of recent data (e.g., last 3-6 months) to ensure models reflect current patterns while maintaining sufficient training data.</p>
+
+<p>Implementation: Maintain automated retraining pipelines that run on schedule. Use the most recent N days of interaction data. Validate on held-out recent data (last week). Deploy if validation metrics exceed current production model. For a large platform, daily retraining might cost \$5,000-10,000 in compute but generates \$100,000s in additional revenue through improved recommendations.</p>
+
+<p><strong>Online learning and real-time updates.</strong> For systems with continuous user feedback, implement online learning to update models in real-time or near-real-time. This is technically challenging for large models but possible with careful engineering. Use techniques like online gradient descent, incremental matrix factorization, or parameter-efficient fine-tuning (LoRA) to update model weights based on recent interactions.</p>
+
+<p>Example: Update user embeddings hourly based on recent interactions. Update item embeddings daily as new items receive interactions. This keeps the model fresh without full retraining. One video platform implemented hourly user embedding updates and saw 2\% improvement in CTR for active users.</p>
+
+<p><strong>Ensemble approaches with temporal diversity.</strong> Maintain an ensemble of models trained on different time periods. Combine predictions from models trained on recent data (captures current trends) and older data (maintains stability and captures long-term preferences). Weight ensemble members based on recency and performance.</p>
+
+<p>Example: Maintain three models: trained on last month, last quarter, and last year. For each user, weight predictions based on user activity level—active users get more weight on recent model, inactive users get more weight on long-term model. This provides robustness to drift while maintaining performance on stable patterns.</p>
+
+<p><strong>Separate models for different time scales.</strong> Build separate models for short-term and long-term preferences. Short-term model captures recent session behavior (last hour, last day). Long-term model captures stable preferences (last months, last year). Combine predictions to balance immediate context with enduring interests.</p>
+
+<p>Example: Short-term model uses transformer on recent 20 interactions. Long-term model uses matrix factorization on all historical interactions. Final score is weighted combination: 70\% short-term, 30\% long-term. This captures both "what user wants right now" and "what user generally likes."</p>
+
+<p><strong>Contextual bandits and exploration.</strong> Use multi-armed bandit algorithms to balance exploitation (recommend known good items) with exploration (try new items to learn preferences). This provides continuous learning through exploration while maintaining engagement through exploitation. Contextual bandits incorporate user and item features to make exploration more efficient.</p>
+
+<p>Example: Allocate 10\% of recommendations to exploration (items with high uncertainty or new items). Use Thompson sampling or upper confidence bound (UCB) algorithms to select exploration candidates. Track performance and update item value estimates in real-time. This enables rapid adaptation to new items and changing preferences.</p>
+
+<p><strong>Transfer learning and meta-learning.</strong> Use transfer learning to adapt models to new users and items quickly. Pretrain on large datasets, then fine-tune on specific user segments or item categories. Use meta-learning (learning to learn) to enable rapid adaptation with few examples. This is particularly valuable for cold-start scenarios.</p>
+
+<p>Example: Pretrain a sequence model on all users. For new users, fine-tune on their first 10 interactions using meta-learning techniques (MAML, Reptile). This enables personalized recommendations after just a few interactions, reducing cold-start period from weeks to hours.</p>
+
+<p><strong>Seasonal and event-aware modeling.</strong> Explicitly model seasonal patterns and events. Include temporal features (month, day of week, holiday indicators) in models. Train separate models or model components for different seasons or events. This enables proactive adaptation to predictable drift.</p>
+
+<p>Example: Train separate models for holiday season (November-December) and regular season. Switch models based on calendar. Include features for major events (sports championships, award shows). This improves recommendations during high-value periods when engagement and revenue are highest.</p>
+
+<h3>Practical Implementation Considerations</h3>
+
+<p>Successfully implementing continuous learning for recommendation systems requires careful attention to operational details:</p>
+
+<p><strong>Data pipeline and freshness.</strong> Maintain real-time or near-real-time data pipelines that collect user interactions, process them, and make them available for training. Latency in data pipelines directly impacts model freshness. A 24-hour delay in data availability means models are always one day behind reality. Invest in streaming data infrastructure (Kafka, Flink) to minimize latency.</p>
+
+<p><strong>Feature engineering and computation.</strong> Many recommendation features require expensive computation (user similarity, item popularity, co-occurrence statistics). Precompute features offline and update regularly. Use approximate algorithms (MinHash for similarity, HyperLogLog for counting) to make computation tractable at scale. Cache frequently accessed features to reduce latency.</p>
+
+<p><strong>Model versioning and experimentation.</strong> Maintain strict versioning of models, training data, and features. Enable rapid experimentation by making it easy to train, validate, and deploy new model variants. Use feature flags to control which users see which models, enabling gradual rollouts and A/B tests. Implement automated rollback if new models degrade metrics.</p>
+
+<p><strong>Monitoring and alerting infrastructure.</strong> Build comprehensive monitoring that tracks all relevant metrics: business KPIs, model performance, data quality, system latency, and cost. Set up alerts for anomalies. Ensure dashboards are accessible to both ML engineers and product managers. Invest in observability tools that enable rapid diagnosis when issues occur.</p>
+
+<p><strong>Cost management and optimization.</strong> Continuous learning is expensive. Daily retraining for a large platform can cost \$50,000-100,000 monthly. Optimize costs through: (1) efficient model architectures, (2) smart data sampling (don't train on all data, sample strategically), (3) incremental learning where possible, (4) spot instances for training, (5) careful monitoring to avoid unnecessary retraining.</p>
+
+<p>Budget example: Platform with 100M users, 10M items, 1B daily interactions. Daily retraining costs \$3,000 (compute). Inference costs \$20,000/day (serving). Monitoring and storage \$5,000/day. Total: \$28,000/day = \$840,000/month. Compare to business value: if continuous learning maintains 2\% higher engagement worth \$5M/month in revenue, ROI is 6x.</p>
+
+<p><strong>Organizational structure and ownership.</strong> Recommendation systems require cross-functional collaboration: ML engineers (models), data engineers (pipelines), backend engineers (serving), product managers (metrics), and data scientists (analysis). Establish clear ownership and communication channels. Use shared dashboards and regular reviews to ensure alignment. Invest in tools that enable non-ML team members to understand and influence recommendation behavior.</p>
+
+<h3>Cross-Domain Patterns and Connections</h3>
+
+<p>The continuous learning challenges in recommendation systems share patterns with other domains while having unique characteristics:</p>
+
+<p><strong>Chapter 24 (Domain-Specific Models):</strong> The general continuous learning framework from Chapter~[ref] applies here, but recommendations face more severe drift due to the dynamic nature of user preferences and content. While enterprise NLP might retrain quarterly, recommendation systems often need daily or weekly updates to maintain performance.</p>
+
+<p><strong>Chapter 27 (Video \& Visual):</strong> Video recommendation systems combine visual content understanding (Chapter~[ref]) with recommendation algorithms. Drift occurs in both visual content characteristics (new video styles, effects) and user preferences. The visual understanding models and recommendation models must be updated in coordination to maintain quality.</p>
+
+<p><strong>Chapter 28 (Knowledge Graphs):</strong> Knowledge graph-based recommendations (Chapter~[ref]) face drift as the knowledge graph evolves—new entities, new relationships, changing entity attributes. The graph structure itself drifts, requiring continuous graph updates and embedding recomputation. Techniques like temporal knowledge graphs and incremental embedding updates are essential.</p>
+
+<p><strong>Chapter 30 (Healthcare):</strong> Healthcare recommendation systems (treatment recommendations, care pathways) face drift as medical knowledge evolves and patient populations change. However, the stakes are higher (patient safety) and the pace is slower (medical knowledge evolves over years, not days). The continuous learning strategies must be adapted to prioritize safety and regulatory compliance over rapid adaptation.</p>
+
+<p><strong>Chapter 33 (Observability):</strong> Monitoring recommendation systems requires specialized observability infrastructure discussed in Chapter~[ref]. Recommendation quality is multidimensional (accuracy, diversity, fairness) and difficult to measure in real-time. Effective observability is essential for detecting drift early and diagnosing root causes. Invest in recommendation-specific monitoring tools and dashboards.</p>
+
+<h2>Case Study: Video Recommendation for a Streaming Platform</h2>
+
+<p>A video streaming platform with 100 million users and 10 million videos seeks to improve watch time and retention through better recommendations.</p>
+
+<h3>System Architecture</h3>
+
+<p><strong>Candidate Generation:</strong>
+<ul>
+<li>User embedding: Pretrain using a siamese network on user-user similarity (users who watch similar videos have similar embeddings)
+<li>Item embedding: Video embeddings from a collaborative filtering model + content embeddings from video metadata
+<li>Retrieval: MIPS (maximum inner product search) using Faiss, returning top-500 candidates in 20 ms
+</ul>
+
+<p><strong>Ranking:</strong>
+<ul>
+<li>Model: XGBoost with 500 features (user features, item features, candidate-specific features)
+<li>Features: user watch time, historical CTR, video popularity, recency, user-item co-occurrence, genre match
+<li>Latency: 80 ms to score 500 candidates and rank top-10
+</ul>
+
+<p><strong>Post-processing:</strong>
+<ul>
+<li>Diversity filter: If top-10 contains 5 videos from the same genre, rerank to ensure max 3 per genre
+<li>Freshness boost: Increase score of videos uploaded < 1 week ago
+<li>Creator fairness: Ensure top-10 includes creators from different regions and demographics
+</ul>
+
+<h3>Training and Offline Evaluation</h3>
+
+<p><strong>Data:</strong> 100 billion historical events (views, clicks, shares) over 3 months</p>
+
+<p><strong>Metrics:</strong>
+<ul>
+<li>Recall@10: Among videos the user watched next, what fraction appear in top-10 recommendations? Target: $\geq 8\%$
+<li>NDCG@10: Ranking quality; videos watched (clicks) are ranked higher. Target: $\geq 0.45$
+</ul>
+
+<p><strong>Results:</strong>
+<ul>
+<li>Collaborative filtering baseline: NDCG@10 = 0.38
+<li>Sequence model (SASRec): NDCG@10 = 0.43
+<li>SASRec + multi-task learning: NDCG@10 = 0.46
+</ul>
+
+<h3>Online A/B Test</h3>
+
+<p>Deploy the improved recommender to 10\% of users.</p>
+
+<p><strong>Results over 4 weeks:</strong>
+<ul>
+<li>Watch time: +4.2\% (statistically significant)
+<li>CTR on recommendations: +3.8\%
+<li>Session length: +2.1\% (users explore more)
+<li>Retention (30-day): +1.5\% (more users return)
+<li>Diversity: +8\% (more diverse recommendations; users explore new genres)
+<li>Creator fairness: +12\% watch share for underrepresented creators (increase from 5\% to 5.6\%)
+</ul>
+
+<p>No negative impact on fairness or diversity metrics. The model improved both engagement and societal goals. Deployment proceeds to all users, expected to recover millions of hours of additional user engagement annually.</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> Implement a simple sequence-based recommender using a 2-layer transformer encoder. Train on MovieLens-1M. Evaluate using Recall@20 and NDCG@20 metrics. How does performance compare to a baseline RNN-based recommender?
+</div>
+
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Design a multi-task recommendation system that predicts both click-through rate (CTR) and conversion rate (CVR). What is the relationship between the two tasks? Should they share weights or have separate heads? How would you weight the two losses?
+</div>
+
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Analyze the filter bubble effect in a recommendation system. Given historical user interactions, recommend items and measure recommendation diversity. Propose modifications to increase diversity while maintaining engagement.
+</div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Sequence-Based Recommender</strong>
+
+<p><em>Architecture:</em>
+<ul>
+<li>Item embedding dimension: 64
+<li>Transformer: 2 layers, 4 attention heads, FFN hidden dim = 256
+<li>Causal masking: prevent attending to future items
+<li>Loss: Cross-entropy on next item (max sequence length = 20)
+</ul>
+
+<p><em>Training (MovieLens-1M):</em>
+<ul>
+<li>Prepare sequences of movie ratings. Threshold rating > 3 as positive interactions.
+<li>Filter users with $\geq$ 5 interactions; obtain 650,000 user sequences.
+<li>Train/val split: 80/20
+<li>Batch size: 128, learning rate: $1 \times 10^{-3}$, epochs: 20
+</ul>
+
+<p><em>Results:</em>
+<ul>
+<li>Transformer Recall@20: 0.52, NDCG@20: 0.38
+<li>RNN baseline (GRU-128): Recall@20: 0.48, NDCG@20: 0.35
+<li>Transformer is 8\% better on recall, 9\% better on NDCG
+<li>Inference latency: 15 ms per user (transformer) vs. 8 ms (RNN); trade-off acceptable
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Multi-Task Learning for CTR and CVR</strong>
+
+<p><em>Task Relationship:</em>
+CTR (click) and CVR (conversion/purchase) are sequential: a user must click before converting. Correlation is high (users who click are more likely to convert), but causality is clear: click enables conversion.</p>
+
+<p><em>Architecture:</em>
+<ul>
+<li>Shared backbone: embedding layer + 2 fully-connected hidden layers (256 -> 128)
+<li>Task-specific heads:
+  <ul>
+  <li>CTR head: 1 dense layer -> sigmoid -> CTR probability
+  <li>CVR head: 1 dense layer -> sigmoid -> CVR probability
+  </ul>
+<li>Note: CVR is computed on clicked items only (conditional probability)
+</ul>
+
+<p><em>Loss weighting:</em>
+<div class="equation">
+$$\begin{align}
+\text{Loss} = \lambda_{\text{ctr}} \text{BCE}(\hat{y}_{\text{ctr}}, y_{\text{ctr}}) + \lambda_{\text{cvr}} \text{BCE}(\hat{y}_{\text{cvr}}, y_{\text{cvr}})
+\end{align}$$
+</div>
+
+<p>Suggest $\lambda_{\text{ctr}} = 0.7, \lambda_{\text{cvr}} = 0.3$ since CTR is more frequent and diverse.</p>
+
+<p><em>Alternative: CTR as auxiliary task:</em>
+Some systems use CTR as an auxiliary task to regularize the CVR model, since more training signal is available for CTR. This improves CVR generalization.</p>
+
+<p>\itshape Results (on dataset with 10\% CTR, 2\% CVR):
+<ul>
+<li>Standalone CVR model: AUC = 0.72
+<li>Multi-task (CTR + CVR): AUC = 0.78 (8\% improvement)
+<li>Improvement from auxiliary task signal and shared representation learning
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Filter Bubble Analysis</strong>
+
+<p><em>Diversity Measurement:</em>
+For a user with recommendation sequence, compute entropy of recommended categories:
+<div class="equation">
+$$\begin{align}
+\text{Diversity} = -\sum_c p_c \log p_c
+\end{align}$$
+</div>
+where $p_c$ is the fraction of recommendations in category $c$.</p>
+
+<p><em>Analysis:</em>
+<ul>
+<li>Baseline recommender: Average diversity = 1.2 bits (low; most recommendations in user's primary interests)
+<li>Improvement proposal: Allocate 10\% of top-10 recommendations for exploration (diverse categories)
+<li>Result: Diversity increases to 1.8 bits (+50\%)
+<li>Engagement impact: Watch time on exploration recommendations is 30\% lower but leads to user growth (10\% increase in diversity preference)
+</ul>
+
+<p>\itshape Implementation:
+Re-rank top-20 candidates to ensure diversity:
+<ol>
+<li>Sort by engagement score
+<li>Greedily select top-10 while maintaining max 3 items per category
+<li>For each selected item, remove other items from the same category to increase diversity
+</ol>
+
+<p>This increases diversity with minimal engagement loss ($< 0.5\%$) and aligns system with user long-term interests.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter28_knowledge_graphs.html">← Chapter 28: Knowledge Graphs and Reasoning</a>
+  <a href="../index.html">📚 Table of Contents</a>
+  <a href="chapter30_healthcare.html">Chapter 30: Healthcare Applications →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
