@@ -16,12 +16,20 @@ CHAPTERS = [
 ]
 ```
 
-### 3. Generate HTML
+### 3. Generate HTML (Automatically Updates All Locations)
 ```bash
 python3 html-build/convert_to_html.py
 ```
 
-### 4. Update Chapter Lists
+This single command:
+- ✅ Converts TEX to HTML
+- ✅ Updates `chapters/` (Vercel deployment)
+- ✅ Updates `nodejs-version/public/chapters/` (Node.js dev)
+- ✅ Updates `docs/chapters/` (GitHub Pages)
+- ✅ Copies TEX source to `docs/chapters/`
+- ✅ Fixes algorithm formatting
+
+### 4. Update Chapter Lists in App
 Edit `nodejs-version/public/app.js`:
 ```javascript
 state.chapters = [
@@ -30,7 +38,14 @@ state.chapters = [
 ];
 ```
 
-### 5. Sync to Root
+### 5. Sync App Files to Root
+```bash
+cp nodejs-version/public/app.js app.js
+cp nodejs-version/public/index.html index.html
+cp nodejs-version/public/styles.css styles.css
+```
+
+Or use the sync script:
 ```bash
 ./sync-to-root.sh
 ```
@@ -42,24 +57,25 @@ git commit -m "Add chapter 35: New Topic"
 git push
 ```
 
-## Updating Existing Content
+## Updating Existing Chapter Content
 
 ### Update Chapter Content
 ```bash
 # 1. Edit LaTeX source
 vim chapters/chapter01_linear_algebra.tex
 
-# 2. Regenerate HTML
+# 2. Regenerate HTML (updates all locations automatically)
 python3 html-build/convert_to_html.py
 
-# 3. Sync to root
-./sync-to-root.sh
-
-# 4. Commit
-git add chapters/chapter01_linear_algebra.* app.js index.html styles.css
+# 3. Commit
+git add chapters/chapter01_linear_algebra.*
+git add nodejs-version/public/chapters/chapter01_linear_algebra.html
+git add docs/chapters/chapter01_linear_algebra.*
 git commit -m "Update chapter 1 content"
 git push
 ```
+
+## Updating Application Files (app.js, index.html, styles.css)
 
 ### Update Styles
 ```bash
@@ -67,7 +83,7 @@ git push
 vim nodejs-version/public/styles.css
 
 # 2. Sync to root
-./sync-to-root.sh
+cp nodejs-version/public/styles.css styles.css
 
 # 3. Commit
 git add styles.css nodejs-version/public/styles.css
@@ -81,11 +97,27 @@ git push
 vim nodejs-version/public/app.js
 
 # 2. Sync to root
-./sync-to-root.sh
+cp nodejs-version/public/app.js app.js
 
 # 3. Commit
 git add app.js nodejs-version/public/app.js
 git commit -m "Update application logic"
+git push
+```
+
+## One-Command Workflow
+
+### Regenerate Everything
+```bash
+# Regenerate all HTML files and update all locations
+python3 html-build/convert_to_html.py
+
+# Sync app files to root
+./sync-to-root.sh
+
+# Commit everything
+git add .
+git commit -m "Regenerate all HTML files"
 git push
 ```
 

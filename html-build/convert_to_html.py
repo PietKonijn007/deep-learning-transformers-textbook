@@ -543,14 +543,14 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
 """
     
     # Write HTML file to all output directories
-    for base_dir in output_dirs:
-        output_path = base_dir / "chapters" / f"{chapter_file}.html"
+    for output_dir in output_dirs:
+        output_path = output_dir / f"{chapter_file}.html"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(full_html)
     
-    print(f"Created: {chapter_file}.html")
+    print(f"   ✓ {chapter_file}.html")
 
 def create_index_html(output_dirs=None):
     """Create main index page"""
@@ -785,29 +785,215 @@ def fix_algorithms_in_dir(output_dir):
                 f.write(content)
             print(f"  ✓ Fixed algorithms in {filepath.name}")
 
+def update_app_js_chapters(chapters_list, output_paths):
+    """Update app.js files with the current chapter list"""
+    
+    # Generate JavaScript chapter array
+    js_chapters = []
+    for chapter_id, chapter_title in chapters_list:
+        # Determine part based on chapter content
+        if chapter_id == 'preface':
+            part = 'Front Matter'
+        elif chapter_id == 'notation':
+            part = 'Front Matter'
+        elif chapter_id.startswith('chapter01') or chapter_id.startswith('chapter02') or chapter_id.startswith('chapter03'):
+            part = 'Part I: Mathematical Foundations'
+        elif chapter_id.startswith('chapter04') or chapter_id.startswith('chapter05') or chapter_id.startswith('chapter06'):
+            part = 'Part II: Neural Network Fundamentals'
+        elif chapter_id.startswith('chapter07') or chapter_id.startswith('chapter08') or chapter_id.startswith('chapter09'):
+            part = 'Part III: Attention Mechanisms'
+        elif chapter_id.startswith('chapter10') or chapter_id.startswith('chapter11') or chapter_id.startswith('chapter12'):
+            part = 'Part IV: Transformer Architecture'
+        elif chapter_id.startswith('chapter13') or chapter_id.startswith('chapter14') or chapter_id.startswith('chapter15') or chapter_id.startswith('chapter16'):
+            part = 'Part V: Modern Transformer Variants'
+        elif chapter_id.startswith('chapter17') or chapter_id.startswith('chapter18') or chapter_id.startswith('chapter19') or chapter_id.startswith('chapter20'):
+            part = 'Part VI: Advanced Topics'
+        elif chapter_id.startswith('chapter21') or chapter_id.startswith('chapter22') or chapter_id.startswith('chapter23'):
+            part = 'Part VII: Practical Implementation'
+        elif chapter_id.startswith('chapter24') or chapter_id.startswith('chapter25') or chapter_id.startswith('chapter26') or chapter_id.startswith('chapter27') or chapter_id.startswith('chapter28') or chapter_id.startswith('chapter29'):
+            part = 'Part VIII: Domain Applications'
+        elif chapter_id.startswith('chapter30') or chapter_id.startswith('chapter31') or chapter_id.startswith('chapter32'):
+            part = 'Part IX: Industry Applications'
+        elif chapter_id.startswith('chapter33') or chapter_id.startswith('chapter34'):
+            part = 'Part X: Production Systems'
+        else:
+            # For new chapters beyond 34, assign to a new part
+            chapter_num = int(chapter_id.split('_')[0].replace('chapter', ''))
+            if chapter_num >= 35:
+                part = 'Part XI: Advanced Topics'
+            else:
+                part = 'Uncategorized'
+        
+        js_chapters.append(f"            {{ id: '{chapter_id}', title: '{chapter_title}', part: '{part}' }}")
+    
+    chapters_js = ',\n'.join(js_chapters)
+    
+    # Update each app.js file
+    for app_js_path in output_paths:
+        if not app_js_path.exists():
+            print(f"   ⚠ Skipping {app_js_path} (file not found)")
+            continue
+        
+        with open(app_js_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Find and replace the chapters array
+        pattern = r'(state\.chapters = \[)\s*\{[^}]+\}[^]]*(\];)'
+        replacement = f'\\1\n{chapters_js}\n        \\2'
+        
+        new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+        
+        if new_content != content:
+            with open(app_js_path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            print(f"   ✓ Updated {app_js_path.relative_to(Path.cwd().parent if 'html-build' in str(Path.cwd()) else Path.cwd())}")
+        else:
+            print(f"   ⚠ No changes needed in {app_js_path.name}")
+
+def update_server_js_chapters(chapters_list, server_js_path):
+    """Update server.js /api/chapters endpoint with the current chapter list"""
+    
+    if not server_js_path.exists():
+        print(f"   ⚠ Skipping {server_js_path} (file not found)")
+        return
+    
+    # Generate JavaScript chapter array (same as app.js)
+    js_chapters = []
+    for chapter_id, chapter_title in chapters_list:
+        # Use same part logic as update_app_js_chapters
+        if chapter_id == 'preface':
+            part = 'Front Matter'
+        elif chapter_id == 'notation':
+            part = 'Front Matter'
+        elif chapter_id.startswith('chapter01') or chapter_id.startswith('chapter02') or chapter_id.startswith('chapter03'):
+            part = 'Part I: Mathematical Foundations'
+        elif chapter_id.startswith('chapter04') or chapter_id.startswith('chapter05') or chapter_id.startswith('chapter06'):
+            part = 'Part II: Neural Network Fundamentals'
+        elif chapter_id.startswith('chapter07') or chapter_id.startswith('chapter08') or chapter_id.startswith('chapter09'):
+            part = 'Part III: Attention Mechanisms'
+        elif chapter_id.startswith('chapter10') or chapter_id.startswith('chapter11') or chapter_id.startswith('chapter12'):
+            part = 'Part IV: Transformer Architecture'
+        elif chapter_id.startswith('chapter13') or chapter_id.startswith('chapter14') or chapter_id.startswith('chapter15') or chapter_id.startswith('chapter16'):
+            part = 'Part V: Modern Transformer Variants'
+        elif chapter_id.startswith('chapter17') or chapter_id.startswith('chapter18') or chapter_id.startswith('chapter19') or chapter_id.startswith('chapter20'):
+            part = 'Part VI: Advanced Topics'
+        elif chapter_id.startswith('chapter21') or chapter_id.startswith('chapter22') or chapter_id.startswith('chapter23'):
+            part = 'Part VII: Practical Implementation'
+        elif chapter_id.startswith('chapter24') or chapter_id.startswith('chapter25') or chapter_id.startswith('chapter26') or chapter_id.startswith('chapter27') or chapter_id.startswith('chapter28') or chapter_id.startswith('chapter29'):
+            part = 'Part VIII: Domain Applications'
+        elif chapter_id.startswith('chapter30') or chapter_id.startswith('chapter31') or chapter_id.startswith('chapter32'):
+            part = 'Part IX: Industry Applications'
+        elif chapter_id.startswith('chapter33') or chapter_id.startswith('chapter34'):
+            part = 'Part X: Production Systems'
+        else:
+            chapter_num = int(chapter_id.split('_')[0].replace('chapter', ''))
+            if chapter_num >= 35:
+                part = 'Part XI: Advanced Topics'
+            else:
+                part = 'Uncategorized'
+        
+        js_chapters.append(f"    {{ id: '{chapter_id}', title: '{chapter_title}', part: '{part}' }}")
+    
+    chapters_js = ',\n'.join(js_chapters)
+    
+    with open(server_js_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Find and replace the chapters array in the API endpoint
+    pattern = r"(const chapters = \[)\s*\{[^}]+\}[^]]*(\];)"
+    replacement = f'\\1\n{chapters_js}\n  \\2'
+    
+    new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+    
+    if new_content != content:
+        with open(server_js_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        print(f"   ✓ Updated {server_js_path.relative_to(Path.cwd().parent if 'html-build' in str(Path.cwd()) else Path.cwd())}")
+    else:
+        print(f"   ⚠ No changes needed in {server_js_path.name}")
+
 def main():
     """Main conversion function"""
-    print("Converting LaTeX textbook chapters to HTML...")
+    print("=" * 70)
+    print("Converting LaTeX textbook chapters to HTML")
+    print("=" * 70)
     
-    # Define output directory - only chapters go to root
-    output_dir = Path(".")
-    chapters_dir = output_dir / "chapters"
-    chapters_dir.mkdir(parents=True, exist_ok=True)
+    # Get project root (parent of html-build)
+    project_root = Path(__file__).parent.parent
     
-    # Convert each chapter
+    # Define all output directories
+    output_dirs = [
+        project_root / "chapters",                    # Root chapters (deployed to Vercel)
+        project_root / "nodejs-version" / "public" / "chapters",  # Node.js version
+        project_root / "docs" / "chapters",           # GitHub Pages
+    ]
+    
+    print(f"\n📂 Output directories:")
+    for output_dir in output_dirs:
+        print(f"   • {output_dir.relative_to(project_root)}")
+    
+    # Create all output directories
+    for output_dir in output_dirs:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"\n📝 Converting {len(CHAPTERS)} chapters...")
+    
+    # Convert each chapter to all output directories
     for i, (chapter_file, chapter_title) in enumerate(CHAPTERS):
         prev_chapter = CHAPTERS[i-1] if i > 0 else None
         next_chapter = CHAPTERS[i+1] if i < len(CHAPTERS)-1 else None
-        create_chapter_html(chapter_file, chapter_title, prev_chapter, next_chapter, [output_dir])
+        create_chapter_html(chapter_file, chapter_title, prev_chapter, next_chapter, output_dirs)
     
-    # Fix algorithm formatting
-    print("\nFixing algorithm formatting...")
-    fix_algorithms_in_dir(chapters_dir)
+    # Fix algorithm formatting in all directories
+    print("\n🔧 Fixing algorithm formatting...")
+    for output_dir in output_dirs:
+        fix_algorithms_in_dir(output_dir)
     
-    print("\n✅ Chapter conversion complete!")
-    print(f"📂 Chapters output to: {chapters_dir}/")
-    print("⚠️  Note: index.html, app.js, and styles.css are NOT modified")
-    print("    These files are maintained separately in the repository root")
+    # Copy TEX files to docs for reference
+    print("\n📄 Copying TEX source files to docs...")
+    docs_chapters = project_root / "docs" / "chapters"
+    chapters_source = project_root / "chapters"
+    
+    import shutil
+    for tex_file in chapters_source.glob("*.tex"):
+        dest = docs_chapters / tex_file.name
+        shutil.copy2(tex_file, dest)
+    print(f"   ✓ Copied {len(list(chapters_source.glob('*.tex')))} TEX files")
+    
+    # Update app.js files with chapter list
+    print("\n🔄 Updating app.js files with chapter list...")
+    app_js_paths = [
+        project_root / "nodejs-version" / "public" / "app.js",
+        project_root / "app.js",  # Root app.js for Vercel deployment
+    ]
+    update_app_js_chapters(CHAPTERS, app_js_paths)
+    
+    # Update server.js with chapter list
+    print("\n🔄 Updating server.js with chapter list...")
+    server_js_path = project_root / "nodejs-version" / "server.js"
+    update_server_js_chapters(CHAPTERS, server_js_path)
+    
+    print("\n" + "=" * 70)
+    print("✅ Conversion complete!")
+    print("=" * 70)
+    print(f"\n📊 Summary:")
+    print(f"   • Chapters converted: {len(CHAPTERS)}")
+    print(f"   • Output locations: {len(output_dirs)}")
+    print(f"   • App.js files updated: {len(app_js_paths)}")
+    print(f"   • Server.js updated: 1")
+    print(f"\n🚀 Deployment ready:")
+    print(f"   • Root chapters/ → Vercel deployment")
+    print(f"   • Root app.js → Vercel deployment (UPDATED)")
+    print(f"   • nodejs-version/public/chapters/ → Node.js development")
+    print(f"   • nodejs-version/public/app.js → Node.js development (UPDATED)")
+    print(f"   • nodejs-version/server.js → API endpoint (UPDATED)")
+    print(f"   • docs/chapters/ → GitHub Pages")
+    print(f"\n💡 Next steps:")
+    print(f"   1. Review generated HTML files")
+    print(f"   2. Test locally: python3 -m http.server 8000")
+    print(f"   3. Commit: git add chapters/ app.js nodejs-version/ docs/")
+    print(f"   4. Push: git push")
+    print()
 
 if __name__ == "__main__":
     main()
