@@ -106,6 +106,43 @@ The gradient with respect to the input is:
 \frac{\partial L}{\partial \mathbf{x}} = \frac{\partial L}{\partial \mathbf{y}} + \frac{\partial L}{\partial \mathbf{y}} \frac{\partial F(\mathbf{x})}{\partial \mathbf{x}}
 \end{equation}
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=0.8cm, font=\small},
+  block/.style={rectangle, draw, minimum width=2cm, minimum height=0.8cm, font=\small},
+  arrow/.style={->, thick},
+  gradient/.style={->, thick, red, dashed}
+]
+
+% Forward pass
+\node[node] (x) at (0,0) {$\mathbf{x}$};
+\node[block] (F) at (3,0) {$F(\mathbf{x})$};
+\node[node] (add) at (6,0) {$+$};
+\node[node] (y) at (8,0) {$\mathbf{y}$};
+
+% Forward arrows
+\draw[arrow] (x) -- (F);
+\draw[arrow] (F) -- (add);
+\draw[arrow, blue, very thick] (x) to[bend left=30] (add);
+\draw[arrow] (add) -- (y);
+
+% Backward pass (gradients) - text positioned absolutely at fixed coordinates
+\node[font=\footnotesize] at (8,3.5) {$\frac{\partial L}{\partial \mathbf{y}}$};
+\node[font=\footnotesize] at (3,3.5) {$\frac{\partial L}{\partial \mathbf{y}} \frac{\partial F}{\partial \mathbf{x}}$};
+\node[font=\footnotesize] at (0,3.5) {$\frac{\partial L}{\partial \mathbf{x}}$};
+
+% Gradient arrows at fixed y-coordinate
+\draw[gradient] (8,3) -- (6,3);
+\draw[gradient] (6,3) -- (3,3);
+\draw[gradient, blue, very thick] (6,3) to[bend right=30] (0,3);
+\draw[gradient] (3,3) -- (0,3);
+
+\end{tikzpicture}
+\caption{Gradient flow through residual connections. The blue path shows the direct gradient highway that bypasses $F(\mathbf{x})$, ensuring gradients can flow through many layers without vanishing. Red dashed arrows show gradient flow during backpropagation.}
+\label{fig:residual_gradient_flow}
+\end{figure}
+
 The first term $\frac{\partial L}{\partial \mathbf{y}}$ is the direct gradient path that bypasses the function $F$ entirely. This ensures that even if $\frac{\partial F(\mathbf{x})}{\partial \mathbf{x}}$ becomes very small (vanishing gradients) or very large (exploding gradients), the gradient $\frac{\partial L}{\partial \mathbf{x}}$ still receives the direct contribution $\frac{\partial L}{\partial \mathbf{y}}$. This is why transformers can be trained with many layers (BERT-large has 24 layers, GPT-3 has 96 layers) without suffering from vanishing gradients that plagued early deep networks.
 
 For a transformer with $L$ layers, the gradient from the output to the input has $2^L$ paths through the network: at each layer, the gradient can either flow through the residual connection (direct path) or through the attention/FFN (indirect path). This exponential number of paths creates a rich gradient flow that helps training, though in practice most gradient flows through the shorter paths that use more residual connections.

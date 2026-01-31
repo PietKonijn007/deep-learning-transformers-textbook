@@ -71,6 +71,51 @@ The feed-forward network is defined as:
 with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \times d_{\text{model}}}$, and typically $d_{ff} = 4 \times d_{\text{model}}$.
 \end{definition}
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    block/.style={rectangle, draw, fill=blue!15, minimum width=3cm, minimum height=0.8cm, font=\small},
+    operation/.style={rectangle, draw, fill=green!15, minimum width=2.5cm, minimum height=0.6cm, font=\small},
+    arrow/.style={->, >=stealth, thick},
+    residual/.style={->, >=stealth, thick, red!70, dashed}
+]
+
+% Input
+\node[block] (input) at (0,0) {Input $\mX$};
+
+% Multi-head attention
+\node[operation] (mha) at (0,-1.5) {Multi-Head Self-Attention};
+
+% Add & Norm 1
+\node[operation] (add1) at (0,-2.5) {Add \& LayerNorm};
+
+% Feed-forward
+\node[operation] (ffn) at (0,-4) {Feed-Forward Network};
+
+% Add & Norm 2
+\node[operation] (add2) at (0,-5) {Add \& LayerNorm};
+
+% Output
+\node[block] (output) at (0,-6.5) {Output};
+
+% Forward arrows
+\draw[arrow] (input) -- (mha);
+\draw[arrow] (mha) -- (add1);
+\draw[arrow] (add1) -- (ffn);
+\draw[arrow] (ffn) -- (add2);
+\draw[arrow] (add2) -- (output);
+
+% Residual connections
+\draw[residual] (input.east) -- ++(1,0) |- (add1.east);
+\draw[residual] (add1.east) -- ++(1,0) |- (add2.east);
+
+\end{tikzpicture}
+
+\caption{Transformer encoder layer architecture showing the two sub-layers with residual connections. The input flows through multi-head self-attention, then through a feed-forward network, with residual connections (red dashed arrows) bypassing each sub-layer. Layer normalization is applied after adding the residual. This structure maintains constant dimensions ($n \times d_{\text{model}}$) throughout, enabling easy stacking of multiple layers. The residual connections provide direct gradient pathways, crucial for training deep transformers.}
+\label{fig:transformer_encoder_layer}
+\end{figure}
+\end{figure}
+
 The dimension tracking through an encoder layer reveals important properties about memory consumption and computational cost. The input $\mX \in \R^{B \times n \times d_{\text{model}}}$ is first projected to queries, keys, and values, each with shape $\R^{B \times n \times d_{\text{model}}}$. For multi-head attention with $h$ heads, these are reshaped to $\R^{B \times h \times n \times d_k}$ where $d_k = d_{\text{model}}/h$. The attention scores form a matrix $\R^{B \times h \times n \times n}$, and this quadratic term in sequence length is what dominates memory consumption for long sequences. After attention, the output is projected back to $\R^{B \times n \times d_{\text{model}}}$, added to the residual, and normalized.
 
 The feed-forward network then expands each position's representation from $d_{\text{model}}$ to $d_{ff}$ dimensions before projecting back down. For BERT-base with $d_{\text{model}} = 768$ and $d_{ff} = 3072$, this means each position's representation temporarily expands to 4× its original size. This expansion creates a bottleneck that forces the model to learn compressed representations, similar to the hidden layer in an autoencoder. The intermediate activations $\R^{B \times n \times d_{ff}}$ consume significant memory during training—for batch size 32 and sequence length 512, this amounts to $32 \times 512 \times 3072 \times 4 = 201$ MB per layer in FP32, and with 12 layers in BERT-base, the feed-forward activations alone consume 2.4 GB of GPU memory.

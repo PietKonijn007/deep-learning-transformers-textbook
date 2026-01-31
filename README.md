@@ -141,7 +141,17 @@ The HTML files will be created in `html-build/output/` and automatically copied 
 
 ### For HTML Generation
 - **Python 3.x**
-- No additional packages required (uses standard library)
+- No additional Python packages required (uses standard library)
+- **System Dependencies for TikZ Diagrams:**
+  - `pdflatex` (from MacTeX or TeX Live)
+    - macOS: `brew install --cask mactex`
+    - Linux: `sudo apt-get install texlive-full`
+  - `pdf2svg` (for converting TikZ diagrams to SVG)
+    - macOS: `brew install pdf2svg`
+    - Linux: `sudo apt-get install pdf2svg`
+  - Alternative: ImageMagick (`convert` command)
+    - macOS: `brew install imagemagick`
+    - Linux: `sudo apt-get install imagemagick`
 
 ## 📁 Repository Structure
 

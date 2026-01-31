@@ -169,6 +169,52 @@ GPT uses transformer decoder blocks with:
 </ul>
 </div>
 
+<figure>
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=1cm, font=\small},
+  layer/.style={rectangle, draw, minimum width=3cm, minimum height=0.8cm, font=\small},
+  arrow/.style={->, thick},
+  causal/.style={->, thick, red}
+]
+
+<p>\node[node] (t1) at (0,0) {$x_1$};
+\node[node] (t2) at (2,0) {$x_2$};
+\node[node] (t3) at (4,0) {$x_3$};
+\node[node] (t4) at (6,0) {$x_4$};</p>
+
+<p>\draw[causal] (t1) -- (t2);
+\draw[causal] (t2) -- (t3);
+\draw[causal] (t3) -- (t4);
+\draw[causal] (t1) to[bend right=20] (t3);
+\draw[causal] (t2) to[bend right=20] (t4);
+\draw[causal] (t1) to[bend right=30] (t4);</p>
+
+<p>\node[layer, fill=orange!10] (dec) at (3,3) {GPT Decoder (12-96 layers)};
+\draw[arrow] (t1) -- (dec);
+\draw[arrow] (t2) -- (dec);
+\draw[arrow] (t3) -- (dec);
+\draw[arrow] (t4) -- (dec);</p>
+
+<p>\node[node, fill=red!20] (h1) at (0,6) {$h_1$};
+\node[node, fill=red!20] (h2) at (2,6) {$h_2$};
+\node[node, fill=red!20] (h3) at (4,6) {$h_3$};
+\node[node, fill=red!20] (h4) at (6,6) {$h_4$};</p>
+
+<p>\draw[arrow] (dec) -- (h1);
+\draw[arrow] (dec) -- (h2);
+\draw[arrow] (dec) -- (h3);
+\draw[arrow] (dec) -- (h4);</p>
+
+<p>$h_1$ sees: $x_1$ \\
+$h_2$ sees: $x_1, x_2$ \\
+$h_3$ sees: $x_1, x_2, x_3$ \\
+$h_4$ sees: $x_1, x_2, x_3, x_4$
+};</p>
+
+<p>\end{tikzpicture}
+<figcaption>GPT's causal decoder architecture. Red arrows show unidirectional attention where each token can only attend to previous tokens (including itself). This triangular connectivity pattern enables autoregressive generation while preventing information leakage from future positions.</figcaption>
+</figure>
+
 <p>The distinction between GPT and BERT architectures illuminates different modeling philosophies. BERT employs bidirectional attention, allowing each position to attend to the entire sequence including future tokens. This bidirectionality enables rich contextual representations ideal for understanding tasks like classification and question answering. However, bidirectional attention is incompatible with autoregressive generation—the model cannot predict the next token if it has already seen it. GPT's unidirectional causal attention sacrifices bidirectional context but gains the ability to generate coherent text autoregressively. This trade-off reflects the fundamental tension between understanding (BERT) and generation (GPT) in language modeling.</p>
 
 <h3>GPT Model Sizes</h3>

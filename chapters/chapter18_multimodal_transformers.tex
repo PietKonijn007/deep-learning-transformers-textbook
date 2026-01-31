@@ -23,6 +23,77 @@ Multimodal transformers process multiple modalities (text, images, audio, video)
 
 The fundamental challenge in multimodal learning is determining how to combine information from different modalities—such as vision, language, and audio—into a unified representation. The choice of fusion strategy has profound implications for model architecture, computational cost, and the types of cross-modal interactions the model can learn. Three primary approaches have emerged, each with distinct trade-offs in terms of expressiveness, efficiency, and implementation complexity.
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
+  encoder/.style={rectangle, draw, minimum width=2cm, minimum height=1.2cm, font=\small},
+  arrow/.style={->, thick},
+  bidir/.style={<->, thick, blue},
+  cross/.style={->, thick, green!60!black, dashed}
+]
+
+% Early Fusion
+\node[font=\small\bfseries] at (0,4) {Early Fusion};
+\node[node, fill=blue!20] (v1) at (-0.5,2.5) {$v_1$};
+\node[node, fill=blue!20] (v2) at (0.5,2.5) {$v_2$};
+\node[node, fill=red!20] (t1) at (-0.5,1.5) {$t_1$};
+\node[node, fill=red!20] (t2) at (0.5,1.5) {$t_2$};
+
+\node[encoder, fill=purple!10] (enc1) at (0,0) {Unified \\ Encoder};
+\draw[arrow] (v1) -- (enc1);
+\draw[arrow] (v2) -- (enc1);
+\draw[arrow] (t1) -- (enc1);
+\draw[arrow] (t2) -- (enc1);
+
+\draw[bidir] (v1) to[bend left=10] (t1);
+\draw[bidir] (v2) to[bend right=10] (t2);
+
+
+% Late Fusion
+\node[font=\small\bfseries] at (6,4) {Late Fusion};
+\node[node, fill=blue!20] (v3) at (5,2.5) {$v_1$};
+\node[node, fill=blue!20] (v4) at (6,2.5) {$v_2$};
+\node[node, fill=red!20] (t3) at (5,1.5) {$t_1$};
+\node[node, fill=red!20] (t4) at (6,1.5) {$t_2$};
+
+\node[encoder, fill=blue!10] (venc) at (5.5,0.8) {Vision \\ Encoder};
+\node[encoder, fill=red!10] (tenc) at (5.5,-0.5) {Text \\ Encoder};
+
+\draw[arrow] (v3) -- (venc);
+\draw[arrow] (v4) -- (venc);
+\draw[arrow] (t3) -- (tenc);
+\draw[arrow] (t4) -- (tenc);
+
+\node[encoder, fill=yellow!10] (fuse) at (5.5,-2) {Fusion};
+\draw[arrow] (venc) -- (fuse);
+\draw[arrow] (tenc) -- (fuse);
+
+
+% Cross-Modal Attention
+\node[font=\small\bfseries] at (12,4) {Cross-Modal};
+\node[node, fill=blue!20] (v5) at (11,2.5) {$v_1$};
+\node[node, fill=blue!20] (v6) at (12,2.5) {$v_2$};
+\node[node, fill=red!20] (t5) at (11,1.5) {$t_1$};
+\node[node, fill=red!20] (t6) at (12,1.5) {$t_2$};
+
+\node[encoder, fill=blue!10] (venc2) at (11.5,0.8) {Vision \\ Encoder};
+\node[encoder, fill=red!10] (tenc2) at (11.5,-0.5) {Text \\ Encoder};
+
+\draw[arrow] (v5) -- (venc2);
+\draw[arrow] (v6) -- (venc2);
+\draw[arrow] (t5) -- (tenc2);
+\draw[arrow] (t6) -- (tenc2);
+
+\draw[cross] (venc2) to[bend left=20] (tenc2);
+\draw[cross] (tenc2) to[bend left=20] (venc2);
+
+
+\end{tikzpicture}
+\caption{Three multimodal fusion strategies. \textbf{Early fusion} (left): concatenates modalities and processes with unified encoder, enabling rich interactions but with quadratic cost $O((N+M)^2)$. \textbf{Late fusion} (center): separate encoders with fusion only at output, efficient $O(N^2 + M^2)$ but limited cross-modal interaction. \textbf{Cross-modal attention} (right): separate encoders with explicit cross-attention, balancing efficiency $O(N^2 + M^2 + NM)$ with rich interactions.}
+\label{fig:multimodal_fusion_strategies}
+\end{figure}
+
 \textbf{Early fusion} combines modalities at the input level, concatenating or interleaving embeddings from different sources before processing them through a single unified encoder. For example, an image might be encoded into a sequence of patch embeddings $\vv_1, \ldots, \vv_N \in \R^d$, while text is tokenized into embeddings $\vt_1, \ldots, \vt_M \in \R^d$. These are concatenated into a single sequence $[\vv_1, \ldots, \vv_N, \vt_1, \ldots, \vt_M]$ and processed by a standard transformer encoder. The advantage of this approach is its simplicity and the fact that cross-modal interactions can occur at every layer through self-attention. However, early fusion has significant computational drawbacks: the attention complexity is $O((N+M)^2 d)$, meaning that adding image patches dramatically increases the cost. For a ViT-Base image with 196 patches and text with 128 tokens, the combined sequence length of 324 tokens results in attention matrices of size $324 \times 324$, consuming substantial memory and compute compared to processing each modality separately.
 
 \textbf{Late fusion} takes the opposite approach, using separate encoders for each modality and combining their outputs only at the final decision stage. An image encoder produces a single embedding $\vv \in \R^d$, a text encoder produces $\vt \in \R^d$, and these are combined through simple operations like concatenation, averaging, or element-wise multiplication before a final classification layer. This approach is computationally efficient since each encoder processes only its own modality with complexity $O(N^2 d)$ for images and $O(M^2 d)$ for text, which can be computed in parallel. The total complexity is $O(N^2 d + M^2 d)$ rather than $O((N+M)^2 d)$. However, late fusion severely limits cross-modal interactions—the encoders cannot attend to information from other modalities, and the combination happens only at the very end. This makes it difficult to learn fine-grained alignments, such as which image regions correspond to which words in a caption.

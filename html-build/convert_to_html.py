@@ -6,6 +6,9 @@ Convert LaTeX textbook to HTML with MathJax support
 import os
 import re
 import sys
+import subprocess
+import tempfile
+import hashlib
 from pathlib import Path
 
 # Chapter information
@@ -48,6 +51,240 @@ CHAPTERS = [
     ("chapter34_dsl_agents", "Chapter 34: DSL and Agent Systems"),
 ]
 
+def extract_tikz_diagrams(latex_content, chapter_name):
+    """Extract TikZ diagrams from LaTeX content and return list of (tikz_code, hash) tuples"""
+    diagrams = []
+    
+    # Find all tikzpicture environments
+    pattern = r'\\begin\{tikzpicture\}.*?\\end\{tikzpicture\}'
+    matches = re.finditer(pattern, latex_content, re.DOTALL)
+    
+    for match in matches:
+        tikz_code = match.group(0)
+        # Create a hash for the diagram to use as filename
+        diagram_hash = hashlib.md5(tikz_code.encode()).hexdigest()[:12]
+        diagrams.append((tikz_code, diagram_hash))
+    
+    return diagrams
+
+def convert_tikz_to_svg(tikz_code, output_path, chapter_name, diagram_hash):
+    """Convert a single TikZ diagram to SVG using pdflatex and pdf2svg or ImageMagick"""
+    
+    # Check if pdflatex is available
+    try:
+        subprocess.run(['pdflatex', '--version'], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"   ⚠ pdflatex not found - skipping TikZ conversion")
+        print(f"      Install MacTeX: brew install --cask mactex")
+        return False
+    
+    # Check for pdf2svg or ImageMagick convert
+    has_pdf2svg = False
+    has_imagemagick = False
+    
+    try:
+        subprocess.run(['pdf2svg'], capture_output=True)
+        has_pdf2svg = True
+    except FileNotFoundError:
+        pass
+    
+    try:
+        result = subprocess.run(['convert', '--version'], capture_output=True)
+        if b'ImageMagick' in result.stdout:
+            has_imagemagick = True
+    except FileNotFoundError:
+        pass
+    
+    if not has_pdf2svg and not has_imagemagick:
+        print(f"   ⚠ Neither pdf2svg nor ImageMagick found - skipping TikZ conversion")
+        print(f"      Install with: brew install pdf2svg  OR  brew install imagemagick")
+        return False
+    
+    # Create a standalone LaTeX document with the TikZ code
+    standalone_doc = r'''\documentclass[tikz,border=2pt]{standalone}
+\usepackage{tikz}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usetikzlibrary{arrows,arrows.meta,positioning,shapes,calc}
+
+% Custom macros from main_pro.tex
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\C}{\mathbb{C}}
+
+% Vector commands
+\newcommand{\va}{\mathbf{a}}
+\newcommand{\vb}{\mathbf{b}}
+\newcommand{\vc}{\mathbf{c}}
+\newcommand{\vd}{\mathbf{d}}
+\newcommand{\ve}{\mathbf{e}}
+\newcommand{\vf}{\mathbf{f}}
+\newcommand{\vg}{\mathbf{g}}
+\newcommand{\vh}{\mathbf{h}}
+\newcommand{\vi}{\mathbf{i}}
+\newcommand{\vj}{\mathbf{j}}
+\newcommand{\vk}{\mathbf{k}}
+\newcommand{\vl}{\mathbf{l}}
+\newcommand{\vm}{\mathbf{m}}
+\newcommand{\vn}{\mathbf{n}}
+\newcommand{\vo}{\mathbf{o}}
+\newcommand{\vp}{\mathbf{p}}
+\newcommand{\vq}{\mathbf{q}}
+\newcommand{\vr}{\mathbf{r}}
+\newcommand{\vs}{\mathbf{s}}
+\newcommand{\vt}{\mathbf{t}}
+\newcommand{\vu}{\mathbf{u}}
+\newcommand{\vv}{\mathbf{v}}
+\newcommand{\vw}{\mathbf{w}}
+\newcommand{\vx}{\mathbf{x}}
+\newcommand{\vy}{\mathbf{y}}
+\newcommand{\vz}{\mathbf{z}}
+
+% Matrix commands
+\newcommand{\mA}{\mathbf{A}}
+\newcommand{\mB}{\mathbf{B}}
+\newcommand{\mC}{\mathbf{C}}
+\newcommand{\mD}{\mathbf{D}}
+\newcommand{\mE}{\mathbf{E}}
+\newcommand{\mF}{\mathbf{F}}
+\newcommand{\mG}{\mathbf{G}}
+\newcommand{\mH}{\mathbf{H}}
+\newcommand{\mI}{\mathbf{I}}
+\newcommand{\mJ}{\mathbf{J}}
+\newcommand{\mK}{\mathbf{K}}
+\newcommand{\mL}{\mathbf{L}}
+\newcommand{\mM}{\mathbf{M}}
+\newcommand{\mN}{\mathbf{N}}
+\newcommand{\mO}{\mathbf{O}}
+\newcommand{\mP}{\mathbf{P}}
+\newcommand{\mQ}{\mathbf{Q}}
+\newcommand{\mR}{\mathbf{R}}
+\newcommand{\mS}{\mathbf{S}}
+\newcommand{\mT}{\mathbf{T}}
+\newcommand{\mU}{\mathbf{U}}
+\newcommand{\mV}{\mathbf{V}}
+\newcommand{\mW}{\mathbf{W}}
+\newcommand{\mX}{\mathbf{X}}
+\newcommand{\mY}{\mathbf{Y}}
+\newcommand{\mZ}{\mathbf{Z}}
+
+\begin{document}
+''' + tikz_code + r'''
+\end{document}
+'''
+    
+    # Create temporary directory for compilation
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        tex_file = tmpdir / f"{diagram_hash}.tex"
+        pdf_file = tmpdir / f"{diagram_hash}.pdf"
+        
+        # Write the standalone document
+        with open(tex_file, 'w', encoding='utf-8') as f:
+            f.write(standalone_doc)
+        
+        try:
+            # Compile to PDF
+            result = subprocess.run(
+                ['pdflatex', '-interaction=nonstopmode', '-halt-on-error', tex_file.name],
+                cwd=tmpdir,
+                capture_output=True,
+                timeout=30
+            )
+            
+            if result.returncode != 0 or not pdf_file.exists():
+                print(f"   ⚠ Failed to compile TikZ diagram {diagram_hash}")
+                # Print error output for debugging
+                if result.stderr:
+                    error_lines = result.stderr.decode('utf-8', errors='ignore').split('\n')
+                    # Print last few lines of error
+                    for line in error_lines[-5:]:
+                        if line.strip():
+                            print(f"      {line.strip()}")
+                return False
+            
+            # Convert PDF to SVG using available tool
+            if has_pdf2svg:
+                result = subprocess.run(
+                    ['pdf2svg', pdf_file.name, output_path.name],
+                    cwd=tmpdir,
+                    capture_output=True,
+                    timeout=30
+                )
+            else:  # Use ImageMagick
+                result = subprocess.run(
+                    ['convert', '-density', '300', pdf_file.name, output_path.name],
+                    cwd=tmpdir,
+                    capture_output=True,
+                    timeout=30
+                )
+            
+            if result.returncode != 0:
+                print(f"   ⚠ Failed to convert PDF to SVG for {diagram_hash}")
+                return False
+            
+            # Move the SVG to the output directory
+            svg_file = tmpdir / output_path.name
+            if svg_file.exists():
+                svg_file.rename(output_path)
+                return True
+            else:
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"   ⚠ Timeout while processing TikZ diagram {diagram_hash}")
+            return False
+        except Exception as e:
+            print(f"   ⚠ Error processing TikZ diagram {diagram_hash}: {e}")
+            return False
+
+def process_tikz_diagrams(latex_content, chapter_name, output_dirs):
+    """Extract and convert all TikZ diagrams in the content, return modified content"""
+    
+    # Extract all TikZ diagrams
+    diagrams = extract_tikz_diagrams(latex_content, chapter_name)
+    
+    if not diagrams:
+        return latex_content
+    
+    print(f"   → Found {len(diagrams)} TikZ diagram(s)")
+    
+    # Create diagrams directory in each output location
+    for output_dir in output_dirs:
+        diagrams_dir = output_dir / "diagrams"
+        diagrams_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Convert each diagram
+    converted_count = 0
+    for tikz_code, diagram_hash in diagrams:
+        svg_filename = f"{chapter_name}_{diagram_hash}.svg"
+        
+        # Convert to SVG (use first output dir for conversion)
+        primary_output = output_dirs[0] / "diagrams" / svg_filename
+        
+        if convert_tikz_to_svg(tikz_code, primary_output, chapter_name, diagram_hash):
+            converted_count += 1
+            
+            # Copy to other output directories
+            for output_dir in output_dirs[1:]:
+                dest = output_dir / "diagrams" / svg_filename
+                if primary_output.exists():
+                    import shutil
+                    shutil.copy2(primary_output, dest)
+            
+            # Replace TikZ code with SVG reference in the LaTeX content
+            # Wrap in figure environment if not already
+            svg_html = f'<div class="tikz-diagram"><img src="diagrams/{svg_filename}" alt="TikZ Diagram" /></div>'
+            
+            # Replace the tikzpicture with a placeholder that will be converted to HTML
+            placeholder = f"%%%TIKZ_SVG:{svg_filename}%%%"
+            latex_content = latex_content.replace(tikz_code, placeholder)
+    
+    if converted_count > 0:
+        print(f"   ✓ Converted {converted_count}/{len(diagrams)} TikZ diagram(s) to SVG")
+    
+    return latex_content
+
 def read_latex_file(filepath):
     """Read LaTeX file content"""
     # Handle both relative and absolute paths
@@ -69,6 +306,62 @@ def convert_latex_to_html(latex_content):
         return ""
     
     html = latex_content
+    
+    # Convert TikZ SVG placeholders to HTML img tags
+    html = re.sub(
+        r'%%%TIKZ_SVG:([^%]+)%%%',
+        r'<div class="tikz-diagram"><img src="diagrams/\1" alt="TikZ Diagram" /></div>',
+        html
+    )
+    
+    # Convert figure environments
+    # Handle figure with caption and label
+    def convert_figure(match):
+        """Convert LaTeX figure environment to HTML"""
+        content = match.group(1)
+        
+        # Extract caption if present - handle nested braces
+        caption = ''
+        caption_start = content.find('\\caption{')
+        if caption_start != -1:
+            # Find matching closing brace
+            brace_count = 0
+            i = caption_start + len('\\caption{')
+            start_pos = i
+            while i < len(content):
+                if content[i] == '{':
+                    brace_count += 1
+                elif content[i] == '}':
+                    if brace_count == 0:
+                        caption = content[start_pos:i]
+                        break
+                    brace_count -= 1
+                i += 1
+        
+        # Remove caption and label commands from content
+        if caption:
+            content = content.replace(f'\\caption{{{caption}}}', '')
+        content = re.sub(r'\\label\{[^}]+\}', '', content)
+        
+        # Remove \centering command
+        content = re.sub(r'\\centering\s*', '', content)
+        
+        # Clean up extra whitespace
+        content = content.strip()
+        
+        # Build HTML figure
+        if caption:
+            return f'<figure>\n{content}\n<figcaption>{caption}</figcaption>\n</figure>'
+        else:
+            return f'<figure>\n{content}\n</figure>'
+    
+    # Match figure environments (with optional positioning like [h], [htbp], etc.)
+    html = re.sub(
+        r'\\begin\{figure\}(?:\[[^\]]*\])?\s*(.*?)\\end\{figure\}',
+        convert_figure,
+        html,
+        flags=re.DOTALL
+    )
     
     # Build a label-to-number mapping for exercises
     label_map = {}
@@ -364,8 +657,8 @@ def convert_latex_to_html(latex_content):
         part = part.strip()
         if not part:
             continue
-        # Check if it's a block element (starts with <h, <div, <ul, <ol, <pre, <table) or a placeholder
-        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote)', part) or '___PRE_BLOCK_' in part:
+        # Check if it's a block element (starts with <h, <div, <ul, <ol, <pre, <table, <figure) or a placeholder
+        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote|figure)', part) or '___PRE_BLOCK_' in part:
             wrapped_parts.append(part)
         else:
             wrapped_parts.append(f'<p>{part}</p>')
@@ -386,6 +679,8 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'(</div>)\s*</p>', r'\1', html)
     html = re.sub(r'<p>\s*(<ul>|<ol>)', r'\1', html)
     html = re.sub(r'(</ul>|</ol>)\s*</p>', r'\1', html)
+    html = re.sub(r'<p>\s*(<figure)', r'\1', html)
+    html = re.sub(r'(</figure>)\s*</p>', r'\1', html)
     
     return html
 
@@ -402,6 +697,9 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
     
     if not latex_content:
         return
+    
+    # Process TikZ diagrams before converting to HTML
+    latex_content = process_tikz_diagrams(latex_content, chapter_file, output_dirs)
     
     html_content = convert_latex_to_html(latex_content)
     

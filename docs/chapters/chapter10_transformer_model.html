@@ -205,6 +205,12 @@ $$
 with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \times d_{\text{model}}}$, and typically $d_{ff} = 4 \times d_{\text{model}}$.
 </div>
 
+<figure>
+<div class="tikz-diagram"><img src="diagrams/chapter10_transformer_model_9ded81b74344.svg" alt="TikZ Diagram" /></div>
+<figcaption>Transformer encoder layer architecture showing the two sub-layers with residual connections. The input flows through multi-head self-attention, then through a feed-forward network, with residual connections (red dashed arrows) bypassing each sub-layer. Layer normalization is applied after adding the residual. This structure maintains constant dimensions ($n \times d_{\text{model}}$) throughout, enabling easy stacking of multiple layers. The residual connections provide direct gradient pathways, crucial for training deep transformers.</figcaption>
+</figure>
+\end{figure}
+
 <p>The dimension tracking through an encoder layer reveals important properties about memory consumption and computational cost. The input $\mX \in \R^{B \times n \times d_{\text{model}}}$ is first projected to queries, keys, and values, each with shape $\R^{B \times n \times d_{\text{model}}}$. For multi-head attention with $h$ heads, these are reshaped to $\R^{B \times h \times n \times d_k}$ where $d_k = d_{\text{model}}/h$. The attention scores form a matrix $\R^{B \times h \times n \times n}$, and this quadratic term in sequence length is what dominates memory consumption for long sequences. After attention, the output is projected back to $\R^{B \times n \times d_{\text{model}}}$, added to the residual, and normalized.</p>
 
 <p>The feed-forward network then expands each position's representation from $d_{\text{model}}$ to $d_{ff}$ dimensions before projecting back down. For BERT-base with $d_{\text{model}} = 768$ and $d_{ff} = 3072$, this means each position's representation temporarily expands to 4× its original size. This expansion creates a bottleneck that forces the model to learn compressed representations, similar to the hidden layer in an autoencoder. The intermediate activations $\R^{B \times n \times d_{ff}}$ consume significant memory during training—for batch size 32 and sequence length 512, this amounts to $32 \times 512 \times 3072 \times 4 = 201$ MB per layer in FP32, and with 12 layers in BERT-base, the feed-forward activations alone consume 2.4 GB of GPU memory.</p>

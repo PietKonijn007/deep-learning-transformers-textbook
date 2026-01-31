@@ -259,6 +259,42 @@ $$
     <li><strong>Crossover point</strong>: When $8nd_{\text{model}}^2 \approx 4n^2d_{\text{model}}$, solving gives $n \approx 2d_{\text{model}}$. For $d=768$, this occurs around $n \approx 1536$.
 </ul>
 
+<figure>
+\begin{tikzpicture}[
+  node/.style={rectangle, draw, minimum width=2.5cm, minimum height=1cm, font=\small},
+  arrow/.style={->, thick}
+]
+
+<p>\node[node, fill=blue!10] (X) at (0,0) {$\mX$ \\ $n \times d$};
+\node[node, fill=green!10] (QKV) at (3,0) {QKV Proj \\ $O(nd^2)$};
+\node[node, fill=red!10] (Attn) at (6,0) {$\mQ\mK^\top$ \\ $O(n^2d)$};
+\node[node, fill=green!10] (AV) at (9,0) {$\mA\mV$ \\ $O(n^2d)$};
+\node[node, fill=blue!10] (Out) at (12,0) {Output \\ $n \times d$};</p>
+
+<p>\draw[arrow] (X) -- (QKV);
+\draw[arrow] (QKV) -- (Attn);
+\draw[arrow] (Attn) -- (AV);
+\draw[arrow] (AV) -- (Out);</p>
+
+<p>\node[node, fill=blue!10] (X2) at (0,-3) {$\mX$ \\ $n \times d$};
+\node[node, fill=green!10] (W1) at (4,-3) {$\mW_1$ \\ $O(nd_{ff}d)$};
+\node[node, fill=orange!10] (Act) at (8,-3) {GELU \\ $O(nd_{ff})$};
+\node[node, fill=green!10] (W2) at (12,-3) {$\mW_2$ \\ $O(nd_{ff}d)$};
+\node[node, fill=blue!10] (Out2) at (16,-3) {Output \\ $n \times d$};</p>
+
+<p>\draw[arrow] (X2) -- (W1);
+\draw[arrow] (W1) -- (Act);
+\draw[arrow] (Act) -- (W2);
+\draw[arrow] (W2) -- (Out2);</p>
+
+<p>Short sequences ($n < 2d$): FFN dominates \\
+Long sequences ($n > 2d$): Attention dominates
+};</p>
+
+<p>\end{tikzpicture}
+<figcaption>Computational flow comparison between self-attention and feed-forward network. Green boxes show matrix multiplications (compute-intensive), red shows the quadratic attention bottleneck, orange shows element-wise operations. For typical sequence lengths, FFN requires roughly 2× the FLOPs of attention.</figcaption>
+</figure>
+
 <p>This analysis explains why efficient attention mechanisms (Chapter 16) focus on reducing the $O(n^2)$ term for long-context applications.</p>
 
 <h3>Feed-Forward Network Complexity</h3>

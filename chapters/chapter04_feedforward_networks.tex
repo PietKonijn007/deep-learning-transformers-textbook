@@ -63,6 +63,63 @@ An L-layer MLP transforms input through layers:
 where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and $\sigma^{(\ell)}$ is the activation function.
 \end{definition}
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    neuron/.style={circle, draw, minimum size=0.7cm, font=\footnotesize},
+    arrow/.style={->, >=stealth},
+    layer/.style={font=\small}
+]
+
+% Input layer
+\foreach \i in {1,2,3} {
+    \node[neuron] (x\i) at (0, -\i*1.2) {$x_{\i}$};
+}
+% Layer labels at fixed coordinates
+\node[layer] at (0, 0.3) {Input};
+\node[font=\footnotesize] at (0, -4.2) {$\R^3$};
+
+% Hidden layer
+\foreach \i in {1,2,3,4} {
+    \node[neuron, fill=blue!10] (h\i) at (3, -\i*1) {$h_{\i}$};
+}
+\node[layer] at (3, 0.3) {Hidden};
+\node[font=\footnotesize] at (3, -4.5) {$\R^4$};
+
+% Output layer
+\foreach \i in {1,2} {
+    \node[neuron, fill=green!10] (y\i) at (6, -\i*1.5-0.5) {$y_{\i}$};
+}
+\node[layer] at (6, 0.3) {Output};
+\node[font=\footnotesize] at (6, -4.2) {$\R^2$};
+
+% Connections input to hidden (fully connected)
+\foreach \i in {1,2,3} {
+    \foreach \j in {1,2,3,4} {
+        \draw[arrow, gray!50] (x\i) -- (h\j);
+    }
+}
+
+% Connections hidden to output (fully connected)
+\foreach \i in {1,2,3,4} {
+    \foreach \j in {1,2} {
+        \draw[arrow, gray!50] (h\i) -- (y\j);
+    }
+}
+
+% Highlight one path
+\draw[arrow, red, very thick] (x1) -- (h2);
+\draw[arrow, red, very thick] (h2) -- (y1);
+
+% Weight labels at fixed coordinates
+\node[font=\tiny] at (1.5, -1.5) {$\mW^{(1)}$};
+\node[font=\tiny] at (4.5, -1.5) {$\mW^{(2)}$};
+
+\end{tikzpicture}
+\caption{Multi-layer perceptron (MLP) computational graph showing fully-connected layers. Each neuron in the hidden layer receives input from \textbf{all} neurons in the input layer (12 connections total), and each output neuron receives input from all hidden neurons (8 connections). The red path highlights one example: $x_1 \to h_2 \to y_1$. This dense connectivity enables MLPs to learn complex non-linear functions.}
+\label{fig:mlp_architecture}
+\end{figure}
+
 \begin{example}[3-Layer MLP for MNIST]
 \label{ex:mnist_mlp}
 Architecture for MNIST digit classification:

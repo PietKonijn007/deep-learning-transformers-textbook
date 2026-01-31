@@ -34,6 +34,51 @@ where:
 \end{itemize}
 \end{definition}
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    node/.style={circle, draw, minimum size=1cm, font=\small},
+    input/.style={rectangle, draw, minimum size=0.6cm, font=\small},
+    arrow/.style={->, >=stealth, thick},
+    recurrent/.style={->, >=stealth, red!70, very thick}
+]
+
+% Hidden states
+\node[node] (h0) at (0,0) {$\vh_0$};
+\node[node] (h1) at (3,0) {$\vh_1$};
+\node[node] (h2) at (6,0) {$\vh_2$};
+\node[node] (h3) at (9,0) {$\vh_3$};
+
+% Inputs
+\node[input] (x1) at (3,1.5) {$\vx_1$};
+\node[input] (x2) at (6,1.5) {$\vx_2$};
+\node[input] (x3) at (9,1.5) {$\vx_3$};
+
+% Outputs
+\node[input] (y1) at (3,-1.5) {$\vy_1$};
+\node[input] (y2) at (6,-1.5) {$\vy_2$};
+\node[input] (y3) at (9,-1.5) {$\vy_3$};
+
+% Recurrent connections (horizontal)
+\draw[recurrent] (h0) -- (h1);
+\draw[recurrent] (h1) -- (h2);
+\draw[recurrent] (h2) -- (h3);
+
+% Input connections (vertical)
+\draw[arrow, blue!70] (x1) -- (h1);
+\draw[arrow, blue!70] (x2) -- (h2);
+\draw[arrow, blue!70] (x3) -- (h3);
+
+% Output connections (vertical)
+\draw[arrow] (h1) -- (y1);
+\draw[arrow] (h2) -- (y2);
+\draw[arrow] (h3) -- (y3);
+
+\end{tikzpicture}
+\caption{RNN unrolled through time showing sequential dependencies. Each hidden state $\vh_t$ depends on both the current input $\vx_t$ (blue arrows) and the previous hidden state $\vh_{t-1}$ (red arrows). The same weight matrices are shared across all time steps. This sequential structure prevents parallelization: $\vh_2$ cannot be computed until $\vh_1$ is complete.}
+\label{fig:rnn_unrolled}
+\end{figure}
+
 \begin{example}[RNN Forward Pass]
 \label{ex:rnn_forward}
 Character-level language model with vocabulary size $V=5$, hidden size $h=3$.
@@ -134,6 +179,67 @@ where $\sigma$ is sigmoid, $\odot$ is element-wise multiplication, and $[\cdot, 
     \item \textbf{Input gate $\vi_t$:} What new information to store
     \item \textbf{Output gate $\vo_t$:} What to output from cell state
 \end{itemize}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    gate/.style={rectangle, draw, fill=blue!20, minimum width=1.2cm, minimum height=0.8cm, font=\small},
+    operation/.style={circle, draw, fill=green!20, minimum size=0.8cm, font=\small},
+    state/.style={rectangle, draw, fill=yellow!20, minimum width=2cm, minimum height=0.6cm, font=\small},
+    arrow/.style={->, >=stealth, thick},
+    cell_flow/.style={->, >=stealth, very thick, red!70}
+]
+
+% Inputs at top
+\node[state] (input) at (0,4) {$[\vh_{t-1}, \vx_t]$};
+
+% Four gates
+\node[gate] (forget) at (-3,2.5) {$\sigma$};
+\node[gate] (input_gate) at (-1,2.5) {$\sigma$};
+\node[gate] (candidate) at (1,2.5) {$\tanh$};
+\node[gate] (output_gate) at (3,2.5) {$\sigma$};
+
+% Cell state flow (horizontal)
+\node[state] (c_prev) at (-4,0) {$\mathbf{c}_{t-1}$};
+\node[state] (c_curr) at (2,0) {$\mathbf{c}_t$};
+
+% Operations
+\node[operation] (mult1) at (-3,0) {$\odot$};
+\node[operation] (mult2) at (1,0) {$\odot$};
+\node[operation] (add) at (-1,0) {$+$};
+\node[operation] (tanh_c) at (2,-1.5) {$\tanh$};
+\node[operation] (mult3) at (3,-1.5) {$\odot$};
+
+% Hidden state output
+\node[state] (h_out) at (3,-3) {$\vh_t$};
+
+% Connections from input to gates
+\draw[arrow] (input) -- (-3,3.2);
+\draw[arrow] (input) -- (-1,3.2);
+\draw[arrow] (input) -- (1,3.2);
+\draw[arrow] (input) -- (3,3.2);
+
+% Gate outputs to operations
+\draw[arrow] (forget) -- (mult1);
+\draw[arrow] (input_gate) -- (mult2);
+\draw[arrow] (candidate) -- (mult2);
+\draw[arrow] (output_gate) -- (mult3);
+
+% Cell state flow (the "highway")
+\draw[cell_flow] (c_prev) -- (mult1);
+\draw[cell_flow] (mult1) -- (add);
+\draw[cell_flow] (add) -- (c_curr);
+\draw[arrow] (mult2) -- (add);
+
+% Cell to output
+\draw[arrow] (c_curr) -- (tanh_c);
+\draw[arrow] (tanh_c) -- (mult3);
+\draw[arrow] (mult3) -- (h_out);
+
+\end{tikzpicture}
+\caption{LSTM cell internal structure showing the four gates and cell state flow. The cell state $\mathbf{c}_t$ (red path) provides an additive "highway" for gradient flow, addressing the vanishing gradient problem. The forget gate $\vf_t$ controls what to keep from $\mathbf{c}_{t-1}$, the input gate $\vi_t$ and candidate $\tilde{\mathbf{c}}_t$ control what new information to add, and the output gate $\vo_t$ controls what to output. All gates receive the same input $[\vh_{t-1}, \vx_t]$ but learn different transformations.}
+\label{fig:lstm_gates}
+\end{figure}
 
 \begin{example}[LSTM Parameter Count]
 \label{ex:lstm_params}

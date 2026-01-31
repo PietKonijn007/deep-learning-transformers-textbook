@@ -233,6 +233,48 @@ The complete formula in one line:
 \end{equation}
 \end{definition}
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    matrix/.style={rectangle, draw, fill=blue!15, minimum width=1.5cm, minimum height=1cm, font=\small},
+    operation/.style={rectangle, draw, fill=green!15, minimum width=1.8cm, minimum height=0.7cm, font=\small},
+    arrow/.style={->, >=stealth, thick}
+]
+
+% Queries, Keys, Values
+\node[matrix] (Q) at (0,0) {$\mQ$};
+\node[matrix] (K) at (2.5,0) {$\mK$};
+\node[matrix] (V) at (5,0) {$\mV$};
+
+% QK^T operation
+\node[operation] (QKT) at (1.25,-2.5) {$\mQ\mK^\top$};
+
+% Scale
+\node[operation] (scale) at (1.25,-4) {Scale};
+
+% Softmax
+\node[operation] (softmax) at (1.25,-5.5) {Softmax};
+
+% Multiply by V
+\node[operation] (AV) at (3.5,-7) {$\mA\mV$};
+
+% Output
+\node[matrix] (output) at (3.5,-8.5) {Output};
+
+% Arrows
+\draw[arrow] (Q) -- (QKT);
+\draw[arrow] (K) -- (QKT);
+\draw[arrow] (QKT) -- (scale);
+\draw[arrow] (scale) -- (softmax);
+\draw[arrow] (softmax) -- (AV);
+\draw[arrow] (V) -- (AV);
+\draw[arrow] (AV) -- (output);
+
+\end{tikzpicture}
+\caption{Scaled dot-product attention computational flow. Queries $\mQ$ and keys $\mK$ are combined via matrix multiplication to produce attention scores ($m \times n$ matrix). After scaling and softmax, the attention weights $\mA$ form a probability distribution over keys for each query. These weights are applied to values $\mV$ to produce the final output. Each of the $m$ queries attends to all $n$ keys, creating $m \times n$ attention connections.}
+\label{fig:scaled_dot_product_attention}
+\end{figure}
+
 \subsection{Why Scaling Matters: Variance Analysis}
 
 The scaling factor $1/\sqrt{d_k}$ is not merely a normalization convenience—it is essential for maintaining stable gradients during training. To understand why, we analyze the variance of dot products between queries and keys.

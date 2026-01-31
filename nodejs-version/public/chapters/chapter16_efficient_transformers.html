@@ -209,6 +209,58 @@ where $|\mathcal{S}(i)| = k \ll n$ for all positions $i$. The computational comp
 <div class="example"><strong>Example:</strong> 
 Longformer combines local and global attention to process documents up to 4096 tokens efficiently. All tokens use local attention with window size $w = 512$, allowing each token to attend to 1024 neighboring tokens (512 on each side). Additionally, task-specific tokens such as [CLS] for classification or question tokens for question answering are designated as global tokens that attend to and are attended by all positions.
 
+<figure>
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
+  global/.style={circle, draw, minimum size=0.6cm, font=\footnotesize, fill=yellow!30},
+  arrow/.style={->, thick},
+  local/.style={->, thick, blue},
+  globalconn/.style={->, thick, red}
+]
+
+<p>\node[global] (cls) at (0,0) {CLS};
+\node[node] (t1) at (1.5,0) {$t_1$};
+\node[node] (t2) at (3,0) {$t_2$};
+\node[node] (t3) at (4.5,0) {$t_3$};
+\node[node] (t4) at (6,0) {$t_4$};
+\node[node] (t5) at (7.5,0) {$t_5$};
+\node[node] (t6) at (9,0) {$t_6$};</p>
+
+<p>\draw[local] (t1) -- (t2);
+\draw[local] (t2) -- (t3);
+\draw[local] (t3) -- (t4);
+\draw[local] (t4) -- (t5);
+\draw[local] (t5) -- (t6);</p>
+
+<p>\draw[local] (t2) to[bend left=20] (t1);
+\draw[local] (t3) to[bend left=20] (t2);
+\draw[local] (t4) to[bend left=20] (t3);
+\draw[local] (t5) to[bend left=20] (t4);
+\draw[local] (t6) to[bend left=20] (t5);</p>
+
+<p>\draw[globalconn] (cls) to[bend left=15] (t1);
+\draw[globalconn] (cls) to[bend left=10] (t2);
+\draw[globalconn] (cls) to[bend left=5] (t3);
+\draw[globalconn] (cls) to[bend right=5] (t4);
+\draw[globalconn] (cls) to[bend right=10] (t5);
+\draw[globalconn] (cls) to[bend right=15] (t6);</p>
+
+<p>\draw[globalconn] (t1) to[bend right=15] (cls);
+\draw[globalconn] (t2) to[bend right=10] (cls);
+\draw[globalconn] (t3) to[bend right=5] (cls);
+\draw[globalconn] (t4) to[bend left=5] (cls);
+\draw[globalconn] (t5) to[bend left=10] (cls);
+\draw[globalconn] (t6) to[bend left=15] (cls);</p>
+
+<p>\textcolor{blue}{Blue}: Local window ($w=512$) \\
+\textcolor{red}{Red}: Global attention \\
+\textcolor{yellow!80!black}{Yellow}: Global token
+};</p>
+
+<p>\end{tikzpicture}
+<figcaption>Longformer attention pattern combining local sliding window (blue) and global attention (red). Regular tokens attend to neighbors within window $w$, while global tokens (yellow) attend to and are attended by all positions, enabling long-range information flow.</figcaption>
+</figure>
+
 <p>For a sequence of length $n = 4096$ with window $w = 512$ and $g = 2$ global tokens, the total number of attention connections is computed as follows. Each of the $n - g = 4094$ regular tokens attends to $2w = 1024$ local tokens plus $g = 2$ global tokens, contributing $(n-g) \times (2w + g) = 4094 \times 1026 \approx 4.2$ million connections. Each of the $g = 2$ global tokens attends to all $n = 4096$ tokens, contributing $g \times n = 8192$ connections. The total is approximately 4.2 million connections compared to $n^2 = 16.8$ million for full attention—a 4× reduction.</p>
 
 <p>The memory savings are equally significant. For a single attention head in FP32, Longformer requires approximately $(4094 \times 1026 + 2 \times 4096) \times 4 = 16.8$ MB compared to 67 MB for full attention. With 12 heads and 12 layers, this reduces total attention memory from 9.6 GB to 2.4 GB, enabling processing of long documents on GPUs with limited memory. On an NVIDIA A100 GPU, Longformer processes 4096-token sequences in approximately 18 milliseconds per layer compared to 98 milliseconds for full attention, a 5.4× speedup.
@@ -225,6 +277,44 @@ BigBird attention combines three sparse patterns for each query position $i$:
     <li><strong>Window attention:</strong> Each query attends to $w$ neighboring keys on each side, forming a local window $\mathcal{W}(i) = \{j : |i-j| \leq w\}$.
     <li><strong>Global attention:</strong> A set of $g$ designated global tokens attend to all positions and are attended by all positions.
 </ol>
+
+<figure>
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
+  global/.style={circle, draw, minimum size=0.6cm, font=\footnotesize, fill=yellow!30},
+  arrow/.style={->, thick},
+  local/.style={->, thick, blue},
+  random/.style={->, thick, green!60!black, dashed},
+  globalconn/.style={->, thick, red}
+]
+
+<p>\node[node, fill=orange!30] (focus) at (4.5,0) {$t_i$};</p>
+
+<p>\node[global] (cls) at (0,0) {CLS};
+\node[node] (t1) at (1.5,0) {$t_1$};
+\node[node] (t2) at (3,0) {$t_2$};
+\node[node] (t3) at (6,0) {$t_3$};
+\node[node] (t4) at (7.5,0) {$t_4$};
+\node[node] (t5) at (9,0) {$t_5$};</p>
+
+<p>\draw[local] (focus) -- (t2);
+\draw[local] (focus) -- (t3);</p>
+
+<p>\draw[random] (focus) to[bend left=20] (t1);
+\draw[random] (focus) to[bend right=20] (t5);</p>
+
+<p>\draw[globalconn] (focus) to[bend right=30] (cls);
+\draw[globalconn] (cls) to[bend left=30] (focus);</p>
+
+<p>\textcolor{blue}{Blue}: Local window \\
+\textcolor{green!60!black}{Green dashed}: Random \\
+\textcolor{red}{Red}: Global \\
+\textcolor{orange}{Orange}: Query token
+};</p>
+
+<p>\end{tikzpicture}
+<figcaption>BigBird attention pattern for a single query token $t_i$ (orange). Combines local window (blue), random connections (green dashed), and global tokens (red). This hybrid pattern provides both local context and long-range connectivity while maintaining $O(n)$ complexity.</figcaption>
+</figure>
 
 <p>The total attention set for a regular token at position $i$ is $\mathcal{S}(i) = \mathcal{W}(i) \cup \mathcal{R}(i) \cup \mathcal{G}$, where $\mathcal{G}$ is the set of global token positions. The total number of connections per query is $|\mathcal{S}(i)| = 2w + r + g$, giving computational complexity $O(n(2w + r + g)d) = O(n)$ when $w$, $r$, and $g$ are constants.
 </div>

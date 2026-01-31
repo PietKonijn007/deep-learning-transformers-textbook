@@ -165,6 +165,11 @@ where:
 </ul>
 </div>
 
+<figure>
+<div class="tikz-diagram"><img src="diagrams/chapter06_recurrent_networks_b260b1fb6b03.svg" alt="TikZ Diagram" /></div>
+<figcaption>RNN unrolled through time showing sequential dependencies. Each hidden state $\vh_t$ depends on both the current input $\vx_t$ (blue arrows) and the previous hidden state $\vh_{t-1}$ (red arrows). The same weight matrices are shared across all time steps. This sequential structure prevents parallelization: $\vh_2$ cannot be computed until $\vh_1$ is complete.</figcaption>
+</figure>
+
 <div class="example"><strong>Example:</strong> 
 Character-level language model with vocabulary size $V=5$, hidden size $h=3$.
 
@@ -271,6 +276,11 @@ where $\sigma$ is sigmoid, $\odot$ is element-wise multiplication, and $[\cdot, 
     <li><strong>Input gate $\vi_t$:</strong> What new information to store
     <li><strong>Output gate $\vo_t$:</strong> What to output from cell state
 </ul>
+
+<figure>
+<div class="tikz-diagram"><img src="diagrams/chapter06_recurrent_networks_70319ea06696.svg" alt="TikZ Diagram" /></div>
+<figcaption>LSTM cell internal structure showing the four gates and cell state flow. The cell state $\mathbf{c}_t$ (red path) provides an additive "highway" for gradient flow, addressing the vanishing gradient problem. The forget gate $\vf_t$ controls what to keep from $\mathbf{c}_{t-1}$, the input gate $\vi_t$ and candidate $\tilde{\mathbf{c}}_t$ control what new information to add, and the output gate $\vo_t$ controls what to output. All gates receive the same input $[\vh_{t-1}, \vx_t]$ but learn different transformations.</figcaption>
+</figure>
 
 <div class="example"><strong>Example:</strong> 
 For input dimension $d=512$ and hidden dimension $h=1024$:

@@ -31,6 +31,57 @@ where $\mW^Q, \mW^K \in \R^{d \times d_k}$ and $\mW^V \in \R^{d \times d_v}$.
 
 Self-attention exhibits several fundamental properties that distinguish it from recurrent architectures. The mechanism is permutation equivariant, meaning that if the input sequence order changes, the output changes correspondingly—there is no inherent notion of sequence order without positional encodings. Every position in the sequence attends to every other position through all-to-all connections, creating direct paths between any pair of tokens regardless of their distance in the sequence. This contrasts sharply with RNNs, where information must propagate sequentially through intermediate hidden states, potentially degrading over long distances.
 
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    node/.style={circle, draw, minimum size=0.8cm, font=\small},
+    arrow/.style={->, >=stealth, thick},
+    attention/.style={->, >=stealth, blue!60, thick}
+]
+
+% Input nodes
+\node[node] (x1) at (0,0) {$\vx_1$};
+\node[node] (x2) at (0,-2) {$\vx_2$};
+\node[node] (x3) at (0,-4) {$\vx_3$};
+
+% Output nodes
+\node[node] (o1) at (6,0) {$\vo_1$};
+\node[node] (o2) at (6,-2) {$\vo_2$};
+\node[node] (o3) at (6,-4) {$\vo_3$};
+
+% All-to-all attention connections
+\draw[attention] (x1) -- (o1);
+\draw[attention] (x1) -- (o2);
+\draw[attention] (x1) -- (o3);
+
+\draw[attention] (x2) -- (o1);
+\draw[attention] (x2) -- (o2);
+\draw[attention] (x2) -- (o3);
+
+\draw[attention] (x3) -- (o1);
+\draw[attention] (x3) -- (o2);
+\draw[attention] (x3) -- (o3);
+
+% Labels
+
+% Comparison with RNN (smaller, on the side)
+\begin{scope}[shift={(10,-2)}]
+    \node[node, scale=0.7] (h0) at (0,0) {$\vh_0$};
+    \node[node, scale=0.7] (h1) at (1.5,0) {$\vh_1$};
+    \node[node, scale=0.7] (h2) at (3,0) {$\vh_2$};
+    \node[node, scale=0.7] (h3) at (4.5,0) {$\vh_3$};
+    
+    \draw[arrow, red!60] (h0) -- (h1);
+    \draw[arrow, red!60] (h1) -- (h2);
+    \draw[arrow, red!60] (h2) -- (h3);
+    
+\end{scope}
+
+\end{tikzpicture}
+\caption{Self-attention connectivity pattern showing all-to-all connections (blue) versus RNN's sequential connections (red). Each output position $\vo_i$ receives information from all input positions $\vx_1, \vx_2, \vx_3$ simultaneously, enabling parallel computation. In contrast, RNN hidden states must propagate information sequentially through $\vh_0 \to \vh_1 \to \vh_2 \to \vh_3$.}
+\label{fig:self_attention_connectivity}
+\end{figure}
+
 The parallel computation property is perhaps the most significant advantage for modern hardware. Unlike RNNs which process sequences sequentially due to the recurrence relation $\vh_t = f(\vh_{t-1}, \vx_t)$, self-attention computes all output positions simultaneously. This enables full utilization of GPU parallelism, where thousands of cores can work concurrently on different positions and attention heads. The long-range dependency modeling is direct rather than transitive: position 0 can attend to position 1000 with a single attention operation, whereas an RNN requires 1000 sequential steps, each potentially losing information through the recurrent bottleneck.
 
 \begin{example}[Self-Attention Computation]
@@ -110,6 +161,58 @@ With $h$ attention heads, each with dimension $d_k = d_v = d_{\text{model}}/h$:
 
 where $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)} \in \R^{d_{\text{model}} \times d_k}$ and $\mW^O \in \R^{hd_k \times d_{\text{model}}}$.
 \end{definition}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    box/.style={rectangle, draw, minimum width=2cm, minimum height=0.8cm, font=\small},
+    operation/.style={rectangle, draw, fill=blue!10, minimum width=2cm, minimum height=0.6cm, font=\footnotesize},
+    arrow/.style={->, >=stealth, thick}
+]
+
+% Input
+\node[box] (input) at (0,0) {Input $\mX$};
+
+% Projection to heads
+\node[operation] (proj1) at (-2,-2) {Head 1};
+\node[operation] (proj2) at (0,-2) {Head 2};
+\node[operation] (proj3) at (2,-2) {Head $h$};
+\node at (1,-2) {$\cdots$};
+
+% Attention heads
+\node[box, fill=green!10] (head1) at (-2,-3.5) {Attention};
+\node[box, fill=green!10] (head2) at (0,-3.5) {Attention};
+\node[box, fill=green!10] (head3) at (2,-3.5) {Attention};
+
+% Concatenation
+\node[operation] (concat) at (0,-5) {Concatenate};
+
+% Output projection
+\node[operation] (output_proj) at (0,-6.5) {$\mW^O$};
+
+% Final output
+\node[box] (output) at (0,-8) {Output};
+
+% Arrows
+\draw[arrow] (input) -- (-2,-1.5);
+\draw[arrow] (input) -- (0,-1.5);
+\draw[arrow] (input) -- (2,-1.5);
+
+\draw[arrow] (proj1) -- (head1);
+\draw[arrow] (proj2) -- (head2);
+\draw[arrow] (proj3) -- (head3);
+
+\draw[arrow] (head1) -- (-2,-4.5);
+\draw[arrow] (head2) -- (0,-4.5);
+\draw[arrow] (head3) -- (2,-4.5);
+
+\draw[arrow] (concat) -- (output_proj);
+\draw[arrow] (output_proj) -- (output);
+
+\end{tikzpicture}
+\caption{Multi-head attention architecture. The input is projected into $h$ parallel attention heads, each with dimension $d_k = d_{\text{model}}/h$. Each head independently computes attention with its own learned projections $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)}$. The head outputs are concatenated and projected through $\mW^O$ to produce the final output. This parallel structure allows the model to attend to different representation subspaces simultaneously.}
+\label{fig:multi_head_attention}
+\end{figure}
 
 \begin{example}[BERT-base Multi-Head Attention]
 \label{ex:bert_mha}

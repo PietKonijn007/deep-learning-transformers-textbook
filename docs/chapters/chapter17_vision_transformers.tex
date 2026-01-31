@@ -51,6 +51,61 @@ Image: $224 \times 224 \times 3$ (ImageNet standard)
 
 Patch size: $P = 16$
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  patch/.style={rectangle, draw, minimum size=0.8cm, font=\tiny},
+  node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
+  layer/.style={rectangle, draw, minimum width=3cm, minimum height=0.8cm, font=\small},
+  arrow/.style={->, thick}
+]
+
+% Image grid (simplified 4x4 representation of 14x14 patches)
+\node[font=\small] at (-1,2) {Image};
+\foreach \i in {0,1,2,3} {
+  \foreach \j in {0,1,2,3} {
+    \node[patch, fill=blue!20] (p\i\j) at (\i*0.9, -\j*0.9) {};
+  }
+}
+
+% Flatten and project
+\node[layer, fill=green!10] (proj) at (5,0) {Linear \\ Projection};
+
+% Sequence of embeddings
+\node[font=\small] at (9,2) {Sequence};
+\node[node, fill=yellow!30] (cls) at (9,0.5) {CLS};
+\node[node] (e1) at (9,-0.5) {$e_1$};
+\node[node] (e2) at (9,-1.5) {$e_2$};
+\node[font=\footnotesize] at (9,-2.3) {$\vdots$};
+\node[node] (en) at (9,-3) {$e_N$};
+
+% Arrows
+\draw[arrow] (p00) to[bend left=10] (proj);
+\draw[arrow] (p11) -- (proj);
+\draw[arrow] (p22) to[bend right=10] (proj);
+\draw[arrow] (proj) -- (cls);
+\draw[arrow] (proj) -- (e1);
+\draw[arrow] (proj) -- (e2);
+\draw[arrow] (proj) -- (en);
+
+% Position embeddings
+\node[layer, fill=orange!10] (pos) at (12,-1.5) {+ Position \\ Embeddings};
+\draw[arrow] (cls) to[bend left=10] (pos);
+\draw[arrow] (e1) -- (pos);
+\draw[arrow] (e2) -- (pos);
+\draw[arrow] (en) to[bend right=10] (pos);
+
+% Transformer
+\node[layer, fill=purple!10] (trans) at (15,-1.5) {Transformer \\ Encoder};
+\draw[arrow] (pos) -- (trans);
+
+% Labels
+
+\end{tikzpicture}
+\caption{Vision Transformer patch embedding process. A $224 \times 224$ image is divided into $16 \times 16$ patches (196 total), each patch is flattened and linearly projected to embedding dimension $d$, a CLS token is prepended, position embeddings are added, and the sequence is processed by a standard transformer encoder.}
+\label{fig:vit_patch_embedding}
+\end{figure}
+
 \textbf{Number of patches:}
 \begin{equation}
 N = \frac{224 \times 224}{16^2} = \frac{50176}{256} = 196 \text{ patches}

@@ -75,6 +75,54 @@ BERT-large's parameter distribution follows the same structure but scales signif
 \text{Input} = \text{TokenEmb} + \text{SegmentEmb} + \text{PositionEmb}
 \end{equation}
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=1cm, font=\small},
+  layer/.style={rectangle, draw, minimum width=3cm, minimum height=0.8cm, font=\small},
+  arrow/.style={->, thick},
+  bidir/.style={<->, thick, blue}
+]
+
+% Input tokens
+\node[node] (t1) at (0,0) {$x_1$};
+\node[node] (t2) at (2,0) {$x_2$};
+\node[node] (t3) at (4,0) {$x_3$};
+\node[node] (t4) at (6,0) {$x_4$};
+
+% Bidirectional attention connections
+\draw[bidir] (t1) -- (t2);
+\draw[bidir] (t2) -- (t3);
+\draw[bidir] (t3) -- (t4);
+\draw[bidir] (t1) to[bend left=20] (t3);
+\draw[bidir] (t2) to[bend left=20] (t4);
+\draw[bidir] (t1) to[bend left=30] (t4);
+
+% Output layer
+\node[layer, fill=green!10] (enc) at (3,3) {BERT Encoder (12 layers)};
+\draw[arrow] (t1) -- (enc);
+\draw[arrow] (t2) -- (enc);
+\draw[arrow] (t3) -- (enc);
+\draw[arrow] (t4) -- (enc);
+
+% Output representations
+\node[node, fill=blue!20] (h1) at (0,6) {$h_1$};
+\node[node, fill=blue!20] (h2) at (2,6) {$h_2$};
+\node[node, fill=blue!20] (h3) at (4,6) {$h_3$};
+\node[node, fill=blue!20] (h4) at (6,6) {$h_4$};
+
+\draw[arrow] (enc) -- (h1);
+\draw[arrow] (enc) -- (h2);
+\draw[arrow] (enc) -- (h3);
+\draw[arrow] (enc) -- (h4);
+
+% Labels
+
+\end{tikzpicture}
+\caption{BERT's bidirectional encoder architecture. Blue double-headed arrows show that each token can attend to all other tokens in both directions, enabling rich contextual representations. Each output $h_i$ depends on the entire input sequence.}
+\label{fig:bert_bidirectional_attention}
+\end{figure}
+
 \textbf{Token Embeddings:} WordPiece tokenization, vocabulary $\approx 30{,}000$
 
 \textbf{Segment Embeddings:} Distinguish sentence A vs B (for sentence-pair tasks)

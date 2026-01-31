@@ -59,6 +59,81 @@ T5 uses encoder-decoder transformer with:
 \end{itemize}
 \end{definition}
 
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  node/.style={circle, draw, minimum size=0.8cm, font=\small},
+  layer/.style={rectangle, draw, minimum width=2.5cm, minimum height=0.8cm, font=\small},
+  arrow/.style={->, thick},
+  bidir/.style={<->, thick, blue},
+  causal/.style={->, thick, red},
+  cross/.style={->, thick, green!60!black, dashed}
+]
+
+% Encoder side
+\node[font=\small\bfseries] at (-2,3) {Encoder};
+\node[node] (e1) at (-3,0) {$x_1$};
+\node[node] (e2) at (-1,0) {$x_2$};
+\node[node] (e3) at (1,0) {$x_3$};
+
+% Encoder bidirectional connections
+\draw[bidir] (e1) -- (e2);
+\draw[bidir] (e2) -- (e3);
+\draw[bidir] (e1) to[bend left=20] (e3);
+
+\node[layer, fill=blue!10] (enc) at (-1,2) {Encoder \\ Layers};
+\draw[arrow] (e1) -- (enc);
+\draw[arrow] (e2) -- (enc);
+\draw[arrow] (e3) -- (enc);
+
+\node[node, fill=blue!20] (h1) at (-3,4) {$h_1^e$};
+\node[node, fill=blue!20] (h2) at (-1,4) {$h_2^e$};
+\node[node, fill=blue!20] (h3) at (1,4) {$h_3^e$};
+
+\draw[arrow] (enc) -- (h1);
+\draw[arrow] (enc) -- (h2);
+\draw[arrow] (enc) -- (h3);
+
+% Decoder side
+\node[font=\small\bfseries] at (6,3) {Decoder};
+\node[node] (d1) at (4,0) {$y_1$};
+\node[node] (d2) at (6,0) {$y_2$};
+\node[node] (d3) at (8,0) {$y_3$};
+
+% Decoder causal connections
+\draw[causal] (d1) -- (d2);
+\draw[causal] (d2) -- (d3);
+\draw[causal] (d1) to[bend right=20] (d3);
+
+\node[layer, fill=orange!10] (dec) at (6,2) {Decoder \\ Layers};
+\draw[arrow] (d1) -- (dec);
+\draw[arrow] (d2) -- (dec);
+\draw[arrow] (d3) -- (dec);
+
+% Cross-attention connections
+\draw[cross] (h1) to[bend left=10] (dec);
+\draw[cross] (h2) -- (dec);
+\draw[cross] (h3) to[bend right=10] (dec);
+
+\node[node, fill=red!20] (o1) at (4,4) {$o_1$};
+\node[node, fill=red!20] (o2) at (6,4) {$o_2$};
+\node[node, fill=red!20] (o3) at (8,4) {$o_3$};
+
+\draw[arrow] (dec) -- (o1);
+\draw[arrow] (dec) -- (o2);
+\draw[arrow] (dec) -- (o3);
+
+% Legend
+\textcolor{blue}{Blue}: Bidirectional (encoder) \\
+\textcolor{red}{Red}: Causal (decoder) \\
+\textcolor{green!60!black}{Green}: Cross-attention
+};
+
+\end{tikzpicture}
+\caption{T5 encoder-decoder architecture. The encoder uses bidirectional attention (blue) to process input, the decoder uses causal attention (red) for autoregressive generation, and cross-attention (green dashed) allows the decoder to attend to all encoder outputs. This combines BERT's understanding with GPT's generation.}
+\label{fig:t5_encoder_decoder}
+\end{figure}
+
 \begin{example}[T5-Base Architecture]
 \label{ex:t5_base}
 Understanding T5-base's parameter distribution reveals how encoder-decoder architectures allocate capacity between understanding and generation. The model uses 12 encoder layers and 12 decoder layers, each with hidden dimension $d = 768$, 12 attention heads, and feed-forward dimension $d_{ff} = 3072$. The vocabulary contains 32,000 tokens using SentencePiece tokenization, which provides better multilingual coverage and handles rare words more gracefully than WordPiece.
