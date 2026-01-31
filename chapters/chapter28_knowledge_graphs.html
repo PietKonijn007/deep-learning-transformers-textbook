@@ -130,7 +130,7 @@
     </nav>
 
     <main>
-        <p>\chapter[Knowledge Graphs and Semantic Web]{Knowledge Graphs, Semantic Web, and Structured Information Extraction}</p>
+        <h1>Knowledge Graphs, Semantic Web, and Structured Information Extraction</h1>
 
 <h2>Chapter Overview</h2>
 
@@ -198,15 +198,15 @@
 <div class="definition"><strong>Definition:</strong> 
 Given text, identify and classify entities into predefined types (Person, Organization, Location, Product, Date, etc.).
 
-<p>Example:
-\begin{verbatim}
-Text: "Barack Obama was elected president of the United States in 2008."</p>
+Example:
+<pre><code>
+Text: "Barack Obama was elected president of the United States in 2008."
 
-<p>Entities:
+Entities:
 - Barack Obama (Person)
 - United States (Location)
 - 2008 (Date)
-\end{verbatim}
+</code></pre>
 </div>
 
 <p><strong>Deep learning approach:</strong> Token classification using sequence labeling (BIO tagging):</p>
@@ -226,14 +226,14 @@ Text: "Barack Obama was elected president of the United States in 2008."</p>
 <div class="definition"><strong>Definition:</strong> 
 Given text with identified entities, determine the relationship type between entity pairs.
 
-<p>Example:
-\begin{verbatim}
-Text: "Barack Obama was born in Honolulu."</p>
+Example:
+<pre><code>
+Text: "Barack Obama was born in Honolulu."
 
-<p>Entities: Barack Obama, Honolulu
+Entities: Barack Obama, Honolulu
 Relation: born_in
 Triple: (Barack Obama, born_in, Honolulu)
-\end{verbatim}
+</code></pre>
 </div>
 
 <p><strong>Challenges:</strong>
@@ -592,22 +592,22 @@ $$\begin{align}
 <li><strong>k-hop:</strong> k layers capture k-hop neighborhood
 </ul>
 
-<p><strong>Example reasoning:</strong>
-\begin{verbatim}
+<strong>Example reasoning:</strong>
+<pre><code>
 Query: "What diseases might drug X treat?"
 1-hop: Drug X targets protein P
 2-hop: Protein P is involved in disease D
 Inference: Drug X might treat disease D
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Practical Implementation</h3>
 
-<p><strong>PyTorch Geometric example (simplified):</strong>
-\begin{verbatim}
+<strong>PyTorch Geometric example (simplified):</strong>
+<pre><code>
 import torch
-from torch_geometric.nn import RGCNConv</p>
+from torch_geometric.nn import RGCNConv
 
-<p>class KnowledgeGraphGNN(torch.nn.Module):
+class KnowledgeGraphGNN(torch.nn.Module):
     def __init__(self, num_entities, num_relations, hidden_dim):
         super().__init__()
         self.embedding = torch.nn.Embedding(num_entities, hidden_dim)
@@ -620,7 +620,7 @@ from torch_geometric.nn import RGCNConv</p>
         x = torch.relu(x)
         x = self.conv2(x, edge_index, edge_type)
         return x
-\end{verbatim}</p>
+</code></pre>
 
 <h2>Knowledge Graph Completion and Multi-Hop Reasoning</h2>
 
@@ -673,14 +673,14 @@ $$\begin{align}
 
 <p>Complex queries require reasoning beyond single edges:</p>
 
-<p><strong>Conjunctive queries:</strong>
-\begin{verbatim}
+<strong>Conjunctive queries:</strong>
+<pre><code>
 Find: Actors who starred in movies directed by Steven Spielberg 
-      AND released after 2000</p>
+      AND released after 2000
 
-<p>Query: (?, starred_in, ?m) ∧ (?m, directed_by, Spielberg) 
+Query: (?, starred_in, ?m) ∧ (?m, directed_by, Spielberg) 
        ∧ (?m, release_year, >2000)
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Query2Box:</strong> Represent queries as geometric regions (boxes) in embedding space:
 <ul>
@@ -891,28 +891,28 @@ For query (h, r, ?):
 
 <h3>KG Embedding Libraries</h3>
 
-<p><strong>PyKEEN (Python Knowledge Embeddings):</strong>
-\begin{verbatim}
-from pykeen.pipeline import pipeline</p>
+<strong>PyKEEN (Python Knowledge Embeddings):</strong>
+<pre><code>
+from pykeen.pipeline import pipeline
 
-<p>result = pipeline(
+result = pipeline(
     dataset='FB15k-237',
     model='TransE',
     training_kwargs=dict(num_epochs=100),
     evaluation_kwargs=dict(batch_size=256),
-)</p>
+)
 
-<p># Access trained model
+# Access trained model
 model = result.model
 # Predict missing links
 predictions = model.predict_tails('Barack_Obama', 'born_in')
-\end{verbatim}</p>
+</code></pre>
 
-<p><strong>DGL-KE (Deep Graph Library - Knowledge Embeddings):</strong>
-\begin{verbatim}
-import dglke</p>
+<strong>DGL-KE (Deep Graph Library - Knowledge Embeddings):</strong>
+<pre><code>
+import dglke
 
-<p># Train TransE on custom dataset
+# Train TransE on custom dataset
 dglke.train(
     model_name='TransE',
     dataset='my_kg',
@@ -925,7 +925,7 @@ dglke.train(
     gamma=12.0,
     lr=0.1,
 )
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>OpenKE:</strong> C++ backend with Python interface; optimized for large-scale training.</p>
 
@@ -933,11 +933,11 @@ dglke.train(
 
 <p><strong>SPARQL:</strong> Standard query language for RDF graphs:</p>
 
-<p>\begin{verbatim}
+<pre><code>
 PREFIX dbo: <http://dbpedia.org/ontology/>
-PREFIX dbr: <http://dbpedia.org/resource/></p>
+PREFIX dbr: <http://dbpedia.org/resource/>
 
-<p>SELECT ?movie ?releaseDate
+SELECT ?movie ?releaseDate
 WHERE {
   ?movie dbo:director dbr:Steven_Spielberg .
   ?movie dbo:releaseDate ?releaseDate .
@@ -945,61 +945,61 @@ WHERE {
 }
 ORDER BY DESC(?releaseDate)
 LIMIT 10
-\end{verbatim}</p>
+</code></pre>
 
-<p><strong>Cypher (Neo4j):</strong>
-\begin{verbatim}
+<strong>Cypher (Neo4j):</strong>
+<pre><code>
 MATCH (director:Person {name: "Steven Spielberg"})-[:DIRECTED]->(movie:Movie)
 WHERE movie.releaseDate > date("2000-01-01")
 RETURN movie.title, movie.releaseDate
 ORDER BY movie.releaseDate DESC
 LIMIT 10
-\end{verbatim}</p>
+</code></pre>
 
 <h3>End-to-End Pipeline Example</h3>
 
 <p><strong>Building a domain-specific KG:</strong></p>
 
-<p>\begin{verbatim}
+<pre><code>
 # 1. Entity extraction from text corpus
-from transformers import pipeline</p>
+from transformers import pipeline
 
-<p>ner = pipeline("ner", model="dslim/bert-base-NER")
-entities = ner("Apple Inc. was founded by Steve Jobs in 1976.")</p>
+ner = pipeline("ner", model="dslim/bert-base-NER")
+entities = ner("Apple Inc. was founded by Steve Jobs in 1976.")
 
-<p># 2. Relation extraction
-from opennre import get_model</p>
+# 2. Relation extraction
+from opennre import get_model
 
-<p>rel_model = get_model('wiki80_bert_softmax')
+rel_model = get_model('wiki80_bert_softmax')
 relations = rel_model.infer({
     'text': 'Apple Inc. was founded by Steve Jobs in 1976.',
     'h': {'pos': (0, 10)},  # Apple Inc.
     't': {'pos': (27, 38)}   # Steve Jobs
-})</p>
+})
 
-<p># 3. Store in graph database
-from neo4j import GraphDatabase</p>
+# 3. Store in graph database
+from neo4j import GraphDatabase
 
-<p>driver = GraphDatabase.driver("bolt://localhost:7687")
+driver = GraphDatabase.driver("bolt://localhost:7687")
 with driver.session() as session:
     session.run("""
         MERGE (a:Company {name: 'Apple Inc.'})
         MERGE (p:Person {name: 'Steve Jobs'})
         MERGE (a)-[:FOUNDED_BY]->(p)
-    """)</p>
+    """)
 
-<p># 4. Train embeddings
-from pykeen.pipeline import pipeline</p>
+# 4. Train embeddings
+from pykeen.pipeline import pipeline
 
-<p>result = pipeline(
+result = pipeline(
     dataset='my_kg',
     model='ComplEx',
     training_kwargs=dict(num_epochs=50),
-)</p>
+)
 
-<p># 5. Query and predict
+# 5. Query and predict
 predictions = result.model.predict_tails('Apple_Inc', 'COMPETITOR')
-\end{verbatim}</p>
+</code></pre>
 
 <h2>Cross-Chapter Connections</h2>
 
@@ -1319,12 +1319,12 @@ TransE performs well on this toy KG. On real graphs (billions of entities), perf
 <li><strong>Consensus mechanism:</strong> If 3+ reliable sources agree, mark as high-confidence
 </ul>
 
-<p>Example:
-\begin{verbatim}
+Example:
+<pre><code>
 Fact 1: (Company A, acquired, Company B, 2024-03-15, source=SEC, conf=0.95)
 Fact 2: (Company A, acquired, Company B, 2024-03-20, source=News, conf=0.70)
 Resolution: Use SEC date (higher confidence); note discrepancy in metadata
-\end{verbatim}
+</code></pre>
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 5: Entity Alignment Between KGs</strong>

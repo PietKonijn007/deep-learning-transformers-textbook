@@ -1319,7 +1319,7 @@ import torch.nn as nn
 import time
 import matplotlib.pyplot as plt
 
-<p>class GPT2WithCache(nn.Module):
+class GPT2WithCache(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transformer = nn.ModuleList([
@@ -1346,9 +1346,9 @@ import matplotlib.pyplot as plt
         hidden_states = self.ln_f(hidden_states)
         logits = self.lm_head(hidden_states)
         
-        return logits, presents</p>
+        return logits, presents
 
-<p>class GPT2Block(nn.Module):
+class GPT2Block(nn.Module):
     def forward(self, x, past_key_value=None, use_cache=False):
         # Self-attention with optional KV cache
         attn_output, present = self.attn(
@@ -1363,9 +1363,9 @@ import matplotlib.pyplot as plt
         x = x + self.mlp(x)
         x = self.ln_2(x)
         
-        return x, present</p>
+        return x, present
 
-<p>class GPT2Attention(nn.Module):
+class GPT2Attention(nn.Module):
     def forward(self, x, past_key_value=None, use_cache=False):
         B, T, C = x.shape
         
@@ -1396,7 +1396,7 @@ import matplotlib.pyplot as plt
         out = self.c_proj(out)
         
         return out, present
-</code></pre></p>
+</code></pre>
 
 <p><strong>Benchmarking Code:</strong></p>
 
@@ -1415,7 +1415,7 @@ import matplotlib.pyplot as plt
     
     return input_ids, times
 
-<p>def generate_with_cache(model, prompt, max_length=256):
+def generate_with_cache(model, prompt, max_length=256):
     """Generate tokens with KV caching"""
     input_ids = prompt
     past_key_values = None
@@ -1444,22 +1444,22 @@ import matplotlib.pyplot as plt
         next_token = logits[:, -1, :].argmax(dim=-1, keepdim=True)
         input_ids = torch.cat([input_ids, next_token], dim=1)
     
-    return input_ids, times</p>
+    return input_ids, times
 
-<p># Run benchmark
-prompt = torch.randint(0, 50257, (1, 50))  # 50 token prompt</p>
+# Run benchmark
+prompt = torch.randint(0, 50257, (1, 50))  # 50 token prompt
 
-<p>output_no_cache, times_no_cache = generate_without_cache(
+output_no_cache, times_no_cache = generate_without_cache(
     model, prompt, max_length=256
 )
 output_with_cache, times_with_cache = generate_with_cache(
     model, prompt, max_length=256
-)</p>
+)
 
-<p>print(f"Without cache: {sum(times_no_cache):.2f}s")
+print(f"Without cache: {sum(times_no_cache):.2f}s")
 print(f"With cache: {sum(times_with_cache):.2f}s")
 print(f"Speedup: {sum(times_no_cache)/sum(times_with_cache):.2f}x")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
@@ -1478,13 +1478,13 @@ seq_lengths = [32, 64, 128, 256, 512]
 times_no_cache = []
 times_with_cache = []
 
-<p>for length in seq_lengths:
+for length in seq_lengths:
     _, t_no = generate_without_cache(model, prompt, max_length=length)
     _, t_with = generate_with_cache(model, prompt, max_length=length)
     times_no_cache.append(sum(t_no))
-    times_with_cache.append(sum(t_with))</p>
+    times_with_cache.append(sum(t_with))
 
-<p># Plot results
+# Plot results
 plt.figure(figsize=(10, 6))
 plt.plot(seq_lengths, times_no_cache, 'o-', label='Without cache', linewidth=2)
 plt.plot(seq_lengths, times_with_cache, 's-', label='With cache', linewidth=2)
@@ -1494,7 +1494,7 @@ plt.title('KV Caching Impact on Generation Speed')
 plt.legend()
 plt.grid(True)
 plt.savefig('kv_cache_speedup.png')
-</code></pre></p>
+</code></pre>
 
 <p><strong>Analysis:</strong></p>
 

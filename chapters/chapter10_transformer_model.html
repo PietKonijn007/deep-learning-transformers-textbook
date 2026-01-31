@@ -1186,7 +1186,7 @@ Why is decoding slower? How many forward passes required?
 <pre><code>import torch
 import torch.nn as nn
 
-<p>class TransformerEncoderLayer(nn.Module):
+class TransformerEncoderLayer(nn.Module):
     def __init__(self, d_model=256, n_heads=8, d_ff=1024, dropout=0.1):
         super().__init__()
         
@@ -1222,42 +1222,42 @@ import torch.nn as nn
         x = x + self.dropout2(ffn_output)
         x = self.norm2(x)
         
-        return x</p>
+        return x
 
-<p># Test the implementation
+# Test the implementation
 batch_size = 16
 seq_length = 64
-d_model = 256</p>
+d_model = 256
 
-<p># Create model and input
+# Create model and input
 model = TransformerEncoderLayer(d_model=d_model)
-x = torch.randn(batch_size, seq_length, d_model, requires_grad=True)</p>
+x = torch.randn(batch_size, seq_length, d_model, requires_grad=True)
 
-<p># Forward pass
-output = model(x)</p>
+# Forward pass
+output = model(x)
 
-<p># Verify output shape
+# Verify output shape
 print(f"Input shape: {x.shape}")
 print(f"Output shape: {output.shape}")
-assert output.shape == (batch_size, seq_length, d_model), "Shape mismatch!"</p>
+assert output.shape == (batch_size, seq_length, d_model), "Shape mismatch!"
 
-<p># Verify gradient flow through residual connections
+# Verify gradient flow through residual connections
 loss = output.sum()
-loss.backward()</p>
+loss.backward()
 
-<p>print(f"Input gradient norm: {x.grad.norm().item():.4f}")
-print(f"Gradient exists: {x.grad is not None}")</p>
+print(f"Input gradient norm: {x.grad.norm().item():.4f}")
+print(f"Gradient exists: {x.grad is not None}")
 
-<p># Check that gradients flow to all parameters
+# Check that gradients flow to all parameters
 for name, param in model.named_parameters():
     if param.grad is not None:
         print(f"{name}: gradient norm = {param.grad.norm().item():.4f}")
     else:
         print(f"{name}: NO GRADIENT!")
-</code></pre></p>
+</code></pre>
 
-<p><strong>Expected Output:</strong>
-\begin{verbatim}
+<strong>Expected Output:</strong>
+<pre><code>
 Input shape: torch.Size([16, 64, 256])
 Output shape: torch.Size([16, 64, 256])
 Input gradient norm: 1.2345
@@ -1268,7 +1268,7 @@ ffn.0.weight: gradient norm = 0.0189
 ffn.3.weight: gradient norm = 0.0167
 norm1.weight: gradient norm = 0.0045
 norm2.weight: gradient norm = 0.0038
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Key Observations:</strong>
 <ul>

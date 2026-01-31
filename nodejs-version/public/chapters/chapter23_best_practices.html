@@ -312,13 +312,13 @@
 
 <h3>Gradient Analysis</h3>
 
-<p><strong>Monitor per-layer gradient norms:</strong>
-\begin{verbatim}
+<strong>Monitor per-layer gradient norms:</strong>
+<pre><code>
 for name, param in model.named_parameters():
     if param.grad is not None:
         grad_norm = param.grad.norm().item()
         print(f"{name}: {grad_norm:.6f}")
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Healthy gradients:</strong>
 <ul>
@@ -657,10 +657,10 @@ for name, param in model.named_parameters():
 
 <p><strong>Model:</strong> BERT-base with regression head</p>
 
-<p><strong>Input format:</strong>
-\begin{verbatim}
+<strong>Input format:</strong>
+<pre><code>
 [CLS] query tokens [SEP] document tokens [SEP]
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Output:</strong> $\text{score} = \sigma(\mW \vh_{\text{[CLS]}} + b)$</p>
 
@@ -706,13 +706,13 @@ for name, param in model.named_parameters():
 
 <p><strong>Task:</strong> Generate Python code from natural language</p>
 
-<p><strong>Example:</strong>
-\begin{verbatim}
+<strong>Example:</strong>
+<pre><code>
 Input: "Function to reverse a string"
 Output: 
 def reverse_string(s):
     return s[::-1]
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Model and Data</h3>
 
@@ -929,16 +929,16 @@ def reverse_string(s):
 
 <p><strong>Symptom:</strong> Model overfits quickly, poor generalization</p>
 
-<p><strong>Fix:</strong>
+<strong>Fix:</strong>
 <pre><code># Before (broken)
 attn_weights = F.softmax(scores, dim=-1)
-output = torch.matmul(attn_weights, V)</p>
+output = torch.matmul(attn_weights, V)
 
-<p># After (fixed)
+# After (fixed)
 attn_weights = F.softmax(scores, dim=-1)
 attn_weights = F.dropout(attn_weights, p=0.1, training=self.training)
 output = torch.matmul(attn_weights, V)
-</code></pre></p>
+</code></pre>
 
 <p><strong>Impact:</strong> Validation accuracy improves from 72\% to 84\%</p>
 
@@ -946,14 +946,14 @@ output = torch.matmul(attn_weights, V)
 
 <p><strong>Symptom:</strong> Loss oscillates, doesn't converge</p>
 
-<p><strong>Fix:</strong>
+<strong>Fix:</strong>
 <pre><code># Before (broken)
-optimizer = AdamW(model.parameters(), lr=1e-3)  # Too high!</p>
+optimizer = AdamW(model.parameters(), lr=1e-3)  # Too high!
 
-<p># After (fixed)
+# After (fixed)
 optimizer = AdamW(model.parameters(), lr=5e-5)  # Appropriate for BERT
 scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=1000)
-</code></pre></p>
+</code></pre>
 
 <p><strong>Impact:</strong> Loss converges smoothly, final accuracy 84\% $\to$ 87\%</p>
 
@@ -961,17 +961,17 @@ scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=1000)
 
 <p><strong>Symptom:</strong> Model attends to padding, poor performance on variable-length sequences</p>
 
-<p><strong>Fix:</strong>
+<strong>Fix:</strong>
 <pre><code># Before (broken)
 attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
-attn_weights = F.softmax(attn_scores, dim=-1)</p>
+attn_weights = F.softmax(attn_scores, dim=-1)
 
-<p># After (fixed)
+# After (fixed)
 attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(d_k)
 # Mask padding tokens
 attn_scores = attn_scores.masked_fill(attention_mask == 0, float('-inf'))
 attn_weights = F.softmax(attn_scores, dim=-1)
-</code></pre></p>
+</code></pre>
 
 <p><strong>Impact:</strong> Accuracy on variable-length sequences improves from 79\% to 87\%</p>
 
@@ -1014,10 +1014,10 @@ attn_weights = F.softmax(attn_scores, dim=-1)
     <li>Inference speed: 2.4x faster
 </ul>
 
-<p><strong>Step 3: Export to ONNX</strong>
-<pre><code>import torch.onnx</p>
+<strong>Step 3: Export to ONNX</strong>
+<pre><code>import torch.onnx
 
-<p># Export model
+# Export model
 dummy_input = torch.randint(0, 1000, (1, 128))
 torch.onnx.export(
     model,
@@ -1026,26 +1026,26 @@ torch.onnx.export(
     input_names=['input_ids'],
     output_names=['logits'],
     dynamic_axes={'input_ids': {0: 'batch', 1: 'sequence'}}
-)</p>
+)
 
-<p># Verify with ONNX Runtime
+# Verify with ONNX Runtime
 import onnxruntime as ort
 session = ort.InferenceSession("bert_sentiment.onnx")
 # 1.3x additional speedup
-</code></pre></p>
+</code></pre>
 
-<p><strong>Step 4: Create REST API</strong>
+<strong>Step 4: Create REST API</strong>
 <pre><code>from fastapi import FastAPI
 from pydantic import BaseModel
-import onnxruntime as ort</p>
+import onnxruntime as ort
 
-<p>app = FastAPI()
-session = ort.InferenceSession("bert_sentiment.onnx")</p>
+app = FastAPI()
+session = ort.InferenceSession("bert_sentiment.onnx")
 
-<p>class TextInput(BaseModel):
-    text: str</p>
+class TextInput(BaseModel):
+    text: str
 
-<p>@app.post("/predict")
+@app.post("/predict")
 async def predict(input: TextInput):
     # Tokenize
     tokens = tokenizer.encode(input.text, max_length=128, truncation=True)
@@ -1059,7 +1059,7 @@ async def predict(input: TextInput):
     confidence = float(max(logits))
     
     return {"prediction": prediction, "confidence": confidence}
-</code></pre></p>
+</code></pre>
 
 <p><strong>Step 5: Load Test and Optimize</strong></p>
 
@@ -1094,8 +1094,8 @@ async def predict(input: TextInput):
     \item[$\checkmark$] Health checks and graceful shutdown
 </ul>
 
-<p><strong>Deployment Architecture:</strong>
-\begin{verbatim}
+<strong>Deployment Architecture:</strong>
+<pre><code>
 Load Balancer
     |
     +-- API Server 1 (ONNX Runtime)
@@ -1103,7 +1103,7 @@ Load Balancer
     +-- API Server 3 (ONNX Runtime)
     |
 Monitoring (Prometheus + Grafana)
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Key Metrics to Monitor:</strong>
 <ul>

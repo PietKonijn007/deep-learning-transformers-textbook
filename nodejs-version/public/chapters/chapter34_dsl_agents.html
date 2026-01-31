@@ -182,19 +182,19 @@ The most successful applications of deep learning to real domains follow this pa
 
 <h3>Case Example: Support Ticket DSL</h3>
 
-<p><strong>Poor DSL (unstructured):</strong>
-\begin{verbatim}
+<strong>Poor DSL (unstructured):</strong>
+<pre><code>
 {
   "text": "I can't login to my account. Tried resetting password 
            but didn't receive the email. My email is johndoe@example.com. 
            Account created 6 months ago. Very frustrated!"
 }
-\end{verbatim}</p>
+</code></pre>
 
 <p>A model must extract key information from unstructured text, error-prone.</p>
 
-<p><strong>Better DSL (structured):</strong>
-\begin{verbatim}
+<strong>Better DSL (structured):</strong>
+<pre><code>
 {
   "customer_id": "123456",
   "issue_type": "authentication",
@@ -205,7 +205,7 @@ The most successful applications of deep learning to real domains follow this pa
   "previous_interactions": 2,
   "sentiment": "negative"
 }
-\end{verbatim}</p>
+</code></pre>
 
 <p>Structured DSL reduces model ambiguity. Models learn to extract and classify information reliably. Downstream tools (routing, priority assignment) consume structured data.</p>
 
@@ -223,8 +223,8 @@ The most successful applications of deep learning to real domains follow this pa
 
 <p>For complex domains, define the DSL formally using schemas:</p>
 
-<p><strong>JSON Schema example:</strong>
-\begin{verbatim}
+<strong>JSON Schema example:</strong>
+<pre><code>
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
@@ -244,7 +244,7 @@ The most successful applications of deep learning to real domains follow this pa
   },
   "required": ["issue_type", "description"]
 }
-\end{verbatim}</p>
+</code></pre>
 
 <p>Formal specification enables:
 <ul>
@@ -280,7 +280,7 @@ The most successful applications of deep learning to real domains follow this pa
 
 <p>Modern APIs (OpenAI's function calling, Anthropic's tool use) formalize this. Models are provided with a tool schema:</p>
 
-<p>\begin{verbatim}
+<pre><code>
 {
   "name": "lookup_order",
   "description": "Retrieve order details by ID",
@@ -295,13 +295,13 @@ The most successful applications of deep learning to real domains follow this pa
     "required": ["order_id"]
   }
 }
-\end{verbatim}</p>
+</code></pre>
 
 <p>The model learns to produce outputs like:</p>
 
-<p>\begin{verbatim}
+<pre><code>
 Tool call: lookup_order(order_id="12345")
-\end{verbatim}</p>
+</code></pre>
 
 <p>The system parses this, executes the tool, and returns results to the model for the next step.</p>
 
@@ -368,21 +368,21 @@ Tool call: lookup_order(order_id="12345")
 
 <p>Advanced agents plan before executing. Chain-of-thought prompting helps:</p>
 
-<p>\begin{verbatim}
-Goal: Find the best laptop for a developer under $2000</p>
+<pre><code>
+Goal: Find the best laptop for a developer under $2000
 
-<p>Thinking: 
+Thinking: 
 1. I need to understand developer needs: CPU, RAM, battery, build quality
 2. I should search for laptops matching these criteria
-3. I need to compare options and recommend the best</p>
+3. I need to compare options and recommend the best
 
-<p>Actions:
+Actions:
 - Tool: get_laptop_specs(type="developer", max_price=2000)
   Result: [Laptop A, Laptop B, Laptop C]
 - Tool: compare_laptops(laptop_ids=[A, B, C])
   Result: Detailed comparison
 - Response: Based on comparison, Laptop A is best because...
-\end{verbatim}</p>
+</code></pre>
 
 <p>Planning increases accuracy and transparency. Users understand the agent's reasoning, improving trust.</p>
 
@@ -411,17 +411,17 @@ Goal: Find the best laptop for a developer under $2000</p>
 
 <p>Some models support JSON output mode: model generates only valid JSON:</p>
 
-<p>\begin{verbatim}
-System prompt: You must output valid JSON matching this schema: {...}</p>
+<pre><code>
+System prompt: You must output valid JSON matching this schema: {...}
 
-<p>User: Extract person and age from "My name is Alice and I'm 30"</p>
+User: Extract person and age from "My name is Alice and I'm 30"
 
-<p>Model output:
+Model output:
 {
   "person": "Alice",
   "age": 30
 }
-\end{verbatim}</p>
+</code></pre>
 
 <p>JSON mode ensures outputs are syntactically valid, but not semantically correct. Validation still checks correctness.</p>
 
@@ -515,8 +515,8 @@ System prompt: You must output valid JSON matching this schema: {...}</p>
 <li>Reservation: ID, customer\_id, restaurant\_id, datetime, party\_size, status, notes
 </ul>
 
-<p>\itshape JSON Schema (partial):
-\begin{verbatim}
+\itshape JSON Schema (partial):
+<pre><code>
 {
   "reservation": {
     "type": "object",
@@ -534,7 +534,7 @@ System prompt: You must output valid JSON matching this schema: {...}</p>
     "required": ["restaurant_id", "customer_id", "datetime", "party_size"]
   }
 }
-\end{verbatim}</p>
+</code></pre>
 
 <p>\itshape Critical Operations:
 <ul>
@@ -549,8 +549,8 @@ System prompt: You must output valid JSON matching this schema: {...}</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Tool-Augmented Weather Chatbot</strong>
 
-<p>\itshape Tool schemas:
-\begin{verbatim}
+\itshape Tool schemas:
+<pre><code>
 {
   "name": "get_weather",
   "description": "Get current weather and forecast",
@@ -568,9 +568,9 @@ System prompt: You must output valid JSON matching this schema: {...}</p>
     },
     "required": ["location"]
   }
-}</p>
+}
 
-<p>{
+{
   "name": "get_hourly_forecast",
   "description": "Detailed hourly forecast",
   "parameters": {
@@ -582,21 +582,21 @@ System prompt: You must output valid JSON matching this schema: {...}</p>
     "required": ["location", "date"]
   }
 }
-\end{verbatim}</p>
+</code></pre>
 
-<p>\itshape Chatbot interaction:
-\begin{verbatim}
+\itshape Chatbot interaction:
+<pre><code>
 User: "What's the weather in Berlin?"
 Model: Tool call: get_weather(location="Berlin", days_ahead=1)
 System: Returns current weather + 7-day forecast
 Model response: "In Berlin, it's currently 5°C and rainy. 
-              Tomorrow will be cloudy with a high of 8°C."</p>
+              Tomorrow will be cloudy with a high of 8°C."
 
-<p>User: "Hour by hour forecast for tomorrow?"
+User: "Hour by hour forecast for tomorrow?"
 Model: Tool call: get_hourly_forecast(location="Berlin", date="2024-02-01")
 System: Returns hourly data
 Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
-\end{verbatim}</p>
+</code></pre>
 
 <p>\itshape Error handling:
 - Invalid location: ``I couldn't find that location. Did you mean Berlin, Germany?''

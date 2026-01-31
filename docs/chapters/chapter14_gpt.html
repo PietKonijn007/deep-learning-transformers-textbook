@@ -429,31 +429,31 @@ $$
 
 <p>Zero-shot learning provides only a task description without examples. The model must infer the desired behavior from the natural language instruction alone. For translation, a zero-shot prompt might simply state "Translate English to French:" followed by the source text. The model must recognize the task from the instruction and generate an appropriate translation. Zero-shot performance varies widely across tasks—GPT-3 performs well on common tasks like translation and summarization but struggles with specialized or ambiguous tasks where the instruction alone provides insufficient specification.</p>
 
-<p><strong>Zero-shot:</strong> Task description only
-\begin{verbatim}
+<strong>Zero-shot:</strong> Task description only
+<pre><code>
 Translate English to French:
 sea otter =>
-\end{verbatim}</p>
+</code></pre>
 
 <p>One-shot learning adds a single example demonstrating the desired input-output mapping. This single example often dramatically improves performance by clarifying the task format, output style, and level of detail expected. For translation, showing one English-French pair helps the model understand not just that translation is required, but also the desired formality level, whether to include punctuation, and how to handle proper nouns. The improvement from zero-shot to one-shot is often larger than from one-shot to few-shot, suggesting that the first example resolves most of the task ambiguity.</p>
 
-<p><strong>One-shot:</strong> One example
-\begin{verbatim}
+<strong>One-shot:</strong> One example
+<pre><code>
 Translate English to French:
 sea otter => loutre de mer
 cheese =>
-\end{verbatim}</p>
+</code></pre>
 
 <p>Few-shot learning provides multiple examples, typically between 10 and 100 depending on the task complexity and context window size. Additional examples help the model learn task-specific patterns, edge cases, and output formatting. For classification tasks, few-shot examples should cover all classes to avoid bias toward classes seen more frequently. For generation tasks, examples demonstrate the desired output length, style, and structure. The performance improvement from few-shot learning scales with both the number of examples and the model size—larger models extract more information from the same examples.</p>
 
-<p><strong>Few-shot:</strong> Multiple examples (typical: 10-100)
-\begin{verbatim}
+<strong>Few-shot:</strong> Multiple examples (typical: 10-100)
+<pre><code>
 Translate English to French:
 sea otter => loutre de mer
 peppermint => menthe poivrée
 plush giraffe => girafe en peluche
 cheese =>
-\end{verbatim}</p>
+</code></pre>
 
 <p>The mechanism underlying in-context learning remains partially mysterious. The model is not performing gradient descent or updating parameters—it processes the prompt in a single forward pass. Instead, the model appears to perform a form of implicit Bayesian inference, using the examples to narrow down the space of possible tasks and then applying the inferred task to the query. The attention mechanism plays a crucial role, allowing later tokens to attend to earlier examples and extract relevant patterns. Larger models have more capacity to represent complex task distributions and perform more sophisticated inference, explaining why few-shot learning improves dramatically with scale.</p>
 
@@ -608,12 +608,12 @@ $$
 
 <h3>Instruction Tuning</h3>
 
-<p>Fine-tune on (instruction, output) pairs:
-\begin{verbatim}
+Fine-tune on (instruction, output) pairs:
+<pre><code>
 Instruction: Summarize the following in one sentence:
 [long text]
 Output: [one-sentence summary]
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>InstructGPT / ChatGPT approach:</strong>
 <ol>
@@ -710,7 +710,7 @@ Output: [one-sentence summary]
 import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
-<p>def compute_lm_loss_teacher_forcing(model, tokenizer, sequence):
+def compute_lm_loss_teacher_forcing(model, tokenizer, sequence):
     """Compute loss with teacher forcing (standard training)"""
     # Tokenize
     tokens = tokenizer.encode(sequence, return_tensors='pt')
@@ -732,9 +732,9 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
         target_ids.view(-1)
     )
     
-    return loss, per_token_loss, tokens</p>
+    return loss, per_token_loss, tokens
 
-<p>def compute_lm_loss_scheduled_sampling(model, tokenizer, sequence, 
+def compute_lm_loss_scheduled_sampling(model, tokenizer, sequence, 
                                       sampling_prob=0.5):
     """Compute loss with scheduled sampling (exposure schedule)"""
     tokens = tokenizer.encode(sequence, return_tensors='pt')
@@ -766,29 +766,29 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
         total_loss += outputs.loss.item()
     
     avg_loss = total_loss / (tokens.size(1) - 1)
-    return avg_loss, per_token_losses, generated_tokens</p>
+    return avg_loss, per_token_losses, generated_tokens
 
-<p># Example
+# Example
 sequence = "The quick brown fox"
 model = GPT2LMHeadModel.from_pretrained('gpt2')
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-model.eval()</p>
+model.eval()
 
-<p># Teacher forcing
+# Teacher forcing
 loss_tf, per_token_tf, tokens = compute_lm_loss_teacher_forcing(
     model, tokenizer, sequence
-)</p>
+)
 
-<p># Scheduled sampling
+# Scheduled sampling
 loss_ss, per_token_ss, gen_tokens = compute_lm_loss_scheduled_sampling(
     model, tokenizer, sequence, sampling_prob=0.5
-)</p>
+)
 
-<p>print(f"Sequence: {sequence}")
+print(f"Sequence: {sequence}")
 print(f"Tokens: {tokenizer.convert_ids_to_tokens(tokens[0])}")
 print(f"\nTeacher forcing loss: {loss_tf.item():.4f}")
 print(f"Scheduled sampling loss: {loss_ss:.4f}")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Detailed Loss Calculation:</strong></p>
 
@@ -808,24 +808,24 @@ $$\begin{align*}
 \end{align*}$$
 </div>
 
-<p><strong>Example output:</strong>
-\begin{verbatim}
+<strong>Example output:</strong>
+<pre><code>
 Position 1 (quick): loss = 3.45, prob = 0.032
 Position 2 (brown): loss = 4.12, prob = 0.016
 Position 3 (fox): loss = 2.87, prob = 0.057
 Average loss: 3.48
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Scheduled Sampling (50\% probability):</strong></p>
 
 <p>At each position, with 50\% probability use model's prediction instead of ground truth:</p>
 
-<p>\begin{verbatim}
+<pre><code>
 Position 1: Use GT "The" -> predict "quick" (loss = 3.45)
 Position 2: Use prediction "fast" -> predict "brown" (loss = 5.23)
 Position 3: Use GT "brown" -> predict "fox" (loss = 2.91)
 Average loss: 3.86
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Comparison:</strong></p>
 
@@ -988,7 +988,7 @@ $$\text{FLOPs} = 6 \times 1.7 \times 10^{12} \times 13 \times 10^{12} = 1.33 \ti
 import torch
 import numpy as np
 
-<p>def create_few_shot_prompt(examples, test_input, n_shots):
+def create_few_shot_prompt(examples, test_input, n_shots):
     """Create prompt with n examples"""
     prompt = ""
     
@@ -1001,9 +1001,9 @@ import numpy as np
     prompt += f"Input: {test_input}\n"
     prompt += f"Label:"
     
-    return prompt</p>
+    return prompt
 
-<p>def predict_with_few_shot(model, tokenizer, prompt, labels=['positive', 'negative']):
+def predict_with_few_shot(model, tokenizer, prompt, labels=['positive', 'negative']):
     """Predict label using few-shot prompting"""
     # Encode prompt
     input_ids = tokenizer.encode(prompt, return_tensors='pt')
@@ -1027,9 +1027,9 @@ import numpy as np
     
     # Return most likely label
     predicted_label = max(label_probs, key=label_probs.get)
-    return predicted_label, label_probs</p>
+    return predicted_label, label_probs
 
-<p># Example dataset: sentiment classification
+# Example dataset: sentiment classification
 train_examples = [
     {"text": "This movie was amazing!", "label": "positive"},
     {"text": "I loved every minute of it.", "label": "positive"},
@@ -1041,20 +1041,20 @@ train_examples = [
     {"text": "Completely disappointing.", "label": "negative"},
     {"text": "A masterpiece!", "label": "positive"},
     {"text": "Awful in every way.", "label": "negative"},
-]</p>
+]
 
-<p>test_examples = [
+test_examples = [
     {"text": "Great acting and story.", "label": "positive"},
     {"text": "Not worth watching.", "label": "negative"},
     {"text": "Exceeded my expectations.", "label": "positive"},
     {"text": "Very dull and slow.", "label": "negative"},
     # ... 20 more test examples
-]</p>
+]
 
-<p>model = GPT2LMHeadModel.from_pretrained('gpt2')
+model = GPT2LMHeadModel.from_pretrained('gpt2')
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
 model.eval()
-</code></pre></p>
+</code></pre>
 
 <p><strong>Evaluation Code:</strong></p>
 
@@ -1095,34 +1095,34 @@ model.eval()
     
     return results
 
-<p># Run evaluation
+# Run evaluation
 results = evaluate_few_shot(
     model, tokenizer, 
     train_examples, test_examples,
     n_shots_list=[0, 1, 5, 10]
-)</p>
+)
 
-<p># Plot results
-import matplotlib.pyplot as plt</p>
+# Plot results
+import matplotlib.pyplot as plt
 
-<p>shots = list(results.keys())
-accuracies = [results[s]['accuracy'] for s in shots]</p>
+shots = list(results.keys())
+accuracies = [results[s]['accuracy'] for s in shots]
 
-<p>plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 plt.plot(shots, accuracies, 'o-', linewidth=2, markersize=10)
 plt.xlabel('Number of Examples (Shots)')
 plt.ylabel('Accuracy')
 plt.title('Few-Shot Learning Performance')
 plt.grid(True)
 plt.xticks(shots)
-plt.ylim([0, 1])</p>
+plt.ylim([0, 1])
 
-<p># Add value labels
+# Add value labels
 for x, y in zip(shots, accuracies):
-    plt.text(x, y + 0.02, f'{y:.1</p>
+    plt.text(x, y + 0.02, f'{y:.1
 
-<p>plt.savefig('few_shot_performance.png', dpi=150)
-</code></pre></p>
+plt.savefig('few_shot_performance.png', dpi=150)
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
@@ -1194,7 +1194,7 @@ from torch.utils.data import DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
 
-<p>def create_model(n_params_target, vocab_size=10000, seq_length=128):
+def create_model(n_params_target, vocab_size=10000, seq_length=128):
     """Create GPT-style model with approximately n_params_target parameters"""
     # Solve for d_model given target parameters
     # Approximate: P ≈ V*d + L*(12*d^2 + 8*d*d_ff)
@@ -1230,9 +1230,9 @@ import matplotlib.pyplot as plt
     total_params += sum(p.numel() for p in embedding.parameters())
     total_params += sum(p.numel() for p in output_layer.parameters())
     
-    return model, embedding, output_layer, total_params</p>
+    return model, embedding, output_layer, total_params
 
-<p>def train_model(model, embedding, output_layer, train_loader, 
+def train_model(model, embedding, output_layer, train_loader, 
                 epochs=50, lr=1e-3):
     """Train model and return final loss"""
     optimizer = torch.optim.Adam(
@@ -1272,7 +1272,7 @@ import matplotlib.pyplot as plt
         losses.append(avg_loss)
     
     return losses[-1]  # Return final loss
-</code></pre></p>
+</code></pre>
 
 <p><strong>Scaling Experiment:</strong></p>
 
@@ -1281,7 +1281,7 @@ param_sizes = [10e6, 50e6, 100e6, 500e6]  # 10M, 50M, 100M, 500M
 final_losses = []
 actual_params = []
 
-<p>for target_params in param_sizes:
+for target_params in param_sizes:
     print(f"\nTraining model with ~{target_params/1e6:.0f}M parameters...")
     
     # Create model
@@ -1292,35 +1292,35 @@ actual_params = []
     # Train model
     final_loss = train_model(model, emb, out, train_loader, epochs=50)
     final_losses.append(final_loss)
-    print(f"Final loss: {final_loss:.4f}")</p>
+    print(f"Final loss: {final_loss:.4f}")
 
-<p># Plot on log-log scale
+# Plot on log-log scale
 plt.figure(figsize=(10, 6))
 plt.loglog(actual_params, final_losses, 'o-', linewidth=2, markersize=10)
 plt.xlabel('Parameters (log scale)')
 plt.ylabel('Loss (log scale)')
 plt.title('Scaling Law: Loss vs Model Size')
-plt.grid(True, which='both', alpha=0.3)</p>
+plt.grid(True, which='both', alpha=0.3)
 
-<p># Fit power law: L = a * N^(-b)
+# Fit power law: L = a * N^(-b)
 log_params = np.log(actual_params)
 log_losses = np.log(final_losses)
 coeffs = np.polyfit(log_params, log_losses, 1)
 exponent = -coeffs[0]
-intercept = coeffs[1]</p>
+intercept = coeffs[1]
 
-<p># Plot fitted line
+# Plot fitted line
 params_fit = np.logspace(np.log10(min(actual_params)), 
                          np.log10(max(actual_params)), 100)
 losses_fit = np.exp(intercept) * params_fit**(-exponent)
-plt.loglog(params_fit, losses_fit, '--', label=f'Power law fit: L ∝ N^{-exponent:.3f}')</p>
+plt.loglog(params_fit, losses_fit, '--', label=f'Power law fit: L ∝ N^{-exponent:.3f}')
 
-<p>plt.legend()
-plt.savefig('scaling_law.png', dpi=150)</p>
+plt.legend()
+plt.savefig('scaling_law.png', dpi=150)
 
-<p>print(f"\nScaling law exponent: {exponent:.3f}")
+print(f"\nScaling law exponent: {exponent:.3f}")
 print(f"Power law: L = {np.exp(intercept):.2f} * N^(-{exponent:.3f})")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 

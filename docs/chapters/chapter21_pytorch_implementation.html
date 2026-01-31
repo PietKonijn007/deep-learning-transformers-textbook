@@ -175,7 +175,7 @@
 
 <p>The first optimization involves computing attention in chunks rather than materializing the entire attention matrix at once. This approach processes the attention computation in blocks, trading some computational efficiency for substantial memory savings. The chunked attention implementation divides the sequence into smaller segments and computes attention scores for each segment independently.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 def memory_efficient_attention(Q, K, V, chunk_size=128):
     """
     Compute attention in chunks to reduce memory usage.
@@ -197,14 +197,14 @@ def memory_efficient_attention(Q, K, V, chunk_size=128):
         output[:, :, i:end_i, :] = torch.matmul(attn, V)
     
     return output
-\end{verbatim}</p>
+</code></pre>
 
 <p>Another critical optimization is the use of PyTorch's scaled dot-product attention function introduced in PyTorch 2.0, which implements Flash Attention algorithms internally. This function provides significant speedups and memory reductions through kernel fusion and optimized memory access patterns.</p>
 
-<p>\begin{verbatim}
-import torch.nn.functional as F</p>
+<pre><code>
+import torch.nn.functional as F
 
-<p>def efficient_attention(Q, K, V, mask=None):
+def efficient_attention(Q, K, V, mask=None):
     """
     Use PyTorch's optimized scaled_dot_product_attention.
     Automatically uses Flash Attention when available.
@@ -217,7 +217,7 @@ import torch.nn.functional as F</p>
         is_causal=False
     )
     return output
-\end{verbatim}</p>
+</code></pre>
 
 <p>This optimized implementation can reduce memory usage by up to 50\% and provide 2-3× speedups compared to the naive implementation, particularly for longer sequences.</p>
 
@@ -281,21 +281,21 @@ M_{ij} = \begin{cases}
 $$
 </div>
 
-<p><strong>Implementation:</strong>
-\begin{verbatim}
+<strong>Implementation:</strong>
+<pre><code>
 causal_mask = torch.tril(torch.ones(seq_len, seq_len))
 scores = scores.masked_fill(mask == 0, -1e9)
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Padding Mask</h3>
 
-<p><strong>For variable-length sequences:</strong>
-\begin{verbatim}
+<strong>For variable-length sequences:</strong>
+<pre><code>
 # input_ids: (batch, seq_len)
 # 0 indicates padding
 pad_mask = (input_ids != 0).unsqueeze(1).unsqueeze(2)
 # Shape: (batch, 1, 1, seq_len)
-\end{verbatim}</p>
+</code></pre>
 
 <h2>Training Optimizations</h2>
 
@@ -305,18 +305,18 @@ pad_mask = (input_ids != 0).unsqueeze(1).unsqueeze(2)
 
 <p>The Apex library from NVIDIA provides highly optimized fused kernels for layer normalization and other operations. These implementations can be 2-3× faster than the standard PyTorch versions, particularly for smaller batch sizes where kernel launch overhead dominates.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 # Standard PyTorch layer norm
-layer_norm = nn.LayerNorm(d_model)</p>
+layer_norm = nn.LayerNorm(d_model)
 
-<p># Fused layer norm from Apex (faster)
+# Fused layer norm from Apex (faster)
 try:
     from apex.normalization import FusedLayerNorm
     layer_norm = FusedLayerNorm(d_model)
 except ImportError:
     # Fall back to standard implementation
     layer_norm = nn.LayerNorm(d_model)
-\end{verbatim}</p>
+</code></pre>
 
 <p>Similarly, fused dropout and bias addition can be combined with other operations to reduce memory traffic. The key principle is to minimize the number of separate kernel launches and memory accesses by combining operations that naturally occur together in the computation graph.</p>
 
@@ -334,13 +334,13 @@ except ImportError:
 
 <p>PyTorch provides automatic mixed precision (AMP) through the torch.cuda.amp module, which automatically handles the conversion between FP16 and FP32 as needed. The implementation requires minimal code changes and provides automatic loss scaling to prevent gradient underflow.</p>
 
-<p>\begin{verbatim}
-from torch.cuda.amp import autocast, GradScaler</p>
+<pre><code>
+from torch.cuda.amp import autocast, GradScaler
 
-<p># Initialize gradient scaler for loss scaling
-scaler = GradScaler()</p>
+# Initialize gradient scaler for loss scaling
+scaler = GradScaler()
 
-<p># Training loop
+# Training loop
 for batch in dataloader:
     optimizer.zero_grad()
     
@@ -359,7 +359,7 @@ for batch in dataloader:
     # Update weights
     scaler.step(optimizer)
     scaler.update()
-\end{verbatim}</p>
+</code></pre>
 
 <p>The gradient scaler automatically adjusts the loss scaling factor to maintain numerical stability. It increases the scale when no overflow is detected and decreases it when overflow occurs, ensuring that gradients remain in a representable range for FP16 arithmetic.</p>
 
@@ -380,11 +380,11 @@ $$
 
 <p>The implementation requires careful handling of gradient normalization to ensure that the accumulated gradients have the correct scale. Each loss value should be divided by the number of accumulation steps so that the final gradient magnitude matches what would be obtained with a single large batch.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 accumulation_steps = 8
-optimizer.zero_grad()</p>
+optimizer.zero_grad()
 
-<p>for i, batch in enumerate(dataloader):
+for i, batch in enumerate(dataloader):
     # Forward pass
     with autocast():
         outputs = model(batch['input_ids'])
@@ -402,7 +402,7 @@ optimizer.zero_grad()</p>
         scaler.step(optimizer)
         scaler.update()
         optimizer.zero_grad()
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Example:</strong>
 <ul>
@@ -427,10 +427,10 @@ optimizer.zero_grad()</p>
 
 <p>PyTorch provides gradient checkpointing through the torch.utils.checkpoint module. The key is to wrap transformer layers or blocks in checkpoint functions, which handle the recomputation automatically during the backward pass.</p>
 
-<p>\begin{verbatim}
-from torch.utils.checkpoint import checkpoint</p>
+<pre><code>
+from torch.utils.checkpoint import checkpoint
 
-<p>class TransformerLayer(nn.Module):
+class TransformerLayer(nn.Module):
     def __init__(self, d_model, num_heads, d_ff, use_checkpoint=False):
         super().__init__()
         self.use_checkpoint = use_checkpoint
@@ -455,7 +455,7 @@ from torch.utils.checkpoint import checkpoint</p>
         ffn_out = self.ffn(x)
         x = self.norm2(x + ffn_out)
         return x
-\end{verbatim}</p>
+</code></pre>
 
 <p>For a 12-layer BERT model, gradient checkpointing can reduce peak memory usage from approximately 16GB to 9GB, allowing training with longer sequences or larger batch sizes. The computational overhead is typically 20-30\%, which is often an acceptable trade-off for the memory savings.</p>
 
@@ -487,10 +487,10 @@ from torch.utils.checkpoint import checkpoint</p>
 
 <p>PyTorch provides comprehensive memory profiling tools through the torch.cuda module. The memory\_summary function provides detailed information about current memory allocation, including cached memory, allocated memory, and peak memory usage.</p>
 
-<p>\begin{verbatim}
-import torch</p>
+<pre><code>
+import torch
 
-<p># Profile memory usage during training
+# Profile memory usage during training
 def profile_memory(model, batch_size, seq_len, device='cuda'):
     torch.cuda.reset_peak_memory_stats(device)
     torch.cuda.empty_cache()
@@ -516,7 +516,7 @@ def profile_memory(model, batch_size, seq_len, device='cuda'):
     # Detailed summary
     print("\nDetailed memory summary:")
     print(torch.cuda.memory_summary(device))
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Identifying Memory Bottlenecks</h3>
 
@@ -543,7 +543,7 @@ $$
 
 <p>Finding the optimal batch size requires balancing memory usage with computational efficiency. Larger batches improve GPU utilization but consume more memory. Use gradient accumulation to achieve large effective batch sizes while keeping physical batch sizes manageable.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 def find_optimal_batch_size(model, seq_len, device='cuda'):
     """Binary search to find maximum batch size that fits in memory."""
     min_batch = 1
@@ -571,7 +571,7 @@ def find_optimal_batch_size(model, seq_len, device='cuda'):
                 raise e
     
     return optimal_batch
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Strategy 3: Layer-wise Optimization</strong></p>
 
@@ -661,33 +661,33 @@ def find_optimal_batch_size(model, seq_len, device='cuda'):
 
 <p>The torch.jit.script function traces the model's execution and converts it to an intermediate representation that can be optimized and executed more efficiently. This process eliminates Python interpreter overhead and enables fusion of operations that would otherwise require multiple kernel launches.</p>
 
-<p>\begin{verbatim}
-import torch.jit as jit</p>
+<pre><code>
+import torch.jit as jit
 
-<p>class TransformerForInference(nn.Module):
+class TransformerForInference(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.transformer = TransformerModel(config)
     
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
         # Type annotations required for TorchScript
-        return self.transformer(input_ids)</p>
+        return self.transformer(input_ids)
 
-<p># Create and script the model
+# Create and script the model
 model = TransformerForInference(config)
-model.eval()</p>
+model.eval()
 
-<p># Convert to TorchScript
-scripted_model = jit.script(model)</p>
+# Convert to TorchScript
+scripted_model = jit.script(model)
 
-<p># Save for deployment
-scripted_model.save('model_scripted.pt')</p>
+# Save for deployment
+scripted_model.save('model_scripted.pt')
 
-<p># Load and use
+# Load and use
 loaded_model = jit.load('model_scripted.pt')
 with torch.no_grad():
     output = loaded_model(input_ids)
-\end{verbatim}</p>
+</code></pre>
 
 <p>TorchScript compilation typically provides 10-30\% speedup for transformer inference, with larger models seeing greater benefits. The compilation process also validates that the model can be executed without Python dependencies, which is essential for deployment in production environments.</p>
 
@@ -695,7 +695,7 @@ with torch.no_grad():
 
 <p>Autoregressive generation in models like GPT requires computing attention over all previous tokens at each step. Without optimization, this results in redundant computation as the keys and values for previous tokens are recomputed at every step. Implementing a KV cache stores these values and reuses them, dramatically reducing computation.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 class GPTWithKVCache(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -737,9 +737,9 @@ class GPTWithKVCache(nn.Module):
             if use_cache:
                 present_key_values.append(new_kv)
         
-        return hidden_states, present_key_values</p>
+        return hidden_states, present_key_values
 
-<p>class TransformerLayerWithCache(nn.Module):
+class TransformerLayerWithCache(nn.Module):
     def forward(self, x, past_key_value=None, use_cache=False):
         # Compute Q, K, V
         Q = self.q_proj(x)
@@ -757,9 +757,9 @@ class GPTWithKVCache(nn.Module):
         
         # Return new cache if requested
         new_kv = (K, V) if use_cache else None
-        return attn_output, new_kv</p>
+        return attn_output, new_kv
 
-<p># Generation with KV cache
+# Generation with KV cache
 def generate_with_cache(model, input_ids, max_length=100):
     """Generate tokens using KV cache for efficiency."""
     past_key_values = None
@@ -787,7 +787,7 @@ def generate_with_cache(model, input_ids, max_length=100):
             break
     
     return input_ids
-\end{verbatim}</p>
+</code></pre>
 
 <p>KV caching reduces the computational complexity of generating $n$ tokens from $O(n^2)$ to $O(n)$, providing speedups of 5-10× for typical generation lengths. The memory overhead is proportional to the sequence length and number of layers, typically requiring 1-2GB for a GPT-2 sized model generating 1000 tokens.</p>
 
@@ -795,10 +795,10 @@ def generate_with_cache(model, input_ids, max_length=100):
 
 <p>ONNX (Open Neural Network Exchange) provides a standardized format for representing neural networks, enabling deployment across different frameworks and hardware platforms. Exporting to ONNX allows using optimized inference engines like ONNX Runtime, which can provide substantial speedups.</p>
 
-<p>\begin{verbatim}
-import torch.onnx</p>
+<pre><code>
+import torch.onnx
 
-<p>def export_to_onnx(model, output_path, batch_size=1, seq_len=128):
+def export_to_onnx(model, output_path, batch_size=1, seq_len=128):
     """Export PyTorch model to ONNX format."""
     model.eval()
     
@@ -821,24 +821,24 @@ import torch.onnx</p>
         },
         opset_version=14,
         do_constant_folding=True
-    )</p>
+    )
 
-<p># Use ONNX Runtime for inference
-import onnxruntime as ort</p>
+# Use ONNX Runtime for inference
+import onnxruntime as ort
 
-<p># Create inference session
+# Create inference session
 session = ort.InferenceSession(
     'model.onnx',
     providers=['CUDAExecutionProvider', 'CPUExecutionProvider']
-)</p>
+)
 
-<p># Run inference
+# Run inference
 input_ids = torch.randint(0, 30000, (1, 128)).numpy()
 outputs = session.run(
     ['logits'],
     {'input_ids': input_ids}
 )
-\end{verbatim}</p>
+</code></pre>
 
 <p>ONNX Runtime typically provides 20-40\% speedup over PyTorch for transformer inference, with the exact speedup depending on the model architecture and hardware. The optimization includes operator fusion, memory layout optimization, and hardware-specific kernel selection.</p>
 
@@ -846,11 +846,11 @@ outputs = session.run(
 
 <p>NVIDIA TensorRT provides highly optimized inference for NVIDIA GPUs through aggressive kernel fusion, precision calibration, and dynamic tensor memory management. TensorRT can provide 2-5× speedup over standard PyTorch inference for transformer models.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 # Convert ONNX to TensorRT
-import tensorrt as trt</p>
+import tensorrt as trt
 
-<p>def build_tensorrt_engine(onnx_path, engine_path, fp16_mode=True):
+def build_tensorrt_engine(onnx_path, engine_path, fp16_mode=True):
     """Build TensorRT engine from ONNX model."""
     logger = trt.Logger(trt.Logger.WARNING)
     builder = trt.Builder(logger)
@@ -880,9 +880,9 @@ import tensorrt as trt</p>
     with open(engine_path, 'wb') as f:
         f.write(engine.serialize())
     
-    return engine</p>
+    return engine
 
-<p># Use TensorRT for inference
+# Use TensorRT for inference
 def infer_with_tensorrt(engine_path, input_ids):
     """Run inference using TensorRT engine."""
     logger = trt.Logger(trt.Logger.WARNING)
@@ -905,7 +905,7 @@ def infer_with_tensorrt(engine_path, input_ids):
     )
     
     return outputs[0]
-\end{verbatim}</p>
+</code></pre>
 
 <p>TensorRT optimization is particularly effective for deployment scenarios where inference latency is critical. The optimization process includes layer fusion, precision calibration for INT8 quantization, and kernel auto-tuning for the specific GPU architecture.</p>
 
@@ -913,10 +913,10 @@ def infer_with_tensorrt(engine_path, input_ids):
 
 <p>Quantization reduces model size and inference latency by using lower precision representations for weights and activations. PyTorch supports several quantization approaches, from simple dynamic quantization to full quantization-aware training.</p>
 
-<p>\begin{verbatim}
-import torch.quantization as quant</p>
+<pre><code>
+import torch.quantization as quant
 
-<p># Dynamic quantization (easiest, good for LSTM/Transformer)
+# Dynamic quantization (easiest, good for LSTM/Transformer)
 def dynamic_quantize(model):
     """Apply dynamic quantization to linear layers."""
     quantized_model = quant.quantize_dynamic(
@@ -924,9 +924,9 @@ def dynamic_quantize(model):
         {nn.Linear},  # Quantize linear layers
         dtype=torch.qint8
     )
-    return quantized_model</p>
+    return quantized_model
 
-<p># Static quantization (requires calibration)
+# Static quantization (requires calibration)
 def static_quantize(model, calibration_dataloader):
     """Apply static quantization with calibration."""
     model.eval()
@@ -944,9 +944,9 @@ def static_quantize(model, calibration_dataloader):
     
     # Convert to quantized model
     model_quantized = quant.convert(model_prepared)
-    return model_quantized</p>
+    return model_quantized
 
-<p># Quantization-aware training
+# Quantization-aware training
 def quantization_aware_training(model, train_dataloader):
     """Train model with quantization simulation."""
     model.train()
@@ -966,7 +966,7 @@ def quantization_aware_training(model, train_dataloader):
     # Convert to quantized model
     model_quantized = quant.convert(model_prepared.eval())
     return model_quantized
-\end{verbatim}</p>
+</code></pre>
 
 <p>Dynamic quantization typically provides 2-3× speedup and 4× model size reduction with minimal accuracy loss for transformer models. Static quantization and quantization-aware training can provide additional benefits but require more careful tuning and calibration data.</p>
 
@@ -974,7 +974,7 @@ def quantization_aware_training(model, train_dataloader):
 
 <p>Comprehensive benchmarking is essential for understanding the trade-offs between different optimization techniques. The following framework measures latency, throughput, and memory usage across different configurations.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 def benchmark_inference(model, batch_sizes, seq_lengths, num_runs=100):
     """Comprehensive inference benchmarking."""
     results = []
@@ -1018,9 +1018,9 @@ def benchmark_inference(model, batch_sizes, seq_lengths, num_runs=100):
             
             torch.cuda.reset_peak_memory_stats()
     
-    return results</p>
+    return results
 
-<p># Compare optimization techniques
+# Compare optimization techniques
 def compare_optimizations(base_model, config):
     """Compare different optimization approaches."""
     models = {
@@ -1040,7 +1040,7 @@ def compare_optimizations(base_model, config):
         )
     
     return results
-\end{verbatim}</p>
+</code></pre>
 
 <p>Typical results for BERT-base inference optimization show that combining TorchScript, FP16, and dynamic quantization can achieve 5-8× speedup with less than 1\% accuracy degradation, making deployment feasible for latency-sensitive applications.</p>
 
@@ -1048,8 +1048,8 @@ def compare_optimizations(base_model, config):
 
 <h3>Training Script Structure</h3>
 
-<p><strong>1. Configuration:</strong>
-\begin{verbatim}
+<strong>1. Configuration:</strong>
+<pre><code>
 config = {
     'd_model': 768,
     'num_heads': 12,
@@ -1063,16 +1063,16 @@ config = {
     'warmup_steps': 10000,
     'max_steps': 1000000
 }
-\end{verbatim}</p>
+</code></pre>
 
-<p><strong>2. Model instantiation:</strong>
-\begin{verbatim}
+<strong>2. Model instantiation:</strong>
+<pre><code>
 model = BERTModel(**config)
 model = model.to(device)
-\end{verbatim}</p>
+</code></pre>
 
-<p><strong>3. Optimizer setup:</strong>
-\begin{verbatim}
+<strong>3. Optimizer setup:</strong>
+<pre><code>
 from torch.optim import AdamW
 optimizer = AdamW(
     model.parameters(),
@@ -1081,17 +1081,17 @@ optimizer = AdamW(
     eps=1e-6,
     weight_decay=0.01
 )
-\end{verbatim}</p>
+</code></pre>
 
-<p><strong>4. Learning rate scheduler:</strong>
-\begin{verbatim}
+<strong>4. Learning rate scheduler:</strong>
+<pre><code>
 from transformers import get_linear_schedule_with_warmup
 scheduler = get_linear_schedule_with_warmup(
     optimizer,
     num_warmup_steps=config['warmup_steps'],
     num_training_steps=config['max_steps']
 )
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>5. Training loop with all optimizations:</strong>
 <ul>
@@ -1108,15 +1108,15 @@ scheduler = get_linear_schedule_with_warmup(
 
 <p>This section provides a complete, production-ready transformer implementation incorporating all the optimization techniques discussed in this chapter. The implementation is modular, efficient, and includes comprehensive error checking and documentation.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.cuda.amp import autocast, GradScaler
 from torch.utils.checkpoint import checkpoint
-import math</p>
+import math
 
-<p>class MultiHeadAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     """Optimized multi-head attention with optional Flash Attention."""
     
     def __init__(self, d_model, num_heads, dropout=0.1, use_flash=True):
@@ -1177,9 +1177,9 @@ import math</p>
         
         # Return cache if requested
         new_kv = (K, V) if use_cache else None
-        return output, new_kv</p>
+        return output, new_kv
 
-<p>class FeedForward(nn.Module):
+class FeedForward(nn.Module):
     """Feed-forward network with GELU activation."""
     
     def __init__(self, d_model, d_ff, dropout=0.1):
@@ -1193,9 +1193,9 @@ import math</p>
         x = F.gelu(x)
         x = self.dropout(x)
         x = self.linear2(x)
-        return x</p>
+        return x
 
-<p>class TransformerLayer(nn.Module):
+class TransformerLayer(nn.Module):
     """Single transformer layer with pre-norm architecture."""
     
     def __init__(self, d_model, num_heads, d_ff, dropout=0.1, 
@@ -1233,9 +1233,9 @@ import math</p>
         ffn_out = self.ffn(normed)
         x = x + self.dropout(ffn_out)
         
-        return x, new_kv</p>
+        return x, new_kv
 
-<p>class TransformerModel(nn.Module):
+class TransformerModel(nn.Module):
     """Complete transformer model with all optimizations."""
     
     def __init__(self, vocab_size, d_model=768, num_heads=12, 
@@ -1326,13 +1326,13 @@ import math</p>
         logits = self.lm_head(hidden_states)
         
         return logits, present_key_values
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Optimized Training Loop</h3>
 
 <p>The following training loop incorporates all optimization techniques including mixed precision, gradient accumulation, gradient clipping, and comprehensive logging.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 def train_transformer(model, train_dataloader, val_dataloader, config):
     """Complete training loop with all optimizations."""
     
@@ -1431,9 +1431,9 @@ def train_transformer(model, train_dataloader, val_dataloader, config):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_loss': val_loss,
-            }, 'best_model.pt')</p>
+            }, 'best_model.pt')
 
-<p>def evaluate(model, dataloader, device):
+def evaluate(model, dataloader, device):
     """Evaluation loop."""
     model.eval()
     total_loss = 0.0
@@ -1453,7 +1453,7 @@ def train_transformer(model, train_dataloader, val_dataloader, config):
             total_loss += loss.item()
     
     return total_loss / len(dataloader)
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Comprehensive Benchmarks</h3>
 
@@ -1506,11 +1506,11 @@ def train_transformer(model, train_dataloader, val_dataloader, config):
 
 <h3>Data Parallel</h3>
 
-<p><strong>Simple multi-GPU:</strong>
-\begin{verbatim}
+<strong>Simple multi-GPU:</strong>
+<pre><code>
 if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Effective batch size:</strong> $B \times N_{\text{GPUs}}$</p>
 
@@ -1539,10 +1539,10 @@ if torch.cuda.device_count() > 1:
 
 <p>The num\_workers parameter controls how many subprocesses are used for data loading. Setting this too low results in the GPU waiting for data, while setting it too high can cause excessive CPU and memory usage. A good starting point is to use 4-8 workers per GPU, but the optimal value depends on the specific dataset and preprocessing pipeline.</p>
 
-<p>\begin{verbatim}
-from torch.utils.data import DataLoader</p>
+<pre><code>
+from torch.utils.data import DataLoader
 
-<p># Optimized DataLoader configuration
+# Optimized DataLoader configuration
 dataloader = DataLoader(
     dataset,
     batch_size=32,
@@ -1551,7 +1551,7 @@ dataloader = DataLoader(
     persistent_workers=True, # Keep workers alive between epochs
     prefetch_factor=2        # Prefetch batches per worker
 )
-\end{verbatim}</p>
+</code></pre>
 
 <p>The pin\_memory option allocates data in pinned (page-locked) memory, which enables faster transfers to the GPU using asynchronous DMA transfers. This can provide 20-30\% speedup for data transfer, particularly beneficial when the model is small relative to the batch size.</p>
 
@@ -1561,7 +1561,7 @@ dataloader = DataLoader(
 
 <p>Overlapping data transfer with computation can hide data transfer latency. PyTorch supports non-blocking transfers that allow the CPU to continue executing while data is being copied to the GPU.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 for batch in dataloader:
     # Non-blocking transfer to GPU
     input_ids = batch['input_ids'].to(device, non_blocking=True)
@@ -1571,7 +1571,7 @@ for batch in dataloader:
     with autocast():
         outputs = model(input_ids)
         loss = criterion(outputs, labels)
-\end{verbatim}</p>
+</code></pre>
 
 <p>This technique is most effective when combined with pinned memory, as it enables true asynchronous transfers. The speedup depends on the ratio of transfer time to computation time, with larger models benefiting more as computation dominates.</p>
 
@@ -1579,18 +1579,18 @@ for batch in dataloader:
 
 <p>Understanding where time is spent during training is essential for effective optimization. PyTorch's profiler provides detailed information about CPU and GPU operations, memory usage, and kernel execution times.</p>
 
-<p>\begin{verbatim}
-from torch.profiler import profile, ProfilerActivity, schedule</p>
+<pre><code>
+from torch.profiler import profile, ProfilerActivity, schedule
 
-<p># Configure profiler
+# Configure profiler
 profiler_schedule = schedule(
     wait=1,      # Skip first batch
     warmup=1,    # Warmup for 1 batch
     active=3,    # Profile 3 batches
     repeat=2     # Repeat cycle twice
-)</p>
+)
 
-<p>with profile(
+with profile(
     activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
     schedule=profiler_schedule,
     on_trace_ready=torch.profiler.tensorboard_trace_handler('./log'),
@@ -1609,12 +1609,12 @@ profiler_schedule = schedule(
         optimizer.step()
         optimizer.zero_grad()
         
-        prof.step()  # Signal end of iteration</p>
+        prof.step()  # Signal end of iteration
 
-<p># Print summary
+# Print summary
 print(prof.key_averages().table(
     sort_by="cuda_time_total", row_limit=10))
-\end{verbatim}</p>
+</code></pre>
 
 <p>The profiler output identifies operations that consume the most time, enabling targeted optimization. Common bottlenecks include inefficient attention implementations, excessive memory allocations, and CPU-GPU synchronization points.</p>
 
@@ -1624,7 +1624,7 @@ print(prof.key_averages().table(
 
 <p>The optimal batch size maximizes GPU utilization without causing memory overflow. For transformer models, GPU utilization typically plateaus at batch sizes where the GPU is fully occupied, with further increases providing diminishing returns.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 def benchmark_batch_sizes(model, seq_len, device='cuda'):
     """Benchmark training speed for different batch sizes."""
     results = []
@@ -1670,23 +1670,23 @@ def benchmark_batch_sizes(model, seq_len, device='cuda'):
                 break
     
     return results
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Compilation with torch.compile</h3>
 
 <p>PyTorch 2.0 introduces torch.compile, which uses TorchDynamo and TorchInductor to compile models into optimized kernels. This can provide substantial speedups with minimal code changes.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 # Compile model for faster execution
-model = torch.compile(model, mode='max-autotune')</p>
+model = torch.compile(model, mode='max-autotune')
 
-<p># Training proceeds as normal
+# Training proceeds as normal
 for batch in dataloader:
     outputs = model(batch['input_ids'])
     loss = outputs.mean()
     loss.backward()
     optimizer.step()
-\end{verbatim}</p>
+</code></pre>
 
 <p>The compilation process analyzes the model's computation graph and generates optimized CUDA kernels. The first iteration is slow due to compilation overhead, but subsequent iterations benefit from the optimized code. Speedups of 20-50\% are common for transformer models, with larger models typically seeing greater benefits.</p>
 
@@ -1704,12 +1704,12 @@ for batch in dataloader:
 
 <p>DistributedDataParallel (DDP) is PyTorch's recommended approach for multi-GPU training. It provides better performance than DataParallel through more efficient gradient synchronization and support for multi-node training.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data.distributed import DistributedSampler</p>
+from torch.utils.data.distributed import DistributedSampler
 
-<p>def setup_distributed(rank, world_size):
+def setup_distributed(rank, world_size):
     """Initialize distributed training."""
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
@@ -1719,13 +1719,13 @@ from torch.utils.data.distributed import DistributedSampler</p>
         backend='nccl',  # Use NCCL for GPU training
         rank=rank,
         world_size=world_size
-    )</p>
+    )
 
-<p>def cleanup_distributed():
+def cleanup_distributed():
     """Clean up distributed training."""
-    dist.destroy_process_group()</p>
+    dist.destroy_process_group()
 
-<p>def train_distributed(rank, world_size, model, dataset):
+def train_distributed(rank, world_size, model, dataset):
     """Training function for each process."""
     setup_distributed(rank, world_size)
     
@@ -1770,9 +1770,9 @@ from torch.utils.data.distributed import DistributedSampler</p>
             optimizer.step()
             optimizer.zero_grad()
     
-    cleanup_distributed()</p>
+    cleanup_distributed()
 
-<p># Launch training on multiple GPUs
+# Launch training on multiple GPUs
 if __name__ == '__main__':
     world_size = torch.cuda.device_count()
     torch.multiprocessing.spawn(
@@ -1781,7 +1781,7 @@ if __name__ == '__main__':
         nprocs=world_size,
         join=True
     )
-\end{verbatim}</p>
+</code></pre>
 
 <h3>Gradient Synchronization</h3>
 
@@ -1793,7 +1793,7 @@ if __name__ == '__main__':
 
 <p>Distributed training efficiency is measured by scaling efficiency, which compares actual speedup to ideal linear speedup. Perfect scaling would achieve 8× speedup with 8 GPUs, but communication overhead and synchronization typically reduce this.</p>
 
-<p>\begin{verbatim}
+<pre><code>
 def measure_scaling_efficiency(model, batch_size, seq_len):
     """Measure scaling efficiency across different GPU counts."""
     results = {}
@@ -1823,7 +1823,7 @@ def measure_scaling_efficiency(model, batch_size, seq_len):
         }
     
     return results
-\end{verbatim}</p>
+</code></pre>
 
 <p>For transformer models, scaling efficiency typically ranges from 85-95\% for 2-8 GPUs on a single node, with larger models achieving better efficiency due to higher computation-to-communication ratios. Multi-node training introduces additional communication overhead, with efficiency typically dropping to 70-85\% depending on network bandwidth and model size.</p>
 
@@ -2043,14 +2043,14 @@ def measure_scaling_efficiency(model, batch_size, seq_len):
     <li>Quality: Perplexity 28.4 (competitive with baseline)
 </ul>
 
-<p><strong>Sample Generation:</strong>
-\begin{verbatim}
+<strong>Sample Generation:</strong>
+<pre><code>
 Prompt: "The future of artificial intelligence"
 Output: "The future of artificial intelligence will be shaped by 
 advances in deep learning and transformer architectures. These 
 models have demonstrated remarkable capabilities in natural 
 language understanding and generation..."
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Key Achievements:</strong>
 <ol>

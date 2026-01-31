@@ -137,9 +137,19 @@ def convert_latex_to_html(latex_content):
         print(f"  → Converted {tables_found} table environments to {tables_after} HTML tables [v2-FIXED]")
     
     # Convert chapters and sections
+    # Handle \chapter[short]{long} format - use the long title
+    html = re.sub(r'\\chapter\*?\[([^\]]+)\]\{([^}]+)\}', r'<h1>\2</h1>', html)
+    # Handle \chapter{title} format
     html = re.sub(r'\\chapter\*?\{([^}]+)\}', r'<h1>\1</h1>', html)
+    
+    # Handle sections with optional short titles
+    html = re.sub(r'\\section\*?\[([^\]]+)\]\{([^}]+)\}', r'<h2>\2</h2>', html)
     html = re.sub(r'\\section\*?\{([^}]+)\}', r'<h2>\1</h2>', html)
+    
+    html = re.sub(r'\\subsection\*?\[([^\]]+)\]\{([^}]+)\}', r'<h3>\2</h3>', html)
     html = re.sub(r'\\subsection\*?\{([^}]+)\}', r'<h3>\1</h3>', html)
+    
+    html = re.sub(r'\\subsubsection\*?\[([^\]]+)\]\{([^}]+)\}', r'<h4>\2</h4>', html)
     html = re.sub(r'\\subsubsection\*?\{([^}]+)\}', r'<h4>\1</h4>', html)
     
     # Convert environments - handle both with and without labels
@@ -323,6 +333,9 @@ def convert_latex_to_html(latex_content):
     # Convert lstlisting to code blocks
     html = re.sub(r'\\begin\{lstlisting\}.*?\n(.*?)\\end\{lstlisting\}', r'<pre><code>\1</code></pre>', html, flags=re.DOTALL)
     
+    # Convert verbatim to code blocks
+    html = re.sub(r'\\begin\{verbatim\}(.*?)\\end\{verbatim\}', r'<pre><code>\1</code></pre>', html, flags=re.DOTALL)
+    
     # Convert algorithm environment
     html = re.sub(r'\\begin\{algorithm\}.*?\\caption\{([^}]+)\}.*?\\label\{[^}]+\}', r'<div class="algorithm"><div class="algorithm-title">Algorithm: \1</div>', html, flags=re.DOTALL)
     html = re.sub(r'\\end\{algorithm\}', r'</div>', html)
@@ -332,6 +345,14 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\ref\{[^}]+\}', '[ref]', html)
     html = re.sub(r'\\cite\{[^}]+\}', '[citation]', html)
     html = re.sub(r'\\addcontentsline\{[^}]+\}\{[^}]+\}\{[^}]+\}', '', html)
+    
+    # Protect pre/code blocks from paragraph processing by replacing newlines with placeholders
+    pre_blocks = []
+    def save_pre_block(match):
+        pre_blocks.append(match.group(0))
+        return f'___PRE_BLOCK_{len(pre_blocks)-1}___'
+    
+    html = re.sub(r'<pre><code>.*?</code></pre>', save_pre_block, html, flags=re.DOTALL)
     
     # Clean up paragraphs - but don't wrap block elements
     # Split by double newlines
@@ -343,13 +364,17 @@ def convert_latex_to_html(latex_content):
         part = part.strip()
         if not part:
             continue
-        # Check if it's a block element (starts with <h, <div, <ul, <ol, <pre, <table)
-        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote)', part):
+        # Check if it's a block element (starts with <h, <div, <ul, <ol, <pre, <table) or a placeholder
+        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote)', part) or '___PRE_BLOCK_' in part:
             wrapped_parts.append(part)
         else:
             wrapped_parts.append(f'<p>{part}</p>')
     
     html = '\n\n'.join(wrapped_parts)
+    
+    # Restore pre/code blocks
+    for i, block in enumerate(pre_blocks):
+        html = html.replace(f'___PRE_BLOCK_{i}___', block)
     
     # Clean up empty paragraphs
     html = re.sub(r'<p>\s*</p>', '', html)

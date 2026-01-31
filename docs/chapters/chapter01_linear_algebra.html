@@ -414,13 +414,13 @@ $$\begin{align}
 <div class="keypoint">
 <strong>Cache Efficiency:</strong> Accessing memory sequentially is 10-100$\times$ faster than random access due to CPU cache lines, which typically hold 64 bytes of consecutive memory. This means you should always iterate in the storage order. For row-major matrices, iterate rows in the outer loop to access consecutive memory locations, avoiding strided access patterns that jump across rows and cause cache misses.
 
-<p>For row-major matrices, iterate rows in the outer loop:
+For row-major matrices, iterate rows in the outer loop:
 <pre><code># Good: Sequential memory access
 for i in range(m):
     for j in range(n):
-        result += A[i, j]  # Accesses consecutive memory</p>
+        result += A[i, j]  # Accesses consecutive memory
 
-<p># Bad: Strided memory access  
+# Bad: Strided memory access  
 for j in range(n):
     for i in range(m):
         result += A[i, j]  # Jumps across rows
@@ -638,26 +638,26 @@ $$
 Computing SVD and low-rank approximation in PyTorch:
 <pre><code>import torch
 
-<p># Original weight matrix
-W = torch.randn(512, 2048)</p>
+# Original weight matrix
+W = torch.randn(512, 2048)
 
-<p># Compute SVD
-U, S, Vt = torch.linalg.svd(W, full_matrices=False)</p>
+# Compute SVD
+U, S, Vt = torch.linalg.svd(W, full_matrices=False)
 
-<p># Rank-k approximation
+# Rank-k approximation
 k = 64
-W_compressed = U[:, :k] @ torch.diag(S[:k]) @ Vt[:k, :]</p>
+W_compressed = U[:, :k] @ torch.diag(S[:k]) @ Vt[:k, :]
 
-<p># Factored form for efficient computation
+# Factored form for efficient computation
 W1 = U[:, :k] @ torch.diag(S[:k])  # 512 x 64
-W2 = Vt[:k, :]                       # 64 x 2048</p>
+W2 = Vt[:k, :]                       # 64 x 2048
 
-<p># Verify approximation
+# Verify approximation
 error = torch.norm(W - W_compressed, p='fro')
 relative_error = error / torch.norm(W, p='fro')
-print(f"Relative error: {relative_error:.4f}")</p>
+print(f"Relative error: {relative_error:.4f}")
 
-<p># Memory comparison
+# Memory comparison
 original_params = W.numel()
 compressed_params = W1.numel() + W2.numel()
 compression_ratio = compressed_params / original_params
@@ -693,12 +693,12 @@ $$
 In PyTorch:
 <pre><code>import torch
 
-<p># Vector norms
+# Vector norms
 x = torch.tensor([3.0, 4.0])
 l2_norm = torch.norm(x, p=2)  # 5.0
-l1_norm = torch.norm(x, p=1)  # 7.0</p>
+l1_norm = torch.norm(x, p=1)  # 7.0
 
-<p># Matrix Frobenius norm
+# Matrix Frobenius norm
 W = torch.randn(256, 784)
 frob_norm = torch.norm(W, p='fro')
 </code></pre>
@@ -732,32 +732,32 @@ Consider a single transformer layer with $d_{\text{model}} = 768$, $h = 12$ atte
 Common dimension fixes in PyTorch:
 <pre><code>import torch
 
-<p># Problem: Shape mismatch in matrix multiplication
+# Problem: Shape mismatch in matrix multiplication
 Q = torch.randn(32, 512, 768)  # [batch, seq_len, d_model]
-K = torch.randn(32, 512, 768)</p>
+K = torch.randn(32, 512, 768)
 
-<p># Wrong: Q @ K gives error (768 != 512)
-# scores = Q @ K  # Error!</p>
+# Wrong: Q @ K gives error (768 != 512)
+# scores = Q @ K  # Error!
 
-<p># Correct: Transpose last two dimensions of K
-scores = Q @ K.transpose(-2, -1)  # [32, 512, 512]</p>
+# Correct: Transpose last two dimensions of K
+scores = Q @ K.transpose(-2, -1)  # [32, 512, 512]
 
-<p># Problem: Missing batch dimension
+# Problem: Missing batch dimension
 x = torch.randn(512, 768)  # Missing batch dimension
-W = torch.randn(768, 3072)</p>
+W = torch.randn(768, 3072)
 
-<p># Add batch dimension
+# Add batch dimension
 x = x.unsqueeze(0)  # [1, 512, 768]
-output = x @ W      # [1, 512, 3072]</p>
+output = x @ W      # [1, 512, 3072]
 
-<p># Problem: Broadcasting confusion
+# Problem: Broadcasting confusion
 x = torch.randn(32, 512, 768)
-bias = torch.randn(768)</p>
+bias = torch.randn(768)
 
-<p># This works due to broadcasting
-output = x + bias  # bias broadcasts to [32, 512, 768]</p>
+# This works due to broadcasting
+output = x + bias  # bias broadcasts to [32, 512, 768]
 
-<p># Explicit broadcasting (clearer)
+# Explicit broadcasting (clearer)
 output = x + bias.view(1, 1, 768)
 </code></pre>
 </div>

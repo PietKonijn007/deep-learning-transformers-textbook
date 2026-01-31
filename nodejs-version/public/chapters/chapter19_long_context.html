@@ -445,14 +445,14 @@ $$
     <li>"The tower is 330 meters tall and was the tallest..."
 </ol>
 
-<p><strong>Step 2: Concatenate</strong>
-\begin{verbatim}
+<strong>Step 2: Concatenate</strong>
+<pre><code>
 Context 1: The Eiffel Tower was constructed from 1887 to 1889...
 Context 2: Gustave Eiffel designed the tower for the 1889 World's Fair...
 Context 3: The tower is 330 meters tall and was the tallest...
 Question: When was the Eiffel Tower built?
 Answer:
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Step 3: Generate</strong>
 "The Eiffel Tower was built from 1887 to 1889."</p>
@@ -846,14 +846,14 @@ import torch.nn as nn
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 import numpy as np
 
-<p># Part (a): Load pretrained GPT-2
+# Part (a): Load pretrained GPT-2
 model_name = "gpt2"  # Trained on 1024-token contexts
 tokenizer = GPT2Tokenizer.from_pretrained(model_name)
-model = GPT2LMHeadModel.from_pretrained(model_name)</p>
+model = GPT2LMHeadModel.from_pretrained(model_name)
 
-<p>print(f"Original max position: {model.config.n_positions}")  # 1024</p>
+print(f"Original max position: {model.config.n_positions}")  # 1024
 
-<p># Part (b): Implement position interpolation
+# Part (b): Implement position interpolation
 def extend_position_embeddings(model, new_max_length=4096):
     """
     Extend position embeddings using interpolation
@@ -891,16 +891,16 @@ def extend_position_embeddings(model, new_max_length=4096):
     model.transformer.wpe.weight.data = new_pos_emb
     model.config.n_positions = new_max_length
     
-    return model</p>
+    return model
 
-<p># Extend to 4096 tokens
+# Extend to 4096 tokens
 extended_model = extend_position_embeddings(model, new_max_length=4096)
-print(f"Extended max position: {extended_model.config.n_positions}")  # 4096</p>
+print(f"Extended max position: {extended_model.config.n_positions}")  # 4096
 
-<p># Part (c): Fine-tune on long sequences
-from torch.utils.data import DataLoader, Dataset</p>
+# Part (c): Fine-tune on long sequences
+from torch.utils.data import DataLoader, Dataset
 
-<p>class LongTextDataset(Dataset):
+class LongTextDataset(Dataset):
     def __init__(self, texts, tokenizer, max_length=4096):
         self.encodings = []
         for text in texts:
@@ -912,19 +912,19 @@ from torch.utils.data import DataLoader, Dataset</p>
         return len(self.encodings)
     
     def __getitem__(self, idx):
-        return torch.tensor(self.encodings[idx])</p>
+        return torch.tensor(self.encodings[idx])
 
-<p># Simulate long text dataset
+# Simulate long text dataset
 long_texts = ["..." * 1000 for _ in range(100)]  # Replace with actual data
 dataset = LongTextDataset(long_texts, tokenizer, max_length=4096)
-dataloader = DataLoader(dataset, batch_size=1, shuffle=True)</p>
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-<p># Fine-tuning
+# Fine-tuning
 optimizer = torch.optim.AdamW(extended_model.parameters(), lr=1e-5)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-extended_model.to(device)</p>
+extended_model.to(device)
 
-<p>extended_model.train()
+extended_model.train()
 for step, batch in enumerate(dataloader):
     if step >= 1000:
         break
@@ -938,9 +938,11 @@ for step, batch in enumerate(dataloader):
     optimizer.step()
     
     if step 
-        print(f"Step {step}, Loss: {loss.item():.4f}")</p>
+        print(f"Step {step}, Loss: {loss.item():.4f}")
 
-<p># Part (d): Evaluate perplexity at different lengths
+
+
+# Part (d): Evaluate perplexity at different lengths
 def evaluate_perplexity(model, tokenizer, text, max_length):
     """Evaluate perplexity on a long sequence"""
     model.eval()
@@ -952,16 +954,16 @@ def evaluate_perplexity(model, tokenizer, text, max_length):
         loss = outputs.loss
         perplexity = torch.exp(loss)
     
-    return perplexity.item()</p>
+    return perplexity.item()
 
-<p># Test sequences
-test_text = "..." * 2000  # Long test text</p>
+# Test sequences
+test_text = "..." * 2000  # Long test text
 
-<p>lengths = [1024, 2048, 3072, 4096]
+lengths = [1024, 2048, 3072, 4096]
 perplexities_extended = []
-perplexities_original = []</p>
+perplexities_original = []
 
-<p>for length in lengths:
+for length in lengths:
     # Extended model
     ppl_ext = evaluate_perplexity(extended_model, tokenizer, test_text, length)
     perplexities_extended.append(ppl_ext)
@@ -973,12 +975,12 @@ perplexities_original = []</p>
     else:
         perplexities_original.append(float('inf'))  # Cannot handle
     
-    print(f"Length {length}: Extended={ppl_ext:.2f}, Original={perplexities_original[-1]:.2f}")</p>
+    print(f"Length {length}: Extended={ppl_ext:.2f}, Original={perplexities_original[-1]:.2f}")
 
-<p># Part (e): Plot perplexity vs position
-import matplotlib.pyplot as plt</p>
+# Part (e): Plot perplexity vs position
+import matplotlib.pyplot as plt
 
-<p>def compute_position_perplexity(model, tokens, window_size=100):
+def compute_position_perplexity(model, tokens, window_size=100):
     """Compute perplexity at each position"""
     model.eval()
     perplexities = []
@@ -992,20 +994,20 @@ import matplotlib.pyplot as plt</p>
             ppl = torch.exp(outputs.loss).item()
             perplexities.append(ppl)
     
-    return perplexities</p>
+    return perplexities
 
-<p># Analyze 4096-token sequence
+# Analyze 4096-token sequence
 long_tokens = tokenizer.encode(test_text, max_length=4096, truncation=True)
-position_ppls = compute_position_perplexity(extended_model, long_tokens)</p>
+position_ppls = compute_position_perplexity(extended_model, long_tokens)
 
-<p>plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 plt.plot(range(len(position_ppls)), position_ppls)
 plt.xlabel('Position (in windows of 100 tokens)')
 plt.ylabel('Perplexity')
 plt.title('Perplexity vs Position for Extended GPT-2')
 plt.grid(True)
 plt.savefig('position_perplexity.png')
-</code></pre></p>
+</code></pre>
 
 <p><strong>Expected Results:</strong></p>
 

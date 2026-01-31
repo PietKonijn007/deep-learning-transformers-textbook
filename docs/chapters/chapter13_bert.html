@@ -679,7 +679,7 @@ import torch.nn as nn
 from transformers import BertTokenizer, BertForMaskedLM
 import numpy as np
 
-<p>def create_mlm_data(sentence, tokenizer, mask_prob=0.15):
+def create_mlm_data(sentence, tokenizer, mask_prob=0.15):
     """Create masked language modeling training data"""
     # Tokenize
     tokens = tokenizer.tokenize(sentence)
@@ -709,30 +709,30 @@ import numpy as np
         if i not in masked_indices:
             labels[i] = -100
     
-    return token_ids, labels, masked_indices</p>
+    return token_ids, labels, masked_indices
 
-<p># Example
+# Example
 sentence = "The quick brown fox jumps"
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertForMaskedLM.from_pretrained('bert-base-uncased')</p>
+model = BertForMaskedLM.from_pretrained('bert-base-uncased')
 
-<p># Create masked input
-input_ids, labels, masked_idx = create_mlm_data(sentence, tokenizer)</p>
+# Create masked input
+input_ids, labels, masked_idx = create_mlm_data(sentence, tokenizer)
 
-<p># Convert to tensors
+# Convert to tensors
 input_tensor = torch.tensor([input_ids])
-label_tensor = torch.tensor([labels])</p>
+label_tensor = torch.tensor([labels])
 
-<p># Forward pass
+# Forward pass
 outputs = model(input_tensor, labels=label_tensor)
 loss = outputs.loss
-logits = outputs.logits</p>
+logits = outputs.logits
 
-<p>print(f"Original: {sentence}")
+print(f"Original: {sentence}")
 print(f"Tokens: {tokenizer.convert_ids_to_tokens(input_ids)}")
 print(f"Masked positions: {masked_idx}")
 print(f"MLM Loss: {loss.item():.4f}")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Prediction Probabilities for Masked Positions:</strong></p>
 
@@ -740,7 +740,7 @@ print(f"MLM Loss: {loss.item():.4f}")
 with torch.no_grad():
     predictions = torch.softmax(logits[0], dim=-1)
 
-<p>print("\nPredictions for masked positions:")
+print("\nPredictions for masked positions:")
 for idx in masked_idx:
     # Get top 5 predictions
     probs, indices = torch.topk(predictions[idx], k=5)
@@ -753,32 +753,32 @@ for idx in masked_idx:
     print(f"\nPosition {idx} (original: '{original_token}'):")
     for token, prob in zip(predicted_tokens, probs):
         print(f"  {token}: {prob.item():.4f}")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Example Output:</strong></p>
 
-<p>\begin{verbatim}
+<pre><code>
 Original: The quick brown fox jumps
 Tokens: ['the', '[MASK]', 'brown', '[MASK]', 'jumps']
 Masked positions: [1, 3]
-MLM Loss: 2.3456</p>
+MLM Loss: 2.3456
 
-<p>Predictions for masked positions:</p>
+Predictions for masked positions:
 
-<p>Position 1 (original: 'quick'):
+Position 1 (original: 'quick'):
   quick: 0.8234
   fast: 0.0892
   little: 0.0234
   small: 0.0156
-  big: 0.0089</p>
+  big: 0.0089
 
-<p>Position 3 (original: 'fox'):
+Position 3 (original: 'fox'):
   fox: 0.7123
   dog: 0.1234
   cat: 0.0567
   animal: 0.0234
   wolf: 0.0189
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>MLM Loss Calculation:</strong></p>
 
@@ -805,7 +805,7 @@ $$\mathcal{L}_{\text{MLM}} = -\frac{1}{2}(\log 0.8234 + \log 0.7123) = 2.35$$</p
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 
-<p>def finetune_bert(train_loader, val_loader, freeze_bert=False, 
+def finetune_bert(train_loader, val_loader, freeze_bert=False, 
                   epochs=10):
     model = BertForSequenceClassification.from_pretrained(
         'bert-base-uncased', 
@@ -876,7 +876,7 @@ import matplotlib.pyplot as plt
               f"Val Acc={val_accs[-1]:.4f}")
     
     return train_losses, val_losses, train_accs, val_accs
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results (10,000 examples):</strong></p>
 
@@ -886,24 +886,24 @@ results_frozen = finetune_bert(
     freeze_bert=True, epochs=10
 )
 
-<p>results_full = finetune_bert(
+results_full = finetune_bert(
     train_loader, val_loader,
     freeze_bert=False, epochs=10
-)</p>
+)
 
-<p># Plot learning curves
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))</p>
+# Plot learning curves
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
 
-<p># Loss curves
+# Loss curves
 ax1.plot(results_frozen[1], label='Frozen BERT', marker='o')
 ax1.plot(results_full[1], label='Full fine-tuning', marker='s')
 ax1.set_xlabel('Epoch')
 ax1.set_ylabel('Validation Loss')
 ax1.set_title('Learning Curves: Loss')
 ax1.legend()
-ax1.grid(True)</p>
+ax1.grid(True)
 
-<p># Accuracy curves
+# Accuracy curves
 ax2.plot(results_frozen[3], label='Frozen BERT', marker='o')
 ax2.plot(results_full[3], label='Full fine-tuning', marker='s')
 ax2.set_xlabel('Epoch')
@@ -911,7 +911,7 @@ ax2.set_ylabel('Validation Accuracy')
 ax2.set_title('Learning Curves: Accuracy')
 ax2.legend()
 ax2.grid(True)
-</code></pre></p>
+</code></pre>
 
 <p><strong>Results Summary:</strong></p>
 
@@ -1086,7 +1086,7 @@ import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-<p>def visualize_attention(sentence, model, tokenizer, layer=0):
+def visualize_attention(sentence, model, tokenizer, layer=0):
     """Visualize attention patterns for all heads in a layer"""
     # Tokenize
     inputs = tokenizer(sentence, return_tensors='pt')
@@ -1127,18 +1127,18 @@ import seaborn as sns
     plt.tight_layout()
     plt.savefig(f'attention_layer_{layer}.png', dpi=150)
     
-    return attn, tokens</p>
+    return attn, tokens
 
-<p># Example
+# Example
 sentence = "The cat that chased the mouse ran away"
 model = BertModel.from_pretrained('bert-base-uncased')
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')</p>
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 
-<p># Visualize different layers
+# Visualize different layers
 for layer in [0, 5, 11]:
     attn, tokens = visualize_attention(sentence, model, tokenizer, layer)
     print(f"\nLayer {layer} attention patterns analyzed")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Analyzing Specific Attention Patterns:</strong></p>
 
@@ -1184,40 +1184,40 @@ for layer in [0, 5, 11]:
     
     return adjacent_heads, subj_verb_heads, long_range_heads
 
-<p># Analyze patterns
-adjacent, subj_verb, long_range = analyze_attention_patterns(attn, tokens)</p>
+# Analyze patterns
+adjacent, subj_verb, long_range = analyze_attention_patterns(attn, tokens)
 
-<p>print("(1) Heads capturing adjacent words:")
+print("(1) Heads capturing adjacent words:")
 for head, score in sorted(adjacent, key=lambda x: x[1], reverse=True):
-    print(f"  Head {head}: {score:.3f}")</p>
+    print(f"  Head {head}: {score:.3f}")
 
-<p>print("\n(2) Heads capturing subject-verb relations:")
+print("\n(2) Heads capturing subject-verb relations:")
 for head, score in sorted(subj_verb, key=lambda x: x[1], reverse=True):
-    print(f"  Head {head}: {score:.3f}")</p>
+    print(f"  Head {head}: {score:.3f}")
 
-<p>print("\n(3) Heads capturing long-range dependencies:")
+print("\n(3) Heads capturing long-range dependencies:")
 for head, score in sorted(long_range, key=lambda x: x[1], reverse=True):
     print(f"  Head {head}: {score:.3f}")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Example Output:</strong></p>
 
-<p>\begin{verbatim}
+<pre><code>
 (1) Heads capturing adjacent words:
   Head 2: 0.456
   Head 7: 0.389
-  Head 10: 0.342</p>
+  Head 10: 0.342
 
-<p>(2) Heads capturing subject-verb relations:
+(2) Heads capturing subject-verb relations:
   Head 5: 0.678
   Head 8: 0.534
-  Head 11: 0.423</p>
+  Head 11: 0.423
 
-<p>(3) Heads capturing long-range dependencies:
+(3) Heads capturing long-range dependencies:
   Head 3: 0.289
   Head 9: 0.234
   Head 6: 0.198
-\end{verbatim}</p>
+</code></pre>
 
 <p><strong>Interpretation:</strong></p>
 

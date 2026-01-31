@@ -533,7 +533,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-<p>def create_sliding_window_mask(n, window_size):
+def create_sliding_window_mask(n, window_size):
     """Create attention mask for sliding window"""
     mask = torch.zeros(n, n, dtype=torch.bool)
     
@@ -543,9 +543,9 @@ import seaborn as sns
         end = min(n, i + window_size // 2 + 1)
         mask[i, start:end] = True
     
-    return mask</p>
+    return mask
 
-<p>def sliding_window_attention(Q, K, V, window_size):
+def sliding_window_attention(Q, K, V, window_size):
     """Compute sliding window attention"""
     n, d = Q.shape
     
@@ -564,32 +564,32 @@ import seaborn as sns
     # Apply attention to values
     output = torch.matmul(attn_weights, V)
     
-    return output, attn_weights, mask</p>
+    return output, attn_weights, mask
 
-<p># Example with n=1024, w=256
+# Example with n=1024, w=256
 n = 1024
 d = 64
-window_size = 256</p>
+window_size = 256
 
-<p># Random Q, K, V
+# Random Q, K, V
 torch.manual_seed(42)
 Q = torch.randn(n, d)
 K = torch.randn(n, d)
-V = torch.randn(n, d)</p>
+V = torch.randn(n, d)
 
-<p># Compute sliding window attention
-output_sw, attn_sw, mask = sliding_window_attention(Q, K, V, window_size)</p>
+# Compute sliding window attention
+output_sw, attn_sw, mask = sliding_window_attention(Q, K, V, window_size)
 
-<p># Compute full attention for comparison
+# Compute full attention for comparison
 scores_full = torch.matmul(Q, K.transpose(-2, -1)) / torch.sqrt(torch.tensor(d, dtype=torch.float32))
 attn_full = torch.softmax(scores_full, dim=-1)
-output_full = torch.matmul(attn_full, V)</p>
+output_full = torch.matmul(attn_full, V)
 
-<p>print(f"Sequence length: {n}")
+print(f"Sequence length: {n}")
 print(f"Window size: {window_size}")
 print(f"Output shape: {output_sw.shape}")
 print(f"Attention weights shape: {attn_sw.shape}")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Part (c): FLOPs and Memory Comparison</strong></p>
 
@@ -636,23 +636,23 @@ $$\begin{align*}
 <pre><code># Visualize attention patterns
 fig, axes = plt.subplots(1, 2, figsize=(15, 6))
 
-<p># Full attention (sample 256x256 for visibility)
+# Full attention (sample 256x256 for visibility)
 sample_size = 256
 axes[0].imshow(attn_full[:sample_size, :sample_size].numpy(), cmap='viridis', aspect='auto')
 axes[0].set_title('Full Attention Pattern')
 axes[0].set_xlabel('Key Position')
-axes[0].set_ylabel('Query Position')</p>
+axes[0].set_ylabel('Query Position')
 
-<p># Sliding window attention
+# Sliding window attention
 axes[1].imshow(attn_sw[:sample_size, :sample_size].numpy(), cmap='viridis', aspect='auto')
 axes[1].set_title(f'Sliding Window Attention (w={window_size})')
 axes[1].set_xlabel('Key Position')
-axes[1].set_ylabel('Query Position')</p>
+axes[1].set_ylabel('Query Position')
 
-<p>plt.tight_layout()
-plt.savefig('sliding_window_attention.png', dpi=150)</p>
+plt.tight_layout()
+plt.savefig('sliding_window_attention.png', dpi=150)
 
-<p># Visualize mask pattern
+# Visualize mask pattern
 plt.figure(figsize=(10, 10))
 plt.imshow(mask[:sample_size, :sample_size].numpy(), cmap='binary', aspect='auto')
 plt.title(f'Sliding Window Mask (w={window_size})')
@@ -660,7 +660,7 @@ plt.xlabel('Key Position')
 plt.ylabel('Query Position')
 plt.colorbar(label='Attention Allowed')
 plt.savefig('sliding_window_mask.png', dpi=150)
-</code></pre></p>
+</code></pre>
 
 <p><strong>Key Observations:</strong></p>
 
@@ -827,22 +827,22 @@ $$\text{Attention} = \text{softmax}\left(\frac{\mQ(\mE\mK)^T}{\sqrt{d}}\right)\m
 <pre><code>import torch
 import numpy as np
 
-<p>def generate_random_features(d, m, seed=42):
+def generate_random_features(d, m, seed=42):
     """Generate random projection matrix for Performer"""
     torch.manual_seed(seed)
     # Gaussian random features
     omega = torch.randn(d, m) / np.sqrt(d)
-    return omega</p>
+    return omega
 
-<p>def phi_features(x, omega):
+def phi_features(x, omega):
     """Compute random feature map phi(x)"""
     # x: (n, d), omega: (d, m)
     # phi(x) = exp(x @ omega) / sqrt(m)
     projection = torch.matmul(x, omega)  # (n, m)
     features = torch.exp(projection) / np.sqrt(omega.shape[1])
-    return features</p>
+    return features
 
-<p>def performer_attention(Q, K, V, m=256):
+def performer_attention(Q, K, V, m=256):
     """Compute Performer attention using random features"""
     n, d = Q.shape
     
@@ -862,36 +862,36 @@ import numpy as np
     normalizer = torch.matmul(phi_Q, phi_K.sum(dim=0, keepdim=True).T)  # (n, 1)
     output = output / (normalizer + 1e-6)
     
-    return output, phi_Q, phi_K</p>
+    return output, phi_Q, phi_K
 
-<p>def standard_attention(Q, K, V):
+def standard_attention(Q, K, V):
     """Standard softmax attention"""
     d = Q.shape[1]
     scores = torch.matmul(Q, K.T) / np.sqrt(d)
     attn_weights = torch.softmax(scores, dim=-1)
     output = torch.matmul(attn_weights, V)
-    return output, attn_weights</p>
+    return output, attn_weights
 
-<p># Example with d=64, m=256
+# Example with d=64, m=256
 n = 512
 d = 64
-m = 256</p>
+m = 256
 
-<p>torch.manual_seed(42)
+torch.manual_seed(42)
 Q = torch.randn(n, d)
 K = torch.randn(n, d)
-V = torch.randn(n, d)</p>
+V = torch.randn(n, d)
 
-<p># Compute both attentions
+# Compute both attentions
 output_performer, phi_Q, phi_K = performer_attention(Q, K, V, m)
-output_standard, attn_weights = standard_attention(Q, K, V)</p>
+output_standard, attn_weights = standard_attention(Q, K, V)
 
-<p>print(f"Sequence length: {n}")
+print(f"Sequence length: {n}")
 print(f"Hidden dimension: {d}")
 print(f"Random features: {m}")
 print(f"\nPerformer output shape: {output_performer.shape}")
 print(f"Standard output shape: {output_standard.shape}")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Part (d): Approximation Error Measurement</strong></p>
 
@@ -904,25 +904,25 @@ cosine_sim = torch.nn.functional.cosine_similarity(
     dim=0
 )
 
-<p>print(f"\nApproximation Quality:")
+print(f"\nApproximation Quality:")
 print(f"MSE: {mse_error.item():.6f}")
 print(f"Relative Error: {relative_error.item():.4f}")
-print(f"Cosine Similarity: {cosine_sim.item():.4f}")</p>
+print(f"Cosine Similarity: {cosine_sim.item():.4f}")
 
-<p># Test with different numbers of random features
+# Test with different numbers of random features
 m_values = [32, 64, 128, 256, 512, 1024]
-errors = []</p>
+errors = []
 
-<p>for m in m_values:
+for m in m_values:
     output_perf, _, _ = performer_attention(Q, K, V, m)
     error = torch.mean((output_perf - output_standard) ** 2).item()
     errors.append(error)
-    print(f"m={m:4d}: MSE={error:.6f}")</p>
+    print(f"m={m:4d}: MSE={error:.6f}")
 
-<p># Plot error vs number of features
-import matplotlib.pyplot as plt</p>
+# Plot error vs number of features
+import matplotlib.pyplot as plt
 
-<p>plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 plt.plot(m_values, errors, 'o-', linewidth=2, markersize=8)
 plt.xlabel('Number of Random Features (m)')
 plt.ylabel('Mean Squared Error')
@@ -931,7 +931,7 @@ plt.xscale('log')
 plt.yscale('log')
 plt.grid(True, alpha=0.3)
 plt.savefig('performer_error.png', dpi=150)
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 

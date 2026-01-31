@@ -630,7 +630,7 @@ $$
 <pre><code>import torch
 import torch.nn as nn
 
-<p>class MultiHeadAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     def __init__(self, d_model, num_heads):
         super().__init__()
         assert d_model 
@@ -657,15 +657,15 @@ import torch.nn as nn
         
         # Concatenate and project
         out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
-        return self.W_o(out)</p>
+        return self.W_o(out)
 
-<p># Test
+# Test
 mha = MultiHeadAttention(d_model=128, num_heads=4)
 x = torch.randn(32, 20, 128)
 output = mha(x)
 print(f"Output shape: {output.shape}")  # (32, 20, 128)
 print(f"Parameters: {sum(p.numel() for p in mha.parameters())}")  # 66,048
-</code></pre></p>
+</code></pre>
 
 <p>Expected parameters: $4 \times 128^2 = 65{,}536$ (matches implementation).
 </div>

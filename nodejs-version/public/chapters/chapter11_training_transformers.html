@@ -788,7 +788,7 @@ optimizer.step()  # Update parameters
 
 <pre><code>from torch.utils.checkpoint import checkpoint
 
-<p>class TransformerLayer(nn.Module):
+class TransformerLayer(nn.Module):
     def forward(self, x):
         # Use checkpointing for this layer
         return checkpoint(self._forward, x)
@@ -806,7 +806,7 @@ optimizer.step()  # Update parameters
         x = self.layer_norm2(x)
         
         return x
-</code></pre></p>
+</code></pre>
 
 <p>During the forward pass, PyTorch executes <code>\_forward</code> but doesn't store intermediate activations. During the backward pass, when gradients reach this layer, PyTorch re-executes <code>\_forward</code> with the saved input <code>x</code>, reconstructing the intermediate activations needed for gradient computation.</p>
 
@@ -1558,7 +1558,7 @@ import torch.nn as nn
 from torch.cuda.amp import autocast, GradScaler
 import time
 
-<p>class SmallTransformer(nn.Module):
+class SmallTransformer(nn.Module):
     def __init__(self, vocab_size=10000, d_model=256, n_heads=8, 
                  n_layers=4, d_ff=1024):
         super().__init__()
@@ -1572,9 +1572,9 @@ import time
     def forward(self, x):
         x = self.embedding(x)
         x = self.transformer(x)
-        return self.output(x)</p>
+        return self.output(x)
 
-<p># Training function with FP32
+# Training function with FP32
 def train_fp32(model, data_loader, optimizer, epochs=5):
     model.train()
     start_time = time.time()
@@ -1589,9 +1589,9 @@ def train_fp32(model, data_loader, optimizer, epochs=5):
             loss.backward()
             optimizer.step()
     
-    return time.time() - start_time</p>
+    return time.time() - start_time
 
-<p># Training function with mixed precision
+# Training function with mixed precision
 def train_mixed_precision(model, data_loader, optimizer, epochs=5, 
                          loss_scale=2**16):
     model.train()
@@ -1614,9 +1614,9 @@ def train_mixed_precision(model, data_loader, optimizer, epochs=5,
             scaler.step(optimizer)
             scaler.update()
     
-    return time.time() - start_time</p>
+    return time.time() - start_time
 
-<p># Memory profiling
+# Memory profiling
 def profile_memory(model, data_loader, use_mixed_precision=False):
     torch.cuda.reset_peak_memory_stats()
     
@@ -1638,7 +1638,7 @@ def profile_memory(model, data_loader, use_mixed_precision=False):
         loss.backward()
     
     return torch.cuda.max_memory_allocated() / 1024**3  # GB
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
@@ -1750,26 +1750,26 @@ $$B \times L \times d_{\text{model}} = 32 \times 512 \times 768 = 12{,}582{,}912
 
 <p><strong>Trade-off:</strong> 33\% increase in computation time (recomputing 6 layers during backward)</p>
 
-<p><strong>Verification with PyTorch Profiler:</strong>
+<strong>Verification with PyTorch Profiler:</strong>
 <pre><code>import torch
-from torch.utils.checkpoint import checkpoint</p>
+from torch.utils.checkpoint import checkpoint
 
-<p># Without checkpointing
+# Without checkpointing
 torch.cuda.reset_peak_memory_stats()
 output = model(input_ids)
 loss = output.loss
 loss.backward()
 memory_without = torch.cuda.max_memory_allocated() / 1024**3
-print(f"Memory without checkpointing: {memory_without:.2f} GB")</p>
+print(f"Memory without checkpointing: {memory_without:.2f} GB")
 
-<p># With checkpointing
+# With checkpointing
 torch.cuda.reset_peak_memory_stats()
 output = checkpoint(model, input_ids)
 loss = output.loss
 loss.backward()
 memory_with = torch.cuda.max_memory_allocated() / 1024**3
 print(f"Memory with checkpointing: {memory_with:.2f} GB")
-</code></pre></p>
+</code></pre>
 
 <p>Expected output matches theoretical calculations within 5-10\% (due to framework overhead).
 </div>
@@ -1780,7 +1780,7 @@ print(f"Memory with checkpointing: {memory_with:.2f} GB")
 import torch.nn as nn
 import time
 
-<p>def train_with_accumulation(model, data_loader, optimizer, 
+def train_with_accumulation(model, data_loader, optimizer, 
                            physical_batch_size=32, 
                            effective_batch_size=512):
     accumulation_steps = effective_batch_size // physical_batch_size
@@ -1808,9 +1808,9 @@ import time
             losses.append(loss.item() * accumulation_steps)
     
     training_time = time.time() - start_time
-    return losses, training_time</p>
+    return losses, training_time
 
-<p>def train_true_batch(model, data_loader, optimizer, batch_size=512):
+def train_true_batch(model, data_loader, optimizer, batch_size=512):
     model.train()
     losses = []
     start_time = time.time()
@@ -1827,7 +1827,7 @@ import time
     
     training_time = time.time() - start_time
     return losses, training_time
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
@@ -1853,23 +1853,23 @@ import time
 <pre><code>import matplotlib.pyplot as plt
 import numpy as np
 
-<p># Compare loss curves
+# Compare loss curves
 losses_true = train_true_batch(model, loader_512, optimizer)
-losses_accum = train_with_accumulation(model, loader_32, optimizer)</p>
+losses_accum = train_with_accumulation(model, loader_32, optimizer)
 
-<p>plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6))
 plt.plot(losses_true, label='True batch 512', alpha=0.7)
 plt.plot(losses_accum, label='Gradient accumulation', alpha=0.7)
 plt.xlabel('Update step')
 plt.ylabel('Loss')
 plt.legend()
 plt.title('Training Dynamics: True Batch vs Gradient Accumulation')
-plt.grid(True)</p>
+plt.grid(True)
 
-<p># Compute correlation
+# Compute correlation
 correlation = np.corrcoef(losses_true, losses_accum)[0, 1]
 print(f"Loss correlation: {correlation:.4f}")  # Expected: > 0.99
-</code></pre></p>
+</code></pre>
 
 <p><strong>Key Findings:</strong>
 <ul>
@@ -1886,26 +1886,26 @@ print(f"Loss correlation: {correlation:.4f}")  # Expected: > 0.99
 import torch.nn as nn
 import math
 
-<p># (a) Warmup + Linear Decay
+# (a) Warmup + Linear Decay
 def linear_schedule(step, warmup_steps=4000, total_steps=100000):
     if step < warmup_steps:
         return step / warmup_steps
     else:
-        return max(0.0, (total_steps - step) / (total_steps - warmup_steps))</p>
+        return max(0.0, (total_steps - step) / (total_steps - warmup_steps))
 
-<p># (b) Warmup + Inverse Square Root Decay
+# (b) Warmup + Inverse Square Root Decay
 def inverse_sqrt_schedule(step, warmup_steps=4000, d_model=256):
-    return min(step ** (-0.5), step * warmup_steps ** (-1.5))</p>
+    return min(step ** (-0.5), step * warmup_steps ** (-1.5))
 
-<p># (c) Warmup + Cosine Annealing
+# (c) Warmup + Cosine Annealing
 def cosine_schedule(step, warmup_steps=4000, total_steps=100000):
     if step < warmup_steps:
         return step / warmup_steps
     else:
         progress = (step - warmup_steps) / (total_steps - warmup_steps)
-        return 0.5 * (1 + math.cos(math.pi * progress))</p>
+        return 0.5 * (1 + math.cos(math.pi * progress))
 
-<p># Training function
+# Training function
 def train_with_schedule(model, data_loader, base_lr=1e-3, 
                        schedule_fn=linear_schedule, epochs=50):
     optimizer = torch.optim.Adam(model.parameters(), lr=base_lr)
@@ -1935,7 +1935,7 @@ def train_with_schedule(model, data_loader, base_lr=1e-3,
             step += 1
     
     return losses, lrs
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
@@ -1952,9 +1952,9 @@ def train_with_schedule(model, data_loader, base_lr=1e-3,
 
 <pre><code>import matplotlib.pyplot as plt
 
-<p>fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))</p>
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
 
-<p># Plot learning rate schedules
+# Plot learning rate schedules
 steps = range(10000)
 ax1.plot([linear_schedule(s) for s in steps], label='Linear')
 ax1.plot([inverse_sqrt_schedule(s) for s in steps], label='Inverse sqrt')
@@ -1963,9 +1963,9 @@ ax1.set_xlabel('Training step')
 ax1.set_ylabel('LR multiplier')
 ax1.set_title('Learning Rate Schedules')
 ax1.legend()
-ax1.grid(True)</p>
+ax1.grid(True)
 
-<p># Plot loss curves
+# Plot loss curves
 ax2.plot(losses_linear, label='Linear', alpha=0.7)
 ax2.plot(losses_inverse, label='Inverse sqrt', alpha=0.7)
 ax2.plot(losses_cosine, label='Cosine', alpha=0.7)
@@ -1975,7 +1975,7 @@ ax2.set_title('Training Loss Curves')
 ax2.legend()
 ax2.grid(True)
 plt.tight_layout()
-</code></pre></p>
+</code></pre>
 
 <p><strong>Analysis:</strong></p>
 
@@ -2024,7 +2024,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 import time
 
-<p>def setup_distributed(rank, world_size):
+def setup_distributed(rank, world_size):
     """Initialize distributed training"""
     dist.init_process_group(
         backend='nccl',
@@ -2032,9 +2032,9 @@ import time
         world_size=world_size,
         rank=rank
     )
-    torch.cuda.set_device(rank)</p>
+    torch.cuda.set_device(rank)
 
-<p>def train_distributed(rank, world_size, model, data_loader, epochs=10):
+def train_distributed(rank, world_size, model, data_loader, epochs=10):
     setup_distributed(rank, world_size)
     
     # Wrap model with DDP
@@ -2067,7 +2067,7 @@ import time
             comm_time += time.time() - start_comm
     
     return compute_time, comm_time
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
@@ -2128,7 +2128,7 @@ $$\rho = \frac{T_{\text{comm}}}{T_{\text{compute}}/N}$$</p>
 <pre><code>import torch
 import torch.nn as nn
 
-<p>def train_with_regularization(model, train_loader, val_loader, 
+def train_with_regularization(model, train_loader, val_loader, 
                              dropout=0.0, weight_decay=0.0, 
                              label_smoothing=0.0, epochs=100):
     # Apply dropout to model
@@ -2173,7 +2173,7 @@ import torch.nn as nn
         val_losses.append(val_loss / len(val_loader))
     
     return train_losses, val_losses
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results (10,000 training examples):</strong></p>
 
@@ -2325,7 +2325,7 @@ $$T_{\text{8GPU}} = \frac{30.6}{8 \times 0.85} = 4.5 \text{ hours}$$
 from torch.nn.utils.rnn import pad_sequence
 import time
 
-<p>def static_batching(dataset, batch_size=32, max_length=512):
+def static_batching(dataset, batch_size=32, max_length=512):
     """Traditional batching with fixed max length"""
     batches = []
     total_tokens = 0
@@ -2354,9 +2354,9 @@ import time
             padding_tokens += max(0, max_length - len(seq))
     
     padding_fraction = padding_tokens / total_tokens
-    return batches, padding_fraction</p>
+    return batches, padding_fraction
 
-<p>def dynamic_batching(dataset, batch_size=32, max_tokens=16384):
+def dynamic_batching(dataset, batch_size=32, max_tokens=16384):
     """Dynamic batching: group similar lengths, minimize padding"""
     # Sort by length
     sorted_data = sorted(enumerate(dataset), key=lambda x: len(x[1]))
@@ -2396,7 +2396,7 @@ import time
     
     padding_fraction = padding_tokens / total_tokens
     return batches, padding_fraction
-</code></pre></p>
+</code></pre>
 
 <p><strong>Throughput Measurement:</strong></p>
 
@@ -2419,24 +2419,24 @@ import time
     throughput = total_tokens / elapsed
     return throughput
 
-<p># Compare methods
+# Compare methods
 static_batches, static_padding = static_batching(dataset)
-dynamic_batches, dynamic_padding = dynamic_batching(dataset)</p>
+dynamic_batches, dynamic_padding = dynamic_batching(dataset)
 
-<p>static_throughput = measure_throughput(model, static_batches)
-dynamic_throughput = measure_throughput(model, dynamic_batches)</p>
+static_throughput = measure_throughput(model, static_batches)
+dynamic_throughput = measure_throughput(model, dynamic_batches)
 
-<p>print(f"Static batching:")
+print(f"Static batching:")
 print(f"  Padding fraction: {static_padding:.2
-print(f"  Throughput: {static_throughput:.0f} tokens/sec")</p>
+print(f"  Throughput: {static_throughput:.0f} tokens/sec")
 
-<p>print(f"\nDynamic batching:")
+print(f"\nDynamic batching:")
 print(f"  Padding fraction: {dynamic_padding:.2
-print(f"  Throughput: {dynamic_throughput:.0f} tokens/sec")</p>
+print(f"  Throughput: {dynamic_throughput:.0f} tokens/sec")
 
-<p>speedup = dynamic_throughput / static_throughput
+speedup = dynamic_throughput / static_throughput
 print(f"\nSpeedup: {speedup:.2f}x")
-</code></pre></p>
+</code></pre>
 
 <p><strong>Experimental Results:</strong></p>
 
