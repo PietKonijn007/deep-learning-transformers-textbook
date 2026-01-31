@@ -160,6 +160,13 @@ async function loadChapters() {
 function renderChapterList() {
     const groupedChapters = groupChaptersByPart(state.chapters);
     
+    console.log('=== RENDER DEBUG ===');
+    console.log('Total chapters:', state.chapters.length);
+    console.log('Grouped chapters:', Object.keys(groupedChapters));
+    Object.entries(groupedChapters).forEach(([part, chapters]) => {
+        console.log(`${part}: ${chapters.length} chapters`);
+    });
+    
     let html = '';
     for (const [part, chapters] of Object.entries(groupedChapters)) {
         html += `
@@ -175,6 +182,8 @@ function renderChapterList() {
     }
     
     elements.chapterList.innerHTML = html;
+    console.log('HTML length:', html.length);
+    console.log('Chapter items rendered:', elements.chapterList.querySelectorAll('.chapter-item').length);
 }
 
 // Group chapters by part
@@ -186,6 +195,12 @@ function groupChaptersByPart(chapters) {
         }
         grouped[chapter.part].push(chapter);
     });
+    
+    console.log('Grouping result:');
+    Object.entries(grouped).forEach(([part, chaps]) => {
+        console.log(`  ${part}: ${chaps.map(c => c.id).join(', ')}`);
+    });
+    
     return grouped;
 }
 
