@@ -43,6 +43,23 @@ A comprehensive graduate-level textbook covering the theory, mathematics, and im
 - **Chapter 22:** Hardware Optimization
 - **Chapter 23:** Best Practices
 
+### Part VIII: Domain Applications
+- **Chapter 24:** Domain-Specific Models
+- **Chapter 25:** Enterprise NLP
+- **Chapter 26:** Code and Language Models
+- **Chapter 27:** Video and Visual Understanding
+- **Chapter 28:** Knowledge Graphs and Reasoning
+- **Chapter 29:** Recommendation Systems
+
+### Part IX: Industry Applications
+- **Chapter 30:** Healthcare Applications
+- **Chapter 31:** Financial Applications
+- **Chapter 32:** Legal and Compliance Applications
+
+### Part X: Production Systems
+- **Chapter 33:** Observability and Monitoring
+- **Chapter 34:** DSL and Agent Systems
+
 ## 🚀 Quick Start
 
 ### 🆕 Interactive Node.js Version (Recommended)
@@ -130,33 +147,48 @@ The HTML files will be created in `html-build/output/` and automatically copied 
 
 ```
 .
-├── main_pro.tex                # Main LaTeX file (production version)
-├── main_pro_test.tex           # Test LaTeX file (for testing)
-├── main_pro.pdf                # Compiled PDF book
-├── chapters/                   # Individual chapter LaTeX files
-│   ├── preface.tex
-│   ├── notation.tex
-│   ├── chapter01_linear_algebra.tex
-│   ├── chapter24_solutions.tex
-│   └── ...
-├── docs/                       # HTML version (GitHub Pages)
-│   ├── index.html
-│   ├── chapters/
-│   ├── css/
-│   └── js/
-├── nodejs-version/             # 🆕 Interactive Node.js web app
-│   ├── server.js              # Express server
-│   ├── public/                # Frontend assets
-│   └── *.md                   # Comprehensive documentation
-├── html-build/                 # HTML build system
-│   ├── convert_to_html.py     # Python converter script
-│   ├── fix_algorithms.py      # Algorithm formatting helper
-│   ├── output/                # Generated HTML files
-│   ├── css/
-│   └── js/
-└── references.bib              # Bibliography
-
+├── app.js                      # 🚀 DEPLOYED: Main application (synced from nodejs-version)
+├── index.html                  # 🚀 DEPLOYED: Main page (synced from nodejs-version)
+├── styles.css                  # 🚀 DEPLOYED: Styles (synced from nodejs-version)
+├── chapters/                   # 🚀 DEPLOYED: Chapter HTML files
+│   ├── preface.html
+│   ├── notation.html
+│   ├── chapter01_*.html
+│   └── ... (34 chapters)
+│
+├── main_pro.tex                # LaTeX source (production version)
+├── main_pro.pdf                # Compiled PDF book (429 pages)
+│
+├── chapters/                   # LaTeX source files
+│   ├── *.tex                   # Chapter source files
+│   └── *.html                  # Generated HTML (copied to root)
+│
+├── nodejs-version/             # 🔧 DEVELOPMENT: Source of truth for web app
+│   ├── public/                 # Frontend source files
+│   │   ├── app.js             # Application logic (SOURCE)
+│   │   ├── index.html         # Main page (SOURCE)
+│   │   ├── styles.css         # Styles (SOURCE)
+│   │   └── chapters/          # Chapter HTML files
+│   ├── server.js              # Local development server
+│   └── *.md                   # Documentation
+│
+├── html-build/                 # HTML generation tools
+│   └── convert_to_html.py     # TEX → HTML converter
+│
+├── sync-to-root.sh             # 🔄 Sync script (nodejs-version → root)
+├── DEPLOYMENT_ARCHITECTURE.md  # 📖 Deployment documentation
+└── vercel.json                 # Vercel configuration
 ```
+
+### 🚀 Deployment Architecture
+
+**Important:** Vercel deploys from the **ROOT directory**, not from `nodejs-version/`.
+
+- **Source files:** `nodejs-version/public/` (development)
+- **Deployed files:** Root directory (production)
+- **Sync command:** `./sync-to-root.sh`
+
+See [DEPLOYMENT_ARCHITECTURE.md](DEPLOYMENT_ARCHITECTURE.md) for complete details.
 
 ## 🎓 Target Audience
 
@@ -201,4 +233,4 @@ This is an academic textbook project. For questions, suggestions, or corrections
 
 ---
 
-**Status:** ✅ Complete - All 23 chapters written and compiled
+**Status:** ✅ Complete - All 34 chapters written and compiled (January 2026)
