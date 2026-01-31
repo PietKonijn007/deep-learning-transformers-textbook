@@ -292,8 +292,6 @@ Traditional RCA relies on correlation—if metric A and metric B change together
 
 \textbf{Interventional analysis:} When anomaly occurs, use causal graph to identify root causes through interventional reasoning. If intervening on metric A would fix metric B, then A is likely causing B. This is formalized through do-calculus and counterfactual reasoning.
 
-\textbf{Business Impact:} Causal RCA reduces mean time to resolution (MTTR) by 30-50\% compared to correlation-based methods. Engineers spend less time investigating false leads and more time fixing actual root causes. One large enterprise reported reducing MTTR from 45 minutes to 25 minutes, saving \$5M annually in prevented downtime.
-
 \textbf{Example:} API latency spike occurs. Correlation analysis shows database CPU also spiked. Causal analysis determines: (1) Database CPU spike occurred 2 minutes before API latency spike (temporal precedence), (2) API latency is conditionally dependent on database CPU given other factors (statistical dependence), (3) Intervening on database CPU (reducing load) would fix API latency (interventional test). Conclusion: Database CPU is root cause. Action: Investigate database queries, find expensive query, optimize or kill it.
 
 \subsection{Predictive Failure Detection and Preventive Maintenance}
@@ -317,8 +315,6 @@ Rather than reacting to failures, predict and prevent them:
 \item Provision additional capacity before resource exhaustion
 \item Alert teams to investigate and fix underlying issues
 \end{itemize}
-
-\textbf{Business Impact:} Predictive maintenance reduces unplanned downtime by 40-60\%. Planned maintenance during low-traffic periods has 10x lower business impact than emergency response during peak hours. One cloud provider reported reducing unplanned downtime from 20 hours/year to 8 hours/year, saving \$50M annually.
 
 \textbf{Implementation Considerations:} Predictive models require careful calibration. False positives (predicting failures that don't occur) waste resources on unnecessary maintenance. False negatives (missing actual failures) defeat the purpose. Target 80-90\% precision and 70-80\% recall, with lead times of 4-24 hours for actionable predictions.
 
@@ -344,8 +340,6 @@ AIOps platforms increasingly incorporate automated remediation, moving from dete
 \item Automatic rollback if action makes situation worse
 \item Complete audit logs of all automated actions
 \end{itemize}
-
-\textbf{Business Impact:} Automated remediation reduces MTTR by 50-70\% for common failure patterns. One large platform automated 40\% of incident responses, reducing average MTTR from 30 minutes to 5 minutes for automated incidents. This saved \$10M annually in prevented downtime and reduced on-call engineer workload by 35\%.
 
 \textbf{Adoption Challenges:} Engineers are often hesitant to trust automated remediation due to fear of automation causing additional problems. Gradual adoption is key: start with safest actions (service restarts), build trust through demonstrated reliability, gradually expand to more complex actions. Maintain human oversight and easy override mechanisms.
 
@@ -557,8 +551,6 @@ Successfully implementing continuous learning for observability requires careful
 \textbf{Explainability and engineer trust.} Provide clear explanations for alerts: which metrics are anomalous, how they compare to baselines, similar past incidents, suggested actions. Engineers must understand why they're being alerted to trust the system. Implement visualization tools showing metric trends, anomaly scores, and correlation patterns.
 
 \textbf{Cost management and resource optimization.} Observability infrastructure is expensive: data storage (terabytes daily), compute (real-time processing), and personnel (engineers maintaining systems). Optimize costs through: data retention policies (keep detailed data 7 days, aggregated data 90 days, summaries 1 year), sampling (sample less critical metrics), and efficient storage (compression, columnar formats).
-
-Budget example: Enterprise with 10,000 servers. Observability costs: \$50K/month storage (Elasticsearch, Prometheus), \$30K/month compute (anomaly detection, RCA), \$20K/month personnel (2 engineers maintaining systems) = \$100K/month = \$1.2M/year. Compare to value: preventing 10 hours of downtime annually (from 99.9\% to 99.99\%) saves \$3.4M (at \$5,600/minute). ROI: 2.8x.
 
 \subsection{Cross-Domain Patterns and Connections}
 
