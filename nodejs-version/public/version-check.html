@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Version Check</title>
+</head>
+<body>
+    <h1>Deployment Version Check</h1>
+    <div id="info"></div>
+    <script src="app.js"></script>
+    <script>
+        setTimeout(() => {
+            const info = document.getElementById('info');
+            if (typeof state !== 'undefined' && state.chapters) {
+                info.innerHTML = `
+                    <p><strong>Total chapters loaded:</strong> ${state.chapters.length}</p>
+                    <p><strong>Last chapter:</strong> ${state.chapters[state.chapters.length - 1].title}</p>
+                    <p><strong>Deployment time:</strong> ${new Date().toISOString()}</p>
+                    <h2>All Chapters:</h2>
+                    <ol>
+                        ${state.chapters.map(ch => `<li>${ch.title} (${ch.part})</li>`).join('')}
+                    </ol>
+                `;
+            } else {
+                info.innerHTML = '<p style="color: red;">ERROR: Chapters not loaded!</p>';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
