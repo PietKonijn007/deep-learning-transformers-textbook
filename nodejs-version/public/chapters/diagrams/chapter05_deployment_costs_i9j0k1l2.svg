@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <defs>
+    <style>
+      .title { font: bold 20px sans-serif; fill: #2d3748; }
+      .label { font: 16px sans-serif; fill: #2d3748; }
+      .small-label { font: 14px sans-serif; fill: #4a5568; }
+      .annotation { font: 13px sans-serif; fill: #718096; }
+      .axis-label { font: 14px sans-serif; fill: #2d3748; }
+      .grid-line { stroke: #e2e8f0; stroke-width: 1; }
+      .cloud-line { stroke: #667eea; stroke-width: 3; fill: none; }
+      .onprem-line { stroke: #48bb78; stroke-width: 3; fill: none; }
+      .edge-line { stroke: #f093fb; stroke-width: 3; fill: none; }
+      .breakeven { stroke: #e53e3e; stroke-width: 2; stroke-dasharray: 5,5; }
+    </style>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="30" class="title" text-anchor="middle">Total Cost of Ownership: Deployment Platform Comparison</text>
+  
+  <!-- Graph area -->
+  <g transform="translate(100, 80)">
+    <!-- Grid lines -->
+    <line x1="0" y1="500" x2="1000" y2="500" class="grid-line"/>
+    <line x1="0" y1="400" x2="1000" y2="400" class="grid-line"/>
+    <line x1="0" y1="300" x2="1000" y2="300" class="grid-line"/>
+    <line x1="0" y1="200" x2="1000" y2="200" class="grid-line"/>
+    <line x1="0" y1="100" x2="1000" y2="100" class="grid-line"/>
+    <line x1="0" y1="0" x2="1000" y2="0" class="grid-line"/>
+    
+    <!-- Vertical grid lines -->
+    <line x1="167" y1="0" x2="167" y2="500" class="grid-line"/>
+    <line x1="333" y1="0" x2="333" y2="500" class="grid-line"/>
+    <line x1="500" y1="0" x2="500" y2="500" class="grid-line"/>
+    <line x1="667" y1="0" x2="667" y2="500" class="grid-line"/>
+    <line x1="833" y1="0" x2="833" y2="500" class="grid-line"/>
+    <line x1="1000" y1="0" x2="1000" y2="500" class="grid-line"/>
+    
+    <!-- Axes -->
+    <line x1="0" y1="0" x2="0" y2="500" stroke="#2d3748" stroke-width="2"/>
+    <line x1="0" y1="500" x2="1000" y2="500" stroke="#2d3748" stroke-width="2"/>
+    
+    <!-- Y-axis labels (cost in $1000s) -->
+    <text x="-15" y="505" class="axis-label" text-anchor="end">$0</text>
+    <text x="-15" y="405" class="axis-label" text-anchor="end">$50K</text>
+    <text x="-15" y="305" class="axis-label" text-anchor="end">$100K</text>
+    <text x="-15" y="205" class="axis-label" text-anchor="end">$150K</text>
+    <text x="-15" y="105" class="axis-label" text-anchor="end">$200K</text>
+    <text x="-15" y="5" class="axis-label" text-anchor="end">$250K</text>
+    
+    <!-- X-axis labels (months) -->
+    <text x="0" y="530" class="axis-label" text-anchor="middle">0</text>
+    <text x="167" y="530" class="axis-label" text-anchor="middle">6</text>
+    <text x="333" y="530" class="axis-label" text-anchor="middle">12</text>
+    <text x="500" y="530" class="axis-label" text-anchor="middle">18</text>
+    <text x="667" y="530" class="axis-label" text-anchor="middle">24</text>
+    <text x="833" y="530" class="axis-label" text-anchor="middle">30</text>
+    <text x="1000" y="530" class="axis-label" text-anchor="middle">36</text>
+    
+    <!-- Axis titles -->
+    <text x="500" y="570" class="label" text-anchor="middle">Months</text>
+    <text x="-60" y="250" class="label" text-anchor="middle" transform="rotate(-90, -60, 250)">Total Cost</text>
+    
+    <!-- Cloud line (linear, no upfront) -->
+    <path d="M 0 500 L 167 417 L 333 333 L 500 250 L 667 167 L 833 83 L 1000 0" class="cloud-line"/>
+    
+    <!-- On-premises line (high upfront, lower ongoing) -->
+    <path d="M 0 400 L 167 367 L 333 333 L 500 300 L 667 267 L 833 233 L 1000 200" class="onprem-line"/>
+    
+    <!-- Edge line (lowest ongoing) -->
+    <path d="M 0 450 L 167 442 L 333 433 L 500 425 L 667 417 L 833 408 L 1000 400" class="edge-line"/>
+    
+    <!-- Break-even point -->
+    <line x1="333" y1="0" x2="333" y2="500" class="breakeven"/>
+    <text x="333" y="-10" class="annotation" text-anchor="middle" fill="#e53e3e">Break-even</text>
+    <text x="333" y="10" class="annotation" text-anchor="middle" fill="#e53e3e">(12 months)</text>
+    
+    <!-- Data points -->
+    <circle cx="0" cy="500" r="5" fill="#667eea"/>
+    <circle cx="0" cy="400" r="5" fill="#48bb78"/>
+    <circle cx="0" cy="450" r="5" fill="#f093fb"/>
+    
+    <circle cx="333" cy="333" r="5" fill="#667eea"/>
+    <circle cx="333" cy="333" r="5" fill="#48bb78"/>
+    
+    <circle cx="1000" cy="0" r="5" fill="#667eea"/>
+    <circle cx="1000" cy="200" r="5" fill="#48bb78"/>
+    <circle cx="1000" cy="400" r="5" fill="#f093fb"/>
+    
+    <!-- Annotations -->
+    <text x="850" y="20" class="annotation" fill="#667eea">Cloud: $250K/36mo</text>
+    <text x="850" y="220" class="annotation" fill="#48bb78">On-prem: $200K/36mo</text>
+    <text x="850" y="420" class="annotation" fill="#f093fb">Edge: $100K/36mo</text>
+    
+    <!-- Legend -->
+    <g transform="translate(50, 30)">
+      <rect x="0" y="0" width="250" height="120" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+      
+      <line x1="20" y1="30" x2="70" y2="30" class="cloud-line"/>
+      <text x="80" y="35" class="small-label">Cloud (Pay-as-you-go)</text>
+      <text x="80" y="50" class="annotation">No upfront, $7K/month</text>
+      
+      <line x1="20" y1="70" x2="70" y2="70" class="onprem-line"/>
+      <text x="80" y="75" class="small-label">On-Premises</text>
+      <text x="80" y="90" class="annotation">$80K upfront, $3.3K/month</text>
+      
+      <line x1="20" y1="105" x2="70" y2="105" class="edge-line"/>
+      <text x="80" y="110" class="small-label">Edge Deployment</text>
+    </g>
+  </g>
+  
+  <!-- Bottom notes -->
+  <rect x="50" y="620" width="1100" height="60" fill="#f7fafc" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+  <text x="600" y="645" class="annotation" text-anchor="middle">Assumptions: Continuous 4-GPU utilization, A100 GPUs, cloud at $3/GPU-hour</text>
+  <text x="600" y="665" class="annotation" text-anchor="middle">On-premises includes hardware ($100K), power, cooling, maintenance. Break-even at 12 months for continuous use.</text>
+</svg>

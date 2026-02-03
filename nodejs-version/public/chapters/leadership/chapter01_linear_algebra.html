@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 1: Linear Algebra Essentials - Deep Learning and LLMs for Technical Leaders</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <style>
+        /* Additional styles for formula boxes */
+        .formula-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem auto;
+            text-align: center;
+            max-width: 85%;
+            font-size: 1.1em;
+        }
+        .formula-box p {
+            margin: 0.5rem 0;
+        }
+    </style>
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            packages: {'[+]': ['ams', 'newcommand', 'configmacros']},
+            macros: {
+                R: '{\\mathbb{R}}', N: '{\\mathbb{N}}', Z: '{\\mathbb{Z}}', C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}', vy: '{\\mathbf{y}}', vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}', vw: '{\\mathbf{w}}', vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}', vk: '{\\mathbf{k}}', vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}', mB: '{\\mathbf{B}}', mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}', mX: '{\\mathbf{X}}', mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}', mK: '{\\mathbf{K}}', mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}', mI: '{\\mathbf{I}}', mU: '{\\mathbf{U}}', mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}', norm: ['\\left\\|#1\\right\\|', 1], abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: { pageReady: () => { console.log('MathJax loaded'); return MathJax.startup.defaultPageReady(); } }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <main><h1>Model Architecture and Resource Requirements</h1>
+
+<h2>Why This Matters</h2>
+
+<p>Model architecture decisions—dimensions, layers, parameter counts—directly determine infrastructure requirements, operational costs, and system performance. Understanding the relationship between architectural choices and resource consumption is essential for evaluating technical proposals, planning infrastructure investments, and making informed build-versus-buy decisions.</p>
+
+<p>The computational characteristics of neural networks follow predictable patterns. A model's parameter count, layer structure, and dimensional choices create specific memory footprints and computational demands. These relationships aren't linear: doubling a model's dimensions typically quadruples memory requirements and increases computation eightfold. Recognizing these scaling behaviors enables accurate cost forecasting and realistic performance expectations.</p>
+
+<p>This chapter establishes the technical foundation for evaluating model architectures, focusing on how architectural parameters translate to resource requirements.</p>
+
+<h2>Key Questions This Chapter Answers</h2>
+
+<p>By the end of this chapter, you'll be able to answer:</p>
+
+<ul>
+    <li>Why does doubling model dimensions increase costs 8×, not 2×?
+    <li>Where do BERT's 110M parameters actually go, and why does it matter?
+    <li>When does the 13× memory overhead of training versus inference become critical?
+    <li>How do you evaluate vendor claims about "optimized architectures"?
+    <li>What's the difference between compute-bound and memory-bound operations?
+</ul>
+
+<p><strong>Note on Examples (2026 Context):</strong> This chapter uses BERT-base as the primary teaching example due to its clear, well-documented architecture. By 2026, BERT-base has been largely replaced in production by more efficient alternatives (DistilBERT, modern compact encoders like DeBERTa-v3, and domain-specific models). However, it remains an excellent pedagogical tool—the architectural principles and scaling laws presented here apply universally to all transformer models, from compact encoders to frontier LLMs like GPT-4, Claude 3 Opus, LLaMA 3, and Mistral Large.</p>
+
+<h2>Computational Foundations</h2>
+
+<h3>Matrix Operations as Core Primitives</h3>
+
+<p>Neural networks perform transformations through matrix operations—structured mathematical operations on arrays of numbers. Each layer applies a learned transformation, implemented as matrix multiplication, to its input data. The computational cost and memory requirements scale predictably with matrix dimensions.</p>
+
+<p>A transformation layer with 768-dimensional input and output requires a 768×768 weight matrix containing approximately 590,000 parameters. Each forward pass performs roughly 590,000 multiply-accumulate operations. Modern GPUs execute these operations in parallel, but the total work remains proportional to matrix size.</p>
+
+<p>The critical relationship: computational cost grows cubically with dimension. A 1024-dimensional layer (33\% larger) requires 1,048,576 parameters—a 78\% increase—and performs proportionally more computation. This non-linear scaling fundamentally shapes model design decisions and cost structures.</p>
+
+<h3>Matrix Multiplication: Cost Scaling Intuition</h3>
+
+<p><strong>Intuition: The Tournament Analogy</strong></p>
+
+<p>Think of matrix multiplication like organizing a round-robin tournament. You have n teams (rows), and each team plays n opponents (columns). That's n² matches total (quadratic). But each match requires n rounds of play to determine a winner (linear per match). Total work: n² matches × n rounds = n³ operations (cubic).</p>
+
+<p>When you double the number of teams (2n), you don't just double the work. Matches increase 4× (from n² to 4n²), and rounds per match double (from n to 2n). Total work increases 8× (from n³ to 8n³). This is why "slightly larger models" explode in cost—the scaling isn't linear or even quadratic, it's cubic.</p>
+
+<p>Understanding why costs scale cubically (not linearly or quadratically) is essential for evaluating architectural proposals:</p>
+
+<p>For an n×n matrix multiplication C = A×B:
+<ul>
+    <li>You have n² output positions (memory: quadratic)
+    <li>Each output requires n multiply-accumulate operations (computation per output: linear in n)
+    <li>Total computation: n² × n = n³ (cubic)
+</ul>
+
+<p><strong>Practical intuition</strong>:
+<ul>
+    <li>Double the matrix size → 2² = 4× more outputs → 2× operations per output → 8× total work
+    <li>This is why BERT-large (33\% larger dimensions) requires $\sim$8× longer training than BERT-base
+    <li>A seemingly modest 50\% dimensional increase yields 3.4× more computation
+</ul>
+
+<p>This cubic relationship is the fundamental constraint on model scaling. When evaluating proposals to increase model dimensions, remember that costs scale much faster than the dimensional parameter itself.</p>
+
+<h3>Dimensional Scaling and Cost Implications</h3>
+
+<p>The relationship between model dimensions and computational cost follows a cubic function. Doubling the dimensional parameter increases memory requirements by a factor of four and computational operations by a factor of eight.</p>
+
+<p>BERT-base, a widely-deployed language model, uses 768-dimensional representations. Each transformation layer multiplies 768×768 matrices, requiring approximately 590,000 operations per layer. BERT-large increases dimensions to 1024, requiring 1,048,576 operations per layer—nearly double the computational load.</p>
+
+<p>The compounding effect: BERT-large employs 24 layers versus BERT-base's 12. The combined impact approaches a 4× increase in total computation, despite the dimensional increase appearing modest at 33\%. This multiplicative relationship between architectural parameters and resource requirements necessitates careful analysis of proposed specifications.</p>
+
+<figure>
+<img src="../diagrams/chapter01_matrix_multiplication_522a20fb.png" alt="Diagram" style="max-width: 100%; height: auto;" />
+<figcaption>Matrix multiplication operations showing parallel computation structure. Modern GPUs execute thousands of operations simultaneously, but total work scales cubically with matrix dimension.</figcaption>
+</figure>
+
+<h3>Memory and Compute Trade-offs</h3>
+
+<p>Resource requirements manifest in two primary dimensions: memory capacity and computational throughput. Memory costs scale quadratically with model dimension—a 768×768 weight matrix stores 590,000 values, requiring 2.4 MB at standard precision. Computational costs scale cubically—the same matrix multiplication requires approximately 450 million operations.</p>
+
+<p>For individual operations, these costs appear manageable. The challenge emerges from scale: transformer models contain hundreds of such matrices and process millions of inputs during training. A single BERT-base training run performs approximately $10^{21}$ floating-point operations, requiring substantial computational resources.</p>
+
+<p>The practical implication: architectural modifications have multiplicative effects on resource requirements. Proposals to increase model dimensions warrant careful cost-benefit analysis, as modest dimensional increases translate to significant resource consumption increases.</p>
+
+<h2>BERT-Base: Architecture Analysis</h2>
+
+<h3>Parameter Distribution</h3>
+
+<p>BERT-base contains 110 million parameters distributed across three primary components. Understanding this distribution provides insight into where computational resources are consumed and where optimization opportunities exist.</p>
+
+<p><strong>Note on Modern Alternatives</strong>: By 2026, efficient alternatives (DistilBERT at 67M parameters, modern compact models at 70-90M) have largely replaced BERT for production applications, offering 2-4× inference speedup with comparable quality for most downstream tasks. BERT remains a valuable reference architecture for understanding transformer design principles.</p>
+
+<p><strong>Vocabulary Embeddings</strong> (23 million parameters): The model maintains a lookup table mapping 30,000 vocabulary tokens to 768-dimensional vectors. This component is relatively static during inference but contributes significantly to model size.</p>
+
+<p><strong>Attention Mechanisms</strong> (21 million parameters): Each of 12 layers contains three 768×768 projection matrices for query, key, and value transformations. These matrices enable the attention mechanism's core functionality, totaling 1.77 million parameters per layer.</p>
+
+<p><strong>Feed-Forward Networks</strong> (57 million parameters): Each layer includes a two-layer feed-forward network expanding from 768 to 3,072 dimensions and contracting back. This component accounts for 52\% of total parameters despite its conceptual simplicity, representing 4.7 million parameters per layer.</p>
+
+<p>This distribution reveals an important characteristic: the computationally straightforward feed-forward networks dominate parameter count. This pattern is common across transformer architectures and represents a potential optimization target.</p>
+
+<p><strong>Why Does Feed-Forward Dominate?</strong></p>
+
+<p>The FFN (feed-forward network) accounts for 52\% of parameters despite being conceptually simple. Here's why: Each of BERT's 12 layers has attention with 3 projection matrices of 768×768 ≈ 1.77M parameters, while FFN expands to 768→3072→768 ≈ 4.7M parameters (2.7× more). The FFN performs the "heavy lifting" of non-linear transformations after attention identifies what to focus on. Think of attention as where to look and FFN as what to do with what you found.</p>
+
+<p><strong>Optimization Implication</strong>: When you need to compress a model, FFN layers are often the primary target—you can reduce the intermediate dimension (3072) more aggressively than attention dimensions before accuracy degrades significantly.</p>
+
+<h3>Memory Requirements: Training versus Inference</h3>
+
+<p>Parameter storage represents only a fraction of total memory requirements. BERT-base's 110 million parameters require 440 MB at 32-bit precision. However, training requires approximately 6 GB of GPU memory with batch size 32 and sequence length 512 (activations plus gradients plus optimizer state)—more than 13× the parameter storage. Batch size 8 needs approximately 2GB; batch size 128 needs approximately 15GB.</p>
+
+<p><strong>The 14× Memory Rule</strong></p>
+
+<p>A quick estimate for transformer training memory provides a useful planning tool. For BERT-base at batch size 1: Model parameters require 440MB. Activations require approximately 4× parameters equals 1.76GB. Gradients require 1× parameters equals 440MB. Optimizer state (Adam) requires 2× parameters equals 880MB. Total: approximately 3.5GB at batch size 1.</p>
+
+<p>For batch size B, training memory approximately equals 3.5GB plus (B × activation memory per sample). At batch size 32: approximately 6GB total. Rule of thumb: 14× parameter size for typical training setup.</p>
+
+<p>The memory budget during training includes:</p>
+
+<p><strong>Model Parameters</strong> (440 MB): The trained weights themselves.</p>
+
+<p><strong>Gradients</strong> (440 MB): Computed adjustments for each parameter during backpropagation.</p>
+
+<p><strong>Optimizer State</strong> (880 MB): The Adam optimizer maintains two moving averages per parameter for adaptive learning rates, requiring 2× parameter memory.</p>
+
+<p><strong>Activations</strong> (3-4 GB): Intermediate computations from each layer, stored during forward pass for use in backpropagation. With batch size 32 and sequence length 512 across 12 layers, activations dominate memory consumption at approximately 60\% of total requirements.</p>
+
+<figure>
+<img src="../diagrams/chapter01_bert_parameters_c3d4e5f6.png" alt="Diagram" style="max-width: 100%; height: auto;" />
+<figcaption>BERT-base memory allocation during training. Activations consume 60\% of memory, while parameters represent only 7\%. This distribution explains why batch size significantly impacts memory requirements.</figcaption>
+</figure>
+
+<h3>Inference Optimization</h3>
+
+<p>Inference eliminates several memory requirements present during training. Without gradients, optimizer states, or large activation batches, memory requirements decrease to approximately 1 GB—an 83\% reduction from training requirements.</p>
+
+<p>This disparity has strategic implications: models expensive to train may be economical to deploy at scale. Infrastructure planning should account for these distinct resource profiles across the model lifecycle.</p>
+
+<h2>Scaling Behavior and Cost Projection</h2>
+
+<h3>Dimensional Scaling Relationships</h3>
+
+<p>Resource requirements scale predictably with architectural parameters. When doubling model dimension:
+<ul>
+    <li>Parameter count increases 4× (quadratic relationship)
+    <li>Memory requirements increase 4×
+    <li>Computational operations increase 8× (cubic relationship)
+</ul>
+
+<p>These relationships enable rapid cost estimation for architectural variations. A proposal to increase BERT-base dimensions from 768 to 1536 would increase parameters from 110M to 440M (4×) and training time by approximately 8×.</p>
+
+<h3>Comparative Analysis: BERT-Base versus BERT-Large</h3>
+
+<table>
+<tr><th><strong>Metric</strong></th><th><strong>BERT-Base</strong></th><th><strong>BERT-Large</strong></th></tr>
+<tr><td>Dimension</td><td>768</td><td>1024</td></tr>
+<tr><td>Layers</td><td>12</td><td>24</td></tr>
+<tr><td>Parameters</td><td>110M</td><td>340M</td></tr>
+<tr><td>Training Memory</td><td>$\sim$6 GB</td><td>$\sim$16 GB</td></tr>
+<tr><td>Relative Training Time</td><td>1.0×</td><td>4.3×</td></tr>
+<tr><td>Typical Accuracy Improvement</td><td>baseline</td><td>+2-3\%</td></tr>
+</table>
+
+<p>The cost-benefit analysis reveals diminishing returns: BERT-large requires 4.3× more training resources for 2-3\% accuracy improvement. This pattern is common across model scaling and explains why production deployments frequently favor smaller, more efficient architectures.</p>
+
+<div class="keypoint"><strong>MENTAL MODEL: Cost Driver Dominance</strong><br><strong>Principle:</strong> In any ML system, 80\% of costs come from 20\% of operations.
+
+<p><strong>For Training:</strong>
+<ul>
+    <li>Matrix multiplications in FFN layers dominate (57\% of BERT parameters)
+    <li>Attention is expensive only at long context (quadratic scaling)
+</ul>
+
+<p><strong>For Inference:</strong>
+<ul>
+    <li>High-volume systems: cost per request dominates
+    <li>Low-volume systems: fixed infrastructure costs dominate
+</ul>
+
+<p><strong>Decision Framework:</strong>
+<ol>
+    <li>Identify your dominant cost (training, inference, data, or engineering)
+    <li>Optimize the top 2 drivers first
+    <li>Ignore optimizations that impact less than 5\% of total cost
+</ol>
+
+<p><strong>Example:</strong> If inference costs are \$50K/month and training is \$5K once, don't spend 3 months optimizing training—optimize inference.</div>
+
+<h3>Architectural Optimization Considerations</h3>
+
+<p>The 768-dimensional standard emerged through empirical optimization across multiple constraints: model expressiveness, computational efficiency, and hardware utilization. This dimension is divisible by numerous factors, facilitating efficient parallel computation on GPU architectures.</p>
+
+<p>Alternative dimensions present trade-offs. Reducing to 384 dimensions decreases resource requirements by approximately 8× but often degrades accuracy unacceptably. Increasing to 1536 dimensions provides marginal accuracy improvements at 8× computational cost. The 768-dimensional choice represents a practical optimum rather than a theoretical ideal.</p>
+
+<figure>
+<img src="../diagrams/chapter01_memory_hierarchy_8aa29564.png" alt="Diagram" style="max-width: 100%; height: auto;" />
+<figcaption>GPU memory hierarchy and compute-memory trade-offs. Understanding when operations are memory-bound versus compute-bound informs optimization strategies.</figcaption>
+</figure>
+
+<h2>Model Compression and Optimization</h2>
+
+<h3>Compression Techniques</h3>
+
+<p>Production deployments frequently employ compression techniques to reduce resource requirements while maintaining acceptable performance. Three primary approaches have demonstrated effectiveness:</p>
+
+<p><strong>Knowledge Distillation</strong>: Training a smaller model to replicate a larger model's behavior. Typical results achieve 50\% parameter reduction with 2-3\% accuracy degradation. This approach is particularly effective for deployment scenarios where inference cost dominates total cost of ownership.</p>
+
+<p><strong>Quantization</strong>: Reducing numerical precision from 32-bit to 8-bit or 16-bit representations. This technique provides 2-4× memory reduction with minimal accuracy impact (<1\% typically). Modern hardware includes specialized support for lower-precision arithmetic, enabling both memory and computational benefits.</p>
+
+<p><strong>Pruning</strong>: Removing parameters with minimal impact on model performance. Structured pruning can achieve 30-50\% parameter reduction while maintaining performance within acceptable bounds. This technique requires careful validation to ensure pruned models maintain robustness across diverse inputs.</p>
+
+<h3>Economic Implications</h3>
+
+<p>For high-volume production systems, compression techniques translate directly to infrastructure cost reduction. A 50\% model size reduction through distillation enables:
+<ul>
+    <li>Reduced memory requirements, potentially enabling deployment on less expensive hardware
+    <li>Decreased inference latency, improving user experience and enabling higher throughput
+    <li>Lower operational costs through reduced computational requirements
+</ul>
+
+<p>These benefits compound at scale. For systems serving millions of requests daily, compression-driven efficiency improvements can reduce annual infrastructure costs by hundreds of thousands of dollars.</p>
+
+<h2>Evaluation Framework</h2>
+
+<h3>Architectural Assessment Criteria</h3>
+
+<p>When evaluating model architecture proposals, consider:</p>
+
+<p><strong>Dimensional Specifications</strong>:
+<ul>
+    <li>What dimensional parameters are proposed, and what is the technical justification?
+    <li>How do proposed dimensions compare to established baselines for similar applications?
+    <li>What is the expected accuracy-cost trade-off relative to alternative dimensions?
+</ul>
+
+<p><strong>Parameter Allocation</strong>:
+<ul>
+    <li>What is the total parameter count, and how does it compare to comparable models?
+    <li>Where are parameters concentrated, and does this allocation align with model objectives?
+    <li>Have smaller models been evaluated to establish the accuracy-parameter relationship?
+</ul>
+
+<p><strong>Resource Requirements</strong>:
+<ul>
+    <li>What are the memory requirements for training versus inference?
+    <li>What batch sizes are feasible given available hardware?
+    <li>Have compression techniques been considered for production deployment?
+</ul>
+
+<h3>Common Evaluation Pitfalls</h3>
+
+<p><strong>Overemphasis on Parameter Count</strong>: Parameter count alone provides incomplete information. A well-designed 50M parameter model may outperform a poorly-designed 200M parameter model. Architecture quality and training methodology matter as much as raw parameter count.</p>
+
+<p><strong>Conflating Training and Inference Costs</strong>: Training costs are one-time investments; inference costs are ongoing operational expenses. For high-volume applications, inference efficiency often matters more than training efficiency.</p>
+
+<p><strong>Insufficient Baseline Comparison</strong>: Proposals should include comparison to established baselines. Claims of superior performance require validation against recognized benchmarks, not just internal metrics.</p>
+
+<p><strong>Neglecting Compression Opportunities</strong>: Production deployment should consider compression from the outset, not as a post-deployment optimization. Early integration of compression techniques into the development process yields better results.</p>
+
+<div class="caution"><strong>CAUTIONARY TALE: The Model That Didn't Fit in Memory</strong><br><strong>What Happened:</strong>
+
+<p>A fintech startup decided to train a custom BERT-large variant (340M parameters) for financial document analysis. Their team had access to 4× V100 GPUs (16GB each) and estimated training would take 2 weeks.</p>
+
+<p><strong>Week 1:</strong> Training failed immediately with out-of-memory errors. Investigation revealed they calculated only parameter memory (1.3GB) but ignored the 14× rule. Actual requirement: 18GB per GPU at their planned batch size of 64.</p>
+
+<p><strong>Attempted Fix:</strong> Reduced batch size to 8 (fits in 16GB). Training started but was 8× slower than estimated—would take 16 weeks instead of 2. GPU utilization dropped to 15\% (memory-bound, not compute-bound).</p>
+
+<p><strong>Outcome:</strong></p>
+
+<p>Project timeline blown. Emergency pivot: Switched to BERT-base (110M parameters, 6GB training memory), batch size 32, completed in 3 weeks. Final model achieved 94\% of BERT-large's accuracy at 1/4 the training cost and 1/3 the inference cost.</p>
+
+<p><strong>Lesson:</strong> Always apply the 14× memory rule when planning training infrastructure. Parameter count alone is misleading. Batch size dramatically affects both memory requirements and training efficiency. When memory-constrained, smaller models with proper batch sizes often outperform larger models with tiny batches.</p>
+
+<p><strong>Red Flags They Missed:</strong>
+<ul>
+    <li>No memory calculation beyond parameter storage
+    <li>No consideration of optimizer state (2× parameters)
+    <li>No activation memory estimate (4-6× parameters)
+    <li>No GPU utilization analysis before committing
+</ul></div>
+
+<h2>Where You'll See This in Practice</h2>
+
+<p>The architectural concepts in this chapter underpin multiple domain applications you'll encounter in Part IV:</p>
+
+<h3>Legal Document Analysis (Chapter 13)</h3>
+
+<p>Contract analysis systems processing 50-page documents face the same quadratic attention scaling discussed in Section 1.1.3. When your legal team proposes analyzing 100-page merger agreements, 50 pages (≈12K tokens) versus 100 pages (≈24K tokens) equals 4× attention cost. The parameter distribution patterns (Section 1.2.1) determine which compression techniques work. Inference optimization (Section 1.2.3) becomes critical when processing thousands of contracts.</p>
+
+<p><strong>Decision point</strong>: Should you chunk long documents (cheaper) or use long-context models (higher quality)? Section 1.1.4's memory-compute trade-offs provide the framework.</p>
+
+<h3>Financial Time Series (Chapter 14)</h3>
+
+<p>TabTransformer architecture for credit risk (Chapter 14.2) follows the same parameter scaling principles. Embedding dimensions scale cubically just like BERT (Section 1.1.2). FFN-dominated parameter counts (Section 1.2.1) appear in financial models too. Training memory overhead (13× rule from Section 1.2.2) applies universally.</p>
+
+<p><strong>Decision point</strong>: When vendors propose "custom financial transformers," you can now calculate whether the parameter count matches their claimed model size.</p>
+
+<h3>Code Generation (Chapter 11)</h3>
+
+<p>GitHub Copilot-style systems face context window trade-offs: How much code history to include? (Section 1.1.3). Parameter efficiency: Specialized code models versus general LLMs (Section 1.2.1). Inference cost at scale: Millions of autocomplete requests daily (Section 1.2.3).</p>
+
+<p><strong>Decision point</strong>: Self-host a smaller model (lower per-request cost) or use API (higher cost, better quality)? The memory requirements from Section 1.2.2 determine what hardware you'll need.</p>
+
+<h3>Healthcare NLP (Chapter 12)</h3>
+
+<p>Clinical text processing systems must balance accuracy requirements with inference costs (Section 1.2.3), deploy on-premise due to HIPAA (Section 1.2.2 memory requirements become critical), and compress models for edge deployment in hospitals (Section 1.4).</p>
+
+<p><strong>Decision point</strong>: Can you quantize to INT8 (4× smaller) without violating accuracy requirements? Section 1.4's compression techniques provide the evaluation framework.</p>
+
+<h3>Enterprise Search (Chapter 10)</h3>
+
+<p>Semantic search with RAG systems involves embedding models for 10M documents (Section 1.2.1 parameter efficiency), real-time query latency requirements (Section 1.2.3 inference optimization), and cost at scale: 100K queries/day (Section 1.3 scaling analysis).</p>
+
+<p><strong>Decision point</strong>: Use general-purpose BERT or fine-tune domain-specific embeddings? Section 1.4's compression economics help calculate ROI.</p>
+
+<h3>Key Takeaway</h3>
+
+<p>The architectural principles in this chapter aren't abstract theory—they're the foundation for evaluating every AI proposal you'll face. When your team suggests "upgrading to a larger model" or "extending context windows," you now have the frameworks to calculate the actual cost impact (cubic versus quadratic versus linear scaling), identify optimization opportunities (where are parameters concentrated?), and make informed trade-offs (quality versus cost versus latency). Bookmark this chapter—you'll reference it constantly when evaluating proposals in Part IV.</p>
+
+<h2>Key Insights</h2>
+
+<p><strong>Non-linear Scaling</strong>: Computational costs scale cubically with model dimension, while memory scales quadratically. Small dimensional increases produce large resource requirement increases.</p>
+
+<p><strong>Parameter Distribution</strong>: In transformer architectures, feed-forward networks typically contain 50-60\% of parameters despite conceptual simplicity. This concentration represents an optimization opportunity.</p>
+
+<p><strong>Training-Inference Disparity</strong>: Training memory requirements exceed inference requirements by 6-10×, primarily due to activation storage. Infrastructure planning should account for these distinct profiles.</p>
+
+<p><strong>Diminishing Returns</strong>: Model scaling exhibits diminishing returns. BERT-large requires 4× more resources than BERT-base for 2-3\% accuracy improvement, illustrating the cost-benefit trade-off at larger scales.</p>
+
+<p><strong>Compression Viability</strong>: Most production models can be compressed 2-4× with minimal accuracy impact. This capability should inform deployment strategies and infrastructure planning.</p>
+
+<p>The next chapter examines training dynamics—how these models are optimized, what drives training costs, and how to evaluate training efficiency proposals.</p>
+<div class="chapter-nav">
+  <a href="preface.html">← Preface</a>
+  <a href="../../leadership.html">📚 Table of Contents</a>
+  <a href="chapter02_calculus_optimization.html">Chapter 2: Calculus and Optimization →</a>
+</div>
+</main>
+    <footer><p>&copy; 2026 Deep Learning and LLMs for Technical Leaders.</p></footer>
+</body>
+</html>

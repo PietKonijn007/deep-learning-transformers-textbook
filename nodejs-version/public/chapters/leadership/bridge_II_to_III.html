@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridge: From Architecture to Production - Deep Learning and LLMs for Technical Leaders</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <style>
+        /* Additional styles for formula boxes */
+        .formula-box {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem auto;
+            text-align: center;
+            max-width: 85%;
+            font-size: 1.1em;
+        }
+        .formula-box p {
+            margin: 0.5rem 0;
+        }
+    </style>
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            packages: {'[+]': ['ams', 'newcommand', 'configmacros']},
+            macros: {
+                R: '{\\mathbb{R}}', N: '{\\mathbb{N}}', Z: '{\\mathbb{Z}}', C: '{\\mathbb{C}}',
+                vx: '{\\mathbf{x}}', vy: '{\\mathbf{y}}', vz: '{\\mathbf{z}}',
+                vh: '{\\mathbf{h}}', vw: '{\\mathbf{w}}', vb: '{\\mathbf{b}}',
+                vq: '{\\mathbf{q}}', vk: '{\\mathbf{k}}', vv: '{\\mathbf{v}}',
+                mA: '{\\mathbf{A}}', mB: '{\\mathbf{B}}', mC: '{\\mathbf{C}}',
+                mW: '{\\mathbf{W}}', mX: '{\\mathbf{X}}', mY: '{\\mathbf{Y}}',
+                mQ: '{\\mathbf{Q}}', mK: '{\\mathbf{K}}', mV: '{\\mathbf{V}}',
+                mH: '{\\mathbf{H}}', mI: '{\\mathbf{I}}', mU: '{\\mathbf{U}}', mM: '{\\mathbf{M}}',
+                transpose: '{^\\top}', norm: ['\\left\\|#1\\right\\|', 1], abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: { pageReady: () => { console.log('MathJax loaded'); return MathJax.startup.defaultPageReady(); } }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <main><h1>Part II Equipped You To Ask "Which?"</h1>
+
+<h2>What You Now Understand</h2>
+
+<p>Part II established frameworks for evaluating architectural choices. You now understand when distributed training makes economic sense—data parallelism achieves 90-95\% efficiency for models that fit in single-GPU memory, making 8-GPU training cost-effective for runs exceeding 2 days. You recognize which compression techniques apply to your constraints—the 4-level compression ladder from INT8 quantization (always worth it) to extreme compression (rarely justified). You know when to fine-tune versus optimize prompts—the 4-step decision tree that saves \$20K-40K on 90\% of projects.</p>
+
+<p>These architectural frameworks prevent the expensive mistakes that plague AI projects. Premature fine-tuning without exhausting prompt engineering. Distributed training for models that fit comfortably in single-GPU memory. Compression strategies that sacrifice 5\% accuracy for 2× cost savings when the business case doesn't justify the quality trade-off.</p>
+
+<h2>What You Can Now Evaluate</h2>
+
+<p>The mental models from Part II guide architectural decisions. The Distributed Training Decision Tree reveals when to use data parallelism (model fits in GPU), tensor parallelism (model exceeds single GPU), or pipeline parallelism (model exceeds multi-GPU capacity). The Compression-Quality Frontier shows that most models compress 2-4× with less than 1\% accuracy loss, making Level 1-2 compression standard practice. The Prompt-Finetune Decision Tree demonstrates that systematic prompt optimization achieves 85\% accuracy at \$3K cost, often eliminating the need for \$25K fine-tuning.</p>
+
+<p>You can now challenge architectural proposals effectively. "We'll use pipeline parallelism for faster training" triggers the efficiency question—pipeline parallelism achieves 60-80\% efficiency versus 90-95\% for data parallelism, making it slower unless the model doesn't fit. "We need to fine-tune for best results" prompts the prompt engineering question—have you tried systematic prompt optimization first? "We'll train from scratch for maximum control" raises the cost-benefit question—does the marginal improvement justify 100× higher training costs?</p>
+
+<h2>The Transition: From "Which?" to "How Much?"</h2>
+
+<p>Part II taught you choices—which approaches work for which problems. Part III teaches you costs—how much will this actually cost to build and run in production?</p>
+
+<p>Understanding architectural choices is necessary but insufficient. Knowing that RAG systems work well for enterprise search doesn't reveal whether RAG costs \$500/month or \$50K/month at your scale. Knowing that quantization reduces inference costs doesn't indicate whether the savings justify the engineering investment. Knowing that distributed training enables larger models doesn't show whether the infrastructure costs fit your budget.</p>
+
+<p>Part III addresses the production reality—the infrastructure, operational costs, and lifecycle management that determine whether projects deliver positive ROI. You'll learn what hardware infrastructure actually costs over 3 years, not just sticker prices. You'll understand how data pipeline quality and refresh rates affect ongoing costs. You'll evaluate the full operational lifecycle, including monitoring, retraining, and incident response.</p>
+
+<h2>Part III Will Teach You To Ask "How Much?"</h2>
+
+<p>The next chapters examine production costs that often exceed development costs by 10×:</p>
+
+<p><strong>Hardware Infrastructure (Chapter 7):</strong> What's the real 3-year cost? A vendor quotes \$50K for 8× A100 GPUs. But what about power, cooling, networking, and replacement cycles? Chapter 7 reveals that on-premise infrastructure TCO is typically 2-3× the hardware sticker price. Cloud alternatives cost \$2.50/hour per GPU, reaching break-even at 60-70\% utilization over 3 years. The decision framework shows when each option makes economic sense.</p>
+
+<p><strong>Data Pipeline (Chapter 8):</strong> What does data quality actually cost? Your team proposes "high-quality training data" without specifying what that means or costs. Chapter 8 quantifies data quality dimensions—labeling accuracy (90\% versus 99\% costs 5× more), annotation consistency (requires inter-annotator agreement measurement), and refresh frequency (monthly updates cost 12× annual versus one-time). These costs often exceed model training costs.</p>
+
+<p><strong>Operationalization (Chapter 9):</strong> What's the total cost of ownership? Training costs \$50K once. But what about retraining every quarter (\$200K/year), monitoring infrastructure (\$20K/year), incident response (\$50K/year), and model governance (\$30K/year)? Chapter 9's lifecycle cost framework reveals that operational expenses typically exceed training costs by 5-10× over 3 years. Optimizing training while ignoring operations is false economy.</p>
+
+<h2>Critical Before Commitment</h2>
+
+<p>Part III is critical before committing to production deployment. The patterns are consistent across failed projects:</p>
+
+<p><strong>Underestimated Infrastructure Costs:</strong> Teams calculate training costs accurately but underestimate production infrastructure by 5-10×. A model that costs \$50K to train might cost \$500K annually to serve at scale. Without understanding inference costs, projects that work technically fail economically.</p>
+
+<p><strong>Ignored Data Pipeline Costs:</strong> Teams budget for initial data collection but ignore ongoing refresh requirements. A model trained on 6-month-old data degrades in production. Quarterly retraining requires quarterly data collection, multiplying costs by 4× annually. Without planning for data refresh, models become stale and projects fail operationally.</p>
+
+<p><strong>Neglected Operational Overhead:</strong> Teams focus on model accuracy but ignore monitoring, alerting, incident response, and governance. Production failures occur not from model errors but from operational gaps—undetected drift, unhandled edge cases, inadequate rollback procedures. Without operational planning, projects that work in development fail in production.</p>
+
+<h2>Key Questions for Part III</h2>
+
+<p>As you read the next chapters, you'll develop frameworks to answer:</p>
+
+<ol>
+    <li>What's the 3-year TCO for hardware infrastructure? Cloud versus on-premise—which makes economic sense at your utilization rate and volume?
+    <li>How much does data quality actually cost? What's the trade-off between labeling accuracy, annotation consistency, and refresh frequency?
+    <li>What's the full operational lifecycle cost? Training plus retraining plus monitoring plus incident response plus governance—what's the total?
+    <li>When do operational costs exceed training costs? At what volume does inference cost dominate? When does retraining frequency make operational costs exceed development costs?
+    <li>What's the break-even point? At what request volume does self-hosting become cheaper than APIs? At what scale does on-premise infrastructure beat cloud?
+</ol>
+
+<p>These production cost questions determine whether projects deliver positive ROI or consume budgets without returning value. Part II gave you frameworks to make the right architectural choices. Part III gives you frameworks to understand what those choices actually cost.</p>
+
+<div style="text-align: center;">
+<em>The difference between a profitable AI system and an expensive failure is usually understanding production costs, not model accuracy.</em>
+</div>
+<div class="chapter-nav">
+  <a href="chapter06_advanced_techniques.html">← Chapter 6: Advanced Techniques</a>
+  <a href="../../leadership.html">📚 Table of Contents</a>
+  <a href="chapter07_hardware_infrastructure.html">Chapter 7: Hardware Infrastructure →</a>
+</div>
+</main>
+    <footer><p>&copy; 2026 Deep Learning and LLMs for Technical Leaders.</p></footer>
+</body>
+</html>

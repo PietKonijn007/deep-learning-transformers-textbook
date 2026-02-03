@@ -1,0 +1,82 @@
+\chapter*{Part III Equipped You To Ask "How Much?"}
+\addcontentsline{toc}{chapter}{Bridge: From Production to Applications}
+
+\section*{What You Now Understand}
+
+Part III established frameworks for evaluating production costs and operational reality. You now understand that on-premise infrastructure TCO is typically 2-3× hardware sticker price when accounting for power, cooling, networking, and replacement cycles. You recognize that data quality costs scale non-linearly—99\% labeling accuracy costs 5× more than 90\% accuracy, and monthly data refresh costs 12× more annually than one-time collection. You know that operational costs typically exceed training costs by 5-10× over 3 years when including retraining, monitoring, incident response, and governance.
+
+These production cost frameworks prevent the economic failures that plague AI projects. Teams that optimize training costs while ignoring inference costs that exceed training within months. Projects that budget for initial data collection but not quarterly refresh, leading to model staleness. Systems that work in development but fail in production due to inadequate monitoring and incident response procedures.
+
+\section*{What You Can Now Evaluate}
+
+The cost frameworks from Part III enable realistic project planning. You can calculate 3-year TCO for infrastructure, revealing that cloud costs \$2.50/hour per GPU with break-even at 60-70\% utilization versus on-premise. You can quantify data pipeline costs, showing that high-quality labeled data costs \$2-10 per example depending on domain complexity and accuracy requirements. You can estimate full lifecycle costs, demonstrating that a \$50K training investment becomes \$300K-500K over 3 years when including operations.
+
+You can now challenge cost proposals effectively. "Training costs \$50K" prompts the operational cost question—what about retraining, monitoring, and incident response? "We need 99\% labeling accuracy" triggers the cost-benefit analysis—does the 5× cost increase justify the marginal accuracy improvement? "We'll use cloud infrastructure" raises the utilization question—at what volume does on-premise become more economical?
+
+The production reality check prevents expensive surprises. A semantic search system that costs \$20K to build might cost \$10K/month to operate at 100K queries daily. A recommendation model that costs \$100K to train might require \$50K quarterly retraining to maintain accuracy. A classification system that works at 95\% accuracy in development might need \$200K in operational infrastructure to handle the 5\% error rate at production scale.
+
+\section*{The Transition: From "How Much?" to "Should We?"}
+
+Part III taught you costs—how much systems actually cost to build and run in production. Part IV teaches you decisions—should we build this at all, and if so, which approach makes sense for our domain?
+
+Understanding production costs is necessary but insufficient. Knowing that a system costs \$500K annually to operate doesn't reveal whether that investment delivers positive ROI. Knowing that fine-tuning costs \$25K doesn't indicate whether fine-tuning is necessary for your use case. Knowing that RAG systems cost \$10K/month doesn't show whether RAG is the right architecture for your domain.
+
+Part IV addresses domain-specific decisions—when to build, buy, or walk away. You'll learn which AI approaches work for which business problems and when simpler alternatives deliver better ROI. You'll understand domain-specific constraints that shape architectural choices—regulatory requirements in healthcare and finance, explainability needs in legal applications, latency requirements in real-time systems.
+
+\section*{Part IV Will Teach You To Ask "Should We?"}
+
+The next chapters examine domain-specific patterns and decision frameworks:
+
+\textbf{Enterprise NLP (Chapter 10):} Should you build or buy? A vendor offers semantic search for \$5K/month. Your team proposes building custom for \$100K. Chapter 10's Build vs. Buy framework reveals the economic threshold—APIs win below 10M tokens/month, self-hosted wins above 100M tokens/month, and the 10M-100M range depends on data sovereignty and accuracy requirements. The "When NOT to Use AI" section prevents over-application—rule-based routing often works better than ML for well-defined categories.
+
+\textbf{Code Tools (Chapter 11):} Does code generation deliver ROI? GitHub Copilot costs \$50K/year for 100 developers. Your team claims 20\% productivity improvement. Chapter 11 quantifies the value—20\% improvement on \$15M annual engineering cost equals \$3M value, providing 60× ROI. But the chapter also reveals when code generation fails—security-critical code requiring extensive review, highly specialized domains where models lack training data, and greenfield projects where code completion provides minimal value.
+
+\textbf{Healthcare (Chapter 12):} Should you deploy AI for clinical decisions? A diagnostic model achieves 94\% accuracy. Chapter 12 reveals the domain-specific constraints—FDA approval requirements (6-12 months, \$500K-2M), HIPAA compliance (on-premise deployment, audit trails), and fairness validation across demographic groups (additional 3-6 months). These constraints often make the business case infeasible despite technical success.
+
+\textbf{Legal (Chapter 13):} Should you use AI for contract analysis? A document review system achieves 92\% accuracy. Chapter 13 shows the domain-specific requirements—explainability for audit trails, citation accuracy for professional liability, and human review for low-confidence predictions. The chapter reveals when AI augments rather than replaces—lawyers review AI-flagged clauses 10× faster than manual review, delivering ROI through efficiency rather than automation.
+
+\textbf{Finance (Chapter 14):} Should you deploy AI for trading or risk assessment? A credit risk model improves AUC by 2\%. Chapter 14 quantifies the value—2\% improvement on \$10B loan portfolio reduces defaults by \$20M annually, justifying \$2M development cost. But the chapter also reveals regulatory constraints—model risk management requirements, fairness testing for lending decisions, and explainability for regulatory audits that add 6-12 months and \$500K-1M to timelines.
+
+\textbf{Autonomous Systems (Chapter 15):} Should you deploy AI for infrastructure automation? An AIOps system promises 80\% incident auto-resolution. Chapter 15 reveals the reliability requirements—false positives that cause outages cost 100× more than false negatives that miss incidents. The chapter shows when AI augments rather than replaces—AI suggests remediation actions that humans approve, delivering 5× faster incident response without the risk of autonomous failures.
+
+\section*{Domain-Specific Decision Patterns}
+
+Part IV reveals patterns across domains that determine when AI delivers ROI:
+
+\textbf{AI Delivers ROI When:}
+\begin{itemize}
+    \item Task is well-defined with clear success metrics (classification, extraction, summarization)
+    \item Training data is available and representative (10K+ examples, matches production distribution)
+    \item Accuracy requirements are achievable (85-95\% sufficient, not 99\%+)
+    \item Error costs are manageable (false positives and negatives have acceptable business impact)
+    \item Volume justifies investment (100K+ requests/month, \$100K+ annual value)
+\end{itemize}
+
+\textbf{AI Fails to Deliver ROI When:}
+\begin{itemize}
+    \item Simpler alternatives suffice (rule-based systems, keyword search, structured queries)
+    \item Accuracy requirements exceed state-of-the-art (99.9\% for complex tasks)
+    \item Training data is insufficient or unrepresentative (less than 1K examples, distribution mismatch)
+    \item Regulatory constraints make deployment infeasible (FDA approval timeline, fairness requirements)
+    \item Error costs are catastrophic (false positives cause major incidents, false negatives have legal liability)
+\end{itemize}
+
+\section*{Key Questions for Part IV}
+
+As you read the next chapters, you'll develop frameworks to answer:
+
+\begin{enumerate}
+    \item Should we build this at all? Does AI solve a real problem, or are we applying AI because it's fashionable?
+    \item What are the domain-specific constraints? Regulatory requirements, explainability needs, latency requirements, fairness validation?
+    \item What's the realistic ROI? Quantified value minus full lifecycle costs—is the business case positive?
+    \item What are the failure modes? What happens when the model is wrong? Are error costs acceptable?
+    \item What's the simpler alternative? Would rule-based systems, improved search, or better data organization deliver more value?
+\end{enumerate}
+
+These domain-specific questions determine whether projects should proceed at all. Part III gave you frameworks to understand production costs. Part IV gives you frameworks to decide whether those costs deliver positive ROI in your domain.
+
+\vspace{2em}
+\begin{center}
+\textit{The best AI project is often the one you don't build—because you recognized that simpler alternatives deliver better ROI.}
+\end{center}
+

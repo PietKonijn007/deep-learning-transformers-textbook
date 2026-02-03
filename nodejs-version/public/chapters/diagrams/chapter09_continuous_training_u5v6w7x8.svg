@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1000">
+  <defs>
+    <style>
+      .title { font: bold 24px sans-serif; fill: #1f2937; }
+      .subtitle { font: bold 18px sans-serif; fill: #1f2937; }
+      .label { font: 16px sans-serif; fill: #1f2937; }
+      .small { font: 14px sans-serif; fill: #4b5563; }
+      .tiny { font: 12px sans-serif; fill: #6b7280; }
+      .cost { font: bold 14px sans-serif; fill: #059669; }
+      .primary { fill: #667eea; }
+      .secondary { fill: #764ba2; }
+      .success { fill: #4ade80; }
+      .warning { fill: #fbbf24; }
+      .error { fill: #ef4444; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#6b7280" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="600" y="35" text-anchor="middle" class="title">Continuous Training and Evaluation Loop</text>
+
+  <!-- Center: Model Drift Graph -->
+  <rect x="425" y="350" width="350" height="200" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="2"/>
+  <text x="600" y="375" text-anchor="middle" class="subtitle">Model Drift Over Time</text>
+  
+  <!-- Graph axes -->
+  <line x1="450" y1="520" x2="750" y2="520" stroke="#9ca3af" stroke-width="2"/>
+  <line x1="450" y1="400" x2="450" y2="520" stroke="#9ca3af" stroke-width="2"/>
+  
+  <!-- Y-axis labels -->
+  <text x="440" y="405" text-anchor="end" class="tiny">95%</text>
+  <text x="440" y="445" text-anchor="end" class="tiny">92%</text>
+  <text x="440" y="485" text-anchor="end" class="tiny">90%</text>
+  <text x="440" y="525" text-anchor="end" class="tiny">85%</text>
+  
+  <!-- X-axis labels -->
+  <text x="450" y="540" text-anchor="middle" class="tiny">0</text>
+  <text x="550" y="540" text-anchor="middle" class="tiny">2mo</text>
+  <text x="650" y="540" text-anchor="middle" class="tiny">4mo</text>
+  <text x="750" y="540" text-anchor="middle" class="tiny">6mo</text>
+  
+  <!-- Threshold line -->
+  <line x1="450" y1="485" x2="750" y2="485" stroke="#ef4444" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="755" y="490" class="tiny" fill="#ef4444">Threshold</text>
+  
+  <!-- Performance degradation line -->
+  <polyline points="450,445 500,450 550,460 600,470 650,480 700,492 750,505" 
+            fill="none" stroke="#667eea" stroke-width="3"/>
+  
+  <!-- Accuracy labels -->
+  <text x="600" y="420" text-anchor="middle" class="small" fill="#667eea" font-weight="bold">Accuracy Degradation</text>
+  <text x="470" y="440" class="tiny" fill="#667eea">92%</text>
+  <text x="730" y="510" class="tiny" fill="#667eea">89%</text>
+
+  <!-- Stage 1: Production Serving (Top) -->
+  <ellipse cx="600" cy="120" rx="180" ry="80" class="success" opacity="0.2"/>
+  <ellipse cx="600" cy="120" rx="180" ry="40" class="success"/>
+  <text x="600" y="95" text-anchor="middle" class="subtitle" fill="white">Production Serving</text>
+  <text x="600" y="125" text-anchor="middle" class="label">Serving predictions</text>
+  <text x="600" y="150" text-anchor="middle" class="small">1M predictions/day</text>
+  <text x="600" y="175" text-anchor="middle" class="small">Latency: 50ms p95</text>
+
+  <!-- Arrow from Production to Monitoring -->
+  <path d="M 720 160 Q 850 250 800 350" fill="none" stroke="#6b7280" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Stage 2: Performance Monitoring (Right) -->
+  <ellipse cx="850" cy="420" rx="180" ry="80" class="warning" opacity="0.2"/>
+  <ellipse cx="850" cy="420" rx="180" ry="40" class="warning"/>
+  <text x="850" y="395" text-anchor="middle" class="subtitle" fill="white">Performance Monitoring</text>
+  <text x="850" y="425" text-anchor="middle" class="label">Continuous evaluation</text>
+  <text x="850" y="450" text-anchor="middle" class="small">Accuracy: 92% → 89%</text>
+  <text x="850" y="475" text-anchor="middle" class="small">Distribution shift detected</text>
+
+  <!-- Arrow from Monitoring to Trigger -->
+  <path d="M 800 500 Q 750 600 650 650" fill="none" stroke="#6b7280" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Stage 3: Retraining Trigger (Bottom Right) -->
+  <ellipse cx="600" cy="720" rx="180" ry="80" class="error" opacity="0.2"/>
+  <ellipse cx="600" cy="720" rx="180" ry="40" class="error"/>
+  <text x="600" y="695" text-anchor="middle" class="subtitle" fill="white">Retraining Trigger</text>
+  <text x="600" y="725" text-anchor="middle" class="label">Trigger conditions met:</text>
+  <text x="600" y="750" text-anchor="middle" class="small">✓ Accuracy &lt; 90%</text>
+  <text x="600" y="775" text-anchor="middle" class="small">✓ Distribution shift</text>
+
+  <!-- Arrow from Trigger to Retraining -->
+  <path d="M 480 750 Q 350 780 300 720" fill="none" stroke="#6b7280" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Stage 4: Automated Retraining (Bottom) -->
+  <ellipse cx="200" cy="620" rx="180" ry="80" class="primary" opacity="0.2"/>
+  <ellipse cx="200" cy="620" rx="180" ry="40" class="primary"/>
+  <text x="200" y="595" text-anchor="middle" class="subtitle" fill="white">Automated Retraining</text>
+  <text x="200" y="625" text-anchor="middle" class="label">Retraining pipeline:</text>
+  <text x="200" y="650" text-anchor="middle" class="small">1. Data collection</text>
+  <text x="200" y="670" text-anchor="middle" class="small">2. Fine-tuning (2-4 hrs)</text>
+  <text x="200" y="690" text-anchor="middle" class="cost">$50-$500 per cycle</text>
+
+  <!-- Arrow from Retraining to Validation -->
+  <path d="M 200 540 Q 200 350 350 280" fill="none" stroke="#6b7280" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Stage 5: Validation & Deployment (Left) -->
+  <ellipse cx="350" cy="220" rx="180" ry="80" class="secondary" opacity="0.2"/>
+  <ellipse cx="350" cy="220" rx="180" ry="40" class="secondary"/>
+  <text x="350" y="195" text-anchor="middle" class="subtitle" fill="white">Validation &amp; Deploy</text>
+  <text x="350" y="225" text-anchor="middle" class="label">Staging validation:</text>
+  <text x="350" y="250" text-anchor="middle" class="small">✓ Performance &gt; baseline</text>
+  <text x="350" y="270" text-anchor="middle" class="small">✓ Latency &lt; SLA</text>
+  <text x="350" y="290" text-anchor="middle" class="small">✓ Integration tests pass</text>
+
+  <!-- Arrow from Validation back to Production -->
+  <path d="M 480 160 Q 520 140 540 130" fill="none" stroke="#6b7280" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Cost Comparison Panel (Bottom) -->
+  <rect x="50" y="850" width="1100" height="130" rx="10" fill="#f9fafb" stroke="#d1d5db" stroke-width="2"/>
+  <text x="600" y="880" text-anchor="middle" class="subtitle">Automation ROI Analysis</text>
+
+  <!-- Manual Process -->
+  <rect x="100" y="900" width="450" height="60" rx="5" fill="#fee2e2" stroke="#ef4444" stroke-width="2"/>
+  <text x="325" y="925" text-anchor="middle" class="label" font-weight="bold">Manual Retraining</text>
+  <text x="120" y="945" class="small">Cost: $1,000-$3,000 per cycle</text>
+  <text x="120" y="965" class="small">Time: 10-20 hours per cycle</text>
+
+  <!-- Automated Process -->
+  <rect x="650" y="900" width="450" height="60" rx="5" fill="#d1fae5" stroke="#10b981" stroke-width="2"/>
+  <text x="875" y="925" text-anchor="middle" class="label" font-weight="bold">Automated Retraining</text>
+  <text x="670" y="945" class="small">Cost: $100-$300 per cycle</text>
+  <text x="670" y="965" class="small">Time: 1-2 hours monitoring</text>
+
+  <!-- ROI Arrow -->
+  <line x1="560" y1="930" x2="640" y2="930" stroke="#059669" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="600" y="920" text-anchor="middle" class="small" fill="#059669" font-weight="bold">ROI</text>
+  <text x="600" y="950" text-anchor="middle" class="tiny" fill="#059669">Break even: 15-30 cycles</text>
+  <text x="600" y="965" text-anchor="middle" class="tiny" fill="#059669">(1.5-2.5 years quarterly)</text>
+
+  <!-- Evaluation Methods (Top Right) -->
+  <rect x="900" y="80" width="280" height="220" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1040" y="105" text-anchor="middle" class="label" font-weight="bold">Evaluation Methods</text>
+  
+  <text x="920" y="130" class="small" font-weight="bold">1. Held-out Test Sets</text>
+  <text x="930" y="150" class="tiny">• Consistent measurement</text>
+  <text x="930" y="165" class="tiny">• Becomes stale over time</text>
+  
+  <text x="920" y="190" class="small" font-weight="bold">2. Human Labeling</text>
+  <text x="930" y="210" class="tiny">• 1,000 samples @ $0.50 = $500/mo</text>
+  <text x="930" y="225" class="tiny">• Accurate, current data</text>
+  
+  <text x="920" y="250" class="small" font-weight="bold">3. Proxy Metrics</text>
+  <text x="930" y="270" class="tiny">• Real-time, zero cost</text>
+  <text x="930" y="285" class="tiny">• CTR, reformulation rate, etc.</text>
+
+  <!-- Drift Rates by Domain (Top Left) -->
+  <rect x="20" y="80" width="280" height="220" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="160" y="105" text-anchor="middle" class="label" font-weight="bold">Drift Rates by Domain</text>
+  
+  <text x="40" y="135" class="small" font-weight="bold">Fast Drift (weeks-months):</text>
+  <text x="50" y="155" class="tiny">• News and social media</text>
+  <text x="50" y="170" class="tiny">• Trending topics</text>
+  <text x="50" y="185" class="tiny">• Seasonal content</text>
+  
+  <text x="40" y="210" class="small" font-weight="bold">Moderate (months-quarters):</text>
+  <text x="50" y="230" class="tiny">• E-commerce, search</text>
+  <text x="50" y="245" class="tiny">• Product catalogs</text>
+  
+  <text x="40" y="270" class="small" font-weight="bold">Slow (quarters-years):</text>
+  <text x="50" y="290" class="tiny">• Medical, legal domains</text>
+</svg>

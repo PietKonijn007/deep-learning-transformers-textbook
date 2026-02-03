@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <defs>
+    <style>
+      .title { font: bold 20px sans-serif; fill: #2d3748; }
+      .label { font: 16px sans-serif; fill: #2d3748; }
+      .small-label { font: 14px sans-serif; fill: #4a5568; }
+      .annotation { font: 13px sans-serif; fill: #718096; }
+      .precision-label { font: bold 14px sans-serif; }
+      .fp32 { fill: #667eea; stroke: #4c51bf; stroke-width: 2; }
+      .fp16 { fill: #48bb78; stroke: #38a169; stroke-width: 2; }
+      .conversion { fill: #f093fb; stroke: #e879f9; stroke-width: 2; }
+      .arrow { stroke: #4a5568; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrow-thick { stroke: #4a5568; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4a5568" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="30" class="title" text-anchor="middle">Mixed Precision Training Data Flow</text>
+  
+  <!-- FP32 Master Weights (top) -->
+  <rect x="450" y="80" width="300" height="80" class="fp32" rx="5"/>
+  <text x="600" y="110" class="label" text-anchor="middle">FP32 Master Weights</text>
+  <text x="600" y="135" class="small-label" text-anchor="middle">Full precision parameters</text>
+  <text x="600" y="155" class="precision-label" text-anchor="middle" fill="#667eea">32-bit</text>
+  
+  <!-- Arrow down with copy label -->
+  <path d="M 600 160 L 600 220" class="arrow"/>
+  <text x="620" y="195" class="annotation">Copy &amp; Convert</text>
+  
+  <!-- FP16 Working Copy -->
+  <rect x="450" y="220" width="300" height="60" class="fp16" rx="5"/>
+  <text x="600" y="250" class="label" text-anchor="middle">FP16 Working Copy</text>
+  <text x="600" y="270" class="precision-label" text-anchor="middle" fill="#48bb78">16-bit</text>
+  
+  <!-- Arrow to Forward Pass -->
+  <path d="M 450 250 L 300 250" class="arrow-thick"/>
+  
+  <!-- Forward Pass -->
+  <rect x="50" y="220" width="250" height="60" class="fp16" rx="5"/>
+  <text x="175" y="245" class="label" text-anchor="middle">Forward Pass (FP16)</text>
+  <text x="175" y="265" class="small-label" text-anchor="middle">2× faster, 50% memory</text>
+  
+  <!-- Arrow down to Backward Pass -->
+  <path d="M 175 280 L 175 340" class="arrow"/>
+  
+  <!-- Backward Pass -->
+  <rect x="50" y="340" width="250" height="60" class="fp16" rx="5"/>
+  <text x="175" y="365" class="label" text-anchor="middle">Backward Pass (FP16)</text>
+  <text x="175" y="385" class="small-label" text-anchor="middle">Compute gradients</text>
+  
+  <!-- Arrow to Loss Scaling -->
+  <path d="M 300 370 L 450 370" class="arrow"/>
+  
+  <!-- Loss Scaling -->
+  <rect x="450" y="340" width="300" height="60" class="conversion" rx="5"/>
+  <text x="600" y="365" class="label" text-anchor="middle">Loss Scaling</text>
+  <text x="600" y="385" class="small-label" text-anchor="middle">Prevent gradient underflow</text>
+  
+  <!-- Arrow to Gradient Update -->
+  <path d="M 600 400 L 600 460" class="arrow"/>
+  
+  <!-- Gradient Update -->
+  <rect x="450" y="460" width="300" height="80" class="fp32" rx="5"/>
+  <text x="600" y="490" class="label" text-anchor="middle">Gradient Update (FP32)</text>
+  <text x="600" y="510" class="small-label" text-anchor="middle">Unscale &amp; apply to master weights</text>
+  <text x="600" y="530" class="precision-label" text-anchor="middle" fill="#667eea">32-bit</text>
+  
+  <!-- Loop back arrow -->
+  <path d="M 750 500 L 900 500 L 900 120 L 750 120" class="arrow" stroke-dasharray="5,5"/>
+  <text x="920" y="310" class="annotation">Next</text>
+  <text x="920" y="330" class="annotation">Iteration</text>
+  
+  <!-- Benefits box -->
+  <rect x="50" y="580" width="500" height="100" fill="#f0fff4" stroke="#48bb78" stroke-width="2" rx="5"/>
+  <text x="300" y="610" class="label" text-anchor="middle" fill="#38a169">Benefits</text>
+  <text x="70" y="635" class="annotation">• 1.5-2× training speedup on modern GPUs</text>
+  <text x="70" y="655" class="annotation">• 50% memory reduction enables larger models/batches</text>
+  <text x="70" y="675" class="annotation">• Minimal accuracy impact (&lt;0.1% typically)</text>
+  
+  <!-- Requirements box -->
+  <rect x="600" y="580" width="550" height="100" fill="#fef5e7" stroke="#f39c12" stroke-width="2" rx="5"/>
+  <text x="875" y="610" class="label" text-anchor="middle" fill="#dd6b20">Requirements</text>
+  <text x="620" y="635" class="annotation">• Modern GPU with Tensor Cores (V100, A100, H100)</text>
+  <text x="620" y="655" class="annotation">• Loss scaling to prevent gradient underflow in FP16 range</text>
+  <text x="620" y="675" class="annotation">• FP32 master weights for numerical stability</text>
+</svg>

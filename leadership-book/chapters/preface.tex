@@ -1,0 +1,151 @@
+\chapter*{Preface}
+\addcontentsline{toc}{chapter}{Preface}
+
+\section*{Why This Book?}
+
+It's 3 PM on a Tuesday. Your VP of Engineering presents three proposals: (1) Fine-tune GPT-4 on your support tickets—\$180K investment; (2) Build a RAG system with embeddings—\$25K investment; (3) Prompt-engineer GPT-3.5—\$2K experiment. All three promise "85\% automation of tier-1 support." Which do you choose?
+
+If you can't confidently evaluate these trade-offs, this book is for you. You're not alone—most technical leaders face AI decisions daily without the foundation to distinguish genuine engineering trade-offs from vendor hype.
+
+Model architecture decisions—dimensions, layers, parameter counts—directly determine infrastructure requirements, operational costs, and system performance. Understanding the relationship between architectural choices and resource consumption is essential for evaluating technical proposals, planning infrastructure investments, and making informed build-versus-buy decisions. The computational characteristics of neural networks follow predictable patterns. A model's parameter count, layer structure, and dimensional choices create specific memory footprints and computational demands. These relationships aren't linear: doubling a model's dimensions typically quadruples memory requirements and increases computation eightfold. Recognizing these scaling behaviors enables accurate cost forecasting and realistic performance expectations.
+
+This book provides the engineering foundation to evaluate AI systems, assess proposals, and make informed infrastructure and architectural decisions.
+
+\section*{Who This Book Is For}
+
+If you're a technical leader who needs to understand AI systems without becoming an ML researcher, this book is for you:
+
+\begin{itemize}
+    \item \textbf{CTOs and VPs of Engineering} making architecture and budget decisions
+    \item \textbf{Technical Directors} evaluating team proposals and vendor claims
+    \item \textbf{Principal Engineers} moving into leadership roles
+    \item \textbf{Product Leaders} with technical backgrounds guiding AI strategy
+    \item \textbf{Technical Architects} designing systems that incorporate AI
+\end{itemize}
+
+You don't need a machine learning background. You do need curiosity about how things work and willingness to think through engineering trade-offs.
+
+\section*{What You Will (and Won't) Be Able To Do}
+
+After reading this book, you will be able to evaluate whether a proposal to "train a 7B parameter model" is reasonable for your use case, question claims that "GPT-4 is required" when GPT-3.5 might suffice at one-tenth the cost, and estimate that doubling model dimensions increases compute 8×, not 2×. You will recognize when RAG will outperform fine-tuning at one-twentieth the cost and challenge proposals that ignore inference costs, which often exceed training costs by 100× annually.
+
+You will NOT learn to write PyTorch training loops or implement attention mechanisms, fine-tune models yourself or debug CUDA errors, compete with ML engineers on implementation details, write research papers or contribute to academic ML, or perform detailed prompt engineering or low-level GPU programming.
+
+These boundaries matter because your role is strategic—making informed decisions, asking the right questions, and allocating resources effectively. Implementation is your team's job; knowing when their answers make sense is yours. For implementation details, direct your team to PyTorch and TensorFlow documentation for coding, research papers for cutting-edge techniques, and framework-specific communities for troubleshooting. This book teaches you to evaluate, decide, and lead—not to implement.
+
+\section*{Is This Book For You? A Quick Diagnostic}
+
+Can you answer these questions confidently?
+
+\begin{enumerate}
+    \item Your team proposes a 12-layer, 768-dimensional transformer. Roughly how much memory is needed just to store the parameters? (Answer: ~440 MB for 110M parameters)
+    \item A vendor claims their "optimized" model runs 3× faster. What should you ask? (Answer: Compute-bound or memory-bound? Batch size? Context length? Precision?)
+    \item Fine-tuning costs \$5K. Expected inference volume is 10M requests/month. When does the investment pay back? (Answer: Depends on per-request cost reduction—need both numbers)
+\end{enumerate}
+
+If these questions feel abstract or you're unsure how to approach them, this book will give you the frameworks to answer them systematically.
+
+\section*{How This Book Helps You Make Better Decisions}
+
+\subsection*{The Leadership Challenge}
+
+As a technical leader, you face AI proposals daily: "We should fine-tune GPT-4 on our data" (\$180K), "Let's train a custom 7B parameter model" (\$500K), "We need 32K context windows for our use case" (4× cost increase). How do you evaluate these? This book provides the frameworks.
+
+\subsection*{Concept-to-Decision Map}
+
+Every technical concept in this book maps directly to decisions you'll face:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{4cm}p{4.5cm}p{2cm}}
+\toprule
+\textbf{When your team proposes...} & \textbf{You need to understand...} & \textbf{From chapter...} \\
+\midrule
+"Double model dimensions" & Cubic scaling (O(n³))—costs increase 8×, not 2× & 1.1.3 \\
+"Train for 10 GPU-days" & Memory requirements (14× rule), optimizer overhead & 1.2.2, 2.4 \\
+"Extend context to 16K tokens" & Quadratic attention scaling—costs 4× more & 3.3.1 \\
+"Fine-tune vs. prompt engineering" & Cost crossover analysis, data requirements & 6.1-6.2 \\
+"Self-host vs. use APIs" & Fixed vs. variable cost structures, volume thresholds & 7.3, 10.1.1 \\
+"Use GPT-4 vs. GPT-3.5" & Quality-cost trade-offs, task complexity & 5.6, 10.2.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Three-Layer Understanding Model}
+
+\textbf{Layer 1: Mechanics (Part I—Chapters 1-3)}
+
+What you'll learn: How systems work at a fundamental level. Why it matters: You can't spot unreasonable claims without understanding costs. Key output: "Is this proposal technically feasible and properly costed?"
+
+\textbf{Layer 2: Choices (Parts II-III—Chapters 4-9)}
+
+What you'll learn: Which approaches work for which problems. Why it matters: Most projects fail from wrong architectural choices, not implementation. Key output: "Is this the right approach for our constraints?"
+
+\textbf{Layer 3: Decisions (Parts IV-V—Chapters 10-17)}
+
+What you'll learn: When to build, buy, or walk away. Why it matters: Best implementation of wrong solution equals wasted money. Key output: "Should we do this at all?"
+
+\subsection*{What Success Looks Like}
+
+After reading this book, you'll be able to spot when "8 GPUs" doesn't match the proposed model size in proposal reviews, question whether fine-tuning is necessary or prompt engineering would suffice at one-twentieth the cost, and recognize when inference costs will dwarf training costs and demand the full analysis. In vendor conversations, you'll ask "At what batch size and percentile?" when they quote latency, demand clarification when "accuracy" is cited without baseline or metric, and calculate TCO over 3 years, not just sticker price. In strategic planning, you'll estimate that RAG system will cost \$500-1K/month versus \$50K one-time for fine-tuning, know that moving from GPT-3.5 to GPT-4 is 10-20× more expensive and when that's justified, and recognize when simpler rule-based systems would suffice.
+
+\section*{Book Structure: Your Learning Path}
+
+\begin{center}
+\texttt{Part I (Foundations) → Part II (Architecture) → Part III (Production) → Part IV (Applications) → Part V (Synthesis)}\\
+\vspace{0.3em}
+\texttt{Ask: "How?" \hspace{1.5em} Ask: "Which?" \hspace{1.5em} Ask: "How much?" \hspace{1.5em} Ask: "Should we?" \hspace{1.5em} Ask: "What's next?"}
+\end{center}
+
+\textbf{Part I: Foundations (Chapters 1-3)}
+
+Foundation for understanding how systems work at a fundamental level. Read first. You'll learn why costs scale non-linearly and what drives resource requirements.
+
+\textbf{Part II: Architecture \& Infrastructure (Chapters 4-7)}
+
+Framework for evaluating which technical approaches to choose. Essential for proposal evaluation. Covers training, deployment, optimization techniques, hardware.
+
+\textbf{Part III: Production Layer (Chapters 8-9)}
+
+Infrastructure reality—how much will this actually cost to build and run? Critical before commitment. Data pipelines, operational costs, lifecycle management.
+
+\textbf{Part IV: Industry Applications (Chapters 10-15)}
+
+Domain-specific patterns and should we build this decision frameworks. Use case driven. Jump to your domain or read sequentially for pattern recognition.
+
+\textbf{Part V: Strategic Synthesis (Chapters 16-17)}
+
+Strategic integration and future-proofing frameworks. Read last. Synthesizes patterns and provides decision-making mental models.
+
+\subsection*{Recommended Reading Paths}
+
+\textbf{For CTOs/VPs (Strategic Overview)—4-6 hours:}
+
+Preface (all sections), Chapter 1 (skim technical details, focus on Section 1.3 and 1.6), Chapter 2 (Sections 2.6-2.7 only), Chapter 3 (skim), Chapter 9 (all), Your domain chapter from Part IV, Chapter 16 (all)
+
+\textbf{For Engineering Directors (Architectural Decisions)—15-20 hours:}
+
+Preface, Part I (all chapters), Part II (all chapters), Chapter 9, Relevant domain chapters, Chapter 16
+
+\textbf{For Domain/Product Leaders (Application Focus)—8-12 hours:}
+
+Preface, Chapters 1-2 (overview only), Chapter 9, Your domain chapters (10-15), Chapter 16
+
+\textbf{Complete Read (Deep Understanding)—25-35 hours:}
+
+All chapters in sequence
+
+\section*{How This Book Is Different}
+
+Most AI books either drown you in mathematics or avoid technical depth entirely. This book takes a third path: explaining concepts through engineering principles and trade-offs. You'll see formulas when they're essential for understanding costs or scaling behavior, but we explain the intuition first. Every technical concept connects to real decisions: Should we use this architecture? Is this vendor's claim realistic? What will this cost? The goal isn't to make you an ML expert. It's to give you the technical foundation to lead confidently, ask the right questions, and make informed decisions.
+
+\section*{A Note on Pace of Change}
+
+AI evolves rapidly. New models appear monthly. But the fundamental engineering principles—how attention works, why training costs scale quadratically, what drives memory usage—remain stable. This book focuses on those enduring foundations.
+
+When GPT-5 or the next breakthrough arrives, you'll have the framework to understand it quickly and evaluate it critically.
+
+\vspace{1em}
+\noindent Let's begin.
+

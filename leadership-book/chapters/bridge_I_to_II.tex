@@ -1,0 +1,60 @@
+\chapter*{Part I Equipped You To Ask "How?"}
+\addcontentsline{toc}{chapter}{Bridge: From Foundations to Architecture}
+
+\section*{What You Now Understand}
+
+Part I established the technical foundation for evaluating AI systems. You now understand why costs scale cubically with dimension—doubling model dimensions increases computation eightfold, not twofold. You recognize where memory bottlenecks appear—activations consume 60\% of training memory, making batch size the primary control lever. You understand how attention mechanisms work—the Query-Key-Value architecture that enables context processing with quadratic scaling costs.
+
+These aren't abstract concepts. They're the foundation for every technical decision you'll face. When a vendor proposes "upgrading to a larger model," you can now calculate the actual cost impact. When your team suggests "extending context windows," you know that doubling context length quadruples attention costs. When evaluating training proposals, you can verify whether the memory requirements match the claimed model size using the 14× rule.
+
+\section*{What You Can Now Evaluate}
+
+The mental models from Part I provide rapid evaluation frameworks. Cost Driver Dominance helps you identify where 80\% of costs originate and focus optimization efforts accordingly. The Batch Size Sweet Spot guides you to the 32-128 range where GPU utilization and convergence quality balance optimally. Context Length Economic Threshold reveals when retrieval augmentation becomes 10× cheaper than long-context models.
+
+You can now spot unreasonable proposals. "We need a 1024-dimensional model" triggers the cubic scaling calculation—that's approximately 8× more expensive than 768 dimensions. "Training needs 80GB GPU" prompts verification against the 14× memory rule. "Context length of 8K tokens" immediately registers as 4× more expensive than 4K tokens due to quadratic attention scaling.
+
+The cautionary tales illustrated real failure modes. The fintech startup that underestimated training memory by ignoring the 14× rule, wasting weeks and thousands of dollars. The e-commerce company whose training took 10× longer than estimated because they calculated from theoretical FLOPS without profiling actual bottlenecks. These failures are now avoidable—you have the frameworks to catch them during proposal review.
+
+\section*{The Transition: From "How?" to "Which?"}
+
+Part I taught you costs—how systems work and what drives resource consumption. Part II teaches you choices—which approaches work for which problems and when architectural decisions determine success or failure.
+
+Understanding costs is necessary but insufficient. Knowing that fine-tuning costs \$5K doesn't tell you whether fine-tuning is the right choice. Knowing that distributed training enables larger models doesn't reveal when distributed training is necessary versus wasteful. Knowing that compression reduces inference costs doesn't indicate which compression technique applies to your constraints.
+
+Part II addresses these architectural decisions. You'll learn when to train from scratch versus fine-tune versus use prompt engineering. You'll understand when distributed training becomes necessary and which parallelism strategy applies to your model size. You'll evaluate which deployment platform makes economic sense for your volume and latency requirements.
+
+\section*{Part II Will Teach You To Ask "Which?"}
+
+The next chapters examine architectural choices that determine whether projects succeed or exceed budgets by 10×:
+
+\textbf{Training at Scale (Chapter 4):} When does distributed training make sense? Your team proposes 8-GPU training for a model that fits in single-GPU memory. Should you approve the 8× hardware cost for potential speedup? Chapter 4 provides the decision framework—data parallelism achieves 7.5× speedup on 8 GPUs (94\% efficiency) when the model fits in memory, making it economically favorable for training runs exceeding 2 days.
+
+\textbf{Production Deployment (Chapter 5):} Which compression technique applies to your constraints? Vendors offer quantization (4× compression, less than 1\% accuracy loss), distillation (3× compression, less than 1\% accuracy loss), and pruning (2× compression, less than 1\% accuracy loss). Chapter 5's Compression-Quality Frontier mental model guides you through the 4-level compression ladder, showing when each investment pays off based on your request volume.
+
+\textbf{Advanced Techniques (Chapter 6):} Should you fine-tune or optimize prompts? Your team proposes fine-tuning (\$25K, 3 weeks) to improve classification accuracy from 78\% to 91\%. Chapter 6's Prompt-Finetune Decision Tree walks you through the 4-step process—try zero-shot, try few-shot, optimize prompts systematically, then fine-tune only if prompts fail. Most projects stop at step 3, saving \$20K.
+
+\textbf{Hardware Infrastructure (Chapter 7):} Cloud versus on-premise—which makes economic sense? The decision depends on utilization rates, volume predictability, and 3-year TCO. Chapter 7 provides the calculation framework showing when fixed costs of on-premise infrastructure become favorable over variable costs of cloud APIs.
+
+\textbf{Data Pipeline (Chapter 8):} How much training data do you actually need? Proposals often specify "100K labeled examples" without justification. Chapter 8 reveals the relationship between data quantity, model size, and expected performance, helping you challenge over-specified data requirements that waste months and hundreds of thousands of dollars on unnecessary labeling.
+
+\textbf{Operationalization (Chapter 9):} What's the total cost of ownership? Training cost is visible, but operational costs—retraining frequency, monitoring infrastructure, incident response—often exceed training costs by 10×. Chapter 9 provides the full lifecycle cost framework, preventing the common mistake of optimizing training while ignoring the operational expenses that dominate long-term budgets.
+
+\section*{Key Questions for Part II}
+
+As you read the next chapters, you'll develop frameworks to answer:
+
+\begin{enumerate}
+    \item Your team proposes fine-tuning. Should you try prompt engineering first? What's the economic breakpoint?
+    \item Training is estimated at 10 GPU-days. Can you speed it up? At what cost? When does parallelism pay off?
+    \item The model works in development. What changes for production deployment? What optimizations are mandatory versus optional?
+    \item Which hardware platform makes sense? What's the 3-year TCO comparison between cloud and on-premise?
+    \item How often will you need to retrain? What's the ongoing operational cost, not just the initial training investment?
+\end{enumerate}
+
+These architectural decisions determine whether projects succeed on time and on budget or fail expensively. Part I gave you the foundation to understand costs. Part II gives you the frameworks to make the right choices.
+
+\vspace{2em}
+\begin{center}
+\textit{The difference between a \$50K project and a \$500K project is usually architectural choices, not implementation quality.}
+\end{center}
+

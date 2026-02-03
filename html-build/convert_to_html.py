@@ -274,7 +274,7 @@ def process_tikz_diagrams(latex_content, chapter_name, output_dirs):
             
             # Replace TikZ code with SVG reference in the LaTeX content
             # Wrap in figure environment if not already
-            svg_html = f'<div class="tikz-diagram"><img src="diagrams/{svg_filename}" alt="TikZ Diagram" /></div>'
+            svg_html = f'<div class="tikz-diagram"><img src="../diagrams/{svg_filename}" alt="TikZ Diagram" /></div>'
             
             # Replace the tikzpicture with a placeholder that will be converted to HTML
             placeholder = f"%%%TIKZ_SVG:{svg_filename}%%%"
@@ -310,7 +310,7 @@ def convert_latex_to_html(latex_content):
     # Convert TikZ SVG placeholders to HTML img tags
     html = re.sub(
         r'%%%TIKZ_SVG:([^%]+)%%%',
-        r'<div class="tikz-diagram"><img src="diagrams/\1" alt="TikZ Diagram" /></div>',
+        r'<div class="tikz-diagram"><img src="../diagrams/\1" alt="TikZ Diagram" /></div>',
         html
     )
     
@@ -710,7 +710,7 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
     else:
         nav_html += '  <span></span>\n'
     
-    nav_html += '  <a href="../index.html">📚 Table of Contents</a>\n'
+    nav_html += '  <a href="../../deeptech.html">📚 Table of Contents</a>\n'
     
     if next_chapter:
         nav_html += f'  <a href="{next_chapter[0]}.html">{next_chapter[1]} →</a>\n'
@@ -725,7 +725,7 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{chapter_title} - Deep Learning and Transformers</title>
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../../styles.css">
     
     <!-- MathJax Configuration (must come before loading MathJax) -->
     <script>
@@ -811,7 +811,7 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
 </head>
 <body>
     <nav>
-        <a href="../index.html">🏠 Home</a>
+        <a href="../../deeptech.html">🏠 Home</a>
         <a href="preface.html">Preface</a>
         <a href="notation.html">Notation</a>
         <a href="chapter01_linear_algebra.html">Ch 1</a>
@@ -1247,7 +1247,7 @@ def main():
     # Define all output directories
     output_dirs = [
         project_root / "chapters",                    # Root chapters (deployed to Vercel)
-        project_root / "nodejs-version" / "public" / "chapters",  # Node.js version
+        project_root / "nodejs-version" / "public" / "chapters" / "deeptech",  # Node.js version - deep tech book
         project_root / "docs" / "chapters",           # GitHub Pages
     ]
     

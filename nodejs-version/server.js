@@ -14,9 +14,34 @@ app.use(express.static('public', {
   etag: true
 }));
 
-// API endpoint to get chapter list
-app.get('/api/chapters', (req, res) => {
-  const chapters = [
+// API endpoint to get list of available books
+app.get('/api/books', (req, res) => {
+  const books = [
+    {
+      id: 'deeptech',
+      title: 'Deep Learning and Transformers',
+      subtitle: 'Technical Deep Dive',
+      description: 'A comprehensive, graduate-level treatment of deep learning and transformer architectures',
+      chapterCount: 34,
+      parts: 10
+    },
+    {
+      id: 'leadership',
+      title: 'Deep Learning and LLMs for Technical Leaders',
+      subtitle: 'Strategic Guide for Engineering Leadership',
+      description: 'Strategic guide for technical leaders, CTOs, and engineering managers',
+      chapterCount: 17,
+      parts: 5
+    }
+  ];
+  res.json(books);
+});
+
+// API endpoint to get chapter list for a specific book
+app.get('/api/chapters/:bookId', (req, res) => {
+  const bookId = req.params.bookId;
+  
+  const deeptechChapters = [
     { id: 'preface', title: 'Preface', part: 'Front Matter' },
     { id: 'notation', title: 'Notation and Conventions', part: 'Front Matter' },
     { id: 'chapter01_linear_algebra', title: 'Chapter 1: Linear Algebra for Deep Learning', part: 'Part I: Mathematical Foundations' },
@@ -54,7 +79,38 @@ app.get('/api/chapters', (req, res) => {
     { id: 'chapter33_observability', title: 'Chapter 33: Observability and Monitoring', part: 'Part X: Production Systems' },
     { id: 'chapter34_dsl_agents', title: 'Chapter 34: DSL and Agent Systems', part: 'Part X: Production Systems' }
   ];
-  res.json(chapters);
+  
+  const leadershipChapters = [
+    { id: 'preface', title: 'Preface', part: 'Front Matter' },
+    { id: 'chapter01_linear_algebra', title: 'Chapter 1: Linear Algebra Essentials', part: 'Part I: Foundations for Leaders' },
+    { id: 'chapter02_calculus_optimization', title: 'Chapter 2: Calculus and Optimization', part: 'Part I: Foundations for Leaders' },
+    { id: 'chapter03_attention_fundamentals', title: 'Chapter 3: Attention Fundamentals', part: 'Part I: Foundations for Leaders' },
+    { id: 'bridge_I_to_II', title: 'Bridge: From Foundations to Architecture', part: 'Bridges' },
+    { id: 'chapter04_training_transformers', title: 'Chapter 4: Training Transformers', part: 'Part II: Architecture & Infrastructure' },
+    { id: 'chapter05_production_deployment', title: 'Chapter 5: Production Deployment', part: 'Part II: Architecture & Infrastructure' },
+    { id: 'chapter06_advanced_techniques', title: 'Chapter 6: Advanced Techniques', part: 'Part II: Architecture & Infrastructure' },
+    { id: 'bridge_II_to_III', title: 'Bridge: From Architecture to Production', part: 'Bridges' },
+    { id: 'chapter07_hardware_infrastructure', title: 'Chapter 7: Hardware Infrastructure', part: 'Part III: Production Layer' },
+    { id: 'chapter08_data_pipeline', title: 'Chapter 8: Data Pipeline', part: 'Part III: Production Layer' },
+    { id: 'chapter09_operationalization', title: 'Chapter 9: Operationalization', part: 'Part III: Production Layer' },
+    { id: 'bridge_III_to_IV', title: 'Bridge: From Production to Applications', part: 'Bridges' },
+    { id: 'chapter10_enterprise_nlp', title: 'Chapter 10: Enterprise NLP', part: 'Part IV: Industry Applications' },
+    { id: 'chapter11_code_tools', title: 'Chapter 11: Code and Development Tools', part: 'Part IV: Industry Applications' },
+    { id: 'chapter12_healthcare', title: 'Chapter 12: Healthcare Applications', part: 'Part IV: Industry Applications' },
+    { id: 'chapter13_legal', title: 'Chapter 13: Legal and Compliance', part: 'Part IV: Industry Applications' },
+    { id: 'chapter14_finance', title: 'Chapter 14: Financial Applications', part: 'Part IV: Industry Applications' },
+    { id: 'chapter15_autonomous_systems', title: 'Chapter 15: Autonomous Systems', part: 'Part IV: Industry Applications' },
+    { id: 'chapter16_synthesis', title: 'Chapter 16: Strategic Synthesis', part: 'Part V: Strategic Synthesis' },
+    { id: 'chapter17_frontiers', title: 'Chapter 17: Future Frontiers', part: 'Part V: Strategic Synthesis' }
+  ];
+  
+  if (bookId === 'deeptech') {
+    res.json(deeptechChapters);
+  } else if (bookId === 'leadership') {
+    res.json(leadershipChapters);
+  } else {
+    res.status(404).json({ error: 'Book not found' });
+  }
 });
 
 // Debug endpoint to check file system
@@ -100,15 +156,19 @@ app.get('/api/debug/files', (req, res) => {
 });
 
 // API endpoint to get chapter content
-app.get('/api/chapter/:id', (req, res) => {
-  const chapterId = req.params.id;
+app.get('/api/chapter/:bookId/:chapterId', (req, res) => {
+  const bookId = req.params.bookId;
+  const chapterId = req.params.chapterId;
+  
+  // Determine the subdirectory based on book
+  const bookSubdir = bookId === 'deeptech' ? 'deeptech' : 'leadership';
   
   // Try multiple possible locations
   const possiblePaths = [
-    path.join(__dirname, 'public', 'chapters', `${chapterId}.html`),  // Local server
-    path.join(__dirname, '..', 'public', 'chapters', `${chapterId}.html`),  // Vercel from api/
-    path.join(__dirname, 'chapters', `${chapterId}.html`),  // Vercel with build script
-    path.join(__dirname, '..', 'chapters', `${chapterId}.html`)  // Alternative
+    path.join(__dirname, 'public', 'chapters', bookSubdir, `${chapterId}.html`),  // Local server
+    path.join(__dirname, '..', 'public', 'chapters', bookSubdir, `${chapterId}.html`),  // Vercel from api/
+    path.join(__dirname, 'chapters', bookSubdir, `${chapterId}.html`),  // Vercel with build script
+    path.join(__dirname, '..', 'chapters', bookSubdir, `${chapterId}.html`)  // Alternative
   ];
   
   // Try each path until one works
@@ -121,7 +181,7 @@ app.get('/api/chapter/:id', (req, res) => {
   }
   
   if (!foundPath) {
-    console.error(`Chapter ${chapterId} not found in any location`);
+    console.error(`Chapter ${chapterId} for book ${bookId} not found in any location`);
     console.error(`Tried paths:`, possiblePaths);
     console.error(`__dirname: ${__dirname}`);
     console.error(`cwd: ${process.cwd()}`);
@@ -134,7 +194,7 @@ app.get('/api/chapter/:id', (req, res) => {
   
   fs.readFile(foundPath, 'utf8', (err, data) => {
     if (err) {
-      console.error(`Error reading chapter ${chapterId}:`, err);
+      console.error(`Error reading chapter ${chapterId} for book ${bookId}:`, err);
       return res.status(500).json({ error: 'Error reading chapter' });
     }
     // Ensure HTML content type
@@ -143,9 +203,9 @@ app.get('/api/chapter/:id', (req, res) => {
   });
 });
 
-// Serve the main app
+// Serve the main app (book selector as default)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'book-selector.html'));
 });
 
 // Export the app for Vercel
