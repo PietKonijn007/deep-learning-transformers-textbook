@@ -15,13 +15,22 @@
 \usepackage{xcolor}
 \usepackage{booktabs}
 \usepackage{enumitem}
-% Load tcolorbox with compatibility for older documents
-\usepackage[most]{tcolorbox}
-\tcbuselibrary{skins,breakable}
-% Suppress tcolorbox warnings about new structure names
-\makeatletter
-\@ifundefined{NewStructureName}{\let\NewStructureName\relax}{}
-\makeatother
+% Use mdframed instead of tcolorbox for compatibility
+\usepackage[framemethod=tikz]{mdframed}
+
+% Define tcolorbox-like environments using mdframed
+\newmdenv[
+  linecolor=blue!50!black,
+  linewidth=2pt,
+  backgroundcolor=blue!5,
+  roundcorner=5pt,
+  frametitle={},
+  frametitlebackgroundcolor=blue!20,
+  innertopmargin=10pt,
+  innerbottommargin=10pt,
+  skipabove=10pt,
+  skipbelow=10pt
+]{tcolorbox}
 
 % SVG support - graphicx can handle SVG if available
 \DeclareGraphicsExtensions{.pdf,.png,.jpg,.svg}
