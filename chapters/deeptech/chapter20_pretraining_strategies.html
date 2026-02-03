@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 20: Pretraining Strategies - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../../styles.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../../deeptech.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+        <a href="chapter24_domain_specific_models.html">Ch 24</a>
+        <a href="chapter25_enterprise_nlp.html">Ch 25</a>
+        <a href="chapter26_code_language.html">Ch 26</a>
+        <a href="chapter27_video_visual.html">Ch 27</a>
+        <a href="chapter28_knowledge_graphs.html">Ch 28</a>
+        <a href="chapter29_recommendations.html">Ch 29</a>
+        <a href="chapter30_healthcare.html">Ch 30</a>
+        <a href="chapter31_finance.html">Ch 31</a>
+        <a href="chapter32_legal.html">Ch 32</a>
+        <a href="chapter33_observability.html">Ch 33</a>
+        <a href="chapter34_dsl_agents.html">Ch 34</a>
+    </nav>
+
+    <main>
+        <h1>Pre-training Strategies and Transfer Learning</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Pre-training on large unlabeled corpora followed by task-specific fine-tuning has become the dominant paradigm in deep learning. This chapter covers pre-training objectives, data curation, curriculum learning, continual pre-training, and transfer learning strategies for maximizing downstream performance.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand different pre-training objectives and their trade-offs
+    <li>Curate and process pre-training data at scale
+    <li>Apply curriculum learning and domain-adaptive pre-training
+    <li>Implement parameter-efficient fine-tuning (LoRA, adapters)
+    <li>Design multi-task and multi-stage pre-training
+    <li>Measure and improve transfer learning effectiveness
+</ol>
+
+<h2>Pre-training Objectives</h2>
+
+<h3>Language Modeling Objectives</h3>
+
+<p>The choice of pre-training objective fundamentally shapes what a model learns and how effectively it transfers to downstream tasks. Different objectives make different trade-offs between computational efficiency, representation quality, and suitability for specific task types. Understanding these trade-offs is essential for practitioners designing pre-training pipelines.</p>
+
+<p><strong>Causal Language Modeling (CLM)</strong> predicts each token given only previous context, formalizing the objective as:
+<div class="equation">
+$$
+\mathcal{L}_{\text{CLM}} = -\sum_{t=1}^{T} \log P(x_t | x_{<t}; \theta)
+$$
+</div>
+
+<p>This objective is computationally efficient because it requires only a single forward pass through the model to compute the loss for all positions simultaneously. The unidirectional attention pattern means that for a sequence of length $n$, each position $i$ attends only to positions $1$ through $i-1$, resulting in a triangular attention mask. This makes CLM particularly natural for text generation tasks where the model must produce tokens sequentially without access to future context. However, the unidirectional constraint limits the model's ability to build rich bidirectional representations, which can hurt performance on understanding tasks like question answering or natural language inference. All GPT models, including GPT-2 and GPT-3, use this objective exclusively, optimizing for generation quality at the expense of bidirectional understanding.</p>
+
+<p><strong>Masked Language Modeling (MLM)</strong> addresses the unidirectional limitation by randomly masking tokens and predicting them using bidirectional context:
+<div class="equation">
+$$
+\mathcal{L}_{\text{MLM}} = -\sum_{t \in \mathcal{M}} \log P(x_t | x_{\backslash \mathcal{M}}; \theta)
+$$
+</div>
+where $\mathcal{M}$ denotes the set of masked positions. BERT masks approximately 15\% of tokens during pre-training, allowing each masked position to attend to all unmasked positions in both directions. This bidirectional context enables the model to build richer representations that capture relationships between words regardless of their relative positions. The computational cost is similar to CLM since a single forward pass computes predictions for all masked positions. However, MLM introduces a pre-training/fine-tuning mismatch: the special [MASK] token appears during pre-training but not during fine-tuning or inference. To mitigate this, BERT uses a mixed strategy where 80\% of masked tokens are replaced with [MASK], 10\% with random tokens, and 10\% remain unchanged. Despite this mismatch, MLM has proven highly effective for understanding tasks, with BERT, RoBERTa, and ALBERT all achieving strong performance on GLUE and SQuAD benchmarks.</p>
+
+<p><strong>Prefix Language Modeling</strong> attempts to combine the benefits of both approaches by using bidirectional attention on a prefix and causal attention on the suffix:
+<div class="equation">
+$$
+\mathcal{L}_{\text{prefix}} = -\sum_{t=|p|+1}^{T} \log P(x_t | x_{<t}; \theta)
+$$
+</div>
+where $p$ is the prefix with bidirectional attention. This allows the model to build rich representations of the prefix while maintaining the ability to generate continuations autoregressively. UniLM and GLM use variants of this objective, achieving strong performance on both understanding and generation tasks. The computational cost is slightly higher than pure CLM or MLM because the attention pattern is more complex, requiring careful implementation to avoid recomputing prefix representations for each suffix position.</p>
+
+<h3>Denoising Objectives</h3>
+
+<p>Denoising objectives extend beyond simple token masking to more complex corruption patterns that require the model to understand document structure and long-range dependencies. These objectives are particularly effective for sequence-to-sequence models where both the encoder and decoder must learn rich representations.</p>
+
+<p><strong>Span Corruption</strong>, used by T5, masks contiguous spans of tokens rather than individual tokens. A typical configuration corrupts 15\% of tokens by replacing random spans (average length 3 tokens) with sentinel tokens. For example, the input "The quick brown fox jumps over the lazy dog" might become "The <X> fox <Y> the lazy dog" with the target "<X> quick brown <Y> jumps over <Z>". This objective is more challenging than single-token masking because the model must predict multiple tokens for each sentinel, requiring it to understand the semantic coherence of spans. The computational cost is similar to MLM, but the increased difficulty leads to better representations for tasks requiring understanding of multi-token phrases and entities. T5 experiments showed that span corruption with mean span length 3 outperformed both single-token masking and longer spans, suggesting an optimal balance between difficulty and learnability.</p>
+
+<p><strong>Sentence Shuffling and Text Infilling</strong>, used by BART, apply more aggressive corruption strategies. Sentence shuffling permutes the order of sentences in a document, requiring the model to learn document-level structure and discourse coherence. Text infilling deletes spans of varying length (including zero-length spans), and the model must predict both the span length and content. BART combines multiple corruption strategies including token masking, token deletion, text infilling, sentence permutation, and document rotation. This multi-task denoising approach forces the model to handle diverse corruption patterns, leading to more robust representations. The computational cost is higher than simpler objectives because the encoder and decoder must both process variable-length sequences, but the improved representation quality justifies this cost for sequence-to-sequence tasks. BART achieves state-of-the-art results on summarization and translation benchmarks, demonstrating the effectiveness of aggressive denoising.</p>
+
+<h3>Computational Cost Comparison</h3>
+
+<p>The computational cost of different pre-training objectives varies significantly, impacting both training time and resource requirements. Understanding these costs is essential for practitioners choosing objectives and estimating training budgets.</p>
+
+<p>For a model with $d$ dimensions, $L$ layers, $h$ attention heads, and sequences of length $n$, the dominant computational cost comes from matrix multiplications in attention and feed-forward layers. The attention mechanism requires computing queries, keys, and values ($3d^2$ parameters per layer), followed by attention scores ($O(n^2d)$ operations), and output projections ($d^2$ parameters). The feed-forward network typically uses an intermediate dimension of $4d$, requiring $8d^2$ parameters per layer. Summing across all layers, the total forward pass requires approximately $L(12d^2 + n^2d)$ FLOPs per token.</p>
+
+<p><strong>Causal Language Modeling</strong> is the most efficient objective because it computes loss for all $n$ positions in a single forward pass. For a batch of $b$ sequences, the total cost is $b \cdot L(12d^2n + n^3d)$ FLOPs. The $n^3d$ term comes from computing attention scores for all positions, where position $i$ attends to $i$ previous positions, summing to $\frac{n(n+1)}{2} \approx \frac{n^2}{2}$ attention operations across all positions.</p>
+
+<p><strong>Masked Language Modeling</strong> has similar computational cost to CLM for the forward pass, but only computes loss for the 15\% of masked positions. However, the backward pass still propagates gradients through all positions since masked positions depend on unmasked context. In practice, MLM and CLM have nearly identical training times for the same model size and sequence length. BERT-base training on 16 TPU v3 chips for 1 million steps with batch size 256 and sequence length 512 takes approximately 4 days, consuming roughly $10^{21}$ FLOPs total.</p>
+
+<p><strong>Span Corruption</strong> (T5) has slightly higher cost than MLM because the decoder must generate multiple tokens per corrupted span. If the average span length is $s$ and the corruption rate is $r$, the decoder processes approximately $r \cdot s \cdot n$ tokens, compared to $r \cdot n$ for MLM. For T5's typical configuration with $s=3$ and $r=0.15$, this increases decoder cost by 3×, though the encoder cost remains unchanged. T5-base training on 1 trillion tokens takes approximately 7 days on 256 TPU v3 chips, consuming roughly $10^{21}$ FLOPs.</p>
+
+<p><strong>BART's multi-task denoising</strong> has the highest computational cost due to variable-length sequences and multiple corruption strategies. The encoder and decoder must both handle sequences of varying lengths, reducing batching efficiency. Additionally, applying multiple corruption strategies requires more data preprocessing. In practice, BART training takes approximately 20\% longer than comparable BERT training for the same number of tokens, but the improved performance on generation tasks often justifies this additional cost.</p>
+
+<div class="example"><strong>Example:</strong> 
+Text: "The quick brown fox jumps over the lazy dog"
+
+<p>CLM: Predict each token given previous</p>
+
+<pre><code>The -> quick
+The quick -> brown
+The quick brown -> fox
+...
+</code></pre>
+
+<p>MLM (15\% masking):</p>
+
+<pre><code>Input:  "The [MASK] brown fox [MASK] over the lazy dog"
+Target: "quick" at position 2, "jumps" at position 5
+</code></pre>
+
+<p>Span Corruption:</p>
+
+<pre><code>Input:  "The <X> fox <Y> the lazy dog"
+Target: "<X> quick brown <Y> jumps over <Z>"
+</code></pre>
+
+<p>Different objectives lead to different learned representations!
+</div>
+
+<h3>Contrastive Objectives</h3>
+
+<p><strong>Contrastive Learning:</strong>
+<div class="equation">
+$$
+\mathcal{L}_{\text{contrastive}} = -\log \frac{\exp(\text{sim}(z_i, z_i^+)/\tau)}{\sum_{j} \exp(\text{sim}(z_i, z_j)/\tau)}
+$$
+</div>
+
+<p><strong>Applications:</strong>
+<ul>
+    <li>SimCLR (vision): Augmented views as positives
+    <li>CLIP: Image-text pairs
+    <li>SimCSE (text): Dropout as augmentation
+</ul>
+
+<h2>Data Curation and Processing</h2>
+
+<h3>Data Scale and Requirements</h3>
+
+<p>The scale of pre-training data has grown exponentially over the past few years, driven by empirical findings that larger datasets consistently improve model performance. Understanding the data requirements, storage costs, and preprocessing overhead is essential for planning pre-training projects.</p>
+
+<p><strong>BERT</strong> was pre-trained on approximately 16 GB of text data, consisting of BooksCorpus (800 million words) and English Wikipedia (2.5 billion words). This relatively modest dataset size reflects BERT's focus on high-quality, curated text rather than massive web crawls. The 16 GB of raw text expands to approximately 3.3 billion tokens using BERT's WordPiece tokenizer with a 30,000 token vocabulary. Training BERT-base for 1 million steps with batch size 256 and sequence length 512 means the model sees each token approximately 40 times on average, indicating significant data reuse through multiple epochs. The storage requirements are minimal by modern standards—16 GB of compressed text expands to perhaps 50 GB including tokenized data and intermediate preprocessing artifacts.</p>
+
+<p><strong>GPT-2</strong> scaled up to approximately 40 GB of text from WebText, a dataset created by scraping outbound links from Reddit posts with at least 3 karma. This filtering strategy aimed to identify high-quality content as judged by the Reddit community. The 40 GB corpus contains roughly 8 billion tokens using GPT-2's byte-pair encoding with a 50,257 token vocabulary. GPT-2's largest variant (1.5B parameters) was trained for approximately 1 million steps, seeing each token roughly 10 times. The preprocessing pipeline for WebText involved deduplication, filtering by language, and removing low-quality content, reducing the raw crawl from over 100 GB to the final 40 GB. Storage requirements including raw data, filtered data, and tokenized sequences total approximately 150 GB.</p>
+
+<p><strong>GPT-3</strong> made a massive leap to approximately 570 GB of text, totaling roughly 300 billion tokens. This dataset combines filtered Common Crawl (410 GB), WebText2 (19 GB), Books1 (12 GB), Books2 (55 GB), and Wikipedia (3 GB). The preprocessing pipeline for Common Crawl is particularly intensive: the raw crawl contains petabytes of data, which must be filtered by language, deduplicated, and quality-filtered to produce the final 410 GB. This filtering process itself requires substantial computational resources—processing petabytes of data through language classifiers and deduplication algorithms takes weeks on large clusters. The total storage requirements for GPT-3 pre-training, including raw data, filtered data, tokenized sequences, and training checkpoints, exceed 5 TB. The preprocessing cost alone is estimated at tens of thousands of dollars in compute time.</p>
+
+<p><strong>LLaMA</strong> pushed the scale even further to approximately 1.4 TB of text, totaling roughly 1.4 trillion tokens. This dataset consists primarily of Common Crawl (67\%), C4 (15\%), GitHub (4.5\%), Wikipedia (4.5\%), books (4.5\%), ArXiv (2.5\%), and StackExchange (2\%). The inclusion of code from GitHub and technical content from ArXiv and StackExchange reflects a deliberate strategy to improve reasoning and technical capabilities. The preprocessing pipeline for LLaMA is even more sophisticated than GPT-3, using multiple quality filters including perplexity-based filtering, classifier-based filtering, and extensive deduplication. The total storage requirements exceed 10 TB including all preprocessing artifacts, and the preprocessing cost is estimated at over \$100,000 in compute time.</p>
+
+<h3>Data Quality versus Quantity</h3>
+
+<p>The relationship between data quality and quantity is not straightforward—more data does not always lead to better models if the quality is poor. Recent research has shown that careful data curation can match or exceed the performance of models trained on much larger but noisier datasets.</p>
+
+<p>High-quality datasets like Wikipedia and books consistently improve model performance even when they represent a small fraction of total training data. GPT-3's data mixture samples Wikipedia at 3× the rate it appears in the corpus (3.4 epochs versus 0.44 epochs for Common Crawl), reflecting the higher quality and information density of Wikipedia text. This upsampling strategy means that despite Wikipedia being only 3 GB of the 570 GB total, it contributes disproportionately to the model's knowledge and capabilities.</p>
+
+<p>The preprocessing cost for achieving high data quality is substantial. Language identification using fastText classifiers requires processing every document, taking approximately 1 CPU-hour per 100 GB of text. Deduplication using MinHash LSH is even more expensive, requiring approximately 10 CPU-hours per 100 GB for computing signatures and finding near-duplicates. Quality filtering using perplexity-based methods requires running a language model over the entire corpus, taking approximately 100 GPU-hours per 100 GB. For GPT-3's 570 GB dataset, the total preprocessing cost exceeds 50,000 CPU-hours and 5,000 GPU-hours, translating to roughly \$30,000 in cloud computing costs.</p>
+
+<p>The storage requirements for preprocessing are also significant. Deduplication requires storing hash signatures for all documents, typically requiring 100-200 bytes per document. For a corpus with 1 billion documents, this means 100-200 GB of signature storage. Near-duplicate detection using LSH requires storing multiple hash tables, potentially doubling or tripling this storage requirement. Quality filtering requires storing perplexity scores or classifier outputs for all documents, adding another 10-20 GB. In total, the preprocessing metadata can require 500 GB to 1 TB of storage for a large corpus, comparable to the size of the corpus itself.</p>
+
+<h3>Data Filtering and Cleaning</h3>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Data Filtering Pipeline</div>
+<div class="algorithm-line"><p><strong>Step 1: Quality Filtering</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Remove duplicates (exact and near-duplicates)</div>
+<div class="algorithm-line"><li>Filter by language (fastText classifier)</div>
+<div class="algorithm-line"><li>Remove toxic/harmful content</div>
+<div class="algorithm-line"><li>Filter low-quality (perplexity-based, classifier)</div>
+<div class="algorithm-line"></ul></div>
+<div class="algorithm-line"><p><strong>Step 2: Deduplication</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Exact match: Hash-based</div>
+<div class="algorithm-line"><li>Near-duplicates: MinHash LSH</div>
+<div class="algorithm-line"><li>Document-level and paragraph-level</div>
+<div class="algorithm-line"></ul></div>
+<div class="algorithm-line"><p><strong>Step 3: Privacy</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Remove PII (emails, phone numbers, addresses)</div>
+<div class="algorithm-line"><li>Filter memorized content</div>
+<div class="algorithm-line"><li>Redact sensitive information</div>
+<div class="algorithm-line"></ul></div>
+<div class="algorithm-line"><p><strong>Step 4: Formatting</strong></div>
+<div class="algorithm-line"><ul></div>
+<div class="algorithm-line"><li>Unicode normalization</div>
+<div class="algorithm-line"><li>Remove excessive whitespace</div>
+<div class="algorithm-line"><li>Clean HTML/markup artifacts</div>
+<div class="algorithm-line"></ul></div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Total: ~570GB, 300B tokens
+
+<table>
+<tr><th><strong>Dataset</strong></th><th><strong>Weight</strong></th><th><strong>Epochs</strong></th></tr>
+<tr><td>Common Crawl (filtered)</td><td>60\%</td><td>0.44</td></tr>
+<tr><td>WebText2</td><td>22\%</td><td>2.9</td></tr>
+<tr><td>Books1</td><td>8\%</td><td>1.9</td></tr>
+<tr><td>Books2</td><td>8\%</td><td>1.9</td></tr>
+<tr><td>Wikipedia</td><td>3\%</td><td>3.4</td></tr>
+</table>
+
+<p>Higher-quality sources sampled more frequently (multiple epochs).
+Lower-quality sources seen less to avoid overfitting to noise.
+</div>
+
+<h3>Data Deduplication</h3>
+
+<p><strong>Why deduplicate?</strong>
+<ul>
+    <li>Prevents memorization
+    <li>Better generalization
+    <li>Fairer evaluation (test set contamination)
+</ul>
+
+<p><strong>Methods:</strong></p>
+
+<strong>1. Exact Deduplication:</strong>
+<pre><code>seen_hashes = set()
+for doc in corpus:
+    hash_val = hash(doc)
+    if hash_val not in seen_hashes:
+        keep(doc)
+        seen_hashes.add(hash_val)
+</code></pre>
+
+<p><strong>2. Fuzzy Deduplication (MinHash):</strong>
+<ul>
+    <li>Compute MinHash signatures
+    <li>Use LSH for near-neighbor search
+    <li>Remove documents with Jaccard similarity $> 0.8$
+</ul>
+
+<h2>Training Compute Requirements</h2>
+
+<h3>FLOPs Analysis</h3>
+
+<p>Understanding the computational requirements for pre-training large language models is essential for planning projects and estimating costs. The total compute is typically measured in FLOPs (floating-point operations), which can be calculated from model architecture and training configuration.</p>
+
+<p>For a transformer model with $L$ layers, $d$ model dimension, $h$ attention heads, and feed-forward intermediate dimension $d_{ff}$ (typically $4d$), processing a single token requires approximately:
+<div class="equation">
+$$
+\text{FLOPs per token} = 2L(12d^2 + 4d \cdot d_{ff}) = 2L(12d^2 + 16d^2) = 56Ld^2
+$$
+</div>
+
+<p>The factor of 2 accounts for both forward and backward passes (backward pass requires approximately the same FLOPs as forward pass). The $12d^2$ term comes from attention projections (query, key, value, and output, each $d \times d$), and the $16d^2$ term comes from feed-forward layers (two $d \times 4d$ projections).</p>
+
+<p>For <strong>BERT-base</strong> with $L=12$, $d=768$, training on 3.3 billion tokens for 40 epochs (132 billion tokens total):
+<div class="equation">
+$$
+\text{Total FLOPs} = 56 \times 12 \times 768^2 \times 132 \times 10^9 \approx 5.2 \times 10^{20} \text{ FLOPs}
+$$
+</div>
+
+<p>This is approximately 0.5 zettaFLOPs. Training on 16 TPU v3 chips (each providing 420 TFLOPS in mixed precision) for 4 days:
+<div class="equation">
+$$
+\text{Available compute} = 16 \times 420 \times 10^{12} \times 4 \times 86400 \approx 2.3 \times 10^{21} \text{ FLOPs}
+$$
+</div>
+
+<p>The ratio of available compute to required compute is approximately 4.4, indicating that BERT-base training achieves roughly 23\% hardware utilization. This is typical for large-scale training where communication overhead, data loading, and other inefficiencies reduce effective utilization.</p>
+
+<p>For <strong>GPT-3 175B</strong> with $L=96$, $d=12288$, training on 300 billion tokens:
+<div class="equation">
+$$
+\text{Total FLOPs} = 56 \times 96 \times 12288^2 \times 300 \times 10^9 \approx 2.4 \times 10^{23} \text{ FLOPs}
+$$
+</div>
+
+<p>This is approximately 240 zettaFLOPs, nearly 500× more than BERT-base. The massive compute requirement reflects both the larger model (175B versus 110M parameters) and the larger dataset (300B versus 132B tokens). Training GPT-3 on approximately 10,000 NVIDIA V100 GPUs (each providing 125 TFLOPS in mixed precision) for 1 month:
+<div class="equation">
+$$
+\text{Available compute} = 10000 \times 125 \times 10^{12} \times 30 \times 86400 \approx 3.2 \times 10^{23} \text{ FLOPs}
+$$
+</div>
+
+<p>This suggests approximately 75\% hardware utilization, which is impressive for such a large-scale distributed training job. The higher utilization compared to BERT reflects improvements in distributed training infrastructure and optimization techniques.</p>
+
+<p>For <strong>LLaMA-65B</strong> with $L=80$, $d=8192$, training on 1.4 trillion tokens:
+<div class="equation">
+$$
+\text{Total FLOPs} = 56 \times 80 \times 8192^2 \times 1.4 \times 10^{12} \approx 3.3 \times 10^{23} \text{ FLOPs}
+$$
+</div>
+
+<p>This is approximately 330 zettaFLOPs. Training on 2048 NVIDIA A100 GPUs (each providing 312 TFLOPS in mixed precision) for 21 days:
+<div class="equation">
+$$
+\text{Available compute} = 2048 \times 312 \times 10^{12} \times 21 \times 86400 \approx 1.2 \times 10^{24} \text{ FLOPs}
+$$
+</div>
+
+<p>This suggests approximately 28\% hardware utilization, which is lower than GPT-3 despite using more modern hardware. The lower utilization likely reflects the challenges of scaling to very long sequences (LLaMA uses 2048 token sequences versus GPT-3's 2048 tokens) and the overhead of processing the much larger dataset.</p>
+
+<h3>GPU-Hours and Cost Estimates</h3>
+
+<p>Translating FLOPs into GPU-hours and cost estimates provides a more practical understanding of training requirements. The cost depends heavily on the hardware platform and whether using cloud services or owned infrastructure.</p>
+
+<p><strong>BERT-base</strong> training on 16 TPU v3 chips for 4 days equals 1,536 TPU-hours. At Google Cloud's on-demand pricing of approximately \$8 per TPU v3 hour, this costs roughly \$12,000. However, Google's original BERT paper reported using preemptible TPUs at approximately \$2.40 per hour, reducing the cost to roughly \$3,700. Using equivalent GPU resources (approximately 64 NVIDIA V100 GPUs to match 16 TPU v3 chips), the cost would be approximately \$2 per GPU-hour on AWS, totaling \$12,000 for 96 days of GPU time. The lower TPU cost reflects Google's optimization for transformer workloads and economies of scale.</p>
+
+<p><strong>GPT-3 175B</strong> training on 10,000 V100 GPUs for 1 month equals 7.2 million GPU-hours. At AWS on-demand pricing of approximately \$3 per V100 hour, this would cost \$21.6 million. However, OpenAI likely used a combination of owned infrastructure and negotiated cloud pricing, with estimates suggesting actual costs between \$4 million and \$12 million. The wide range reflects uncertainty about the exact hardware configuration, utilization rates, and pricing agreements. The training also required substantial infrastructure costs including high-bandwidth networking (InfiniBand or equivalent), distributed storage systems, and engineering effort to optimize the training pipeline.</p>
+
+<p><strong>LLaMA-65B</strong> training on 2048 A100 GPUs for 21 days equals 1.03 million GPU-hours. At cloud pricing of approximately \$3 per A100 hour, this would cost \$3.1 million. Meta's paper reports that LLaMA-65B training consumed approximately 1,022,362 GPU-hours on A100-80GB GPUs, closely matching this estimate. Using Meta's owned infrastructure rather than cloud services likely reduced the effective cost to \$1.5-2 million when accounting for hardware depreciation and operational costs. The A100's higher performance compared to V100 (312 versus 125 TFLOPS) means that LLaMA-65B required only 1/7 the GPU-hours of GPT-3 despite using comparable compute (330 versus 240 zettaFLOPs), demonstrating the importance of hardware efficiency.</p>
+
+<h3>Scaling Laws</h3>
+
+<p>Empirical scaling laws, first systematically studied by Kaplan et al. (2020) and refined by Hoffmann et al. (2022), provide predictive relationships between compute budget, model size, dataset size, and performance. These laws are essential for planning pre-training projects and allocating resources optimally.</p>
+
+<p>The Kaplan scaling laws suggest that test loss scales as a power law with compute budget $C$, model parameters $N$, and dataset size $D$:
+<div class="equation">
+$$
+L(C) \propto C^{-\alpha}, \quad L(N) \propto N^{-\beta}, \quad L(D) \propto D^{-\gamma}
+$$
+</div>
+with empirically measured exponents $\alpha \approx 0.05$, $\beta \approx 0.076$, and $\gamma \approx 0.095$. These laws imply that doubling the compute budget reduces loss by approximately 3.4\%, while doubling model size reduces loss by approximately 5.2\%, and doubling dataset size reduces loss by approximately 6.5\%.</p>
+
+<p>The Chinchilla scaling laws (Hoffmann et al., 2022) refined these relationships and found that most large language models are significantly undertrained—they use too many parameters for their compute budget and too few training tokens. The optimal allocation suggests that model size and dataset size should scale approximately equally with compute budget. For a compute budget of $C$ FLOPs, the optimal model size is approximately:
+<div class="equation">
+$$
+N_{\text{opt}} \approx 0.5 \times C^{0.5} \text{ parameters}
+$$
+</div>
+and the optimal dataset size is approximately:
+<div class="equation">
+$$
+D_{\text{opt}} \approx 0.5 \times C^{0.5} \text{ tokens}
+$$
+</div>
+
+<p>This implies that GPT-3 175B, trained on 300B tokens with compute budget $2.4 \times 10^{23}$ FLOPs, should optimally have been approximately 70B parameters trained on 1.4T tokens. This prediction closely matches LLaMA-65B's configuration, which indeed achieves better performance than GPT-3 despite having fewer parameters. The Chinchilla paper demonstrated this by training Chinchilla (70B parameters, 1.4T tokens) to outperform Gopher (280B parameters, 300B tokens) using the same compute budget.</p>
+
+<p>These scaling laws have profound implications for pre-training strategy. Rather than maximizing model size for a given compute budget, practitioners should balance model size and dataset size according to the scaling laws. For a fixed compute budget, training a smaller model on more data typically yields better performance than training a larger model on less data. This insight has driven the trend toward models like LLaMA, Chinchilla, and Mistral that prioritize training tokens over parameter count.</p>
+
+<h2>Curriculum Learning</h2>
+
+<h3>Progressive Training Strategies</h3>
+
+<p>Curriculum learning applies the principle of learning from easy to hard examples, progressively increasing task difficulty during training. This approach can significantly improve training efficiency, convergence speed, and final model performance. The key insight is that models learn more effectively when they first master simpler patterns before tackling complex ones.</p>
+
+<p>The most common curriculum strategy involves progressively increasing sequence length during training. Starting with shorter sequences reduces both memory requirements and computational cost in the early stages of training when the model is learning basic patterns. For a model with quadratic attention complexity $O(n^2d)$, doubling the sequence length quadruples the attention computation. Training BERT-base with sequence length 128 for the first 90\% of steps and then 512 for the final 10\% reduces total training time by approximately 30\% compared to using length 512 throughout. The shorter sequences allow larger batch sizes in early training, which improves gradient estimates and accelerates convergence. The model learns word-level and phrase-level patterns with short sequences, then refines its understanding of long-range dependencies with longer sequences.</p>
+
+<p>Batch size curriculum is another effective strategy, gradually increasing batch size during training. Starting with smaller batches provides more frequent parameter updates, which helps the model escape poor local minima in early training. As training progresses and the model approaches convergence, larger batches provide more stable gradient estimates and better utilize hardware parallelism. GPT-3 training used a batch size curriculum, starting at 32,000 tokens per batch and gradually increasing to 3.2 million tokens per batch. This 100× increase in batch size was enabled by learning rate adjustments and gradient accumulation. The larger batch sizes in later training improved hardware utilization from approximately 30\% to over 70\%, significantly reducing training time.</p>
+
+<p>Learning rate schedules are essential for curriculum learning, as the optimal learning rate changes with batch size and training progress. The linear warmup followed by cosine decay schedule has become standard for transformer pre-training. The warmup phase, typically 1-10\% of total steps, gradually increases the learning rate from near-zero to the peak value. This prevents the large gradient updates in early training from destabilizing the model. The cosine decay phase gradually reduces the learning rate to near-zero, allowing the model to fine-tune its parameters as it approaches convergence. For BERT-base, a warmup of 10,000 steps followed by linear decay over 990,000 steps works well. For GPT-3, a warmup of 375 million tokens (approximately 1\% of total training) followed by cosine decay proved effective.</p>
+
+<p>The impact on training efficiency is substantial. Curriculum learning can reduce training time by 20-40\% compared to fixed configurations while achieving equal or better final performance. For BERT-base, the sequence length curriculum reduces training from approximately 5.5 days to 4 days on the same hardware. For GPT-3, the batch size curriculum improved hardware utilization enough to reduce training time by an estimated 30\%, saving approximately \$3-4 million in compute costs. These savings make curriculum learning essential for large-scale pre-training projects.</p>
+
+<h3>Progressive Training</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Train on progressively harder examples:
+
+<p><strong>Stage 1:</strong> Easy examples (short sequences, simple patterns)</p>
+
+<p><strong>Stage 2:</strong> Medium difficulty</p>
+
+<p><strong>Stage 3:</strong> Full difficulty (long sequences, complex patterns)
+</div>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Faster convergence
+    <li>Better final performance
+    <li>More stable training
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>GPT-3 training:</strong>
+
+<p><strong>Stage 1 (0-100B tokens):</strong> 
+<ul>
+    <li>Sequence length: 1024
+    <li>Batch size: 3.2M tokens
+</ul>
+
+<p><strong>Stage 2 (100B-300B tokens):</strong>
+<ul>
+    <li>Sequence length: 2048
+    <li>Batch size: 3.2M tokens (fewer sequences)
+</ul>
+
+<p>Starting with shorter sequences reduces memory and computation early in training.
+</div>
+
+<h3>Domain-Adaptive Pre-training</h3>
+
+<p><strong>Continue pre-training on domain-specific data:</strong></p>
+
+<div class="algorithm"><div class="algorithm-title">Algorithm: Domain Adaptation</div>
+<div class="algorithm-line"><p><strong>Step 1:</strong> Pre-train on general corpus (e.g., Common Crawl)</p></div>
+<div class="algorithm-line"><p><strong>Step 2:</strong> Continue pre-training on domain data (e.g., biomedical)</p></div>
+<div class="algorithm-line"><p><strong>Step 3:</strong> Fine-tune on task</div>
+</div>
+
+<p><strong>Examples:</strong>
+<ul>
+    <li>BioBERT: BERT + PubMed/PMC
+    <li>SciBERT: BERT + scientific papers
+    <li>FinBERT: BERT + financial documents
+    <li>CodeBERT: BERT + code
+</ul>
+
+<h2>Hardware Requirements and Infrastructure</h2>
+
+<h3>BERT-base Training Infrastructure</h3>
+
+<p>Training BERT-base requires relatively modest infrastructure by modern standards, making it accessible to academic research groups and small companies. The original BERT paper reported training BERT-base on 16 TPU v3 chips for 4 days, providing a concrete reference point for hardware requirements.</p>
+
+<p>Each TPU v3 chip provides 420 TFLOPS of mixed-precision compute (bfloat16) and 16 GB of high-bandwidth memory (HBM). The 16-chip configuration provides 6.7 PFLOPS total compute and 256 GB total memory. BERT-base with 110 million parameters requires approximately 440 MB for model weights in FP32, or 220 MB in FP16. With batch size 256 and sequence length 512, the activation memory per batch is approximately 8 GB, which fits comfortably in the 256 GB total memory when distributed across 16 chips. The high-bandwidth interconnect between TPU chips (approximately 100 GB/s per chip) enables efficient data parallelism with minimal communication overhead.</p>
+
+<p>The training cost at Google Cloud's preemptible TPU pricing (approximately \$2.40 per TPU v3 hour) is roughly \$3,700 for the full 4-day training run. Using on-demand pricing (\$8 per hour) would increase this to \$12,000. For comparison, training on NVIDIA V100 GPUs would require approximately 64 GPUs for 4 days (6,144 GPU-hours) at a cost of approximately \$12,000 using AWS on-demand pricing. The equivalent training on A100 GPUs would require approximately 32 GPUs for 2.5 days (1,920 GPU-hours) at a cost of approximately \$6,000, demonstrating the improved efficiency of newer hardware.</p>
+
+<p>The infrastructure requirements beyond compute include high-bandwidth storage for the training data (approximately 100 GB including tokenized sequences and preprocessing artifacts), network bandwidth for distributed training (at least 10 Gbps per GPU for efficient data parallelism), and monitoring infrastructure for tracking training metrics. The total infrastructure cost including storage, networking, and engineering time is typically 2-3× the raw compute cost, bringing the total BERT-base training cost to approximately \$10,000-15,000.</p>
+
+<h3>GPT-3 Training Infrastructure</h3>
+
+<p>Training GPT-3 175B requires massive infrastructure that is accessible only to large technology companies and well-funded research organizations. The scale of the training job presents significant engineering challenges beyond simply acquiring hardware.</p>
+
+<p>The training used approximately 10,000 NVIDIA V100 GPUs, though the exact configuration has not been publicly disclosed. Each V100 provides 125 TFLOPS of mixed-precision compute and 32 GB of memory. The 10,000-GPU configuration provides 1.25 exaFLOPS total compute and 320 TB total memory. GPT-3 175B with 175 billion parameters requires approximately 700 GB for model weights in FP32, or 350 GB in FP16. With model parallelism across 8 GPUs, each GPU stores approximately 44 GB of model weights, leaving limited memory for activations. The batch size per GPU is typically 1-2 sequences of length 2048, requiring approximately 20 GB of activation memory per GPU.</p>
+
+<p>The communication requirements are severe. With model parallelism across 8 GPUs and data parallelism across 1,250 groups, each training step requires all-reduce operations across the data parallel groups (approximately 700 GB of gradients) and all-to-all communication within model parallel groups (approximately 100 GB per step). At 100 Gbps network bandwidth per GPU, the gradient all-reduce takes approximately 70 seconds per step, which would dominate training time. To address this, GPT-3 training used gradient accumulation (accumulating gradients over multiple micro-batches before synchronizing) and high-bandwidth interconnects like InfiniBand (200 Gbps or higher), reducing communication time to approximately 10\% of total step time.</p>
+
+<p>The training cost is estimated between \$4 million and \$12 million depending on assumptions about hardware ownership versus cloud rental, utilization rates, and pricing agreements. At AWS on-demand pricing of \$3 per V100 hour, the 7.2 million GPU-hours would cost \$21.6 million, but OpenAI likely achieved significant discounts through long-term commitments and negotiated pricing. The infrastructure costs beyond raw compute are substantial: high-bandwidth networking equipment (InfiniBand switches and cables) costs millions of dollars, distributed storage systems for the 5 TB of training data cost hundreds of thousands of dollars, and the engineering effort to build and optimize the training pipeline represents millions of dollars in labor costs.</p>
+
+<p>The power consumption is also significant. Each V100 GPU consumes approximately 300 watts under full load, so 10,000 GPUs consume 3 megawatts. Over a 1-month training run, this equals 2,160 megawatt-hours of electricity. At typical data center electricity costs of \$0.10 per kWh, the electricity cost alone is \$216,000. Including cooling and power distribution overhead (typically 1.5-2× the compute power), the total power cost approaches \$400,000.</p>
+
+<h3>LLaMA-65B Training Infrastructure</h3>
+
+<p>Training LLaMA-65B represents a more efficient approach than GPT-3, using fewer but more powerful GPUs and a more optimized training pipeline. Meta's paper provides detailed information about the infrastructure and costs.</p>
+
+<p>The training used 2,048 NVIDIA A100-80GB GPUs for 21 days, totaling 1,022,362 GPU-hours. Each A100-80GB provides 312 TFLOPS of mixed-precision compute and 80 GB of memory, representing a significant improvement over V100 (2.5× compute, 2.5× memory). The 2,048-GPU configuration provides 639 PFLOPS total compute and 164 TB total memory. LLaMA-65B with 65 billion parameters requires approximately 260 GB for model weights in FP32, or 130 GB in FP16. With model parallelism across 8 GPUs, each GPU stores approximately 16 GB of model weights, leaving substantial memory for activations and optimizer states.</p>
+
+<p>The larger memory capacity of A100-80GB enables more efficient training configurations. LLaMA uses a batch size of 4 million tokens (approximately 2,000 sequences of length 2048), distributed across 2,048 GPUs as 2 sequences per GPU. The activation memory per GPU is approximately 40 GB, and the optimizer states (using AdamW) require approximately 32 GB, totaling approximately 88 GB per GPU. This fits comfortably in the 80 GB memory, avoiding the need for activation checkpointing or other memory-saving techniques that would slow training.</p>
+
+<p>The communication requirements are more manageable than GPT-3 due to the smaller model size and more efficient hardware. With model parallelism across 8 GPUs and data parallelism across 256 groups, each training step requires all-reduce operations across data parallel groups (approximately 260 GB of gradients) and all-to-all communication within model parallel groups (approximately 30 GB per step). Using NVIDIA's NVLink and NVSwitch interconnects (600 GB/s per GPU within a node, 200 Gbps between nodes), the communication time is approximately 5\% of total step time, demonstrating excellent scaling efficiency.</p>
+
+<p>The training cost is estimated at \$2-3 million using Meta's owned infrastructure. At cloud pricing of \$3 per A100 hour, the 1,022,362 GPU-hours would cost \$3.1 million. Meta's owned infrastructure likely reduced the effective cost to \$1.5-2 million when accounting for hardware depreciation (A100 GPUs cost approximately \$10,000 each, depreciated over 3-5 years) and operational costs. The power consumption is approximately 1 megawatt (2,048 GPUs × 400 watts per A100), totaling 504 megawatt-hours over 21 days. At \$0.10 per kWh including cooling overhead, the electricity cost is approximately \$75,000.</p>
+
+<p>The infrastructure requirements include high-bandwidth networking (NVIDIA InfiniBand or equivalent), distributed storage systems (approximately 15 TB for training data and checkpoints), and monitoring infrastructure. Meta's paper notes that they used a custom training framework optimized for their infrastructure, with careful attention to memory management, communication patterns, and fault tolerance. The engineering effort to build this infrastructure and optimize the training pipeline represents a significant investment beyond the raw hardware costs.</p>
+
+<h2>Efficient Pre-training Techniques</h2>
+
+<h3>Mixed Precision Training</h3>
+
+<p>Mixed precision training represents one of the most impactful optimizations for transformer pre-training, leveraging the FP16 (16-bit floating point) format for most computations while maintaining FP32 (32-bit) master weights for numerical stability. This approach reduces activation memory consumption by approximately 50\% since activations, which often dominate memory usage during training, are stored in the lower-precision format. The memory savings enable larger batch sizes or longer sequences, directly improving training efficiency.</p>
+
+<p>Modern GPUs like the NVIDIA A100 provide dedicated Tensor Cores that execute FP16 matrix multiplications at twice the throughput of FP32 operations, yielding training speedups of 1.5-2× in practice. The speedup is less than the theoretical 2× due to memory bandwidth limitations and non-matrix operations that don't benefit from reduced precision. For BERT-base, mixed precision training reduces memory from 13.8 GB to 8.0 GB (42\% reduction) and decreases training time from 4 days to approximately 2.5 days on the same hardware.</p>
+
+<p>However, the reduced precision of FP16 can cause gradient underflow for very small values. To address this, loss scaling is employed: the loss is multiplied by a large factor (typically 1024 or dynamically adjusted) before backpropagation, then gradients are scaled back down before the optimizer step. This effectively shifts the representable range to prevent underflow while maintaining the benefits of reduced precision. Dynamic loss scaling automatically adjusts the scale factor during training, increasing it when no overflow occurs and decreasing it when overflow is detected.</p>
+
+<h3>Gradient Checkpointing</h3>
+
+<p>Gradient checkpointing trades computation for memory by selectively storing only a subset of activations during the forward pass and recomputing the others during the backward pass. This technique is particularly valuable for training very large models or using very long sequences where activation memory dominates.</p>
+
+<p>For a transformer with $L$ layers, storing all activations requires $O(Lnbd)$ memory where $n$ is sequence length, $b$ is batch size, and $d$ is model dimension. With gradient checkpointing, only activations at checkpoint boundaries are stored (typically every $\sqrt{L}$ layers), reducing memory to $O(\sqrt{L}nbd)$. The recomputation adds approximately 33\% to training time but can reduce activation memory by 5-10×, enabling much larger batch sizes or longer sequences that more than compensate for the slowdown.</p>
+
+<p>For GPT-3 training, gradient checkpointing enabled fitting the model on V100 GPUs with 32 GB memory. Without checkpointing, the activation memory for a single sequence of length 2048 would exceed 60 GB, making training impossible. With checkpointing every 8 layers, activation memory drops to approximately 15 GB per sequence, allowing batch size 2 per GPU. The 33\% slowdown from recomputation is offset by the ability to use 2× larger batch size, resulting in net training speedup.</p>
+
+<h3>ZeRO Optimizer</h3>
+
+<p>The ZeRO (Zero Redundancy Optimizer) technique, developed by Microsoft, eliminates memory redundancy in data-parallel training by partitioning optimizer states, gradients, and parameters across data-parallel processes. Traditional data parallelism replicates the entire model and optimizer state on each GPU, wasting memory. ZeRO partitions these states while maintaining the computational efficiency of data parallelism.</p>
+
+<p>ZeRO has three stages with increasing memory savings and communication overhead. ZeRO Stage 1 partitions only optimizer states, reducing memory by approximately 4× for Adam optimizer (which stores first and second moments). ZeRO Stage 2 additionally partitions gradients, reducing memory by approximately 8×. ZeRO Stage 3 partitions parameters as well, reducing memory by the data parallelism degree (e.g., 64× for 64 GPUs). The memory savings enable training much larger models on the same hardware.</p>
+
+<p>For training a 175B parameter model like GPT-3, ZeRO Stage 3 across 64 GPUs reduces per-GPU memory from approximately 700 GB (impossible) to approximately 11 GB (feasible). The communication overhead is manageable because parameter partitions are gathered just before use and discarded after, with careful overlapping of communication and computation. DeepSpeed, Microsoft's training framework, implements ZeRO and has been used to train models exceeding 1 trillion parameters.</p>
+
+<h3>Pipeline Parallelism</h3>
+
+<p>Pipeline parallelism divides the model vertically across layers, with different GPUs processing different layers. This enables training models too large to fit on a single GPU while maintaining high hardware utilization through pipelining. The key challenge is keeping all GPUs busy despite the sequential dependency between layers.</p>
+
+<p>The GPipe approach divides each batch into micro-batches and pipelines their execution across stages. While stage 1 processes micro-batch 2, stage 2 processes micro-batch 1, and so on. This achieves high utilization once the pipeline is full, though there are bubble periods at the start and end of each batch. With $m$ micro-batches and $p$ pipeline stages, the bubble overhead is approximately $\frac{p-1}{m}$. Using $m = 4p$ micro-batches reduces bubble overhead to approximately 25\%.</p>
+
+<p>For GPT-3 training, pipeline parallelism across 8 stages (12 layers per stage) combined with model parallelism within each stage and data parallelism across pipeline replicas achieved approximately 75\% hardware utilization. The pipeline approach enabled training the 175B parameter model on V100 GPUs with 32 GB memory, which would otherwise be impossible. The combination of pipeline parallelism, model parallelism, data parallelism, and ZeRO represents the state-of-the-art for training extremely large models.</p>
+
+<h2>Parameter-Efficient Fine-tuning</h2>
+
+<h3>Motivation</h3>
+
+<p><strong>Full fine-tuning challenges:</strong>
+<ul>
+    <li>Requires storing full model copy per task
+    <li>175B model $\times$ 100 tasks = 17.5T parameters!
+    <li>Expensive and slow
+</ul>
+
+<p><strong>Solution:</strong> Fine-tune small subset of parameters.</p>
+
+<h3>LoRA: Low-Rank Adaptation</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Inject trainable low-rank matrices into frozen model:
+
+<p><strong>Original:</strong> $\vh = \mW \vx$ where $\mW \in \R^{d \times d}$</p>
+
+<p><strong>LoRA:</strong> 
+<div class="equation">
+$$
+\vh = \mW \vx + \Delta \mW \vx = \mW \vx + \mB \mA \vx
+$$
+</div>
+
+<p>where $\mA \in \R^{r \times d}$, $\mB \in \R^{d \times r}$, and $r \ll d$ (typically $r = 4$ to $64$).</p>
+
+<p><strong>Parameters:</strong>
+<ul>
+    <li>Original: $d^2$ (frozen)
+    <li>LoRA: $2rd$ (trainable)
+    <li>Reduction: $\frac{2rd}{d^2} = \frac{2r}{d}$
+</ul>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+GPT-3 175B, apply LoRA with $r=8$ to attention projections.
+
+<p><strong>Single attention layer:</strong>
+<ul>
+    <li>$\mW^Q, \mW^K, \mW^V, \mW^O \in \R^{12288 \times 12288}$
+    <li>Original params: $4 \times 12288^2 = 604M$
+</ul>
+
+<p><strong>LoRA params per layer:</strong>
+<div class="equation">
+$$
+4 \times 2 \times 8 \times 12288 = 786{,}432 \approx 0.79M
+$$
+</div>
+
+<p><strong>96 layers total:</strong>
+<ul>
+    <li>LoRA params: $96 \times 0.79M = 75.8M$
+    <li>Full model: 175B
+    <li><strong>Reduction: 2,300×</strong> (train only 0.04\% of parameters!)
+</ul>
+
+<p><strong>Performance:</strong> Matches full fine-tuning on many tasks!
+</div>
+
+<h3>Adapter Layers</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Insert small bottleneck layers between frozen layers:
+
+<div class="equation">
+$$
+\vh_{\text{adapter}} = \vh + \text{FFN}_{\text{adapter}}(\text{LayerNorm}(\vh))
+$$
+</div>
+
+<p>where FFN$_{\text{adapter}}$: $d \to d_{\text{bottleneck}} \to d$ with $d_{\text{bottleneck}} \ll d$.
+</div>
+
+<p><strong>Typical bottleneck:</strong> $d_{\text{bottleneck}} = 64$ for $d = 768$</p>
+
+<p><strong>Parameters per adapter:</strong>
+<div class="equation">
+$$
+2d \cdot d_{\text{bottleneck}} = 2 \times 768 \times 64 = 98{,}304
+$$
+</div>
+
+<h3>Prompt Tuning</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Prepend learnable "soft prompt" vectors:
+
+<p><strong>Input:</strong> $[\vp_1, \ldots, \vp_k, \vx_1, \ldots, \vx_n]$</p>
+
+<p>where $\vp_i \in \R^d$ are learned continuous prompts (not discrete tokens).</p>
+
+<p><strong>Parameters:</strong> Only $k \times d$ prompt vectors (model frozen).
+</div>
+
+<p><strong>Typical:</strong> $k = 20$ prompts, $d = 768$ $\to$ only 15,360 parameters!</p>
+
+<h2>Multi-Task and Multi-Stage Pre-training</h2>
+
+<h3>Multi-Task Pre-training</h3>
+
+<p><strong>Train on multiple objectives simultaneously:</strong></p>
+
+<div class="equation">
+$$
+\mathcal{L}_{\text{total}} = \sum_{i=1}^{K} \lambda_i \mathcal{L}_i
+$$
+</div>
+
+<p><strong>Example (T5):</strong>
+<ul>
+    <li>Span corruption (main)
+    <li>Prefix LM
+    <li>Deshuffling
+</ul>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>More robust representations
+    <li>Better transfer to diverse tasks
+    <li>Can balance objectives with $\lambda_i$
+</ul>
+
+<h3>Multi-Stage Pre-training</h3>
+
+<p><strong>Stage 1: General pre-training</strong>
+<ul>
+    <li>Large diverse corpus
+    <li>Language modeling
+    <li>Build general knowledge
+</ul>
+
+<p><strong>Stage 2: Instruction tuning</strong>
+<ul>
+    <li>Instruction-response pairs
+    <li>Learn to follow instructions
+    <li>Improve helpfulness
+</ul>
+
+<p><strong>Stage 3: RLHF</strong>
+<ul>
+    <li>Reinforcement learning from human feedback
+    <li>Align with human preferences
+    <li>Improve safety
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Stage 1:</strong> GPT-3 pre-training (175B params, 300B tokens)
+
+<p><strong>Stage 2:</strong> Supervised fine-tuning
+<ul>
+    <li>13,000 instruction-output examples
+    <li>Fine-tune for 16 epochs
+    <li>Learning rate: $9.65 \times 10^{-6}$
+</ul>
+
+<p><strong>Stage 3:</strong> Reward modeling
+<ul>
+    <li>33,000 comparison examples
+    <li>Train 6B reward model
+    <li>Predicts human preferences
+</ul>
+
+<p><strong>Stage 4:</strong> PPO optimization
+<ul>
+    <li>31,000 prompts
+    <li>Optimize policy to maximize reward
+    <li>KL penalty from SFT model
+</ul>
+
+<p><strong>Result:</strong> 1.3B InstructGPT preferred over 175B GPT-3 by humans!
+</div>
+
+<h2>Transfer Learning Analysis</h2>
+
+<h3>Measuring Transfer</h3>
+
+<p><strong>Metrics:</strong></p>
+
+<p><strong>1. Downstream Performance:</strong>
+<div class="equation">
+$$
+\Delta = \text{Performance}_{\text{fine-tuned}} - \text{Performance}_{\text{from-scratch}}
+$$
+</div>
+
+<p><strong>2. Sample Efficiency:</strong>
+<ul>
+    <li>Number of examples to reach target performance
+    <li>Pre-trained models: 10-100× fewer examples
+</ul>
+
+<p><strong>3. Convergence Speed:</strong>
+<ul>
+    <li>Training steps to convergence
+    <li>Pre-trained: 10× faster
+</ul>
+
+<h3>What Makes Good Pre-training?</h3>
+
+<p><strong>Data scale:</strong> More data $\to$ better transfer (up to a point)</p>
+
+<p><strong>Data diversity:</strong> Diverse pre-training $\to$ broader transfer</p>
+
+<p><strong>Model scale:</strong> Larger models transfer better</p>
+
+<p><strong>Objective alignment:</strong> Pre-training objective similar to downstream task</p>
+
+<p><strong>Domain match:</strong> Domain-specific pre-training helps domain-specific tasks</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> Compare pre-training objectives:
+<ol>
+    <li>Train BERT-tiny with: (a) MLM, (b) CLM, (c) Span corruption
+    <li>Evaluate on GLUE tasks
+    <li>Which objective transfers best? Why?
+</ol>
+</div>
+
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Implement data filtering pipeline:
+<ol>
+    <li>Download 10,000 documents from Common Crawl
+    <li>Remove duplicates (exact and near-duplicate)
+    <li>Filter by language (keep English)
+    <li>Filter low-quality (perplexity > threshold)
+    <li>Report statistics at each stage
+</ol>
+</div>
+
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Implement LoRA:
+<ol>
+    <li>Load pre-trained GPT-2
+    <li>Add LoRA layers with $r=8$ to attention
+    <li>Fine-tune on sentiment analysis
+    <li>Compare: (a) Full fine-tuning, (b) LoRA, (c) Frozen
+    <li>Measure: parameters trained, memory, accuracy
+</ol>
+</div>
+
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Analyze transfer learning:
+<ol>
+    <li>Fine-tune BERT on 5 GLUE tasks
+    <li>Vary training data: [100, 500, 1000, 5000, all]
+    <li>Compare to training from scratch
+    <li>Plot sample efficiency curves
+    <li>At what point does pre-training stop helping?
+</ol>
+</div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Compare Pre-training Objectives</strong>
+
+<p><strong>Expected Results on GLUE:</strong></p>
+
+<table>
+<tr><th><strong>Objective</strong></th><th><strong>MNLI</strong></th><th><strong>QQP</strong></th><th><strong>SST-2</strong></th><th><strong>Avg</strong></th></tr>
+<tr><td>MLM (BERT-style)</td><td>78.3</td><td>85.2</td><td>89.7</td><td>84.4</td></tr>
+<tr><td>CLM (GPT-style)</td><td>72.1</td><td>81.5</td><td>87.3</td><td>80.3</td></tr>
+<tr><td>Span Corruption (T5-style)</td><td>76.8</td><td>84.1</td><td>88.9</td><td>83.3</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>Part (c): Which transfers best?</strong></p>
+
+<p><strong>MLM (Masked Language Modeling) wins because:</strong></p>
+
+<ol>
+    <li><strong>Bidirectional context:</strong> Sees both left and right context
+    <li><strong>Better for understanding:</strong> GLUE tasks require comprehension
+    <li><strong>Sentence-level tasks:</strong> MLM learns sentence representations
+    <li><strong>Natural for classification:</strong> [CLS] token aggregates information
+</ol>
+
+<p><strong>CLM (Causal Language Modeling) is weaker because:</strong></p>
+
+<ul>
+    <li>Only left context (unidirectional)
+    <li>Optimized for generation, not understanding
+    <li>No explicit sentence representation
+    <li>Better for generative tasks (not GLUE)
+</ul>
+
+<p><strong>Span Corruption is middle ground:</strong></p>
+
+<ul>
+    <li>Bidirectional like MLM
+    <li>Longer spans than single tokens
+    <li>Good for seq2seq tasks
+    <li>Slightly worse than MLM for classification
+</ul>
+
+<p><strong>Key Insight:</strong> Pre-training objective should match downstream task type:
+<ul>
+    <li><strong>Understanding tasks:</strong> Use MLM (BERT)
+    <li><strong>Generation tasks:</strong> Use CLM (GPT)
+    <li><strong>Seq2seq tasks:</strong> Use span corruption (T5)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Data Filtering Pipeline</strong>
+
+<p><strong>Pipeline Statistics:</strong></p>
+
+<table>
+<tr><th><strong>Stage</strong></th><th><strong>Documents</strong></th><th><strong>Retention</strong></th></tr>
+<tr><td>Initial (Common Crawl)</td><td>10,000</td><td>100\%</td></tr>
+<tr><td>After exact deduplication</td><td>8,742</td><td>87.4\%</td></tr>
+<tr><td>After near-duplicate removal</td><td>7,891</td><td>78.9\%</td></tr>
+<tr><td>After language filtering</td><td>6,234</td><td>62.3\%</td></tr>
+<tr><td>After quality filtering</td><td>4,567</td><td>45.7\%</td></tr>
+</table>
+
+<p><strong>Key Steps:</strong></p>
+
+<p><strong>1. Exact Deduplication:</strong>
+<ul>
+    <li>Hash each document (MD5/SHA256)
+    <li>Remove documents with identical hashes
+    <li>Removes 12.6\% duplicates
+</ul>
+
+<p><strong>2. Near-Duplicate Removal:</strong>
+<ul>
+    <li>Use MinHash LSH for similarity detection
+    <li>Threshold: 90\% similarity
+    <li>Removes 9.7\% near-duplicates
+</ul>
+
+<p><strong>3. Language Filtering:</strong>
+<ul>
+    <li>Use fastText language detector
+    <li>Keep only English (confidence > 0.9)
+    <li>Removes 21.0\% non-English
+</ul>
+
+<p><strong>4. Quality Filtering:</strong>
+<ul>
+    <li>Compute perplexity with GPT-2
+    <li>Threshold: perplexity < 1000
+    <li>Removes 26.7\% low-quality
+</ul>
+
+<p><strong>Final Result:</strong> 4,567 high-quality English documents (45.7\% retention)</p>
+
+<p><strong>Quality Metrics:</strong></p>
+
+<ul>
+    <li>Average perplexity: 342 (vs 1,247 before filtering)
+    <li>Average length: 1,834 tokens (vs 892 before)
+    <li>English confidence: 0.97 (vs 0.73 before)
+</ul>
+
+<p><strong>Key Insight:</strong> Aggressive filtering (54.3\% removed) dramatically improves data quality, leading to better pre-training outcomes.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: LoRA Implementation</strong>
+
+<p><strong>Comparison Results:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Params Trained</strong></th><th><strong>Memory (GB)</strong></th><th><strong>Accuracy</strong></th></tr>
+<tr><td>Full Fine-tuning</td><td>124M (100\%)</td><td>8.2</td><td>94.3\%</td></tr>
+<tr><td>LoRA ($r=8$)</td><td>0.3M (0.24\%)</td><td>2.1</td><td>93.8\%</td></tr>
+<tr><td>Frozen (linear probe)</td><td>0.001M (0.001\%)</td><td>1.8</td><td>87.2\%</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>LoRA Advantages:</strong></p>
+
+<ol>
+    <li><strong>Parameter efficiency:</strong> 400x fewer trainable parameters
+    <li><strong>Memory efficiency:</strong> 4x less memory (no optimizer states for frozen params)
+    <li><strong>Near full performance:</strong> Only 0.5\% accuracy drop
+    <li><strong>Fast training:</strong> 3x faster per epoch
+    <li><strong>Modular:</strong> Can swap LoRA adapters for different tasks
+</ol>
+
+<p><strong>When to use each:</strong></p>
+
+<ul>
+    <li><strong>Full fine-tuning:</strong> Maximum accuracy, sufficient compute
+    <li><strong>LoRA:</strong> Limited compute, multiple tasks, near-optimal accuracy
+    <li><strong>Frozen:</strong> Extremely limited resources, quick baseline
+</ul>
+
+<p><strong>LoRA Configuration:</strong></p>
+
+<ul>
+    <li>Rank $r=8$: Good balance (try 4, 16, 32 for tuning)
+    <li>Apply to: Query and Value projections
+    <li>Alpha: $\alpha = 16$ (scaling factor)
+    <li>Dropout: 0.1 on LoRA layers
+</ul>
+
+<p><strong>Key Insight:</strong> LoRA achieves 99.5\% of full fine-tuning performance with 0.24\% of parameters, making it ideal for resource-constrained scenarios.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: Transfer Learning Analysis</strong>
+
+<p><strong>Sample Efficiency Results:</strong></p>
+
+<table>
+<tr><th><strong>Training Size</strong></th><th><strong>100</strong></th><th><strong>500</strong></th><th><strong>1000</strong></th><th><strong>5000</strong></th><th><strong>All</strong></th></tr>
+<tr><td>Pre-trained BERT</td><td>72.3</td><td>81.7</td><td>85.2</td><td>88.9</td><td>90.1</td></tr>
+<tr><td>From Scratch</td><td>51.2</td><td>63.8</td><td>71.4</td><td>82.3</td><td>87.8</td></tr>
+<tr><td>Improvement</td><td>+21.1</td><td>+17.9</td><td>+13.8</td><td>+6.6</td><td>+2.3</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>Key Observations:</strong></p>
+
+<ol>
+    <li><strong>Largest gains with small data:</strong> +21.1\% at 100 examples
+    <li><strong>Diminishing returns:</strong> Improvement drops as data increases
+    <li><strong>Convergence point:</strong> Around 10k-50k examples
+    <li><strong>Always helpful:</strong> Even with full data, +2.3\% improvement
+</ol>
+
+<p><strong>Sample Efficiency Curve:</strong></p>
+
+<p>The gap between pre-trained and from-scratch narrows as:
+<ul>
+    <li>More task-specific data becomes available
+    <li>Model learns task-specific patterns
+    <li>Pre-training advantage diminishes
+</ul>
+
+<p><strong>When pre-training stops helping significantly:</strong></p>
+
+<ul>
+    <li><strong>Threshold:</strong> Around 10,000-50,000 labeled examples
+    <li><strong>Task complexity:</strong> Complex tasks need more data
+    <li><strong>Domain shift:</strong> Large domain gap reduces benefit
+    <li><strong>Model size:</strong> Larger models need more data to catch up
+</ul>
+
+<p><strong>Practical Recommendations:</strong></p>
+
+<table>
+<tr><th><strong>Data Size</strong></th><th><strong>Strategy</strong></th></tr>
+<tr><td>< 1,000</td><td>Always use pre-training (critical)</td></tr>
+<tr><td>1,000 - 10,000</td><td>Pre-training highly beneficial</td></tr>
+<tr><td>10,000 - 50,000</td><td>Pre-training still helps</td></tr>
+<tr><td>> 50,000</td><td>Pre-training provides marginal gains</td></tr>
+</table>
+
+<p><strong>Key Insight:</strong> Pre-training is most valuable in low-resource settings, providing 10-20\% accuracy improvements with < 1000 examples, but benefits diminish as task-specific data grows.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter19_long_context.html">← Chapter 19: Long Context Handling</a>
+  <a href="../../deeptech.html">📚 Table of Contents</a>
+  <a href="chapter21_pytorch_implementation.html">Chapter 21: PyTorch Implementation →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

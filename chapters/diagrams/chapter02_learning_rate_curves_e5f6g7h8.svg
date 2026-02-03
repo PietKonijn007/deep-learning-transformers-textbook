@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600">
+  <defs>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1000" height="600" fill="#ffffff"/>
+  
+  <!-- Title -->
+  <text x="500" y="35" font-family="Arial, sans-serif" font-size="22" font-weight="bold" text-anchor="middle" fill="#1a1a1a">
+    Learning Rate Impact on Training Dynamics
+  </text>
+  
+  <!-- Chart area -->
+  <rect x="100" y="80" width="800" height="420" fill="#fafafa" stroke="#ddd" stroke-width="1"/>
+  
+  <!-- Grid lines (logarithmic y-axis) -->
+  <g stroke="#e0e0e0" stroke-width="1" opacity="0.5">
+    <!-- Horizontal grid lines -->
+    <line x1="100" y1="500" x2="900" y2="500"/>
+    <line x1="100" y1="430" x2="900" y2="430"/>
+    <line x1="100" y1="360" x2="900" y2="360"/>
+    <line x1="100" y1="290" x2="900" y2="290"/>
+    <line x1="100" y1="220" x2="900" y2="220"/>
+    <line x1="100" y1="150" x2="900" y2="150"/>
+    <line x1="100" y1="80" x2="900" y2="80"/>
+    
+    <!-- Vertical grid lines -->
+    <line x1="100" y1="80" x2="100" y2="500"/>
+    <line x1="260" y1="80" x2="260" y2="500"/>
+    <line x1="420" y1="80" x2="420" y2="500"/>
+    <line x1="580" y1="80" x2="580" y2="500"/>
+    <line x1="740" y1="80" x2="740" y2="500"/>
+    <line x1="900" y1="80" x2="900" y2="500"/>
+  </g>
+  
+  <!-- Axes -->
+  <line x1="100" y1="500" x2="900" y2="500" stroke="#333" stroke-width="2"/>
+  <line x1="100" y1="80" x2="100" y2="500" stroke="#333" stroke-width="2"/>
+  
+  <!-- Y-axis labels (logarithmic) -->
+  <text x="85" y="505" font-family="Arial, sans-serif" font-size="12" text-anchor="end" fill="#333">10⁰</text>
+  <text x="85" y="365" font-family="Arial, sans-serif" font-size="12" text-anchor="end" fill="#333">10⁻¹</text>
+  <text x="85" y="225" font-family="Arial, sans-serif" font-size="12" text-anchor="end" fill="#333">10⁻²</text>
+  <text x="85" y="85" font-family="Arial, sans-serif" font-size="12" text-anchor="end" fill="#333">10⁻³</text>
+  
+  <!-- X-axis labels -->
+  <text x="100" y="525" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">0</text>
+  <text x="260" y="525" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">2K</text>
+  <text x="420" y="525" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">4K</text>
+  <text x="580" y="525" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">6K</text>
+  <text x="740" y="525" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">8K</text>
+  <text x="900" y="525" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">10K</text>
+  
+  <!-- Axis titles -->
+  <text x="500" y="560" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#333">
+    Training Steps
+  </text>
+  <text x="40" y="290" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#333" transform="rotate(-90, 40, 290)">
+    Training Loss
+  </text>
+  
+  <!-- Curve 1: α = 0.00001 (too small) - Blue, slow descent -->
+  <path d="M 100,500 Q 200,480 300,460 Q 400,440 500,420 Q 600,400 700,385 Q 800,375 900,370" 
+        stroke="#2196f3" stroke-width="3" fill="none"/>
+  
+  <!-- Curve 2: α = 0.0001 (optimal) - Green, fast convergence -->
+  <path d="M 100,500 Q 150,420 200,360 Q 250,310 300,280 Q 400,250 500,240 Q 700,235 900,235" 
+        stroke="#4caf50" stroke-width="3" fill="none"/>
+  
+  <!-- Curve 3: α = 0.001 (too large) - Red, oscillating -->
+  <path d="M 100,500 Q 150,380 200,420 Q 250,340 300,400 Q 350,320 400,380 Q 450,300 500,360 Q 550,290 600,340 Q 650,280 700,320 Q 750,270 800,310 Q 850,260 900,300" 
+        stroke="#f44336" stroke-width="3" fill="none" stroke-dasharray="none"/>
+  
+  <!-- Annotations on curves -->
+  <text x="920" y="375" font-family="Arial, sans-serif" font-size="13" fill="#2196f3" font-weight="bold">
+    Too slow
+  </text>
+  <text x="920" y="240" font-family="Arial, sans-serif" font-size="13" fill="#4caf50" font-weight="bold">
+    Optimal
+  </text>
+  <text x="920" y="305" font-family="Arial, sans-serif" font-size="13" fill="#f44336" font-weight="bold">
+    Unstable
+  </text>
+  
+  <!-- Legend with actual values -->
+  <g transform="translate(680, 100)">
+    <rect x="0" y="0" width="200" height="130" fill="white" stroke="#ccc" stroke-width="1" rx="5"/>
+    <text x="100" y="25" font-family="Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#333">
+      Learning Rate (α)
+    </text>
+    
+    <line x1="15" y1="50" x2="55" y2="50" stroke="#2196f3" stroke-width="3"/>
+    <text x="65" y="55" font-family="Arial, sans-serif" font-size="12" fill="#333">
+      0.00001 (10⁻⁵)
+    </text>
+    
+    <line x1="15" y1="80" x2="55" y2="80" stroke="#4caf50" stroke-width="3"/>
+    <text x="65" y="85" font-family="Arial, sans-serif" font-size="12" fill="#333">
+      0.0001 (10⁻⁴)
+    </text>
+    
+    <line x1="15" y1="110" x2="55" y2="110" stroke="#f44336" stroke-width="3"/>
+    <text x="65" y="115" font-family="Arial, sans-serif" font-size="12" fill="#333">
+      0.001 (10⁻³)
+    </text>
+  </g>
+  
+  <!-- Bottom note -->
+  <text x="500" y="590" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666" font-style="italic">
+    Optimal learning rate balances convergence speed with stability
+  </text>
+</svg>

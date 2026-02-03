@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <defs>
+    <style>
+      .title { font: bold 20px sans-serif; fill: #2d3748; }
+      .subtitle { font: bold 16px sans-serif; fill: #2d3748; }
+      .label { font: 14px sans-serif; fill: #2d3748; }
+      .annotation { font: 12px sans-serif; fill: #718096; }
+      .metric { font: bold 13px sans-serif; }
+      .code { font: 12px monospace; fill: #2d3748; }
+      .stage-box { fill: white; stroke: #4a5568; stroke-width: 2; }
+      .stage1 { fill: #667eea; }
+      .stage2 { fill: #48bb78; }
+      .stage3 { fill: #f093fb; }
+      .human-box { fill: #fef5e7; stroke: #f39c12; stroke-width: 2; }
+      .data-box { fill: #e6fffa; stroke: #38a169; stroke-width: 2; }
+      .arrow { stroke: #4a5568; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+      .arrow-feedback { stroke: #e53e3e; stroke-width: 2; fill: none; marker-end: url(#arrowhead-red); stroke-dasharray: 5,5; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4a5568" />
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#e53e3e" />
+    </marker>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.7" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#48bb78;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#48bb78;stop-opacity:0.7" />
+    </linearGradient>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:0.7" />
+    </linearGradient>
+  </defs>
+  
+  <text x="600" y="30" class="title" text-anchor="middle">RLHF Process: Three-Stage Pipeline</text>
+  <text x="600" y="55" class="annotation" text-anchor="middle">Reinforcement Learning from Human Feedback for Model Alignment</text>
+  
+  <!-- Stage 1: Supervised Fine-Tuning -->
+  <g transform="translate(50, 90)">
+    <!-- Stage header -->
+    <rect x="0" y="0" width="320" height="50" fill="url(#grad1)" rx="8"/>
+    <text x="160" y="25" class="subtitle" text-anchor="middle" fill="white">Stage 1: Supervised Fine-Tuning</text>
+    <text x="160" y="42" class="annotation" text-anchor="middle" fill="white">Establish baseline behavior</text>
+    
+    <!-- Input -->
+    <g transform="translate(0, 70)">
+      <rect x="0" y="0" width="150" height="80" class="data-box" rx="5"/>
+      <text x="75" y="20" class="label" text-anchor="middle">Input Data</text>
+      <text x="10" y="40" class="annotation">• Pre-trained model</text>
+      <text x="10" y="58" class="annotation">• 10K-50K demos</text>
+      <text x="10" y="76" class="annotation">• High-quality pairs</text>
+    </g>
+    
+    <path d="M 150 110 L 170 110" class="arrow"/>
+    
+    <!-- Process -->
+    <g transform="translate(170, 70)">
+      <rect x="0" y="0" width="150" height="80" class="stage-box" rx="5"/>
+      <text x="75" y="25" class="label" text-anchor="middle">Fine-Tune</text>
+      <text x="75" y="45" class="annotation" text-anchor="middle">Standard supervised</text>
+      <text x="75" y="62" class="annotation" text-anchor="middle">learning on</text>
+      <text x="75" y="79" class="annotation" text-anchor="middle">demonstrations</text>
+    </g>
+    
+    <!-- Output -->
+    <g transform="translate(85, 170)">
+      <rect x="0" y="0" width="150" height="60" fill="#e6f7ff" stroke="#1890ff" stroke-width="2" rx="5"/>
+      <text x="75" y="25" class="label" text-anchor="middle">SFT Model</text>
+      <text x="75" y="45" class="annotation" text-anchor="middle">Baseline aligned model</text>
+    </g>
+    
+    <!-- Metrics -->
+    <g transform="translate(0, 250)">
+      <rect x="0" y="0" width="320" height="100" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+      <text x="160" y="20" class="label" text-anchor="middle">Stage 1 Metrics</text>
+      
+      <text x="15" y="45" class="annotation">Cost:</text>
+      <text x="305" y="45" class="metric" text-anchor="end" fill="#667eea">$5K-50K</text>
+      
+      <text x="15" y="68" class="annotation">Time:</text>
+      <text x="305" y="68" class="metric" text-anchor="end" fill="#667eea">1-2 weeks</text>
+      
+      <text x="15" y="91" class="annotation">Data:</text>
+      <text x="305" y="91" class="metric" text-anchor="end" fill="#667eea">10K-50K pairs</text>
+    </g>
+  </g>
+  
+  <!-- Arrow to Stage 2 -->
+  <path d="M 210 440 L 210 470 L 440 470 L 440 200" class="arrow"/>
+  
+  <!-- Stage 2: Reward Model Training -->
+  <g transform="translate(440, 90)">
+    <!-- Stage header -->
+    <rect x="0" y="0" width="320" height="50" fill="url(#grad2)" rx="8"/>
+    <text x="160" y="25" class="subtitle" text-anchor="middle" fill="white">Stage 2: Reward Model</text>
+    <text x="160" y="42" class="annotation" text-anchor="middle" fill="white">Learn human preferences</text>
+    
+    <!-- Human feedback loop -->
+    <g transform="translate(0, 70)">
+      <rect x="0" y="0" width="150" height="100" class="human-box" rx="5"/>
+      <text x="75" y="20" class="label" text-anchor="middle">Human Labelers</text>
+      <text x="10" y="40" class="annotation">1. Generate outputs</text>
+      <text x="10" y="58" class="annotation">2. Humans rank them</text>
+      <text x="10" y="76" class="annotation">3. Collect preferences</text>
+      <text x="10" y="94" class="annotation">50K-500K comparisons</text>
+    </g>
+    
+    <path d="M 150 120 L 170 120" class="arrow"/>
+    
+    <!-- Process -->
+    <g transform="translate(170, 70)">
+      <rect x="0" y="0" width="150" height="100" class="stage-box" rx="5"/>
+      <text x="75" y="25" class="label" text-anchor="middle">Train Reward</text>
+      <text x="75" y="42" class="label" text-anchor="middle">Model</text>
+      <text x="75" y="65" class="annotation" text-anchor="middle">Learn to predict</text>
+      <text x="75" y="82" class="annotation" text-anchor="middle">human preferences</text>
+    </g>
+    
+    <!-- Output -->
+    <g transform="translate(85, 190)">
+      <rect x="0" y="0" width="150" height="60" fill="#e6f7ff" stroke="#1890ff" stroke-width="2" rx="5"/>
+      <text x="75" y="25" class="label" text-anchor="middle">Reward Model</text>
+      <text x="75" y="45" class="annotation" text-anchor="middle">Scores model outputs</text>
+    </g>
+    
+    <!-- Metrics -->
+    <g transform="translate(0, 270)">
+      <rect x="0" y="0" width="320" height="80" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+      <text x="160" y="20" class="label" text-anchor="middle">Stage 2 Metrics</text>
+      
+      <text x="15" y="45" class="annotation">Cost:</text>
+      <text x="305" y="45" class="metric" text-anchor="end" fill="#48bb78">$10K-500K</text>
+      
+      <text x="15" y="68" class="annotation">Time:</text>
+      <text x="305" y="68" class="metric" text-anchor="end" fill="#48bb78">2-4 weeks</text>
+    </g>
+  </g>
+  
+  <!-- Arrow to Stage 3 -->
+  <path d="M 600 440 L 600 470 L 830 470 L 830 200" class="arrow"/>
+  
+  <!-- Stage 3: RL Optimization -->
+  <g transform="translate(830, 90)">
+    <!-- Stage header -->
+    <rect x="0" y="0" width="320" height="50" fill="url(#grad3)" rx="8"/>
+    <text x="160" y="25" class="subtitle" text-anchor="middle" fill="white">Stage 3: RL Optimization</text>
+    <text x="160" y="42" class="annotation" text-anchor="middle" fill="white">Optimize using reward model</text>
+    
+    <!-- Process -->
+    <g transform="translate(0, 70)">
+      <rect x="0" y="0" width="150" height="100" class="stage-box" rx="5"/>
+      <text x="75" y="25" class="label" text-anchor="middle">PPO Training</text>
+      <text x="10" y="48" class="annotation">1. Generate response</text>
+      <text x="10" y="66" class="annotation">2. Score with RM</text>
+      <text x="10" y="84" class="annotation">3. Update policy</text>
+      <text x="10" y="102" class="annotation">4. Repeat 1000s×</text>
+    </g>
+    
+    <path d="M 150 120 L 170 120" class="arrow"/>
+    
+    <!-- Output -->
+    <g transform="translate(170, 70)">
+      <rect x="0" y="0" width="150" height="100" fill="#e6f7ff" stroke="#1890ff" stroke-width="2" rx="5"/>
+      <text x="75" y="30" class="label" text-anchor="middle">Aligned Model</text>
+      <text x="10" y="55" class="annotation">✓ Helpful</text>
+      <text x="10" y="73" class="annotation">✓ Harmless</text>
+      <text x="10" y="91" class="annotation">✓ Honest</text>
+    </g>
+    
+    <!-- Metrics -->
+    <g transform="translate(0, 190)">
+      <rect x="0" y="0" width="320" height="160" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+      <text x="160" y="20" class="label" text-anchor="middle">Stage 3 Metrics</text>
+      
+      <text x="15" y="45" class="annotation">Cost:</text>
+      <text x="305" y="45" class="metric" text-anchor="end" fill="#f093fb">$50K-500K</text>
+      
+      <text x="15" y="68" class="annotation">Time:</text>
+      <text x="305" y="68" class="metric" text-anchor="end" fill="#f093fb">2-6 weeks</text>
+      
+      <text x="15" y="91" class="annotation">Compute:</text>
+      <text x="305" y="91" class="metric" text-anchor="end" fill="#f093fb">2-5× SFT</text>
+      
+      <text x="15" y="114" class="annotation">Improvement:</text>
+      <text x="305" y="114" class="metric" text-anchor="end" fill="#48bb78">+20-40%</text>
+      
+      <text x="15" y="137" class="annotation">Quality:</text>
+      <text x="305" y="137" class="metric" text-anchor="end" fill="#48bb78">Production</text>
+    </g>
+  </g>
+  
+  <!-- Feedback loop -->
+  <path d="M 990 380 Q 990 520, 600 520 Q 210 520, 210 380" class="arrow-feedback"/>
+  <text x="600" y="545" class="annotation" text-anchor="middle" fill="#e53e3e">Iterative refinement: Monitor quality, collect more feedback, retrain</text>
+  
+  <!-- Bottom summary -->
+  <g transform="translate(50, 580)">
+    <rect x="0" y="0" width="1100" height="100" fill="#f7fafc" stroke="#cbd5e0" stroke-width="2" rx="8"/>
+    
+    <text x="550" y="25" class="subtitle" text-anchor="middle">Total RLHF Investment</text>
+    
+    <g transform="translate(50, 40)">
+      <text x="0" y="15" class="label">Total Cost:</text>
+      <text x="150" y="15" class="metric" fill="#e53e3e">$65K - $1M+</text>
+      <text x="300" y="15" class="annotation">(mostly human feedback)</text>
+      
+      <text x="550" y="15" class="label">Total Time:</text>
+      <text x="680" y="15" class="metric" fill="#e53e3e">5-12 weeks</text>
+      <text x="800" y="15" class="annotation">(can parallelize)</text>
+    </g>
+    
+    <g transform="translate(50, 60)">
+      <text x="0" y="15" class="label">Best For:</text>
+      <text x="100" y="15" class="annotation">Conversational AI • Safety-critical apps • Subjective quality optimization</text>
+    </g>
+    
+    <text x="550" y="95" class="annotation" text-anchor="middle" font-style="italic">
+      Key Insight: RLHF is expensive but essential for production conversational AI
+    </text>
+  </g>
+</svg>

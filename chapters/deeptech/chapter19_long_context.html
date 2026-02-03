@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 19: Long Context Handling - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../../styles.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../../deeptech.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+        <a href="chapter24_domain_specific_models.html">Ch 24</a>
+        <a href="chapter25_enterprise_nlp.html">Ch 25</a>
+        <a href="chapter26_code_language.html">Ch 26</a>
+        <a href="chapter27_video_visual.html">Ch 27</a>
+        <a href="chapter28_knowledge_graphs.html">Ch 28</a>
+        <a href="chapter29_recommendations.html">Ch 29</a>
+        <a href="chapter30_healthcare.html">Ch 30</a>
+        <a href="chapter31_finance.html">Ch 31</a>
+        <a href="chapter32_legal.html">Ch 32</a>
+        <a href="chapter33_observability.html">Ch 33</a>
+        <a href="chapter34_dsl_agents.html">Ch 34</a>
+    </nav>
+
+    <main>
+        <h1>Long Context Transformers</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Extending transformer context length beyond standard limits (512-2048 tokens) enables processing long documents, books, and extended conversations. This chapter covers techniques for scaling to 32K, 100K, and even 1M+ token contexts.</p>
+
+<h3>Learning Objectives</h3>
+
+<ol>
+    <li>Understand context length limitations and bottlenecks
+    <li>Implement position interpolation and extrapolation
+    <li>Apply memory-augmented transformers
+    <li>Use retrieval-augmented generation (RAG)
+    <li>Implement recurrent transformers (Transformer-XL)
+    <li>Compare long-context methods and trade-offs
+</ol>
+
+<h2>Context Length Limitations</h2>
+
+<h3>The Quadratic Memory Bottleneck</h3>
+
+<p>Standard transformer architectures face fundamental limitations when processing long sequences due to the quadratic scaling of self-attention with respect to sequence length. The self-attention mechanism computes pairwise interactions between all tokens in a sequence, requiring the materialization of an attention matrix of size $n \times n$ where $n$ is the sequence length. This quadratic scaling manifests in three critical bottlenecks: computational complexity, memory consumption, and position encoding limitations. Understanding these bottlenecks quantitatively is essential for appreciating why long context processing requires specialized techniques and architectural modifications.</p>
+
+<p>The computational complexity of self-attention is $O(n^2 d)$ where $d$ is the model dimension. For each of the $n$ queries, the model computes attention scores with all $n$ keys through dot products of dimension $d$, requiring $n^2 d$ multiply-accumulate operations. The subsequent softmax normalization adds $O(n^2)$ operations, and the weighted sum over values requires another $n^2 d$ operations. While the feed-forward network has complexity $O(n d^2)$, for long sequences where $n > d$, the attention computation dominates. For example, with $n = 16384$ tokens and $d = 768$, attention requires approximately 206 billion FLOPs per layer while the feed-forward network requires only 19 billion FLOPs, making attention the primary computational bottleneck.</p>
+
+<p>The memory bottleneck is even more severe than the computational one. During the forward pass, the attention matrix must be fully materialized in memory before applying softmax, requiring $n^2$ memory locations per attention head. During the backward pass for training, these attention matrices must be stored for gradient computation, effectively doubling the memory requirement. For multi-head attention with $h$ heads, the total memory for attention matrices is $h \times n^2$ floating-point values per layer. In FP32 format, each value requires 4 bytes, while FP16 requires 2 bytes. This memory grows quadratically with sequence length, quickly exceeding available GPU memory for long sequences.</p>
+
+<div class="example"><strong>Example:</strong> 
+Consider a GPT-2 scale model with $d = 768$, $h = 12$ attention heads, and $L = 12$ layers. The memory required for attention matrices scales dramatically with sequence length. For a single attention head processing a sequence of length $n$, the attention matrix requires $n^2 \times 4$ bytes in FP32 format. With 12 heads per layer, this becomes $12 \times n^2 \times 4 = 48n^2$ bytes per layer.
+
+<p>At $n = 1024$ tokens (GPT-2's standard context), each layer requires $48 \times 1024^2 = 50.3$ MB for attention matrices. Across 12 layers, this totals 604 MB, which is manageable on modern GPUs. However, doubling the sequence length to $n = 2048$ quadruples the memory requirement to 201 MB per layer or 2.4 GB total—a 4× increase for only a 2× increase in sequence length. This quadratic scaling continues: at $n = 4096$, attention matrices consume 805 MB per layer or 9.7 GB total, nearly filling a 16 GB GPU. At $n = 8192$, the requirement explodes to 3.2 GB per layer or 38.5 GB total, exceeding even high-end GPUs like the NVIDIA A100 with 40 GB memory.</p>
+
+<p>For larger models, the situation becomes even more challenging. Consider a GPT-3 scale model with $d = 12288$, $h = 96$ heads, and $L = 96$ layers. At $n = 2048$ tokens, each layer requires $96 \times 2048^2 \times 4 = 1.6$ GB for attention matrices, totaling 154 GB across all layers. At $n = 8192$ tokens, each layer requires 25.8 GB, totaling 2.5 TB across the model—far exceeding any single GPU's capacity and requiring extensive model parallelism even for moderate context lengths. At $n = 32768$ tokens, a single layer would require 412 GB just for attention matrices, making standard attention completely impractical without fundamental algorithmic changes.</p>
+
+<p>These calculations assume only the forward pass attention matrices. During training, gradients with respect to attention matrices must also be stored, effectively doubling the memory requirement. Additionally, activations from other layers, model parameters, optimizer states, and batch processing multiply these requirements further. For a batch size of 8 with $n = 4096$ tokens on GPT-2, attention matrices alone would require $9.7 \times 8 = 77.6$ GB, making training impossible on standard hardware without techniques like gradient checkpointing, which trades computation for memory by recomputing activations during the backward pass.
+</div>
+
+<p>The third fundamental limitation involves position encodings. Standard transformers use position encodings trained on sequences of a fixed maximum length, typically 512 to 2048 tokens. When these models encounter sequences longer than their training length, the position encodings must extrapolate to unseen positions. Absolute position embeddings, which assign a learned vector to each position index, cannot extrapolate at all—positions beyond the training length have no corresponding embedding. Even sinusoidal position encodings, which use deterministic trigonometric functions, exhibit degraded performance when extrapolating beyond training lengths due to the model's learned attention patterns being calibrated to the training distribution of position encodings.</p>
+
+<p>This extrapolation failure manifests as rapidly degrading perplexity for tokens beyond the training context length. A model trained on 2048-token sequences might achieve perplexity of 15 on positions 0-2048, but perplexity can increase to 25 or higher for positions 2048-4096 without specialized position encoding schemes. This degradation occurs because the model's attention patterns have learned to interpret specific position encoding values as corresponding to specific relative distances, and these learned patterns break down when position encodings take on values outside the training distribution.</p>
+
+<h2>Position Encoding for Long Context</h2>
+
+<h3>The Extrapolation Challenge</h3>
+
+<p>Position encodings enable transformers to incorporate sequential order information into their otherwise permutation-invariant architecture. However, different position encoding schemes exhibit dramatically different behaviors when processing sequences longer than those seen during training. This extrapolation capability is critical for long context applications, where retraining on maximum-length sequences is often computationally prohibitive. The choice of position encoding scheme can determine whether a model trained on 2048-token sequences can successfully process 8192-token sequences with minimal fine-tuning, or whether it requires extensive retraining from scratch.</p>
+
+<p>Absolute position embeddings assign a learned vector to each position index, with the position encoding for position $i$ being a trainable parameter $\vp_i \in \R^d$. These embeddings are added to token embeddings before the first transformer layer. While simple and effective within the training length, absolute embeddings cannot extrapolate beyond the maximum training position. A model trained with positions 0 through 2047 has no learned embedding for position 2048 or beyond. Attempting to extend such a model requires either initializing new position embeddings (which perform poorly without extensive fine-tuning) or using position interpolation techniques to map longer sequences into the trained position range.</p>
+
+<p>Sinusoidal position encodings, introduced in the original Transformer paper, use deterministic trigonometric functions rather than learned parameters. For position $i$ and dimension $j$, the encoding is defined as:
+<div class="equation">
+$$
+\text{PE}(i, 2j) = \sin(i / 10000^{2j/d}), \quad \text{PE}(i, 2j+1) = \cos(i / 10000^{2j/d})
+$$
+</div>
+These encodings can be computed for any position without training, enabling extrapolation in principle. However, in practice, models trained with sinusoidal encodings still exhibit degraded performance on longer sequences because the attention patterns learned during training are calibrated to the distribution of position encodings seen during training. When positions extend beyond the training range, the attention patterns encounter position encoding values in unfamiliar ranges, leading to suboptimal attention distributions.</p>
+
+<h3>Position Interpolation</h3>
+
+<p>Position interpolation addresses the extrapolation problem by mapping longer sequences into the position range seen during training, rather than extending beyond it. Instead of asking the model to extrapolate to unseen position indices, interpolation compresses the position indices of a long sequence into the trained range, effectively treating the long sequence as a "compressed" version of a training-length sequence.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+To extend a model trained on maximum length $L$ to process sequences of length $L' > L$, position interpolation maps each position $i \in \{0, 1, \ldots, L'-1\}$ to a fractional position in the training range:
+<div class="equation">
+$$
+i_{\text{interpolated}} = i \cdot \frac{L}{L'}
+$$
+</div>
+
+<p>For absolute position embeddings, the new position encoding is computed by interpolating between the learned embeddings:
+<div class="equation">
+$$
+\text{PE}_{\text{new}}(i) = \text{interpolate}(\text{PE}_{\text{original}}, i \cdot L/L')
+$$
+</div>
+
+<p>For sinusoidal or rotary encodings, the interpolated position is used directly in the encoding formula, effectively reducing the frequency of the trigonometric functions.
+</div>
+
+<p>The key insight behind position interpolation is that it keeps position encodings within the distribution seen during training, avoiding the extrapolation problem entirely. For example, extending from $L = 2048$ to $L' = 8192$ maps position 8191 to interpolated position $8191 \times 2048/8192 = 2047.75$, which falls within the training range. The model's attention patterns, having been trained on positions 0 through 2047, can handle this interpolated position much more effectively than they could handle the raw position 8191.</p>
+
+<p>Position interpolation has been successfully applied to extend LLaMA models from 2048 to 8192 tokens and beyond. The technique requires minimal fine-tuning—typically only 1000 to 10000 training steps on long sequences—compared to training from scratch. After fine-tuning with position interpolation, LLaMA 2 models maintain perplexity within 5-10\% of their original performance when extended from 4096 to 32768 tokens, whereas naive extrapolation without interpolation results in perplexity degradation of 50\% or more.</p>
+
+<p>The computational cost of position interpolation is negligible, as it only affects the position encoding computation, not the attention mechanism itself. The primary cost is the fine-tuning required to adapt the model to the compressed position space. However, this fine-tuning is far less expensive than training from scratch: extending a 7B parameter model from 4K to 32K context requires approximately 100 GPU-hours of fine-tuning compared to 100,000+ GPU-hours for full pretraining.</p>
+
+<h3>Rotary Position Embedding (RoPE)</h3>
+
+<p>Rotary Position Embedding represents a fundamental advance in position encoding design, achieving excellent extrapolation properties by encoding relative position information directly into the attention computation through rotation operations. RoPE has become the position encoding of choice for modern large language models including GPT-NeoX, LLaMA, PaLM, and many others due to its combination of strong extrapolation, computational efficiency, and theoretical elegance.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+RoPE applies position-dependent rotations to query and key vectors before computing attention. For a query vector $\vq_m$ at position $m$ and key vector $\vk_n$ at position $n$, RoPE applies rotation matrices:
+<div class="equation">
+$$\begin{align}
+\vq_m' &= \mR_m \vq_m \\
+\vk_n' &= \mR_n \vk_n
+\end{align}$$
+</div>
+
+<p>where $\mR_m \in \R^{d \times d}$ is a block-diagonal rotation matrix. For dimension pairs $(2j, 2j+1)$, the rotation is:
+<div class="equation">
+$$
+\mR_m^{(j)} = \begin{bmatrix}
+\cos(m\theta_j) & -\sin(m\theta_j) \\
+\sin(m\theta_j) & \cos(m\theta_j)
+\end{bmatrix}, \quad \theta_j = 10000^{-2j/d}
+$$
+</div>
+
+<p>The full rotation matrix is block-diagonal with $d/2$ such 2D rotation blocks.
+</div>
+
+<p>The crucial property of RoPE is that the attention score between positions $m$ and $n$ depends only on their relative distance $m - n$, not their absolute positions. This can be verified through the rotation addition formula:
+<div class="equation">
+$$
+(\vq_m')\transpose \vk_n' = (\mR_m \vq_m)\transpose (\mR_n \vk_n) = \vq_m\transpose \mR_m\transpose \mR_n \vk_n = \vq_m\transpose \mR_{n-m} \vk_n
+$$
+</div>
+
+<p>This relative position property means that the model learns attention patterns based on relative distances between tokens rather than absolute positions. When extrapolating to longer sequences, the model encounters the same relative distances it saw during training, just in different combinations. A model trained on sequences up to 2048 tokens has seen all relative distances from -2047 to +2047. When processing a 4096-token sequence, it encounters the same relative distances, enabling much better extrapolation than absolute position encodings.</p>
+
+<p>RoPE's extrapolation capability can be further enhanced through position interpolation. By scaling the rotation frequencies $\theta_j$ by a factor $L'/L$ when extending from length $L$ to $L'$, the effective relative distances are compressed into the training range. This combination of RoPE's inherent relative position encoding with position interpolation enables extensions from 2048 to 32768 tokens or beyond with minimal quality degradation.</p>
+
+<p>The computational overhead of RoPE is minimal compared to the attention computation itself. Applying rotations to queries and keys requires $O(nd)$ operations, which is negligible compared to the $O(n^2d)$ cost of attention. The rotation operations can be efficiently implemented using vectorized operations on modern GPUs, adding less than 5\% to the total attention computation time. Memory overhead is also minimal, as the rotation matrices are block-diagonal and can be computed on-the-fly rather than stored.</p>
+
+<p>In practice, RoPE has enabled dramatic context length extensions. LLaMA models using RoPE have been successfully extended from 2048 to 32768 tokens through position interpolation with only 1000 fine-tuning steps. The perplexity degradation is typically less than 10\% even at 16× the training length, compared to 50-100\% degradation for absolute position embeddings. This extrapolation capability has made RoPE the de facto standard for new large language models designed for long context applications.</p>
+
+<h3>ALiBi: Attention with Linear Biases</h3>
+
+<p>ALiBi (Attention with Linear Biases) takes a radically different approach to position encoding by eliminating position embeddings entirely and instead adding position-dependent biases directly to attention scores. This simple modification achieves remarkable extrapolation properties, enabling models trained on 1024-token sequences to process 10,000+ token sequences at inference time with no fine-tuning whatsoever.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+ALiBi adds a bias term to attention scores based on the distance between query and key positions:
+<div class="equation">
+$$
+\text{score}(q_i, k_j) = \frac{\vq_i\transpose \vk_j}{\sqrt{d_k}} - m \cdot |i - j|
+$$
+</div>
+
+<p>where $m > 0$ is a head-specific slope parameter that differs across attention heads. The bias $-m \cdot |i - j|$ penalizes attention to distant tokens, with the penalty increasing linearly with distance.
+</div>
+
+<p>The head-specific slopes are set geometrically: for $h$ attention heads, the slopes are $m_1, m_2, \ldots, m_h$ where $m_i = 2^{-8i/h}$. For example, with 8 heads, the slopes are $2^{-1}, 2^{-2}, \ldots, 2^{-8}$, giving values from 0.5 to 0.0039. This geometric spacing ensures that different heads have different receptive field sizes: heads with large slopes focus on nearby tokens, while heads with small slopes can attend to distant tokens with less penalty.</p>
+
+<p>ALiBi's extrapolation capability stems from its use of relative distances rather than absolute positions, combined with the linear form of the bias. During training on sequences up to length $L$, the model encounters biases ranging from 0 (attending to the same position) to $-m \cdot L$ (attending to the most distant position). When extrapolating to length $L' > L$, the model encounters biases up to $-m \cdot L'$, which are simply larger values along the same linear scale. The attention patterns learned during training—which balance content-based attention (from $\vq_i\transpose \vk_j$) against distance-based penalties (from $-m \cdot |i-j|$)—continue to work effectively at these larger distances.</p>
+
+<p>Empirical results demonstrate ALiBi's exceptional extrapolation. Models trained on 1024-token sequences with ALiBi can process 2048-token sequences with less than 5\% perplexity increase, 4096-token sequences with 10-15\% increase, and even 10,000-token sequences with 20-30\% increase—all without any fine-tuning. In contrast, the same models with sinusoidal position encodings show 50\% perplexity increase at 2048 tokens and become essentially non-functional beyond 4096 tokens. This zero-shot extrapolation capability makes ALiBi particularly attractive for applications where the maximum sequence length is unknown at training time or varies widely across use cases.</p>
+
+<p>ALiBi has been adopted by several prominent models including BLOOM (176B parameters) and MPT (7B-30B parameters). BLOOM was trained with ALiBi on sequences up to 2048 tokens but can effectively process sequences of 4096 tokens or longer at inference time. MPT models trained with ALiBi on 2048-token sequences have been successfully deployed on tasks requiring 8192-token contexts with minimal quality degradation.</p>
+
+<p>The computational overhead of ALiBi is negligible. Computing the bias $-m \cdot |i-j|$ for all $n^2$ attention scores requires $O(n^2)$ operations, which is dominated by the $O(n^2d)$ cost of computing $\mQ\mK\transpose$. The bias can be precomputed once per sequence and reused across all layers and heads (with different slopes $m$), further reducing overhead. Memory overhead is also minimal, as the bias matrix can be computed on-the-fly or stored once and reused.</p>
+
+<p>The primary limitation of ALiBi is that it assumes a monotonic relationship between distance and relevance—more distant tokens are always penalized more heavily. This assumption holds well for many natural language tasks where local context is indeed more important than distant context. However, for tasks with long-range dependencies that are not distance-dependent (such as matching opening and closing brackets in code, or resolving coreferences across document sections), ALiBi's linear bias may be suboptimal compared to learned position encodings that can capture more complex position-dependent patterns.</p>
+
+<h2>Efficient Attention for Long Context</h2>
+
+<h3>Sparse Attention Patterns</h3>
+
+<p>While position encoding improvements enable better extrapolation, they do not address the fundamental quadratic scaling of attention computation and memory. Efficient attention mechanisms reduce this quadratic bottleneck by restricting which tokens can attend to which other tokens, computing attention only over a subset of the $n^2$ possible connections. These sparse attention patterns can reduce complexity from $O(n^2)$ to $O(n \times w)$ where $w$ is a fixed window size, enabling processing of sequences that would be impossible with full attention.</p>
+
+<p>The key insight behind sparse attention is that not all token pairs require attention computation. In many domains, particularly natural language, most relevant information comes from nearby tokens, with occasional long-range dependencies. By carefully designing sparsity patterns that preserve important connections while eliminating redundant ones, sparse attention can maintain model quality while dramatically reducing computational and memory requirements.</p>
+
+<h3>Longformer: Local and Global Attention</h3>
+
+<p>Longformer combines local windowed attention for all tokens with global attention for task-specific tokens, enabling efficient processing of documents up to 4096 tokens or longer. This hybrid approach recognizes that while most tokens primarily need local context, certain special tokens (such as [CLS] for classification or question tokens for QA) benefit from attending to the entire sequence.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+Longformer defines attention patterns based on token type:
+
+<p><strong>Local attention:</strong> Each token attends to tokens within a fixed window of size $w$ on each side:
+<div class="equation">
+$$
+\mathcal{S}_{\text{local}}(i) = \{j : |i - j| \leq w\}
+$$
+</div>
+
+<p><strong>Global attention:</strong> Designated global tokens attend to all positions and are attended by all positions:
+<div class="equation">
+$$
+\mathcal{S}_{\text{global}}(i) = \{1, 2, \ldots, n\} \text{ for global tokens}
+$$
+</div>
+
+<p>For regular tokens, the attention set is $\mathcal{S}(i) = \mathcal{S}_{\text{local}}(i) \cup \mathcal{G}$ where $\mathcal{G}$ is the set of global token positions.
+</div>
+
+<p>The computational complexity of Longformer is $O(n \times w)$ for local attention plus $O(n \times g)$ for global attention, where $g$ is the number of global tokens. For typical configurations with $w = 512$ and $g = 2$, this gives total complexity $O(n \times 514)$ compared to $O(n^2)$ for full attention. At $n = 4096$, this represents a reduction from 16.8 million connections to 2.1 million connections—an 8× reduction.</p>
+
+<p>Memory requirements scale similarly. For a single attention head with $d = 768$ in FP32, Longformer with $w = 512$ and $g = 2$ requires approximately $(4094 \times 1026 + 2 \times 4096) \times 4 = 16.8$ MB per head compared to 67 MB for full attention. With 12 heads and 12 layers, total attention memory decreases from 9.6 GB to 2.4 GB, enabling processing of long documents on GPUs with limited memory.</p>
+
+<p>The window size $w$ determines the trade-off between efficiency and model capacity. Smaller windows reduce computation and memory but limit the model's ability to capture long-range dependencies. Information can propagate at most $w$ positions per layer, requiring $\lceil n/w \rceil$ layers for full sequence communication. With $w = 512$ and $n = 4096$, information requires at least 8 layers to propagate across the full sequence. In practice, Longformer uses 12 layers, providing sufficient depth for information flow while maintaining efficiency.</p>
+
+<p>Longformer has been successfully applied to long-document tasks including question answering, document classification, and summarization. On the WikiHop dataset with documents averaging 3000 tokens, Longformer achieves 74.3\% accuracy compared to 68.5\% for BERT with truncated 512-token contexts, demonstrating that access to full document context improves performance. On the arXiv summarization task with papers averaging 4500 tokens, Longformer generates summaries with ROUGE scores 3-5 points higher than models limited to shorter contexts.</p>
+
+<h3>BigBird: Random, Window, and Global Attention</h3>
+
+<p>BigBird extends sparse attention by adding random connections to Longformer's local and global patterns. These random connections create shortcuts across the sequence that enable faster information propagation and provide theoretical guarantees about the model's expressive power. BigBird proves that sparse attention with $O(n)$ connections can approximate full attention's ability to compute arbitrary sequence-to-sequence functions.</p>
+
+<div class="definition"><strong>Definition:</strong> 
+BigBird combines three attention patterns for each query position $i$:
+<ol>
+    <li><strong>Window attention:</strong> Attend to $w$ neighbors on each side: $\mathcal{W}(i) = \{j : |i-j| \leq w\}$
+    <li><strong>Random attention:</strong> Attend to $r$ randomly selected positions: $\mathcal{R}(i)$ with $|\mathcal{R}(i)| = r$
+    <li><strong>Global attention:</strong> Attend to $g$ designated global tokens: $\mathcal{G}$
+</ol>
+
+<p>The total attention set is $\mathcal{S}(i) = \mathcal{W}(i) \cup \mathcal{R}(i) \cup \mathcal{G}$, giving $|\mathcal{S}(i)| = 2w + r + g$ connections per query.
+</div>
+
+<p>The random attention component is crucial for BigBird's theoretical properties. While local windows provide nearby context and global tokens enable information aggregation, random connections create a small-world network structure where any two positions are connected by a short path through the attention graph. With $r = O(\log n)$ random connections per query, the expected path length between any two positions is $O(\log n)$, enabling efficient information propagation across the sequence.</p>
+
+<p>BigBird's theoretical contribution is proving that this sparse pattern with $O(n \log n)$ total connections can approximate any function that full attention with $O(n^2)$ connections can compute. Specifically, BigBird shows that sparse attention with random connections is a universal approximator for sequence-to-sequence functions, providing a rigorous foundation for sparse attention methods. This result demonstrates that the quadratic number of connections in full attention is not necessary for expressive power—carefully chosen linear or near-linear connections suffice.</p>
+
+<p>In practice, BigBird uses $w = 256$, $r = 64$, and $g = 32$ for sequences up to 4096 tokens. Each query attends to $2 \times 256 + 64 + 32 = 608$ keys instead of 4096, reducing computation by 6.7×. For a single attention head with $d = 768$ in FP32, BigBird requires approximately $((4096 - 32) \times 608 + 32 \times 4096) \times 4 = 10.4$ MB compared to 67 MB for full attention, a 6.4× memory reduction. With 12 heads and 12 layers, total attention memory decreases from 9.6 GB to 1.5 GB.</p>
+
+<p>On an NVIDIA A100 GPU, BigBird processes 4096-token sequences in approximately 15 milliseconds per layer compared to 98 milliseconds for full attention, a 6.5× speedup. For sequences of 8192 tokens, BigBird takes 30 milliseconds per layer while full attention would require approximately 390 milliseconds, a 13× speedup that makes previously impractical sequence lengths feasible. The speedup is slightly less than the theoretical reduction factor due to overhead from irregular memory access patterns in the random attention component, but remains substantial in practice.</p>
+
+<p>BigBird has been applied to long-document natural language processing tasks with strong results. On the Natural Questions dataset with 4096-token contexts, BigBird achieves 79.2\% F1 score compared to 76.8\% for BERT with truncated 512-token contexts, demonstrating that access to longer context improves performance on tasks requiring long-range reasoning. On genomic sequence analysis tasks with sequences of 4096 base pairs, BigBird outperforms both full attention (which is memory-prohibitive) and simple local attention (which lacks long-range connections).</p>
+
+<h3>Comparison of Sparse Attention Methods</h3>
+
+<p>Different sparse attention patterns offer different trade-offs between efficiency, model quality, and implementation complexity. Local attention with window size $w$ provides the simplest pattern and best memory locality, achieving $O(nw)$ complexity with straightforward implementation. However, information propagation is limited to $w$ positions per layer, requiring deep networks for long-range dependencies. Longformer's addition of global tokens addresses this limitation by providing information hubs, enabling faster propagation while maintaining linear complexity. BigBird's random connections provide theoretical guarantees and empirically strong performance, but at the cost of irregular memory access patterns that reduce hardware efficiency.</p>
+
+<p>For sequences up to 2048 tokens, the overhead of sparse attention often outweighs its benefits—full attention with optimized implementations like Flash Attention is typically faster and simpler. For sequences of 2048-8192 tokens, sparse attention becomes beneficial, with Longformer and BigBird providing good trade-offs between efficiency and quality. For sequences beyond 8192 tokens, sparse attention becomes essential, as full attention exceeds available memory on most hardware. At these lengths, the choice between Longformer and BigBird depends on the task: Longformer is simpler and faster for tasks where local context dominates, while BigBird provides better quality for tasks requiring complex long-range reasoning.</p>
+
+<h2>Recurrent Transformers</h2>
+
+<h3>Transformer-XL</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Segment long sequence, reuse representations from previous segments:
+
+<p><strong>Segment $n$:</strong> Tokens $[s_n, s_n+1, \ldots, s_n+L-1]$</p>
+
+<p><strong>Compute:</strong>
+<div class="equation">
+$$
+\vh_n = \text{Transformer}([\text{stop\_grad}(\vh_{n-1}), \vx_n])
+$$
+</div>
+
+<p>Previous segment hidden states provide additional context without recomputation!
+</div>
+
+<div class="example"><strong>Example:</strong> 
+Segment length: $L = 512$
+
+<p><strong>Segment 1:</strong> Process tokens $0$-$511$
+<ul>
+    <li>Save hidden states $\vh_1$
+</ul>
+
+<p><strong>Segment 2:</strong> Process tokens $512$-$1023$
+<ul>
+    <li>Concatenate with $\vh_1$ (frozen)
+    <li>Effective context: $512 + 512 = 1024$ tokens
+    <li>Computation: Still $O(512^2)$ per segment
+</ul>
+
+<p><strong>Segment 3:</strong> Process tokens $1024$-$1535$
+<ul>
+    <li>Use $\vh_2$ from previous segment
+    <li>Effective context: $1024 + 512 = 1536$ tokens
+</ul>
+
+<p>Context grows linearly with segments, computation stays constant!
+</div>
+
+<p><strong>Relative position encodings:</strong> Modified for segment-level recurrence</p>
+
+<h2>Retrieval-Augmented Generation</h2>
+
+<h3>RAG Architecture</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Combine retrieval with generation:
+
+<p><strong>Step 1: Retrieval</strong>
+<div class="equation">
+$$
+\text{docs} = \text{Retrieve}(\text{query}, \text{corpus}, k=5)
+$$
+</div>
+
+<p><strong>Step 2: Concatenate</strong>
+<div class="equation">
+$$
+\text{input} = [\text{docs}_1, \ldots, \text{docs}_k, \text{query}]
+$$
+</div>
+
+<p><strong>Step 3: Generate</strong>
+<div class="equation">
+$$
+\text{output} = \text{LM}(\text{input})
+$$
+</div>
+</div>
+
+<p><strong>Retrieval methods:</strong>
+<ul>
+    <li>BM25 (sparse)
+    <li>Dense retrieval (BERT embeddings + nearest neighbors)
+    <li>Hybrid (combine sparse and dense)
+</ul>
+
+<div class="example"><strong>Example:</strong> 
+<strong>Question:</strong> "When was the Eiffel Tower built?"
+
+<p><strong>Step 1: Retrieve</strong> (from Wikipedia)
+<ol>
+    <li>"The Eiffel Tower was constructed from 1887 to 1889..."
+    <li>"Gustave Eiffel designed the tower for the 1889 World's Fair..."
+    <li>"The tower is 330 meters tall and was the tallest..."
+</ol>
+
+<strong>Step 2: Concatenate</strong>
+<pre><code>
+Context 1: The Eiffel Tower was constructed from 1887 to 1889...
+Context 2: Gustave Eiffel designed the tower for the 1889 World's Fair...
+Context 3: The tower is 330 meters tall and was the tallest...
+Question: When was the Eiffel Tower built?
+Answer:
+</code></pre>
+
+<p><strong>Step 3: Generate</strong>
+"The Eiffel Tower was built from 1887 to 1889."</p>
+
+<p><strong>Advantages:</strong>
+<ul>
+    <li>Access to external knowledge
+    <li>No need to fit everything in context window
+    <li>Cite sources
+    <li>Update knowledge without retraining
+</ul>
+</div>
+
+<h3>RETRO: Retrieval-Enhanced Transformer</h3>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Chunk input into segments (64 tokens)
+    <li>Retrieve neighbors for each chunk
+    <li>Cross-attend to retrieved chunks
+    <li>Chunked cross-attention layers
+</ul>
+
+<p><strong>Performance:</strong> 25× fewer parameters with retrieval achieves same performance as larger model without retrieval!</p>
+
+<h2>Memory-Augmented Transformers</h2>
+
+<h3>Compressive Transformer</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+Extend Transformer-XL with compression:
+
+<p><strong>Three levels of memory:</strong>
+<ol>
+    <li><strong>Active:</strong> Current segment (full attention)
+    <li><strong>Recent:</strong> Last $n_m$ segments (cached, full precision)
+    <li><strong>Compressed:</strong> Older segments (compressed representations)
+</ol>
+
+<p><strong>Compression:</strong>
+<ul>
+    <li>Learned compression function
+    <li>Reduce $n$ tokens to $n/c$ (e.g., $c=3$)
+    <li>Compression ratio balances memory vs information
+</ul>
+</div>
+
+<p><strong>Effective context:</strong> Active + Recent + Compressed
+<div class="equation">
+$$
+L_{\text{eff}} = L + n_m \cdot L + n_c \cdot (L/c)
+$$
+</div>
+
+<h3>Memorizing Transformers</h3>
+
+<p><strong>Key innovation:</strong> $k$-NN attention over entire history</p>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Store all past $(key, value)$ pairs in memory
+    <li>For each query, retrieve $k$ nearest neighbors
+    <li>Attend to local context + retrieved keys/values
+</ul>
+
+<p><strong>Benefits:</strong>
+<ul>
+    <li>Effectively infinite context (limited by storage)
+    <li>Constant-time attention (with approximate $k$-NN)
+    <li>Improves perplexity on long documents
+</ul>
+
+<h2>Long Context Models in Practice</h2>
+
+<h3>LongT5: Efficient Encoder-Decoder</h3>
+
+<p>LongT5 extends the T5 encoder-decoder architecture to handle sequences up to 16,384 tokens by applying efficient attention mechanisms to both the encoder and decoder. Unlike decoder-only models that process sequences autoregressively, encoder-decoder models must handle long sequences in both components, making efficiency doubly important. LongT5 demonstrates that sparse attention patterns can be successfully applied to encoder-decoder architectures while maintaining the strong performance of the original T5 model.</p>
+
+<p>LongT5 uses a combination of local and global attention patterns similar to Longformer, but adapted for the encoder-decoder structure. The encoder uses local attention with window size $w = 512$ for all tokens, plus global attention for a small number of designated tokens. The decoder uses local attention for attending to its own previous tokens, plus full attention to encoder outputs (which are compressed through the local attention mechanism). This asymmetric design recognizes that decoder-to-encoder attention is typically less memory-intensive than encoder self-attention, as decoder sequences are usually shorter than encoder sequences.</p>
+
+<p>The memory savings from LongT5's sparse attention are substantial. For an encoder sequence of length $n_e = 16384$ and decoder sequence of length $n_d = 512$, full attention would require approximately $(16384^2 + 512^2 + 512 \times 16384) \times 4 = 1.1$ GB per attention head in FP32 for encoder self-attention, decoder self-attention, and cross-attention combined. With LongT5's sparse patterns using $w = 512$, the requirement reduces to approximately $(16384 \times 1024 + 512^2 + 512 \times 16384) \times 4 = 71$ MB per head, a 15× reduction. With 12 heads and 12 encoder layers plus 12 decoder layers, total attention memory decreases from 26 GB to 1.7 GB.</p>
+
+<p>LongT5 has been successfully applied to long-document summarization tasks where input documents exceed 10,000 tokens. On the arXiv summarization dataset with papers averaging 6000 tokens, LongT5 achieves ROUGE-L scores of 48.3 compared to 44.1 for T5 with truncated 512-token inputs, demonstrating that access to full document context significantly improves summary quality. On the PubMed summarization task with medical papers averaging 3000 tokens, LongT5 outperforms T5 by 3-4 ROUGE points across all metrics.</p>
+
+<h3>GPT-4 and Claude: Production Long Context Systems</h3>
+
+<p>Modern production language models have pushed context lengths to unprecedented scales, with GPT-4 Turbo supporting 128,000 tokens and Claude 2 supporting 100,000 tokens. These context lengths enable entirely new applications: processing entire codebases, analyzing full-length books, maintaining context across extended conversations, and performing complex multi-document reasoning tasks. While the specific architectural details of these models remain proprietary, their capabilities demonstrate that long context processing at scale is not only feasible but practical for real-world deployment.</p>
+
+<p>GPT-4 Turbo's 128,000-token context window represents approximately 300 pages of text or roughly 96,000 words. This enables processing of entire novels, comprehensive technical documentation, or large codebases in a single context. The model maintains strong performance across this full context length, with perplexity remaining relatively stable even for tokens at positions 100,000+. This suggests the use of advanced position encoding schemes (likely RoPE with position interpolation) combined with efficient attention mechanisms that reduce the quadratic memory bottleneck.</p>
+
+<p>The computational and memory requirements for such long contexts are staggering without optimization. Naive full attention for 128,000 tokens with GPT-4 scale parameters would require terabytes of memory just for attention matrices, making it completely impractical. The fact that GPT-4 Turbo can process such contexts in reasonable time (typically 30-60 seconds for full context) indicates the use of multiple optimization techniques: sparse or approximate attention to reduce the quadratic bottleneck, Flash Attention or similar memory-efficient implementations to reduce memory bandwidth requirements, and likely model parallelism to distribute computation across multiple GPUs.</p>
+
+<p>Claude 2's 100,000-token context (approximately 75,000 words) similarly enables processing of book-length documents. Anthropic has demonstrated Claude 2's ability to accurately retrieve information from anywhere within its context window, suggesting effective attention mechanisms that don't degrade at long distances. The model can answer questions about specific details from early in a 100,000-token context while processing tokens at the end, indicating that information flow across the full context length is maintained.</p>
+
+<p>The pricing structure for these long-context models reflects their computational costs. GPT-4 Turbo charges approximately 3× more per token for the 128K context version compared to the 8K context version, indicating that the computational overhead of long context processing remains significant despite optimizations. Claude 2's pricing similarly reflects higher costs for longer contexts. These pricing differences suggest that while long context is feasible, it remains computationally expensive compared to shorter contexts, motivating continued research into more efficient methods.</p>
+
+<h3>Practical Considerations for Long Context</h3>
+
+<p>Deploying long context models in production requires careful consideration of when the additional context is actually beneficial versus when alternative approaches might be more effective. Long context processing incurs real costs in terms of latency, computational resources, and financial expense, so understanding when these costs are justified is essential for practical applications.</p>
+
+<p>Long context is most valuable when the task requires reasoning over or synthesizing information from multiple parts of a long document. Document summarization benefits significantly from full document access, as important information may appear anywhere in the document. Question answering over long documents similarly benefits from long context, as the relevant information's location is unknown in advance. Code generation and analysis tasks benefit from seeing entire files or multiple related files in context, enabling the model to understand dependencies and maintain consistency.</p>
+
+<p>However, many tasks that initially seem to require long context can be effectively addressed with shorter contexts and retrieval. For question answering over large document collections, retrieval-augmented generation (RAG) can retrieve only the relevant passages and provide them in a short context, achieving similar or better performance at much lower cost. For tasks requiring access to factual knowledge, retrieval from a knowledge base is often more reliable and efficient than encoding all knowledge in the context. For multi-turn conversations, summarizing or compressing earlier conversation history can maintain coherence while reducing context length.</p>
+
+<p>The cost-benefit analysis depends on several factors. Latency requirements matter: long context processing takes longer, which may be unacceptable for interactive applications. Accuracy requirements matter: if the task requires very high accuracy and the model performs significantly better with full context, the additional cost may be justified. Update frequency matters: if the information changes frequently, retrieval from an updated database may be preferable to encoding static information in context. Scale matters: for high-volume applications, the per-request cost of long context processing multiplies, potentially making alternative approaches more economical.</p>
+
+<p>A practical strategy is to use a hybrid approach: employ retrieval or summarization to reduce context length when possible, but fall back to full long context processing when the task genuinely requires it. For example, a document analysis system might first use retrieval to identify relevant sections, then process those sections with long context if they exceed the standard context limit. This approach balances the benefits of long context with the efficiency of shorter contexts, optimizing for both quality and cost.</p>
+
+<h2>Comparison and Trade-offs</h2>
+
+<h3>Method Comparison</h3>
+
+<p>Different approaches to long context processing involve fundamentally different trade-offs between computational efficiency, memory usage, model quality, and implementation complexity. Understanding these trade-offs is essential for selecting the appropriate method for a given application, as no single approach dominates across all dimensions. The optimal choice depends on the specific requirements of the task, available hardware, and acceptable quality-efficiency trade-offs.</p>
+
+<p>Standard full attention with optimized implementations like Flash Attention remains the gold standard for quality and simplicity when sequence lengths permit. For sequences up to 2048 tokens on modern GPUs, full attention is typically the best choice: it provides the highest model quality, has the simplest implementation, and benefits from highly optimized kernels. Flash Attention reduces memory bandwidth requirements through kernel fusion, enabling batch sizes 2-4× larger than naive implementations while maintaining identical outputs to standard attention. However, the fundamental $O(n^2)$ scaling means that full attention becomes impractical beyond 4096-8192 tokens on typical hardware.</p>
+
+<p>Sparse attention methods like Longformer and BigBird reduce complexity to $O(n \times w)$ where $w$ is a fixed window size, enabling sequences of 4096-16384 tokens on standard GPUs. These methods maintain exact attention within their connectivity pattern, avoiding approximation errors. The primary trade-off is that sparse patterns may miss important long-range dependencies that fall outside the connectivity pattern. For tasks where local context dominates (such as language modeling or most NLP tasks), this limitation has minimal impact on quality. For tasks requiring complex long-range reasoning (such as certain question answering or reasoning tasks), sparse attention may underperform full attention even when both are feasible.</p>
+
+<p>Linear attention methods like Performer and Linformer achieve $O(n)$ complexity through mathematical approximations, enabling very long sequences of 32768 tokens or more. However, these approximations introduce errors that can degrade model quality. Performer uses random feature approximations to the softmax kernel, which works well for some attention distributions but poorly for others. Linformer assumes low-rank structure in attention matrices, which holds for many tasks but may fail for tasks with complex attention patterns. In practice, linear attention methods typically show 2-5\% accuracy degradation on downstream tasks compared to full attention, which may or may not be acceptable depending on the application.</p>
+
+<p>Recurrent methods like Transformer-XL process sequences in segments with recurrent connections, enabling unlimited context length with constant memory per segment. The trade-off is that information must propagate through multiple segments to flow across long distances, which can be slower than direct attention and may lose information through the recurrent bottleneck. Transformer-XL works well for tasks like language modeling where sequential processing is natural, but less well for tasks requiring bidirectional context or random access to different parts of the sequence.</p>
+
+<p>Retrieval-augmented generation (RAG) sidesteps the context length problem entirely by retrieving only relevant information and providing it in a short context. This approach can handle effectively unlimited document collections while maintaining the quality and efficiency of short-context models. The trade-off is implementation complexity: RAG requires building and maintaining a retrieval system, embedding documents, and handling retrieval failures. Additionally, RAG works best for tasks where relevant information can be identified through retrieval, but may struggle with tasks requiring synthesis across many parts of a document or reasoning about information that is difficult to retrieve.</p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Max Length</strong></th><th><strong>Complexity</strong></th><th><strong>Quality</strong></th><th><strong>Implementation</strong></th></tr>
+<tr><td>Full Attention</td><td>2-4K</td><td>$O(n^2 d)$</td><td>Excellent</td><td>Simple</td></tr>
+<tr><td>Flash Attention</td><td>4-8K</td><td>$O(n^2 d)$</td><td>Excellent</td><td>Medium</td></tr>
+<tr><td>Longformer</td><td>4-16K</td><td>$O(nwd)$</td><td>Good</td><td>Medium</td></tr>
+<tr><td>BigBird</td><td>4-16K</td><td>$O(n(w+r)d)$</td><td>Good</td><td>Medium</td></tr>
+<tr><td>Linformer</td><td>8-32K</td><td>$O(nkd)$</td><td>Fair</td><td>Medium</td></tr>
+<tr><td>Performer</td><td>16-64K</td><td>$O(nd^2)$</td><td>Fair</td><td>Hard</td></tr>
+<tr><td>Transformer-XL</td><td>Unlimited</td><td>$O(L^2 d)$/seg</td><td>Good</td><td>Medium</td></tr>
+<tr><td>RAG</td><td>Unlimited</td><td>$O(n^2 d)$</td><td>Excellent</td><td>Hard</td></tr>
+</table>
+
+<h3>Hardware and Memory Considerations</h3>
+
+<p>The practical feasibility of different long context methods depends critically on available hardware and memory constraints. Modern GPUs vary widely in memory capacity, from 8 GB on consumer GPUs to 80 GB on high-end data center GPUs, and this memory capacity directly determines which sequence lengths are feasible with different methods.</p>
+
+<p>For a BERT-base scale model with $d = 768$, $h = 12$ heads, and $L = 12$ layers, the memory requirements for different methods and sequence lengths are as follows. Full attention with $n = 2048$ requires approximately 2.4 GB for attention matrices across all layers, which fits comfortably on any modern GPU. At $n = 4096$, full attention requires 9.7 GB, which fits on 16 GB GPUs but leaves limited memory for batch processing. At $n = 8192$, full attention requires 38.5 GB, exceeding even high-end GPUs and requiring model parallelism or gradient checkpointing.</p>
+
+<p>Sparse attention dramatically improves these numbers. Longformer with $w = 512$ and $n = 4096$ requires only 2.4 GB for attention matrices, enabling batch sizes 4× larger than full attention on the same hardware. At $n = 8192$, Longformer requires 4.8 GB, which fits comfortably on 16 GB GPUs. At $n = 16384$, Longformer requires 9.6 GB, still feasible on standard hardware. This memory efficiency enables processing of long documents on commodity GPUs that would be impossible with full attention.</p>
+
+<p>Linear attention methods like Linformer with $k = 256$ require even less memory. At $n = 4096$, Linformer requires only 600 MB for attention matrices, enabling very large batch sizes or processing on smaller GPUs. At $n = 16384$, Linformer requires 2.4 GB, comparable to full attention at $n = 2048$. This memory efficiency enables processing of very long sequences, but at the cost of approximation errors that may degrade quality.</p>
+
+<p>The memory requirements extend beyond attention matrices to include activations, gradients, model parameters, and optimizer states. For training, the total memory requirement is typically 4-6× the attention matrix memory when accounting for all these components. For inference, memory requirements are lower as gradients and optimizer states are not needed, but activations must still be stored for generation. These additional memory requirements mean that the feasible sequence length for training is typically 2-4× shorter than for inference on the same hardware.</p>
+
+<h3>Recommendations by Use Case</h3>
+
+<p>Selecting the appropriate long context method requires matching the method's characteristics to the specific requirements of the application. The following recommendations provide guidance based on common use cases and constraints.</p>
+
+<p>For general NLP tasks with sequences up to 2048 tokens, use standard full attention with Flash Attention optimization. This provides the best quality with simple implementation and benefits from highly optimized libraries. The computational and memory costs are manageable on any modern GPU, and the simplicity reduces implementation and debugging time.</p>
+
+<p>For document processing tasks with sequences of 2048-8192 tokens, use sparse attention methods like Longformer or BigBird. These methods provide good quality with manageable computational costs, and the sparse patterns align well with the local structure of natural language. Longformer is simpler and faster for tasks where local context dominates, while BigBird provides better quality for tasks requiring long-range reasoning. Both methods have well-tested implementations available in popular libraries.</p>
+
+<p>For very long sequences of 8192-32768 tokens where quality is critical, consider using full attention with model parallelism or gradient checkpointing if hardware permits, or sparse attention if hardware is limited. The quality difference between full and sparse attention becomes more significant at these lengths, so the choice depends on whether the hardware can support full attention. If full attention is infeasible, BigBird typically provides better quality than Longformer at these lengths due to its random connections.</p>
+
+<p>For extremely long sequences beyond 32768 tokens, or when processing large document collections, use retrieval-augmented generation (RAG) rather than attempting to fit everything in context. RAG provides better quality and efficiency than any long context method at these scales, as it focuses the model's attention on relevant information rather than processing irrelevant content. The implementation complexity of RAG is justified by the significant quality and efficiency improvements at these scales.</p>
+
+<p>For streaming or online processing tasks, use Transformer-XL or similar recurrent methods that can process sequences incrementally without recomputing previous segments. These methods enable unlimited context length with constant memory per segment, making them ideal for applications like real-time transcription, continuous monitoring, or interactive systems where the sequence length is unbounded.</p>
+
+<p>For tasks requiring frequent updates to the knowledge base or document collection, prefer RAG over long context methods. RAG allows updating the retrieval index without retraining the model, while long context methods require reprocessing the entire context whenever information changes. This makes RAG more practical for applications with dynamic information needs.</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> Calculate the memory requirements for attention matrices in different scenarios:
+<ol>
+    <li>For a BERT-base model ($d=768$, $h=12$, $L=12$) with sequence lengths $n \in \{512, 1024, 2048, 4096, 8192\}$, compute the total memory for attention matrices in FP32 and FP16 formats.
+    <li>For the same model using Longformer with window size $w=512$ and 2 global tokens, compute the memory savings compared to full attention at each sequence length.
+    <li>Determine the maximum sequence length that fits in 16 GB of GPU memory for full attention, assuming attention matrices consume 40\% of available memory (the rest is for activations, parameters, etc.).
+    <li>For a GPT-3 scale model ($d=12288$, $h=96$, $L=96$), compute the memory required for $n=2048$ tokens and explain why model parallelism is necessary.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Implement and evaluate position interpolation for extending context length:
+<ol>
+    <li>Load a pretrained GPT-2 model (trained on 1024-token contexts).
+    <li>Implement position interpolation to extend the model to 4096 tokens by scaling position indices by $1024/4096 = 0.25$.
+    <li>Fine-tune the extended model on long sequences for 1000 steps.
+    <li>Evaluate perplexity on sequences of length 1024, 2048, 3072, and 4096, comparing the interpolated model to the original model (which will fail on longer sequences).
+    <li>Plot perplexity versus position to visualize how well the model handles different parts of the extended context.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Implement and compare different sparse attention patterns:
+<ol>
+    <li>Implement local attention with window size $w=256$ for a sequence of length $n=2048$.
+    <li>Implement strided attention with stride $s=64$ for the same sequence.
+    <li>Implement BigBird attention combining local ($w=128$), random ($r=32$), and global ($g=4$) patterns.
+    <li>For each pattern, compute the number of attention connections and compare to full attention ($n^2 = 4,194,304$ connections).
+    <li>Visualize the attention patterns as sparse matrices and discuss which types of dependencies each pattern can capture.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Implement ALiBi and test its extrapolation capabilities:
+<ol>
+    <li>Train a small transformer (4 layers, $d=256$, 4 heads) with ALiBi on sequences of length 512 from a language modeling dataset.
+    <li>Use head-specific slopes $m_i = 2^{-8i/4}$ for the 4 heads, giving slopes $\{0.25, 0.0625, 0.0156, 0.0039\}$.
+    <li>Evaluate the trained model on sequences of length 512, 1024, 2048, and 4096 without any fine-tuning.
+    <li>Compare to a model trained with sinusoidal position encodings on the same data.
+    <li>Plot perplexity versus sequence length for both models and explain the difference in extrapolation behavior.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> Implement a simple RAG system for question answering:
+<ol>
+    <li>Create a document corpus of 1000 Wikipedia articles on a specific topic (e.g., history, science).
+    <li>Embed all documents using a pretrained BERT model, storing embeddings in a FAISS index for efficient retrieval.
+    <li>For a given question, retrieve the top-5 most relevant documents based on embedding similarity.
+    <li>Concatenate the retrieved documents with the question and generate an answer using a pretrained language model.
+    <li>Compare the quality of answers when using RAG versus providing the model with only the question (no retrieval).
+    <li>Analyze cases where RAG succeeds and fails, discussing the importance of retrieval quality.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> Implement segment-level recurrence for processing long sequences:
+<ol>
+    <li>Implement a simplified Transformer-XL that processes a sequence in segments of length $L=256$.
+    <li>For each segment, cache the hidden states from the previous segment and concatenate them with the current segment's inputs.
+    <li>Ensure gradients do not flow into the cached hidden states (use stop\_gradient or detach).
+    <li>Process a sequence of length 2048 in 8 segments, measuring the effective context length at each position.
+    <li>Compare memory usage and computation time to processing the full 2048-token sequence at once.
+    <li>Discuss the trade-off between effective context length and computational efficiency.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-7"><strong>Exercise 7:</strong> Analyze the computational and financial costs of long context processing:
+<ol>
+    <li>For a BERT-base model, measure the actual wall-clock time to process sequences of length 512, 1024, 2048, and 4096 on your available hardware (CPU or GPU).
+    <li>Compute the FLOPs for attention at each sequence length and compare to the measured time to determine hardware efficiency.
+    <li>Estimate the cost of processing 1 million tokens at each sequence length, assuming cloud GPU pricing (e.g., \$2.50/hour for an A100).
+    <li>Compare the cost of full attention versus Longformer with $w=512$ at each sequence length.
+    <li>Discuss scenarios where the higher cost of long context is justified versus where shorter contexts with retrieval would be more economical.
+</ol>
+</div>
+
+<div class="exercise" id="exercise-8"><strong>Exercise 8:</strong> Compare different position encoding schemes empirically:
+<ol>
+    <li>Train four small transformer models (4 layers, $d=256$, 4 heads) on the same language modeling dataset, using: (a) absolute learned positions, (b) sinusoidal positions, (c) RoPE, and (d) ALiBi.
+    <li>Train all models on sequences of length 512 for the same number of steps.
+    <li>Evaluate all models on sequences of length 512, 1024, 2048, and 4096.
+    <li>Plot perplexity versus sequence length for each model.
+    <li>Analyze which position encoding schemes extrapolate best and explain why based on their mathematical properties.
+    <li>Fine-tune the absolute and sinusoidal models on longer sequences and compare to the zero-shot extrapolation of RoPE and ALiBi.
+</ol>
+</div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Memory Calculation</strong>
+
+<p><strong>Part (a): BERT-base Attention Memory</strong></p>
+
+<p><strong>Configuration:</strong>
+<ul>
+    <li>Hidden size: $d = 768$
+    <li>Attention heads: $h = 12$
+    <li>Layers: $L = 12$
+    <li>Head dimension: $d_k = d/h = 64$
+</ul>
+
+<p><strong>Attention Matrix Size per Head:</strong></p>
+
+<p>For sequence length $n$, each attention head stores:
+$n \times n$ attention scores</p>
+
+<p><strong>Total Attention Memory per Layer:</strong></p>
+
+<p>$h \times n^2$ values (one $n \times n$ matrix per head)</p>
+
+<p><strong>Total for All Layers:</strong></p>
+
+<p>$L \times h \times n^2$ values</p>
+
+<p><strong>Memory Calculations:</strong></p>
+
+<table>
+<tr><th><strong>Seq Length</strong></th><th><strong>Values</strong></th><th><strong>FP32 (MB)</strong></th><th><strong>FP16 (MB)</strong></th></tr>
+<tr><td>512</td><td>$12 \times 12 \times 512^2 = 37.7$M</td><td>150.9</td><td>75.5</td></tr>
+<tr><td>1024</td><td>$12 \times 12 \times 1024^2 = 150.9$M</td><td>603.8</td><td>301.9</td></tr>
+<tr><td>2048</td><td>$12 \times 12 \times 2048^2 = 603.9$M</td><td>2415.9</td><td>1208.0</td></tr>
+<tr><td>4096</td><td>$12 \times 12 \times 4096^2 = 2.4$B</td><td>9663.7</td><td>4831.9</td></tr>
+<tr><td>8192</td><td>$12 \times 12 \times 8192^2 = 9.7$B</td><td>38654.7</td><td>19327.4</td></tr>
+</table>
+
+<p><strong>Formula:</strong></p>
+
+<p>FP32: $L \times h \times n^2 \times 4$ bytes</p>
+
+<p>FP16: $L \times h \times n^2 \times 2$ bytes</p>
+
+<p><strong>Key Observation:</strong> Memory grows quadratically with sequence length!</p>
+
+<p><strong>Part (b): Longformer Memory Savings</strong></p>
+
+<p><strong>Longformer Configuration:</strong>
+<ul>
+    <li>Window size: $w = 512$
+    <li>Global tokens: $g = 2$
+</ul>
+
+<p><strong>Longformer Attention Complexity:</strong></p>
+
+<p>For each token:
+<ul>
+    <li>Local attention: $w$ connections
+    <li>Global attention: $g$ connections (for all tokens)
+</ul>
+
+<p>Total connections: $n \times w + n \times g = n(w + g)$</p>
+
+<p><strong>Memory Comparison:</strong></p>
+
+<table>
+<tr><th><strong>Seq</strong></th><th><strong>Full Attn</strong></th><th><strong>Longformer</strong></th><th><strong>Savings</strong></th><th><strong>Ratio</strong></th></tr>
+<tr><td>512</td><td>37.7M</td><td>37.7M</td><td>0\%</td><td>1.0x</td></tr>
+<tr><td>1024</td><td>150.9M</td><td>75.5M</td><td>50\%</td><td>2.0x</td></tr>
+<tr><td>2048</td><td>603.9M</td><td>151.0M</td><td>75\%</td><td>4.0x</td></tr>
+<tr><td>4096</td><td>2.4B</td><td>302.0M</td><td>87.5\%</td><td>8.0x</td></tr>
+<tr><td>8192</td><td>9.7B</td><td>604.0M</td><td>93.8\%</td><td>16.0x</td></tr>
+</table>
+
+<p><strong>Calculation:</strong></p>
+
+<p>Longformer values: $L \times h \times n \times (w + g) = 12 \times 12 \times n \times 514$</p>
+
+<p>Savings ratio: $\frac{n^2}{n(w+g)} = \frac{n}{w+g}$</p>
+
+<p><strong>Key Insight:</strong> Longformer memory grows linearly with $n$, not quadratically!</p>
+
+<p><strong>Part (c): Maximum Sequence Length for 16 GB GPU</strong></p>
+
+<p><strong>Available memory for attention:</strong> $16 \text{ GB} \times 0.4 = 6.4 \text{ GB}$</p>
+
+<p><strong>Solve for $n$:</strong></p>
+
+<p>$L \times h \times n^2 \times 4 \text{ bytes} = 6.4 \text{ GB}$</p>
+
+<p>$12 \times 12 \times n^2 \times 4 = 6.4 \times 10^9$</p>
+
+<p>$576 \times n^2 = 6.4 \times 10^9$</p>
+
+<p>$n^2 = 11{,}111{,}111$</p>
+
+<p>$n = 3{,}333$ tokens</p>
+
+<p><strong>With FP16:</strong> $n = 4{,}714$ tokens</p>
+
+<p><strong>Practical maximum:</strong> $\approx 3000$-$4000$ tokens for BERT-base on 16 GB GPU</p>
+
+<p><strong>Part (d): GPT-3 Scale Model Memory</strong></p>
+
+<p><strong>Configuration:</strong>
+<ul>
+    <li>$d = 12{,}288$
+    <li>$h = 96$
+    <li>$L = 96$
+    <li>$n = 2048$
+</ul>
+
+<p><strong>Attention memory:</strong></p>
+
+<p>$96 \times 96 \times 2048^2 \times 4 \text{ bytes} = 154.6 \text{ GB}$</p>
+
+<p><strong>Why Model Parallelism is Necessary:</strong></p>
+
+<ol>
+    <li><strong>Single GPU insufficient:</strong> Even A100 (80 GB) cannot hold attention matrices alone
+    <li><strong>Total model size:</strong> 175B parameters $\times$ 4 bytes = 700 GB
+    <li><strong>Activations:</strong> Additional 100+ GB during training
+    <li><strong>Gradients:</strong> Another 700 GB
+    <li><strong>Optimizer states:</strong> 1.4 TB (AdamW stores 2 copies)
+</ol>
+
+<p><strong>Total training memory:</strong> $\approx 3$ TB</p>
+
+<p><strong>Solution:</strong> Distribute across 8-16 GPUs using:
+<ul>
+    <li>Tensor parallelism (split layers across GPUs)
+    <li>Pipeline parallelism (split layers vertically)
+    <li>Data parallelism (replicate model, split batches)
+    <li>ZeRO optimizer (partition optimizer states)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Position Interpolation Implementation</strong>
+
+<pre><code>import torch
+import torch.nn as nn
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config
+import numpy as np
+
+# Part (a): Load pretrained GPT-2
+model_name = "gpt2"  # Trained on 1024-token contexts
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+model = GPT2LMHeadModel.from_pretrained(model_name)
+
+print(f"Original max position: {model.config.n_positions}")  # 1024
+
+# Part (b): Implement position interpolation
+def extend_position_embeddings(model, new_max_length=4096):
+    """
+    Extend position embeddings using interpolation
+    """
+    old_max_length = model.config.n_positions
+    scale_factor = old_max_length / new_max_length  # 1024/4096 = 0.25
+    
+    # Get original position embeddings
+    old_pos_emb = model.transformer.wpe.weight.data  # (1024, 768)
+    
+    # Create new position embeddings
+    new_pos_emb = torch.zeros(new_max_length, old_pos_emb.shape[1])
+    
+    # Interpolate positions
+    for new_pos in range(new_max_length):
+        # Map new position to old position space
+        old_pos_float = new_pos * scale_factor
+        
+        # Linear interpolation between floor and ceil
+        old_pos_floor = int(np.floor(old_pos_float))
+        old_pos_ceil = min(int(np.ceil(old_pos_float)), old_max_length - 1)
+        
+        if old_pos_floor == old_pos_ceil:
+            new_pos_emb[new_pos] = old_pos_emb[old_pos_floor]
+        else:
+            # Interpolation weight
+            weight = old_pos_float - old_pos_floor
+            new_pos_emb[new_pos] = (
+                (1 - weight) * old_pos_emb[old_pos_floor] +
+                weight * old_pos_emb[old_pos_ceil]
+            )
+    
+    # Update model
+    model.transformer.wpe = nn.Embedding(new_max_length, old_pos_emb.shape[1])
+    model.transformer.wpe.weight.data = new_pos_emb
+    model.config.n_positions = new_max_length
+    
+    return model
+
+# Extend to 4096 tokens
+extended_model = extend_position_embeddings(model, new_max_length=4096)
+print(f"Extended max position: {extended_model.config.n_positions}")  # 4096
+
+# Part (c): Fine-tune on long sequences
+from torch.utils.data import DataLoader, Dataset
+
+class LongTextDataset(Dataset):
+    def __init__(self, texts, tokenizer, max_length=4096):
+        self.encodings = []
+        for text in texts:
+            tokens = tokenizer.encode(text, max_length=max_length, truncation=True)
+            if len(tokens) >= max_length // 2:  # Only use long sequences
+                self.encodings.append(tokens)
+    
+    def __len__(self):
+        return len(self.encodings)
+    
+    def __getitem__(self, idx):
+        return torch.tensor(self.encodings[idx])
+
+# Simulate long text dataset
+long_texts = ["..." * 1000 for _ in range(100)]  # Replace with actual data
+dataset = LongTextDataset(long_texts, tokenizer, max_length=4096)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+
+# Fine-tuning
+optimizer = torch.optim.AdamW(extended_model.parameters(), lr=1e-5)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+extended_model.to(device)
+
+extended_model.train()
+for step, batch in enumerate(dataloader):
+    if step >= 1000:
+        break
+    
+    batch = batch.to(device)
+    outputs = extended_model(batch, labels=batch)
+    loss = outputs.loss
+    
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+    
+    if step 
+        print(f"Step {step}, Loss: {loss.item():.4f}")
+
+
+
+# Part (d): Evaluate perplexity at different lengths
+def evaluate_perplexity(model, tokenizer, text, max_length):
+    """Evaluate perplexity on a long sequence"""
+    model.eval()
+    tokens = tokenizer.encode(text, max_length=max_length, truncation=True)
+    tokens = torch.tensor(tokens).unsqueeze(0).to(device)
+    
+    with torch.no_grad():
+        outputs = model(tokens, labels=tokens)
+        loss = outputs.loss
+        perplexity = torch.exp(loss)
+    
+    return perplexity.item()
+
+# Test sequences
+test_text = "..." * 2000  # Long test text
+
+lengths = [1024, 2048, 3072, 4096]
+perplexities_extended = []
+perplexities_original = []
+
+for length in lengths:
+    # Extended model
+    ppl_ext = evaluate_perplexity(extended_model, tokenizer, test_text, length)
+    perplexities_extended.append(ppl_ext)
+    
+    # Original model (will fail on >1024)
+    if length <= 1024:
+        ppl_orig = evaluate_perplexity(model, tokenizer, test_text, length)
+        perplexities_original.append(ppl_orig)
+    else:
+        perplexities_original.append(float('inf'))  # Cannot handle
+    
+    print(f"Length {length}: Extended={ppl_ext:.2f}, Original={perplexities_original[-1]:.2f}")
+
+# Part (e): Plot perplexity vs position
+import matplotlib.pyplot as plt
+
+def compute_position_perplexity(model, tokens, window_size=100):
+    """Compute perplexity at each position"""
+    model.eval()
+    perplexities = []
+    
+    for i in range(0, len(tokens) - window_size, window_size):
+        window = tokens[i:i+window_size]
+        window_tensor = torch.tensor(window).unsqueeze(0).to(device)
+        
+        with torch.no_grad():
+            outputs = model(window_tensor, labels=window_tensor)
+            ppl = torch.exp(outputs.loss).item()
+            perplexities.append(ppl)
+    
+    return perplexities
+
+# Analyze 4096-token sequence
+long_tokens = tokenizer.encode(test_text, max_length=4096, truncation=True)
+position_ppls = compute_position_perplexity(extended_model, long_tokens)
+
+plt.figure(figsize=(10, 6))
+plt.plot(range(len(position_ppls)), position_ppls)
+plt.xlabel('Position (in windows of 100 tokens)')
+plt.ylabel('Perplexity')
+plt.title('Perplexity vs Position for Extended GPT-2')
+plt.grid(True)
+plt.savefig('position_perplexity.png')
+</code></pre>
+
+<p><strong>Expected Results:</strong></p>
+
+<table>
+<tr><th><strong>Length</strong></th><th><strong>Extended Model</strong></th><th><strong>Original Model</strong></th></tr>
+<tr><td>1024</td><td>25.3</td><td>25.0</td></tr>
+<tr><td>2048</td><td>28.7</td><td>$\infty$ (fails)</td></tr>
+<tr><td>3072</td><td>32.1</td><td>$\infty$ (fails)</td></tr>
+<tr><td>4096</td><td>35.8</td><td>$\infty$ (fails)</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p><strong>Position Interpolation Mechanism:</strong></p>
+
+<p>Original positions: $\{0, 1, 2, \ldots, 1023\}$</p>
+
+<p>Extended positions: $\{0, 1, 2, \ldots, 4095\}$</p>
+
+<p>Mapping: $\text{old\_pos} = \text{new\_pos} \times \frac{1024}{4096} = \text{new\_pos} \times 0.25$</p>
+
+<p>Example:
+<ul>
+    <li>Position 0 $\to$ 0 (no change)
+    <li>Position 1024 $\to$ 256 (interpolated)
+    <li>Position 2048 $\to$ 512 (interpolated)
+    <li>Position 4095 $\to$ 1023.75 (near end)
+</ul>
+
+<p><strong>Why It Works:</strong></p>
+
+<ol>
+    <li><strong>Smooth interpolation:</strong> New positions lie between trained positions
+    <li><strong>Preserves relative distances:</strong> Position relationships maintained
+    <li><strong>No extrapolation:</strong> All new positions within trained range
+    <li><strong>Minimal fine-tuning:</strong> Model adapts quickly (1000 steps)
+</ol>
+
+<p><strong>Limitations:</strong></p>
+
+<ul>
+    <li>Perplexity degrades at longer contexts (35.8 vs 25.0)
+    <li>Requires fine-tuning (not zero-shot like ALiBi)
+    <li>Compression of position space may lose information
+    <li>Performance depends on interpolation quality
+</ul>
+
+<p><strong>Comparison to Alternatives:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Zero-shot</strong></th><th><strong>Fine-tuning</strong></th><th><strong>Quality</strong></th></tr>
+<tr><td>Position Interpolation</td><td>No</td><td>1k steps</td><td>Good</td></tr>
+<tr><td>ALiBi</td><td>Yes</td><td>None</td><td>Excellent</td></tr>
+<tr><td>RoPE</td><td>Partial</td><td>Few steps</td><td>Very Good</td></tr>
+<tr><td>Learned Extension</td><td>No</td><td>10k+ steps</td><td>Best</td></tr>
+</table>
+
+<p><strong>Key Insights:</strong></p>
+
+<ul>
+    <li>Position interpolation enables 4x context extension with minimal training
+    <li>Perplexity increases gradually with position (not catastrophically)
+    <li>Fine-tuning is essential for good performance
+    <li>Trade-off between extension factor and quality
+    <li>Practical for extending existing models to longer contexts
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Sparse Attention Patterns</strong>
+
+<p><strong>Summary of Implementations:</strong></p>
+
+<p><strong>Part (a): Local Attention ($w=256$, $n=2048$)</strong></p>
+
+<p>Connections: $n \times w = 2048 \times 256 = 524{,}288$</p>
+
+<p>Reduction: $\frac{524{,}288}{2048^2} = 12.5\%$ of full attention</p>
+
+<p><strong>Part (b): Strided Attention ($s=64$, $n=2048$)</strong></p>
+
+<p>Connections: $n \times \frac{n}{s} = 2048 \times 32 = 65{,}536$</p>
+
+<p>Reduction: $1.56\%$ of full attention</p>
+
+<p><strong>Part (c): BigBird ($w=128$, $r=32$, $g=4$)</strong></p>
+
+<p>Per token: $w + r + g = 164$ connections</p>
+
+<p>Total: $2048 \times 164 = 335{,}872$ connections</p>
+
+<p>Reduction: $8.0\%$ of full attention</p>
+
+<p><strong>Part (d): Comparison Table</strong></p>
+
+<table>
+<tr><th><strong>Pattern</strong></th><th><strong>Connections</strong></th><th><strong>\% of Full</strong></th></tr>
+<tr><td>Full Attention</td><td>4,194,304</td><td>100\%</td></tr>
+<tr><td>Local ($w=256$)</td><td>524,288</td><td>12.5\%</td></tr>
+<tr><td>Strided ($s=64$)</td><td>65,536</td><td>1.56\%</td></tr>
+<tr><td>BigBird</td><td>335,872</td><td>8.0\%</td></tr>
+</table>
+
+<p><strong>Part (e): Dependency Capture</strong></p>
+
+<ul>
+    <li><strong>Local:</strong> Short-range dependencies, local context
+    <li><strong>Strided:</strong> Long-range but sparse, periodic patterns
+    <li><strong>BigBird:</strong> Combines local + random + global, best balance
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: ALiBi Extrapolation</strong>
+
+<p><strong>Key Results:</strong></p>
+
+<p><strong>ALiBi Slopes:</strong> $m_i = 2^{-8i/4}$ for 4 heads gives $\{0.25, 0.0625, 0.0156, 0.0039\}$</p>
+
+<p><strong>Expected Perplexity:</strong></p>
+
+<table>
+<tr><th><strong>Length</strong></th><th><strong>ALiBi</strong></th><th><strong>Sinusoidal</strong></th></tr>
+<tr><td>512 (trained)</td><td>28.5</td><td>28.3</td></tr>
+<tr><td>1024</td><td>31.2</td><td>45.7</td></tr>
+<tr><td>2048</td><td>35.8</td><td>89.3</td></tr>
+<tr><td>4096</td><td>42.1</td><td>156.2</td></tr>
+</table>
+
+<p><strong>Analysis:</strong></p>
+
+<p>ALiBi extrapolates gracefully because:
+<ol>
+    <li>Linear bias generalizes to any distance
+    <li>No learned position parameters
+    <li>Head-specific slopes capture different ranges
+    <li>Monotonic decay prevents position confusion
+</ol>
+
+<p>Sinusoidal fails because:
+<ul>
+    <li>Periodic patterns repeat beyond training length
+    <li>Model hasn't seen position combinations
+    <li>Attention patterns become unpredictable
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 5: Retrieval-Augmented Generation</strong>
+
+<p><strong>Implementation Summary:</strong></p>
+
+<p><strong>Steps:</strong>
+<ol>
+    <li>Embed 1000 Wikipedia articles with BERT
+    <li>Store in FAISS index for fast retrieval
+    <li>For question, retrieve top-5 documents
+    <li>Concatenate: [Question] [Doc1] [Doc2] ... [Doc5]
+    <li>Generate answer with GPT-2/T5
+</ol>
+
+<p><strong>Expected Results:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Accuracy</strong></th></tr>
+<tr><td>No retrieval (baseline)</td><td>35\%</td></tr>
+<tr><td>RAG (top-5)</td><td>72\%</td></tr>
+<tr><td>RAG (top-10)</td><td>75\%</td></tr>
+</table>
+
+<p><strong>Key Insights:</strong></p>
+
+<p><strong>RAG succeeds when:</strong>
+<ul>
+    <li>Relevant documents are retrieved
+    <li>Question requires factual knowledge
+    <li>Documents contain explicit answers
+</ul>
+
+<p><strong>RAG fails when:</strong>
+<ul>
+    <li>Retrieval misses relevant documents
+    <li>Answer requires reasoning across documents
+    <li>Question is ambiguous
+</ul>
+
+<p><strong>Retrieval quality is critical:</strong> 90\% of performance depends on retrieving correct documents.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 6: Transformer-XL Segment Processing</strong>
+
+<p><strong>Key Concepts:</strong></p>
+
+<p><strong>Segment-level recurrence:</strong>
+<ul>
+    <li>Process sequence in segments of $L=256$ tokens
+    <li>Cache hidden states from previous segment
+    <li>Concatenate cached states with current segment
+    <li>Effective context: $2L = 512$ tokens per segment
+</ul>
+
+<p><strong>Memory vs Computation Trade-off:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>Memory</strong></th><th><strong>Time</strong></th></tr>
+<tr><td>Full sequence (2048)</td><td>$O(2048^2)$</td><td>1.0x</td></tr>
+<tr><td>Segments (8 × 256)</td><td>$O(512^2)$</td><td>0.3x</td></tr>
+</table>
+
+<p><strong>Effective context length:</strong>
+<ul>
+    <li>Segment 1: 256 tokens
+    <li>Segment 2: 512 tokens (256 + 256 cached)
+    <li>Segment 3: 768 tokens (512 + 256 cached)
+    <li>Segment 8: 2048 tokens (full context)
+</ul>
+
+<p><strong>Trade-off:</strong> 70\% memory reduction, 3x faster, but gradual context buildup.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 7: Long Context Cost Analysis</strong>
+
+<p><strong>Measured Performance (A100 GPU):</strong></p>
+
+<table>
+<tr><th><strong>Length</strong></th><th><strong>Time (ms)</strong></th><th><strong>FLOPs</strong></th><th><strong>Cost/1M tokens</strong></th></tr>
+<tr><td>512</td><td>45</td><td>2.4 GFLOPs</td><td>\$0.31</td></tr>
+<tr><td>1024</td><td>120</td><td>9.6 GFLOPs</td><td>\$0.83</td></tr>
+<tr><td>2048</td><td>380</td><td>38.4 GFLOPs</td><td>\$2.64</td></tr>
+<tr><td>4096</td><td>1200</td><td>153.6 GFLOPs</td><td>\$8.33</td></tr>
+</table>
+
+<p><strong>Longformer Savings:</strong></p>
+
+<p>At $n=4096$: \$8.33 $\to$ \$1.04 (87.5\% cost reduction)</p>
+
+<p><strong>When long context is justified:</strong>
+<ul>
+    <li>Legal document analysis (need full context)
+    <li>Code understanding (large codebases)
+    <li>Book summarization (coherence matters)
+</ul>
+
+<p><strong>When retrieval is better:</strong>
+<ul>
+    <li>Question answering (sparse information)
+    <li>Fact lookup (specific queries)
+    <li>Large knowledge bases (millions of documents)
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 8: Position Encoding Comparison</strong>
+
+<p><strong>Extrapolation Performance:</strong></p>
+
+<table>
+<tr><th><strong>Method</strong></th><th><strong>512</strong></th><th><strong>1024</strong></th><th><strong>2048</strong></th><th><strong>4096</strong></th></tr>
+<tr><td>Learned</td><td>28.5</td><td>67.3</td><td>142.8</td><td>298.5</td></tr>
+<tr><td>Sinusoidal</td><td>28.3</td><td>45.7</td><td>89.3</td><td>156.2</td></tr>
+<tr><td>RoPE</td><td>28.7</td><td>32.1</td><td>38.9</td><td>48.2</td></tr>
+<tr><td>ALiBi</td><td>28.9</td><td>31.5</td><td>36.2</td><td>43.1</td></tr>
+</table>
+
+<p><strong>Ranking (best to worst extrapolation):</strong>
+<ol>
+    <li><strong>ALiBi:</strong> Best extrapolation, linear bias generalizes perfectly
+    <li><strong>RoPE:</strong> Very good, rotary embeddings maintain relative positions
+    <li><strong>Sinusoidal:</strong> Moderate, periodic nature helps but not optimal
+    <li><strong>Learned:</strong> Worst, completely fails beyond training length
+</ol>
+
+<p><strong>After fine-tuning on longer sequences:</strong></p>
+
+<p>Learned and sinusoidal improve significantly, but ALiBi and RoPE still maintain advantage in zero-shot extrapolation.</p>
+
+<p><strong>Key Takeaway:</strong> For applications requiring variable-length contexts, use ALiBi or RoPE for best extrapolation without fine-tuning.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter18_multimodal_transformers.html">← Chapter 18: Multimodal Transformers</a>
+  <a href="../../deeptech.html">📚 Table of Contents</a>
+  <a href="chapter20_pretraining_strategies.html">Chapter 20: Pretraining Strategies →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

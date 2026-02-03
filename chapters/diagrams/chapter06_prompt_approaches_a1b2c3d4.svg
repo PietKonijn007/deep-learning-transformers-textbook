@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700">
+  <defs>
+    <style>
+      .title { font: bold 20px sans-serif; fill: #2d3748; }
+      .subtitle { font: bold 16px sans-serif; fill: #2d3748; }
+      .label { font: 14px sans-serif; fill: #2d3748; }
+      .code { font: 13px monospace; fill: #2d3748; }
+      .annotation { font: 12px sans-serif; fill: #718096; }
+      .metric { font: bold 14px sans-serif; }
+      .box-zero { fill: #667eea; stroke: #4c51bf; stroke-width: 2; }
+      .box-few { fill: #48bb78; stroke: #38a169; stroke-width: 2; }
+      .box-cot { fill: #f093fb; stroke: #e879f9; stroke-width: 2; }
+      .input-box { fill: #fef5e7; stroke: #f39c12; stroke-width: 1; }
+      .output-box { fill: #e6fffa; stroke: #81e6d9; stroke-width: 1; }
+      .arrow { stroke: #4a5568; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto">
+      <polygon points="0 0, 8 2.5, 0 5" fill="#4a5568" />
+    </marker>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:0.1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#48bb78;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#48bb78;stop-opacity:0.1" />
+    </linearGradient>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:0.1" />
+    </linearGradient>
+  </defs>
+  
+  <text x="600" y="30" class="title" text-anchor="middle">Prompt Engineering Approaches</text>
+  
+  <!-- Zero-Shot Column -->
+  <g transform="translate(30, 70)">
+    <rect x="0" y="0" width="340" height="560" fill="url(#grad1)" rx="8"/>
+    <rect x="10" y="10" width="320" height="60" class="box-zero" rx="5"/>
+    <text x="170" y="40" class="subtitle" text-anchor="middle">Zero-Shot Prompting</text>
+    <text x="170" y="60" class="annotation" text-anchor="middle">Task description only</text>
+    
+    <!-- Input -->
+    <text x="20" y="95" class="label">Prompt:</text>
+    <rect x="20" y="100" width="300" height="110" class="input-box" rx="3"/>
+    <text x="30" y="120" class="code">Translate to French:</text>
+    <text x="30" y="140" class="code">"The meeting is at 3pm"</text>
+    <text x="30" y="175" class="annotation">(No examples provided)</text>
+    
+    <path d="M 170 210 L 170 240" class="arrow"/>
+    
+    <!-- Output -->
+    <text x="20" y="260" class="label">Response:</text>
+    <rect x="20" y="265" width="300" height="60" class="output-box" rx="3"/>
+    <text x="30" y="285" class="code">"La réunion est à 15h"</text>
+    <text x="30" y="305" class="annotation">✓ Correct translation</text>
+    
+    <!-- Metrics -->
+    <rect x="20" y="350" width="300" height="190" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+    <text x="170" y="375" class="label" text-anchor="middle">Performance Metrics</text>
+    
+    <text x="30" y="400" class="annotation">Success Rate:</text>
+    <rect x="30" y="405" width="200" height="20" fill="#e2e8f0" rx="2"/>
+    <rect x="30" y="405" width="140" height="20" fill="#667eea" rx="2"/>
+    <text x="240" y="420" class="metric" fill="#667eea">70%</text>
+    
+    <text x="30" y="445" class="annotation">Development Time:</text>
+    <text x="240" y="460" class="metric" fill="#38a169">1-2 hours</text>
+    
+    <text x="30" y="485" class="annotation">Cost per Request:</text>
+    <text x="240" y="500" class="metric" fill="#38a169">$0.001</text>
+    
+    <text x="30" y="525" class="annotation">Best For:</text>
+    <text x="30" y="540" class="annotation" font-size="11">• Well-defined tasks</text>
+  </g>
+  
+  <!-- Few-Shot Column -->
+  <g transform="translate(410, 70)">
+    <rect x="0" y="0" width="340" height="560" fill="url(#grad2)" rx="8"/>
+    <rect x="10" y="10" width="320" height="60" class="box-few" rx="5"/>
+    <text x="170" y="40" class="subtitle" text-anchor="middle">Few-Shot Prompting</text>
+    <text x="170" y="60" class="annotation" text-anchor="middle">With 2-5 examples</text>
+    
+    <!-- Input -->
+    <text x="20" y="95" class="label">Prompt:</text>
+    <rect x="20" y="100" width="300" height="110" class="input-box" rx="3"/>
+    <text x="30" y="118" class="code" font-size="11">EN: "Hello" → FR: "Bonjour"</text>
+    <text x="30" y="133" class="code" font-size="11">EN: "Thank you" → FR: "Merci"</text>
+    <text x="30" y="148" class="code" font-size="11">EN: "Goodbye" → FR: "Au revoir"</text>
+    <text x="30" y="168" class="code" font-size="11">EN: "The meeting is at 3pm"</text>
+    <text x="30" y="183" class="code" font-size="11">FR: ?</text>
+    
+    <path d="M 170 210 L 170 240" class="arrow"/>
+    
+    <!-- Output -->
+    <text x="20" y="260" class="label">Response:</text>
+    <rect x="20" y="265" width="300" height="60" class="output-box" rx="3"/>
+    <text x="30" y="285" class="code">"La réunion est à 15h"</text>
+    <text x="30" y="305" class="annotation">✓ Correct + consistent style</text>
+    
+    <!-- Metrics -->
+    <rect x="20" y="350" width="300" height="190" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+    <text x="170" y="375" class="label" text-anchor="middle">Performance Metrics</text>
+    
+    <text x="30" y="400" class="annotation">Success Rate:</text>
+    <rect x="30" y="405" width="200" height="20" fill="#e2e8f0" rx="2"/>
+    <rect x="30" y="405" width="180" height="20" fill="#48bb78" rx="2"/>
+    <text x="240" y="420" class="metric" fill="#48bb78">90%</text>
+    
+    <text x="30" y="445" class="annotation">Development Time:</text>
+    <text x="240" y="460" class="metric" fill="#38a169">2-4 hours</text>
+    
+    <text x="30" y="485" class="annotation">Cost per Request:</text>
+    <text x="240" y="500" class="metric" fill="#ed8936">$0.002</text>
+    
+    <text x="30" y="525" class="annotation">Best For:</text>
+    <text x="30" y="540" class="annotation" font-size="11">• Complex formatting</text>
+  </g>
+  
+  <!-- Chain-of-Thought Column -->
+  <g transform="translate(790, 70)">
+    <rect x="0" y="0" width="380" height="560" fill="url(#grad3)" rx="8"/>
+    <rect x="10" y="10" width="360" height="60" class="box-cot" rx="5"/>
+    <text x="190" y="40" class="subtitle" text-anchor="middle">Chain-of-Thought</text>
+    <text x="190" y="60" class="annotation" text-anchor="middle">Show reasoning steps</text>
+    
+    <!-- Input -->
+    <text x="20" y="95" class="label">Prompt:</text>
+    <rect x="20" y="100" width="340" height="110" class="input-box" rx="3"/>
+    <text x="30" y="118" class="code" font-size="11">Solve: If 5 apples cost $3,</text>
+    <text x="30" y="133" class="code" font-size="11">how much do 8 apples cost?</text>
+    <text x="30" y="153" class="code" font-size="11">Let's think step by step:</text>
+    <text x="30" y="178" class="annotation">(Triggers reasoning)</text>
+    
+    <path d="M 190 210 L 190 240" class="arrow"/>
+    
+    <!-- Output -->
+    <text x="20" y="260" class="label">Response:</text>
+    <rect x="20" y="265" width="340" height="80" class="output-box" rx="3"/>
+    <text x="30" y="280" class="code" font-size="11">1. Cost per apple: $3 ÷ 5 = $0.60</text>
+    <text x="30" y="295" class="code" font-size="11">2. Cost for 8: $0.60 × 8 = $4.80</text>
+    <text x="30" y="310" class="code" font-size="11">Answer: $4.80</text>
+    <text x="30" y="330" class="annotation">✓ Shows work + correct answer</text>
+    
+    <!-- Metrics -->
+    <rect x="20" y="350" width="340" height="190" fill="white" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+    <text x="190" y="375" class="label" text-anchor="middle">Performance Metrics</text>
+    
+    <text x="30" y="400" class="annotation">Success Rate (Reasoning):</text>
+    <rect x="30" y="405" width="240" height="20" fill="#e2e8f0" rx="2"/>
+    <rect x="30" y="405" width="216" height="20" fill="#f093fb" rx="2"/>
+    <text x="280" y="420" class="metric" fill="#f093fb">90%</text>
+    
+    <text x="30" y="445" class="annotation">Development Time:</text>
+    <text x="280" y="460" class="metric" fill="#38a169">1-3 hours</text>
+    
+    <text x="30" y="485" class="annotation">Cost per Request:</text>
+    <text x="280" y="500" class="metric" fill="#e53e3e">$0.003</text>
+    
+    <text x="30" y="525" class="annotation">Best For:</text>
+    <text x="30" y="540" class="annotation" font-size="11">• Multi-step reasoning</text>
+  </g>
+  
+  <!-- Bottom comparison -->
+  <rect x="30" y="650" width="1140" height="40" fill="#f7fafc" stroke="#cbd5e0" stroke-width="1" rx="5"/>
+  <text x="600" y="675" class="annotation" text-anchor="middle">Key Insight: Few-shot prompting achieves 70-90% of fine-tuned performance at zero training cost</text>
+</svg>

@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 4: Feed-Forward Neural Networks - Deep Learning and Transformers</title>
+    <link rel="stylesheet" href="../../styles.css">
+    
+    <!-- MathJax Configuration (must come before loading MathJax) -->
+    <script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']],
+            processEscapes: true,
+            processEnvironments: true,
+            tags: 'ams',
+            macros: {
+                R: '{\\mathbb{R}}',
+                N: '{\\mathbb{N}}',
+                Z: '{\\mathbb{Z}}',
+                C: '{\\mathbb{C}}',
+                va: '{\\mathbf{a}}',
+                vb: '{\\mathbf{b}}',
+                vc: '{\\mathbf{c}}',
+                vd: '{\\mathbf{d}}',
+                ve: '{\\mathbf{e}}',
+                vf: '{\\mathbf{f}}',
+                vg: '{\\mathbf{g}}',
+                vh: '{\\mathbf{h}}',
+                vi: '{\\mathbf{i}}',
+                vj: '{\\mathbf{j}}',
+                vk: '{\\mathbf{k}}',
+                vl: '{\\mathbf{l}}',
+                vm: '{\\mathbf{m}}',
+                vn: '{\\mathbf{n}}',
+                vo: '{\\mathbf{o}}',
+                vp: '{\\mathbf{p}}',
+                vq: '{\\mathbf{q}}',
+                vr: '{\\mathbf{r}}',
+                vs: '{\\mathbf{s}}',
+                vt: '{\\mathbf{t}}',
+                vu: '{\\mathbf{u}}',
+                vv: '{\\mathbf{v}}',
+                vw: '{\\mathbf{w}}',
+                vx: '{\\mathbf{x}}',
+                vy: '{\\mathbf{y}}',
+                vz: '{\\mathbf{z}}',
+                mA: '{\\mathbf{A}}',
+                mB: '{\\mathbf{B}}',
+                mC: '{\\mathbf{C}}',
+                mD: '{\\mathbf{D}}',
+                mE: '{\\mathbf{E}}',
+                mF: '{\\mathbf{F}}',
+                mG: '{\\mathbf{G}}',
+                mH: '{\\mathbf{H}}',
+                mI: '{\\mathbf{I}}',
+                mJ: '{\\mathbf{J}}',
+                mK: '{\\mathbf{K}}',
+                mL: '{\\mathbf{L}}',
+                mM: '{\\mathbf{M}}',
+                mN: '{\\mathbf{N}}',
+                mO: '{\\mathbf{O}}',
+                mP: '{\\mathbf{P}}',
+                mQ: '{\\mathbf{Q}}',
+                mR: '{\\mathbf{R}}',
+                mS: '{\\mathbf{S}}',
+                mT: '{\\mathbf{T}}',
+                mU: '{\\mathbf{U}}',
+                mV: '{\\mathbf{V}}',
+                mW: '{\\mathbf{W}}',
+                mX: '{\\mathbf{X}}',
+                mY: '{\\mathbf{Y}}',
+                mZ: '{\\mathbf{Z}}',
+                transpose: '{^\\top}',
+                norm: ['\\left\\|#1\\right\\|', 1],
+                abs: ['\\left|#1\\right|', 1]
+            }
+        },
+        startup: {
+            pageReady: () => {
+                console.log('MathJax loaded and ready');
+                return MathJax.startup.defaultPageReady();
+            }
+        }
+    };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="../../deeptech.html">🏠 Home</a>
+        <a href="preface.html">Preface</a>
+        <a href="notation.html">Notation</a>
+        <a href="chapter01_linear_algebra.html">Ch 1</a>
+        <a href="chapter02_calculus_optimization.html">Ch 2</a>
+        <a href="chapter03_probability_information.html">Ch 3</a>
+        <a href="chapter04_feedforward_networks.html">Ch 4</a>
+        <a href="chapter05_convolutional_networks.html">Ch 5</a>
+        <a href="chapter06_recurrent_networks.html">Ch 6</a>
+        <a href="chapter07_attention_fundamentals.html">Ch 7</a>
+        <a href="chapter08_self_attention.html">Ch 8</a>
+        <a href="chapter09_attention_variants.html">Ch 9</a>
+        <a href="chapter10_transformer_model.html">Ch 10</a>
+        <a href="chapter11_training_transformers.html">Ch 11</a>
+        <a href="chapter12_computational_analysis.html">Ch 12</a>
+        <a href="chapter13_bert.html">Ch 13</a>
+        <a href="chapter14_gpt.html">Ch 14</a>
+        <a href="chapter15_t5_bart.html">Ch 15</a>
+        <a href="chapter16_efficient_transformers.html">Ch 16</a>
+        <a href="chapter17_vision_transformers.html">Ch 17</a>
+        <a href="chapter18_multimodal_transformers.html">Ch 18</a>
+        <a href="chapter19_long_context.html">Ch 19</a>
+        <a href="chapter20_pretraining_strategies.html">Ch 20</a>
+        <a href="chapter21_pytorch_implementation.html">Ch 21</a>
+        <a href="chapter22_hardware_optimization.html">Ch 22</a>
+        <a href="chapter23_best_practices.html">Ch 23</a>
+        <a href="chapter24_domain_specific_models.html">Ch 24</a>
+        <a href="chapter25_enterprise_nlp.html">Ch 25</a>
+        <a href="chapter26_code_language.html">Ch 26</a>
+        <a href="chapter27_video_visual.html">Ch 27</a>
+        <a href="chapter28_knowledge_graphs.html">Ch 28</a>
+        <a href="chapter29_recommendations.html">Ch 29</a>
+        <a href="chapter30_healthcare.html">Ch 30</a>
+        <a href="chapter31_finance.html">Ch 31</a>
+        <a href="chapter32_legal.html">Ch 32</a>
+        <a href="chapter33_observability.html">Ch 33</a>
+        <a href="chapter34_dsl_agents.html">Ch 34</a>
+    </nav>
+
+    <main>
+        <h1>Feed-Forward Neural Networks</h1>
+
+<h2>Chapter Overview</h2>
+
+<p>Feed-forward neural networks are the foundation of deep learning. These networks transform inputs through sequences of linear and nonlinear operations to produce outputs. This chapter develops the architecture, training, and theory of feed-forward networks, establishing concepts that extend to all modern deep learning models including transformers.</p>
+
+<h3>Learning Objectives</h3>
+
+<p>After completing this chapter, you will be able to:</p>
+
+<ol>
+    <li>Understand the architecture of feed-forward neural networks
+    <li>Implement forward and backward passes through MLPs
+    <li>Apply appropriate activation functions and understand their properties
+    <li>Initialize network weights properly to enable training
+    <li>Apply regularization techniques to prevent overfitting
+    <li>Understand the universal approximation theorem
+</ol>
+
+<h2>From Linear Models to Neural Networks</h2>
+
+<h3>The Perceptron</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+The perceptron is a binary classifier:
+<div class="equation">
+$$
+\hat{y} = \text{sign}(\vw\transpose \vx + b) = \begin{cases}
++1 & \text{if } \vw\transpose \vx + b > 0 \\
+-1 & \text{otherwise}
+\end{cases}
+$$
+</div>
+where $\vw \in \R^n$ are weights, $b \in \R$ is bias, $\vx \in \R^n$ is input.
+</div>
+
+<h3>Multi-Class Classification: Softmax Regression</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+For logits $\vz = [z_1, \ldots, z_C]\transpose \in \R^C$:
+<div class="equation">
+$$
+\text{softmax}(\vz)_k = \frac{\exp(z_k)}{\sum_{j=1}^C \exp(z_j)}
+$$
+</div>
+</div>
+
+<div class="example"><strong>Example:</strong> 
+For logits $\vz = [2.0, 1.0, 0.1]$: Sum of exponentials $= 11.212$, giving probabilities $[0.659, 0.242, 0.099]$. The model predicts class 1 with 65.9 percent confidence.
+</div>
+
+<h2>Multi-Layer Perceptrons</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+An L-layer MLP transforms input through layers:
+<div class="equation">
+$$\begin{align}
+\vz^{(\ell)} &= \mW^{(\ell)} \vh^{(\ell-1)} + \vb^{(\ell)} \\
+\vh^{(\ell)} &= \sigma^{(\ell)}(\vz^{(\ell)})
+\end{align}$$
+</div>
+where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and $\sigma^{(\ell)}$ is the activation function.
+</div>
+
+<figure>
+<div class="tikz-diagram"><img src="../diagrams/chapter04_feedforward_networks_522a20fbc46b.svg" alt="TikZ Diagram" /></div>
+<figcaption>Multi-layer perceptron (MLP) computational graph showing fully-connected layers. Each neuron in the hidden layer receives input from <strong>all</strong> neurons in the input layer (12 connections total), and each output neuron receives input from all hidden neurons (8 connections). The red path highlights one example: $x_1 \to h_2 \to y_1$. This dense connectivity enables MLPs to learn complex non-linear functions.</figcaption>
+</figure>
+
+<div class="example"><strong>Example:</strong> 
+Architecture for MNIST digit classification:
+<ul>
+    <li>Input: $\vx \in \R^{784}$ (flattened $28 \times 28$ image)
+    <li>Hidden 1: $\vh^{(1)} \in \R^{256}$ with ReLU
+    <li>Hidden 2: $\vh^{(2)} \in \R^{128}$ with ReLU
+    <li>Output: $\vz^{(3)} \in \R^{10}$ with softmax
+</ul>
+
+<p>Parameter count: $200{,}960 + 32{,}896 + 1{,}290 = 235{,}146$ parameters.
+</div>
+
+<h3>Why Depth Matters</h3>
+
+<p>Without nonlinear activations, multiple layers collapse to single linear transformation. With nonlinearities, deep networks learn complex functions efficiently.</p>
+
+<h2>Memory and Computation Analysis</h2>
+
+<p>Understanding the memory and computational requirements of feed-forward networks is essential for training large models efficiently. The relationship between parameter count, floating-point operations (FLOPs), and memory usage determines the practical limits of model size and batch size on available hardware.</p>
+
+<h3>Parameter Count vs FLOPs</h3>
+
+<p>The parameter count of a neural network determines its memory footprint for storing weights, while the FLOPs (floating-point operations) determine the computational cost of forward and backward passes. These two quantities scale differently with network architecture, leading to important trade-offs in model design.</p>
+
+<p>For a single fully-connected layer computing $\vy = \mW\vx + \vb$ where $\mW \in \R^{m \times n}$, the parameter count is $mn + m$ (weights plus biases). The forward pass requires $mn$ multiply-accumulate operations for the matrix-vector product plus $m$ additions for the bias, totaling approximately $2mn$ FLOPs. The backward pass requires computing gradients with respect to inputs ($\nabla_{\vx} L = \mW\transpose \nabla_{\vy} L$, requiring $2mn$ FLOPs), gradients with respect to weights ($\nabla_{\mW} L = \nabla_{\vy} L \vx\transpose$, requiring $2mn$ FLOPs), and gradients with respect to biases ($\nabla_{\vb} L = \nabla_{\vy} L$, requiring $m$ FLOPs). The total computational cost for forward and backward passes is approximately $6mn$ FLOPs, or 3× the parameter count.</p>
+
+<p>This 3× ratio between FLOPs and parameters holds approximately for fully-connected layers and provides a useful rule of thumb: training a model for one step requires approximately 6× as many FLOPs as the model has parameters (2× for forward pass, 4× for backward pass including gradient computation). For a model with 100 million parameters, one training step requires approximately 600 million FLOPs, or 0.6 GFLOPs. At 1,000 training steps, this totals 600 GFLOPs of computation.</p>
+
+<p>However, this ratio varies significantly with architecture. Convolutional layers have much higher FLOPs per parameter due to weight sharing: a $3 \times 3$ convolutional filter with $C_{\text{in}}$ input channels and $C_{\text{out}}$ output channels has $9 C_{\text{in}} C_{\text{out}}$ parameters but requires $9 C_{\text{in}} C_{\text{out}} H W$ FLOPs for an $H \times W$ feature map, giving a FLOPs-to-parameter ratio of $HW$. For a $224 \times 224$ image, this ratio is 50,176, making convolutional layers far more compute-intensive per parameter than fully-connected layers. Conversely, embedding layers have zero FLOPs (they perform table lookups rather than arithmetic) despite having many parameters, making them memory-intensive but computationally cheap.</p>
+
+<h3>Memory Requirements for Activations</h3>
+
+<p>During training, neural networks must store intermediate activations for use in the backward pass, and these activations often consume more memory than the model parameters themselves. Understanding activation memory is critical for determining maximum batch size and sequence length.</p>
+
+<p>For a feed-forward layer computing $\vh = \sigma(\mW\vx + \vb)$ with batch size $B$, the network must store the input activations $\vx \in \R^{B \times n}$, the pre-activation values $\vz = \mW\vx + \vb \in \R^{B \times m}$, and the post-activation values $\vh \in \R^{B \times m}$. In FP32, this requires $4B(n + 2m)$ bytes of memory. For a typical transformer feed-forward layer with $n = 768$ (model dimension) and $m = 3072$ (intermediate dimension), processing batch size $B = 32$ requires $4 \times 32 \times (768 + 2 \times 3072) = 901{,}120$ bytes, or approximately 0.86 MB per layer. For a 12-layer BERT-base model, activation memory totals approximately 10.3 MB per batch, which is modest compared to the 440 MB required for model parameters.</p>
+
+<p>However, activation memory scales linearly with batch size while parameter memory remains constant. Increasing batch size from 32 to 256 increases activation memory by 8×, from 10.3 MB to 82.4 MB, while parameter memory remains 440 MB. For very large batch sizes, activation memory can exceed parameter memory. At batch size 1024, activation memory for BERT-base reaches 329.6 MB, approaching the parameter memory. This scaling explains why large batch sizes eventually become memory-limited: the activations grow without bound while parameters remain fixed.</p>
+
+<p>The situation is more severe for transformer models due to attention mechanisms. Self-attention requires storing attention score matrices of size $B \times h \times n \times n$ where $h$ is the number of attention heads and $n$ is the sequence length. For BERT-base with $h = 12$ heads, batch size $B = 32$, and sequence length $n = 512$, the attention scores require $4 \times 32 \times 12 \times 512 \times 512 = 402{,}653{,}184$ bytes, or approximately 384 MB per layer. Across 12 layers, attention scores alone consume 4.6 GB of memory, dwarfing both the parameter memory (440 MB) and the feed-forward activation memory (10.3 MB). This explains why sequence length has such a dramatic impact on memory usage: doubling the sequence length quadruples the attention memory due to the $O(n^2)$ scaling.</p>
+
+<h3>GPU Utilization for Different Layer Sizes</h3>
+
+<p>GPU utilization—the fraction of peak computational throughput actually achieved—varies dramatically with layer dimensions and batch size. Understanding these utilization patterns is essential for designing efficient architectures and selecting appropriate hyperparameters.</p>
+
+<p>Modern GPUs achieve peak performance on large matrix multiplications where dimensions are multiples of the GPU's tile size (typically 16 or 32 for FP16 operations). For an NVIDIA A100 GPU with peak FP16 throughput of 312 TFLOPS, a matrix multiplication $\mC = \mA\mB$ where $\mA \in \R^{m \times k}$ and $\mB \in \R^{k \times n}$ achieves near-peak performance when $m$, $k$, and $n$ are all large (greater than 1024) and multiples of 16. Under these conditions, the GPU can achieve 280-300 TFLOPS, or 90-95\% of peak throughput.</p>
+
+<p>However, for smaller dimensions, utilization drops dramatically. A matrix multiplication with $m = 32$, $k = 768$, $n = 768$ (corresponding to batch size 32 and BERT-base dimensions) requires $2 \times 32 \times 768 \times 768 = 37{,}748{,}736$ FLOPs. At peak throughput, this would take 0.12 microseconds, but the actual runtime is approximately 15 microseconds, indicating only 0.8\% utilization. The poor utilization arises because the small batch dimension ($m = 32$) provides insufficient parallelism to saturate the GPU's 6,912 CUDA cores. Each CUDA core can process one operation per clock cycle, so saturating the GPU requires at least 6,912 concurrent operations. With $m = 32$, only 32 rows can be processed in parallel, leaving 99.5\% of the GPU idle.</p>
+
+<p>Increasing batch size directly improves GPU utilization. With batch size 256, the same operation requires $2 \times 256 \times 768 \times 768 = 301{,}989{,}888$ FLOPs, taking approximately 50 microseconds for actual runtime. This corresponds to 6.0 TFLOPS, or 1.9\% of peak throughput—still poor, but 2.4× better than batch size 32. At batch size 2048, the operation achieves approximately 45 TFLOPS, or 14.4\% of peak throughput. Full utilization (90\%+) requires batch sizes exceeding 8192 for these dimensions, which is impractical for most training scenarios due to memory constraints and optimization difficulties with very large batches.</p>
+
+<p>The feed-forward layers in transformers achieve better utilization than attention layers due to their larger intermediate dimension. For BERT-base, the first feed-forward layer computes $\mW_1 \vh$ where $\mW_1 \in \R^{3072 \times 768}$ and $\vh \in \R^{B \times 768}$. With batch size 32, this requires $2 \times 32 \times 768 \times 3072 = 150{,}994{,}944$ FLOPs, taking approximately 25 microseconds for 6.0 TFLOPS throughput (1.9\% utilization). The larger output dimension (3072 vs 768) provides more parallelism, but utilization remains poor due to the small batch size. At batch size 256, the feed-forward layer achieves approximately 60 TFLOPS (19.2\% utilization), and at batch size 2048, it reaches approximately 180 TFLOPS (57.7\% utilization). These higher utilization rates explain why feed-forward layers account for a larger fraction of training time than their FLOPs would suggest: they achieve better hardware efficiency than attention layers.</p>
+
+<h3>Batch Size Impact on Efficiency</h3>
+
+<p>Batch size is the primary lever for controlling GPU utilization and training efficiency. Larger batches amortize the fixed costs of launching GPU kernels, loading weights from memory, and synchronizing across devices, leading to higher throughput measured in samples per second. However, larger batches also require more memory and may necessitate adjustments to learning rate and training schedule.</p>
+
+<p>For BERT-base training on an NVIDIA A100 GPU, the relationship between batch size and throughput is approximately logarithmic: doubling the batch size increases throughput by 1.5-1.7× rather than 2×. With batch size 8, BERT-base achieves approximately 120 samples per second. At batch size 16, throughput increases to 200 samples per second (1.67× improvement). At batch size 32, throughput reaches 320 samples per second (1.6× improvement). At batch size 64, throughput reaches 480 samples per second (1.5× improvement). The diminishing returns arise because larger batches improve GPU utilization but eventually become limited by memory bandwidth rather than compute throughput.</p>
+
+<p>The memory cost of larger batches is substantial. Batch size 8 requires approximately 4.2 GB of GPU memory for BERT-base (including model parameters, optimizer states, and activations). Batch size 16 requires 6.8 GB (1.62× increase). Batch size 32 requires 12.0 GB (1.76× increase). Batch size 64 requires 22.6 GB (1.88× increase). The super-linear scaling of memory with batch size arises because activation memory scales linearly with batch size while parameter and optimizer memory remain constant, and the activation memory eventually dominates. An A100 GPU with 80 GB of memory can accommodate batch size 256 for BERT-base, but larger batches require gradient accumulation or distributed training.</p>
+
+<p>The optimal batch size balances throughput, memory usage, and optimization dynamics. From a hardware efficiency perspective, larger batches are always better, as they improve GPU utilization and samples-per-second throughput. However, from an optimization perspective, very large batches can slow convergence by reducing the number of parameter updates per epoch. Empirically, batch sizes of 256-2048 work well for BERT-base, providing good hardware efficiency (40-60\% GPU utilization) while maintaining reasonable convergence speed. Larger batches require careful tuning of learning rate and warmup schedule to maintain training stability and final model quality.</p>
+
+<h3>Transformer Feed-Forward Networks</h3>
+
+<p>The feed-forward networks in transformer models follow a specific architecture that differs from traditional MLPs. Each transformer layer contains a two-layer feed-forward network with an expansion factor of 4: the first layer projects from model dimension $d$ to intermediate dimension $4d$, applies an activation function (typically GELU), and the second layer projects back to dimension $d$. This architecture is used universally in BERT, GPT, T5, and other transformer models.</p>
+
+<p>For BERT-base with $d = 768$, the feed-forward network has dimensions $768 \to 3072 \to 768$. The first layer has weight matrix $\mW_1 \in \R^{3072 \times 768}$ with $2{,}359{,}296$ parameters, and the second layer has weight matrix $\mW_2 \in \R^{768 \times 3072}$ with $2{,}359{,}296$ parameters, totaling $4{,}718{,}592$ parameters per transformer layer. Across 12 layers, the feed-forward networks contain $56{,}623{,}104$ parameters, or 51.5\% of BERT-base's 110 million total parameters. This makes the feed-forward networks the largest component of the model by parameter count, exceeding the attention layers (38.6\% of parameters) and embeddings (9.9\% of parameters).</p>
+
+<p>The computational cost of the feed-forward network is similarly dominant. For batch size $B$ and sequence length $n$, the first layer requires $2Bn \times 768 \times 3072$ FLOPs, and the second layer requires $2Bn \times 3072 \times 768$ FLOPs, totaling $4Bn \times 768 \times 3072 = 9{,}437{,}184 Bn$ FLOPs per transformer layer. For $B = 32$ and $n = 512$, this totals $154{,}140{,}098{,}048$ FLOPs per layer, or approximately 154 GFLOPs. Across 12 layers, the feed-forward networks require 1.85 TFLOPs per forward pass, compared to 1.57 TFLOPs for attention layers. The feed-forward networks account for 54.1\% of the total computational cost, slightly more than their share of parameters due to the large intermediate dimension.</p>
+
+<p>The memory requirements for feed-forward activations are modest compared to attention. For batch size $B = 32$ and sequence length $n = 512$, the intermediate activations after the first layer have shape $32 \times 512 \times 3072$, requiring $4 \times 32 \times 512 \times 3072 = 201{,}326{,}592$ bytes, or approximately 192 MB per layer. Across 12 layers, feed-forward activations total 2.3 GB, which is substantial but less than the 4.6 GB required for attention score matrices. The feed-forward activations scale linearly with sequence length ($O(n)$) rather than quadratically ($O(n^2)$), making them less problematic for long sequences.</p>
+
+<p>The 4× expansion factor used in transformer feed-forward networks is a design choice that balances model capacity, computational cost, and memory usage. Larger expansion factors (e.g., 8× or 16×) increase model capacity and can improve performance on some tasks, but they also increase parameter count, FLOPs, and memory proportionally. Smaller expansion factors (e.g., 2×) reduce computational cost but may limit model expressiveness. The 4× factor has proven effective across a wide range of tasks and model sizes, from BERT-base (768 → 3072) to GPT-3 (12288 → 49152), and has become a standard architectural choice.</p>
+
+<h2>Activation Functions</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+<div class="equation">
+$$
+\text{ReLU}(z) = \max(0, z)
+$$
+</div>
+Derivative: $\text{ReLU}'(z) = \mathbb{1}[z > 0]$
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+Gaussian Error Linear Unit (default in transformers):
+<div class="equation">
+$$
+\text{GELU}(z) = z \cdot \Phi(z)
+$$
+</div>
+where $\Phi$ is standard normal CDF. Approximation:
+<div class="equation">
+$$
+\text{GELU}(z) \approx 0.5z \left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}(z + 0.044715z^3)\right]\right)
+$$
+</div>
+</div>
+
+<div class="keypoint">
+Transformer models use GELU (BERT, GPT) or variants like Swish for feed-forward networks.
+</div>
+
+<h3>Computational Cost of Activation Functions</h3>
+
+<p>The choice of activation function has direct implications for both computational cost and memory bandwidth utilization. While activation functions appear simple mathematically, their performance characteristics on modern hardware vary significantly, making activation selection an important consideration for efficient neural network training.</p>
+
+<p>ReLU is the most computationally efficient activation function, requiring only a single comparison and conditional assignment per element. On modern GPUs, ReLU can be implemented as a single instruction using the maximum operation: $\text{ReLU}(z) = \max(0, z)$. For a layer with $n$ activations, ReLU requires $n$ comparisons and $n$ conditional moves, totaling approximately $2n$ operations. On an NVIDIA A100 GPU with 312 TFLOPS of FP16 throughput, computing ReLU for a batch of $B = 32$ sequences with $n = 512$ tokens and $d = 768$ dimensions requires $32 \times 512 \times 768 = 12{,}582{,}912$ operations, completing in approximately 0.04 microseconds at peak throughput. However, the actual runtime is dominated by memory bandwidth: reading and writing the activation tensor requires $2 \times 32 \times 512 \times 768 \times 2 = 50$ MB of memory traffic, taking approximately 33 microseconds at the A100's 1.5 TB/s bandwidth. This makes ReLU approximately 825× memory-bandwidth-bound rather than compute-bound.</p>
+
+<p>GELU is significantly more expensive computationally than ReLU due to the Gaussian error function $\Phi(z)$, which requires computing the cumulative distribution function of the standard normal distribution. The exact GELU implementation requires evaluating the error function, which typically involves polynomial approximations with 10-15 arithmetic operations per element. The tanh-based approximation shown in Definition~[ref] reduces this to approximately 8 operations per element: one cube, two multiplications, one addition, one square root, one tanh evaluation (itself requiring 5-6 operations), and two final multiplications. For the same BERT-base configuration with $32 \times 512 \times 768$ activations, GELU requires approximately $8 \times 12{,}582{,}912 = 100{,}663{,}296$ operations, taking approximately 0.32 microseconds at peak throughput. The memory bandwidth remains 50 MB, taking 33 microseconds, so GELU is still approximately 100× memory-bandwidth-bound but significantly less so than ReLU.</p>
+
+<p>The computational overhead of GELU compared to ReLU is approximately 4× in terms of arithmetic operations, but the actual runtime difference is much smaller due to memory bandwidth limitations. In practice, GELU adds approximately 10-15\% to the total activation computation time compared to ReLU, as both operations spend most of their time waiting for memory transfers rather than computing. For a full BERT-base forward pass taking approximately 50 milliseconds, replacing ReLU with GELU in all 12 layers adds approximately 0.5-1 milliseconds, or 1-2\% of total training time. This modest overhead explains why modern transformers universally adopt GELU despite its higher computational cost: the improved training dynamics and final model quality outweigh the small performance penalty.</p>
+
+<p>Swish, defined as $\text{Swish}(z) = z \cdot \sigma(z)$ where $\sigma$ is the sigmoid function, has computational cost similar to GELU. The sigmoid function requires computing an exponential and a division, totaling approximately 6-8 operations per element including the final multiplication. Swish therefore has comparable performance to GELU, typically within 5-10\% in runtime. The choice between GELU and Swish is usually based on empirical performance on specific tasks rather than computational considerations, as their efficiency is nearly identical.</p>
+
+<h3>Hardware Support and Fused Kernels</h3>
+
+<p>Modern deep learning frameworks provide fused kernels that combine activation functions with preceding operations to reduce memory traffic. A fused linear-GELU kernel computes $\text{GELU}(\mW\vx + \vb)$ in a single GPU kernel, eliminating the need to write the intermediate result $\vz = \mW\vx + \vb$ to memory and then read it back for the GELU computation. This fusion reduces memory traffic from $3V$ to $2V$ values (where $V$ is the number of activations), providing speedups of 1.3-1.5× for the combined operation.</p>
+
+<p>For BERT-base with hidden dimension $d = 768$ and feed-forward intermediate dimension $d_{\text{ff}} = 3072$, the first feed-forward layer computes $\text{GELU}(\mW_1 \vh + \vb_1)$ where $\mW_1 \in \R^{3072 \times 768}$. Without fusion, this requires writing $32 \times 512 \times 3072 = 50{,}331{,}648$ FP16 values (100 MB) to memory after the linear layer, then reading them back for GELU, totaling 200 MB of memory traffic. With fusion, only the final GELU output is written to memory (100 MB), reducing traffic by 50\% and improving runtime from approximately 100 microseconds to 67 microseconds on an A100 GPU. Across 12 transformer layers with 2 feed-forward layers each, this fusion saves approximately 0.8 milliseconds per forward pass, or 1.6\% of total training time.</p>
+
+<p>NVIDIA's cuDNN library and PyTorch's JIT compiler automatically apply these fusions when possible, but they require that the activation function be known at compile time. Custom activation functions or dynamically selected activations may not benefit from fusion, resulting in 30-50\% slower performance. This hardware consideration provides another reason to prefer standard activations like ReLU, GELU, and Swish over custom alternatives: the extensive optimization effort invested in these common operations by hardware vendors and framework developers translates directly to faster training.</p>
+
+<h3>Why GELU is Preferred in Transformers</h3>
+
+<p>Despite its higher computational cost, GELU has become the standard activation function for transformer models, used in BERT, GPT-2, GPT-3, T5, and most modern language models. This preference is driven by empirical performance rather than computational efficiency: models trained with GELU consistently achieve better final accuracy than those trained with ReLU, particularly on language understanding tasks.</p>
+
+<p>The theoretical motivation for GELU is that it provides a smoother approximation to the ReLU function, with non-zero gradients for negative inputs. While ReLU has gradient zero for all $z < 0$, GELU has small but non-zero gradients in this region, allowing the network to recover from neurons that have been pushed into the negative regime. This property is particularly valuable in deep networks where gradient flow through many layers can be fragile. For a 24-layer BERT-large model, the probability that a gradient signal survives through all layers is significantly higher with GELU than with ReLU, as GELU never completely blocks gradient flow.</p>
+
+<p>Empirically, BERT-base trained with GELU achieves 84.6\% accuracy on the MNLI natural language inference task, compared to 83.9\% with ReLU—a 0.7 percentage point improvement that is statistically significant and practically meaningful. For GPT-2, the perplexity on the WebText validation set is 18.3 with GELU compared to 19.1 with ReLU, indicating better language modeling performance. These improvements justify the 1-2\% computational overhead of GELU, as the improved model quality translates to better downstream task performance and potentially reduced training time to reach a target accuracy.</p>
+
+<p>The success of GELU has inspired variants like Swish and Mish that share the property of smooth, non-zero gradients everywhere. Swish, defined as $\text{Swish}(z) = z \cdot \sigma(z)$, has similar performance to GELU on most tasks and is used in some efficient transformer architectures like EfficientNet. Mish, defined as $\text{Mish}(z) = z \cdot \tanh(\text{softplus}(z))$, provides slightly better performance than GELU on some vision tasks but has higher computational cost. The landscape of activation functions continues to evolve, but GELU remains the standard for language models due to its strong empirical performance and reasonable computational cost.</p>
+
+<h2>Universal Approximation Theorem</h2>
+
+<div class="theorem"><strong>Theorem:</strong> 
+A single-hidden-layer neural network with nonlinear activation can approximate any continuous function on compact domain to arbitrary precision, given sufficient hidden units.
+</div>
+
+<p>Caveat: The theorem says nothing about how many units needed, how to find weights, or generalization. Deep networks often more efficient than wide networks.</p>
+
+<h2>Weight Initialization</h2>
+
+<div class="definition"><strong>Definition:</strong> 
+For layer with $n_{\text{in}}$ inputs and $n_{\text{out}}$ outputs:
+<div class="equation">
+$$
+w_{ij} \sim \mathcal{N}\left(0, \frac{2}{n_{\text{in}} + n_{\text{out}}}\right)
+$$
+</div>
+Best for tanh and sigmoid activations.
+</div>
+
+<div class="definition"><strong>Definition:</strong> 
+For ReLU networks:
+<div class="equation">
+$$
+w_{ij} \sim \mathcal{N}\left(0, \frac{2}{n_{\text{in}}}\right)
+$$
+</div>
+Accounts for ReLU zeroing half the activations.
+</div>
+
+<h3>Variance Preservation Through Layers</h3>
+
+<p>Proper weight initialization ensures that activations and gradients maintain reasonable magnitudes as they propagate through deep networks. Without careful initialization, activations can explode (growing exponentially with depth) or vanish (shrinking to zero), making training impossible. The initialization schemes above are designed to preserve variance through forward and backward passes.</p>
+
+<p>Consider a linear layer $\vy = \mW\vx$ where $\vx \in \R^{n_{\text{in}}}$ has zero mean and unit variance, and weights $w_{ij}$ are independent with zero mean and variance $\sigma_w^2$. The variance of each output element is:
+<div class="equation">
+$$
+\text{Var}(y_i) = \text{Var}\left(\sum_{j=1}^{n_{\text{in}}} w_{ij} x_j\right) = \sum_{j=1}^{n_{\text{in}}} \text{Var}(w_{ij}) \text{Var}(x_j) = n_{\text{in}} \sigma_w^2
+$$
+</div>
+
+<p>To preserve variance ($\text{Var}(y_i) = 1$), we need $\sigma_w^2 = 1/n_{\text{in}}$. This is the basis for Xavier initialization, which uses $\sigma_w^2 = 2/(n_{\text{in}} + n_{\text{out}})$ to balance forward and backward pass variance preservation. The factor of 2 in the numerator accounts for the fact that gradients flow backward through the transpose of the weight matrix, which has dimensions $n_{\text{out}} \times n_{\text{in}}$.</p>
+
+<p>For ReLU activations, the analysis is modified because ReLU zeros out half the activations on average. If the input has variance 1, the output of ReLU has variance approximately 0.5 (since half the values become zero). To compensate, He initialization uses $\sigma_w^2 = 2/n_{\text{in}}$, doubling the variance compared to the linear case. This ensures that after the ReLU activation, the variance returns to approximately 1, maintaining signal strength through deep networks.</p>
+
+<p>The importance of proper initialization becomes apparent in deep networks. For a 100-layer network with Xavier initialization, activations maintain roughly constant variance through all layers. With naive initialization using $\sigma_w^2 = 1$ (too large), activations grow exponentially: after 10 layers, the variance is approximately $10^{10}$, causing numerical overflow. With $\sigma_w^2 = 0.01$ (too small), activations shrink exponentially: after 10 layers, the variance is approximately $10^{-20}$, causing numerical underflow. Both scenarios make training impossible, as gradients either explode or vanish.</p>
+
+<h3>Impact on Training Speed</h3>
+
+<p>Proper initialization not only enables training but also significantly affects convergence speed. Networks initialized with appropriate schemes reach target accuracy in fewer training steps, reducing total training time and computational cost.</p>
+
+<p>For BERT-base trained on the MNLI natural language inference task, the impact of initialization is dramatic. With He initialization (appropriate for the GELU activations used in BERT), the model reaches 84\% validation accuracy after approximately 15,000 training steps, requiring 3.5 hours on an NVIDIA A100 GPU. With Xavier initialization (suboptimal for GELU), the model reaches the same accuracy after approximately 22,000 steps, requiring 5.1 hours—a 46\% increase in training time. With naive initialization using $\sigma_w^2 = 0.01$, the model fails to converge even after 50,000 steps, as the gradients vanish in the deep network.</p>
+
+<p>The mechanism behind this speedup is that proper initialization places the network in a region of parameter space where gradients have appropriate magnitude for learning. With He initialization, the average gradient norm for BERT-base is approximately 1.0 in early training, allowing the Adam optimizer with learning rate $10^{-4}$ to make meaningful parameter updates. With Xavier initialization, the average gradient norm is approximately 0.3, requiring either a higher learning rate (which risks instability) or more training steps to achieve the same parameter changes. With naive initialization, the gradient norm is approximately 0.001, making learning extremely slow regardless of learning rate.</p>
+
+<p>The computational cost of initialization itself is negligible. Generating random numbers for 110 million parameters in BERT-base requires approximately 50 milliseconds on a CPU, compared to hours or days of training time. Modern deep learning frameworks like PyTorch provide efficient initialization functions that run on the GPU, reducing initialization time to less than 10 milliseconds. This one-time cost is amortized over thousands of training steps, making proper initialization essentially free from a computational perspective while providing substantial benefits for training speed and stability.</p>
+
+<h3>GPU Memory During Initialization</h3>
+
+<p>Initialization requires temporarily allocating memory for random number generation, which can be significant for very large models. For a model with $P$ parameters, initialization requires $4P$ bytes to store the parameters in FP32, plus additional memory for the random number generator state. For BERT-base with 110 million parameters, this totals 440 MB plus approximately 10 MB for RNG state, totaling 450 MB. This is modest and fits comfortably in any modern GPU.</p>
+
+<p>However, for very large models like GPT-3 with 175 billion parameters, initialization requires $4 \times 175 \times 10^9 = 700$ GB of memory just for the parameters in FP32. This exceeds the memory of any single GPU, requiring distributed initialization across multiple devices. The typical approach is to initialize parameters on CPU in chunks, transfer each chunk to the appropriate GPU, and convert to FP16 to reduce memory. This process can take several minutes for GPT-3, but it remains a one-time cost that is negligible compared to the weeks of training time required.</p>
+
+<p>Modern frameworks provide memory-efficient initialization strategies for large models. PyTorch's <code>torch.nn.init</code> module supports in-place initialization, which avoids allocating temporary tensors. For models using mixed precision training, parameters can be initialized directly in FP16, halving the memory requirement. For models using model parallelism, each GPU initializes only its shard of the parameters, distributing the memory cost across devices. These optimizations make initialization practical even for models with hundreds of billions of parameters.</p>
+
+<h3>Example: BERT-base Initialization</h3>
+
+<p>BERT-base uses a variant of He initialization adapted for GELU activations. The initialization scheme is:
+<ul>
+    <li>Embedding layers: $\mathcal{N}(0, 0.02^2)$ (fixed small variance)
+    <li>Linear layers: $\mathcal{N}(0, \sigma^2)$ where $\sigma = \sqrt{2/n_{\text{in}}}$
+    <li>Layer norm parameters: $\gamma = 1$, $\beta = 0$
+    <li>Biases: $b = 0$
+</ul>
+
+<p>For the feed-forward layers in BERT-base, the first layer has $n_{\text{in}} = 768$, giving $\sigma = \sqrt{2/768} \approx 0.051$. The second layer has $n_{\text{in}} = 3072$, giving $\sigma = \sqrt{2/3072} \approx 0.026$. These initialization variances ensure that activations maintain unit variance through the network, enabling stable training from the first iteration.</p>
+
+<p>The impact of this initialization can be measured empirically. At initialization (before any training), BERT-base with proper He initialization has average activation magnitude approximately 1.0 in all layers, and gradient magnitude approximately 1.0 for all parameters. With naive initialization using $\sigma = 0.01$ for all layers, the activation magnitude in the final layer is approximately 0.001, and gradients for early layers are approximately $10^{-6}$, making learning extremely slow. With too-large initialization using $\sigma = 0.1$, the activation magnitude in the final layer is approximately 100, and gradients are approximately 1000, causing training instability and divergence.</p>
+
+<p>The lesson is clear: proper initialization is not optional but essential for training deep networks efficiently. The specific initialization scheme (Xavier vs He vs other variants) matters less than ensuring that variance is preserved through the network. For transformer models with GELU activations, He initialization or slight variants thereof work well and are used universally in BERT, GPT, T5, and other modern architectures.</p>
+
+<h2>Regularization</h2>
+
+<h3>L2 Regularization</h3>
+
+<p>Add penalty to loss:
+<div class="equation">
+$$
+L_{\text{total}} = L_{\text{data}} + \frac{\lambda}{2} \sum_{\ell} \norm{\mW^{(\ell)}}_F^2
+$$
+</div>
+
+<p>L2 regularization, also known as weight decay, penalizes large parameter values to prevent overfitting. The regularization term adds the squared Frobenius norm of all weight matrices to the loss function, encouraging the optimizer to keep weights small. The hyperparameter $\lambda$ controls the strength of regularization: larger $\lambda$ produces smaller weights and stronger regularization.</p>
+
+<p>The computational cost of L2 regularization is modest. Computing the squared norm $\norm{\mW}_F^2 = \sum_{ij} w_{ij}^2$ requires one multiplication and one addition per parameter, totaling $2P$ operations for a model with $P$ parameters. For BERT-base with 110 million parameters, this requires 220 million operations, or 0.22 GFLOPs. Compared to the 96 GFLOPs required for a forward pass, the regularization computation adds only 0.23\% overhead. On an NVIDIA A100 GPU, computing the regularization term takes approximately 0.7 microseconds, which is negligible compared to the 50 milliseconds for a full forward-backward pass.</p>
+
+<p>The gradient of the L2 regularization term is even simpler: $\nabla_{\mW} \left(\frac{\lambda}{2} \norm{\mW}_F^2\right) = \lambda \mW$. This adds a term proportional to the current weights to the gradient, which can be implemented as a simple scaling operation during the optimizer step. Most optimizers, including PyTorch's Adam and SGD, support weight decay as a built-in parameter that applies this scaling automatically without requiring explicit computation of the regularization term. This makes L2 regularization essentially free from a computational perspective.</p>
+
+<p>The memory overhead of L2 regularization is zero, as it requires no additional storage beyond the parameters themselves. The regularization term is computed on-the-fly during the backward pass and does not need to be stored. This makes L2 regularization an attractive regularization technique for large models where memory is at a premium.</p>
+
+<h3>Dropout</h3>
+
+<div class="definition"><strong>Definition:</strong> 
+During training, randomly set activations to zero with probability p. During inference, scale by $(1-p)$.
+</div>
+
+<p>Dropout is a powerful regularization technique that randomly drops (sets to zero) a fraction of activations during training. This prevents the network from relying too heavily on any single neuron and encourages learning robust features. The dropout probability $p$ is typically 0.1 to 0.5, with higher values providing stronger regularization at the cost of slower convergence.</p>
+
+<h3>Computational Overhead of Dropout</h3>
+
+<p>The computational cost of dropout consists of random number generation and masking operations. For each activation tensor with $N$ elements, dropout requires generating $N$ random numbers, comparing each to the threshold $p$, and multiplying the activations by the resulting binary mask. Additionally, the surviving activations must be scaled by $1/(1-p)$ to maintain expected values.</p>
+
+<p>For a BERT-base layer with batch size $B = 32$, sequence length $n = 512$, and hidden dimension $d = 768$, the activation tensor has $32 \times 512 \times 768 = 12{,}582{,}912$ elements. Generating 12.6 million random numbers on a GPU takes approximately 50 microseconds using CUDA's cuRAND library. The masking operation (element-wise multiplication) requires 12.6 million operations, taking approximately 0.04 microseconds at peak throughput but actually taking approximately 20 microseconds due to memory bandwidth limitations (reading activations, reading mask, writing masked activations). The scaling operation requires another 12.6 million operations, taking approximately 20 microseconds. The total dropout overhead is approximately 90 microseconds per layer.</p>
+
+<p>For a 12-layer BERT-base model with dropout applied after attention and feed-forward layers (2 dropout operations per layer), the total dropout overhead is $12 \times 2 \times 90 = 2{,}160$ microseconds, or approximately 2.2 milliseconds per forward pass. Compared to the 50 milliseconds for the full forward pass, dropout adds approximately 4.4\% overhead. The backward pass has similar overhead, as dropout must be applied to gradients as well, bringing the total dropout overhead to approximately 4.4 milliseconds per training step, or 4.4\% of total training time.</p>
+
+<p>This overhead is non-negligible but acceptable given the regularization benefits. Dropout typically improves final model accuracy by 0.5-2 percentage points on downstream tasks, which justifies the 4-5\% increase in training time. For models where training time is critical, dropout can be reduced or eliminated, but this often requires other forms of regularization (like L2 regularization or data augmentation) to maintain model quality.</p>
+
+<h3>Memory Requirements for Dropout</h3>
+
+<p>Dropout requires storing the binary dropout mask for use in the backward pass. For an activation tensor with $N$ elements, the mask requires $N$ bits, or $N/8$ bytes. For BERT-base with $32 \times 512 \times 768$ activations per layer, the mask requires $12{,}582{,}912 / 8 = 1{,}572{,}864$ bytes, or approximately 1.5 MB per dropout operation. With 2 dropout operations per layer and 12 layers, the total mask memory is $12 \times 2 \times 1.5 = 36$ MB.</p>
+
+<p>This memory overhead is modest compared to the activation memory itself (approximately 10 GB for BERT-base with batch size 32), adding only 0.36\% overhead. However, for very large batch sizes or long sequences, the mask memory can become significant. At batch size 256 and sequence length 2048, the mask memory for BERT-base would be $12 \times 2 \times 256 \times 2048 \times 768 / 8 = 1{,}207{,}959{,}552$ bytes, or approximately 1.15 GB. This is still manageable on modern GPUs with 40-80 GB of memory, but it represents a non-trivial fraction of the memory budget.</p>
+
+<p>Modern deep learning frameworks optimize dropout memory by using compact representations. PyTorch stores dropout masks as boolean tensors (1 byte per element) rather than float tensors (4 bytes per element), reducing memory by 4×. Some implementations use bit-packed representations (1 bit per element) to reduce memory by 32×, though this requires custom CUDA kernels and is not standard in most frameworks. For most applications, the memory overhead of dropout is acceptable and does not limit batch size or sequence length.</p>
+
+<h3>Inference Mode Differences</h3>
+
+<p>During inference, dropout is disabled: all activations are kept, and no scaling is applied (assuming the training-time scaling approach where activations are divided by $1-p$). This means inference is faster than training, as it avoids the random number generation and masking operations. For BERT-base, disabling dropout reduces inference time from approximately 50 milliseconds to 48 milliseconds per batch, a 4\% speedup. This speedup is modest but can be significant for latency-sensitive applications where every millisecond counts.</p>
+
+<p>The alternative approach, called inverted dropout, scales activations during training by $1/(1-p)$ and does nothing during inference. This is the approach used in most modern frameworks, as it makes inference code simpler (no scaling required) and slightly faster. The computational cost is identical to standard dropout, but the implementation is cleaner and less error-prone.</p>
+
+<h3>Dropout in Transformer Models</h3>
+
+<p>Transformer models apply dropout at multiple points in the architecture:
+<ul>
+    <li>Attention dropout: Applied to attention weights after softmax
+    <li>Residual dropout: Applied to the output of attention and feed-forward layers before adding to the residual connection
+    <li>Embedding dropout: Applied to input embeddings
+</ul>
+
+<p>BERT-base uses dropout probability $p = 0.1$ at all these locations, totaling 4 dropout operations per transformer layer (attention dropout, attention residual dropout, feed-forward residual dropout, and embedding dropout for the first layer). With 12 layers, this totals approximately 50 dropout operations per forward pass, consuming approximately 4.5 milliseconds or 9\% of total training time. This overhead is higher than for simple feed-forward networks due to the multiple dropout locations, but it provides strong regularization that is essential for good generalization on downstream tasks.</p>
+
+<p>For GPT-3, dropout is applied more sparingly: only residual dropout with $p = 0.1$ is used, and attention dropout is disabled. This reduces the dropout overhead to approximately 2 dropout operations per layer, or 192 operations for the 96-layer model. The total dropout overhead is approximately 17 milliseconds per forward pass, or approximately 5\% of total training time. The reduced dropout is compensated by the massive scale of the training data (300 billion tokens), which provides implicit regularization through data diversity.</p>
+
+<p>The lesson is that dropout overhead scales with the number of dropout operations and the size of the activation tensors. For models with many layers and large hidden dimensions, dropout can consume 5-10\% of training time. This overhead is generally acceptable given the regularization benefits, but for models where training time is critical, reducing the number of dropout operations or using lower dropout probabilities can provide speedups with minimal impact on final model quality.</p>
+
+<h2>Exercises</h2>
+
+<div class="exercise" id="exercise-1"><strong>Exercise 1:</strong> Design 3-layer MLP for binary classification of 100-dimensional inputs. Specify layer dimensions, activations, and parameter count.
+</div>
+
+<div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Compute forward pass through 2-layer network with given weights and ReLU activation.
+</div>
+
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> For layer with 512 inputs and 256 outputs using ReLU: (1) What is He initialization variance? (2) Why different from Xavier? (3) What happens with zero initialization?
+</div>
+
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Prove that without nonlinear activations, L-layer network equivalent to single layer.
+</div>
+
+<h2>Solutions</h2>
+
+<div class="solution"><strong>Solution:</strong> <strong>3-layer MLP design for binary classification:</strong>
+
+<p><strong>Architecture:</strong>
+<ul>
+    <li>Input layer: 100 dimensions
+    <li>Hidden layer 1: 100 $\to$ 64 with ReLU activation
+    <li>Hidden layer 2: 64 $\to$ 32 with ReLU activation
+    <li>Output layer: 32 $\to$ 1 with sigmoid activation
+</ul>
+
+<p><strong>Parameter count:</strong>
+<ul>
+    <li>Layer 1: $\mW^{(1)} \in \R^{64 \times 100}$ has $6{,}400$ weights, $\vb^{(1)} \in \R^{64}$ has $64$ biases
+    <li>Layer 2: $\mW^{(2)} \in \R^{32 \times 64}$ has $2{,}048$ weights, $\vb^{(2)} \in \R^{32}$ has $32$ biases
+    <li>Layer 3: $\mW^{(3)} \in \R^{1 \times 32}$ has $32$ weights, $b^{(3)} \in \R$ has $1$ bias
+    <li>Total: $6{,}400 + 64 + 2{,}048 + 32 + 32 + 1 = 8{,}577$ parameters
+</ul>
+
+<p><strong>Forward pass equations:</strong>
+<div class="equation">
+$$\begin{align}
+\vh^{(1)} &= \text{ReLU}(\mW^{(1)}\vx + \vb^{(1)}) \\
+\vh^{(2)} &= \text{ReLU}(\mW^{(2)}\vh^{(1)} + \vb^{(2)}) \\
+\hat{y} &= \sigma(\mW^{(3)}\vh^{(2)} + b^{(3)})
+\end{align}$$
+</div>
+
+<p>where $\sigma(z) = \frac{1}{1 + e^{-z}}$ is the sigmoid function.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Forward pass computation:</strong>
+
+<p>Given weights:
+<div class="equation">
+$$
+\mW^{(1)} = \begin{bmatrix} 0.5 & -0.3 \\ 0.2 & 0.6 \end{bmatrix}, \quad \vb^{(1)} = \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix}, \quad \mW^{(2)} = \begin{bmatrix} 1.0 & -0.5 \end{bmatrix}, \quad b^{(2)} = 0.3
+$$
+</div>
+
+<p>Input: $\vx = \begin{bmatrix} 2.0 \\ 1.0 \end{bmatrix}$</p>
+
+<p><strong>Layer 1:</strong>
+<div class="equation">
+$$\begin{align}
+\vz^{(1)} &= \mW^{(1)}\vx + \vb^{(1)} = \begin{bmatrix} 0.5(2.0) - 0.3(1.0) \\ 0.2(2.0) + 0.6(1.0) \end{bmatrix} + \begin{bmatrix} 0.1 \\ -0.2 \end{bmatrix} = \begin{bmatrix} 0.8 \\ 0.8 \end{bmatrix} \\
+\vh^{(1)} &= \text{ReLU}(\vz^{(1)}) = \begin{bmatrix} 0.8 \\ 0.8 \end{bmatrix}
+\end{align}$$
+</div>
+
+<p><strong>Layer 2:</strong>
+<div class="equation">
+$$\begin{align}
+z^{(2)} &= \mW^{(2)}\vh^{(1)} + b^{(2)} = 1.0(0.8) - 0.5(0.8) + 0.3 = 0.7 \\
+\hat{y} &= z^{(2)} = 0.7 \quad \text{(no activation for regression)}
+\end{align}$$
+</div>
+
+<p>Final output: $\hat{y} = 0.7$
+</div>
+
+<div class="solution"><strong>Solution:</strong> For layer with 512 inputs and 256 outputs using ReLU:
+
+<p><strong>(1) He initialization variance:</strong>
+<div class="equation">
+$$
+\text{Var}(w_{ij}) = \frac{2}{n_{\text{in}}} = \frac{2}{512} = 0.00391
+$$
+</div>
+
+<p>Standard deviation: $\sigma = \sqrt{0.00391} \approx 0.0625$</p>
+
+<p><strong>(2) Why different from Xavier:</strong>
+<ul>
+    <li>Xavier initialization: $\text{Var}(w) = \frac{1}{n_{\text{in}}}$ (for tanh/sigmoid)
+    <li>He initialization: $\text{Var}(w) = \frac{2}{n_{\text{in}}}$ (for ReLU)
+    <li>ReLU zeros out half the activations, reducing variance by factor of 2
+    <li>He initialization compensates by doubling the initial variance
+    <li>This maintains signal variance through deep networks with ReLU
+</ul>
+
+<p><strong>(3) Zero initialization problem:</strong>
+If all weights are initialized to zero:
+<ul>
+    <li>All neurons in a layer compute identical outputs
+    <li>All gradients are identical (symmetry)
+    <li>Neurons never differentiate during training
+    <li>Network effectively has only one neuron per layer
+    <li>Learning fails completely
+</ul>
+
+<p>Random initialization breaks symmetry, allowing neurons to learn different features.
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Proof that L-layer linear network equals single layer:</strong>
+
+<p>Consider an $L$-layer network without nonlinear activations:
+<div class="equation">
+$$\begin{align}
+\vh^{(1)} &= \mW^{(1)}\vx + \vb^{(1)} \\
+\vh^{(2)} &= \mW^{(2)}\vh^{(1)} + \vb^{(2)} \\
+&\vdots \\
+\vh^{(L)} &= \mW^{(L)}\vh^{(L-1)} + \vb^{(L)}
+\end{align}$$
+</div>
+
+<p>Substituting recursively:
+<div class="equation">
+$$\begin{align}
+\vh^{(2)} &= \mW^{(2)}(\mW^{(1)}\vx + \vb^{(1)}) + \vb^{(2)} \\
+&= \mW^{(2)}\mW^{(1)}\vx + \mW^{(2)}\vb^{(1)} + \vb^{(2)}
+\end{align}$$
+</div>
+
+<p>Continuing to layer $L$:
+<div class="equation">
+$$\begin{align}
+\vh^{(L)} &= \mW^{(L)}\mW^{(L-1)}\cdots\mW^{(1)}\vx + \text{(bias terms)} \\
+&= \mW_{\text{eff}}\vx + \vb_{\text{eff}}
+\end{align}$$
+</div>
+
+<p>where:
+<div class="equation">
+$$\begin{align}
+\mW_{\text{eff}} &= \mW^{(L)}\mW^{(L-1)}\cdots\mW^{(1)} \\
+\vb_{\text{eff}} &= \sum_{i=1}^{L} \left(\prod_{j=i+1}^{L} \mW^{(j)}\right) \vb^{(i)}
+\end{align}$$
+</div>
+
+<p>This is equivalent to a single linear layer with weights $\mW_{\text{eff}}$ and bias $\vb_{\text{eff}}$. Therefore, without nonlinear activations, depth provides no additional representational power—the network can only learn linear functions regardless of depth.
+</div>
+        
+        <div class="chapter-nav">
+  <a href="chapter03_probability_information.html">← Chapter 3: Probability and Information Theory</a>
+  <a href="../../deeptech.html">📚 Table of Contents</a>
+  <a href="chapter05_convolutional_networks.html">Chapter 5: Convolutional Neural Networks →</a>
+</div>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Deep Learning and Transformers Textbook. All rights reserved.</p>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>
