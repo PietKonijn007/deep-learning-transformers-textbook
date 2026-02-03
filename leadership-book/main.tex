@@ -18,19 +18,23 @@
 % Use mdframed instead of tcolorbox for compatibility
 \usepackage[framemethod=tikz]{mdframed}
 
-% Define tcolorbox-like environments using mdframed
-\newmdenv[
-  linecolor=blue!50!black,
-  linewidth=2pt,
-  backgroundcolor=blue!5,
-  roundcorner=5pt,
-  frametitle={},
-  frametitlebackgroundcolor=blue!20,
-  innertopmargin=10pt,
-  innerbottommargin=10pt,
-  skipabove=10pt,
-  skipbelow=10pt
-]{tcolorbox}
+% Define tcolorbox environment that accepts options but uses mdframed
+\newenvironment{tcolorbox}[1][]
+{%
+  \begin{mdframed}[
+    linecolor=blue!50!black,
+    linewidth=2pt,
+    backgroundcolor=blue!5,
+    roundcorner=5pt,
+    innertopmargin=10pt,
+    innerbottommargin=10pt,
+    skipabove=10pt,
+    skipbelow=10pt
+  ]%
+}
+{%
+  \end{mdframed}%
+}
 
 % SVG support - graphicx can handle SVG if available
 \DeclareGraphicsExtensions{.pdf,.png,.jpg,.svg}
