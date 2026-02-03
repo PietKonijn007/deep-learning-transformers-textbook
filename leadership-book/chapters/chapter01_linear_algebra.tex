@@ -22,11 +22,89 @@ By the end of this chapter, you'll be able to answer:
 
 \textbf{Note on Examples (2026 Context):} This chapter uses BERT-base as the primary teaching example due to its clear, well-documented architecture. By 2026, BERT-base has been largely replaced in production by more efficient alternatives (DistilBERT, modern compact encoders like DeBERTa-v3, and domain-specific models). However, it remains an excellent pedagogical tool—the architectural principles and scaling laws presented here apply universally to all transformer models, from compact encoders to frontier LLMs like GPT-4, Claude 3 Opus, LLaMA 3, and Mistral Large.
 
+\section{Mathematical Foundations: What Linear Algebra Actually Is}
+
+Before discussing computational costs and resource requirements, it's essential to understand what linear algebra operations actually do and why they're fundamental to neural networks.
+
+\subsection{Vectors and Matrices: Representing Data and Transformations}
+
+At its core, linear algebra provides a mathematical framework for working with collections of numbers and transforming them systematically. In deep learning, we represent data as \textbf{vectors}—ordered lists of numbers—and transformations as \textbf{matrices}—rectangular arrays of numbers.
+
+\textbf{Example: Image as a Vector}
+
+A 28×28 grayscale image (like MNIST handwritten digits) contains 784 pixels, each with an intensity value. We can represent this image as a vector with 784 components—a single point in 784-dimensional space. For a color image (224×224 RGB), we have 150,528 numbers (224 × 224 × 3 channels). This is why we talk about "high-dimensional data"—images naturally live in spaces with hundreds of thousands of dimensions.
+
+\textbf{Example: Text as a Vector}
+
+In natural language processing, words are represented as vectors called embeddings. The word "king" might be a vector with 300 or 768 components. These embeddings are learned such that semantically similar words have similar vectors. The famous example: vector("king") - vector("man") + vector("woman") ≈ vector("queen"), showing that vector arithmetic can capture semantic relationships.
+
+\subsection{Matrix Multiplication: The Core Transformation}
+
+A neural network layer transforms input data by multiplying it with a weight matrix. This operation projects the data into a new representational space.
+
+\textbf{Concrete Example:}
+
+Consider transforming a 784-dimensional input (flattened MNIST image) to a 256-dimensional hidden representation:
+\begin{itemize}
+    \item Input vector: 784 numbers
+    \item Weight matrix: 784 × 256 = 200,704 numbers
+    \item Output vector: 256 numbers
+\end{itemize}
+
+Each of the 256 output values is computed by taking a weighted sum of all 784 input values. This requires 784 multiplications and 784 additions per output, totaling 200,704 multiply-add operations for the full transformation.
+
+\textbf{Why This Matters:} This single layer has 200,704 trainable parameters. Understanding where parameters come from (matrix dimensions) is essential for evaluating model size claims and memory requirements.
+
+\subsection{Dot Products: Measuring Similarity}
+
+The dot product between two vectors measures their similarity or alignment. For vectors $\mathbf{x}$ and $\mathbf{y}$ with $n$ components:
+
+\begin{equation}
+\text{dot product} = x_1 y_1 + x_2 y_2 + \cdots + x_n y_n
+\end{equation}
+
+\textbf{Geometric Interpretation:} The dot product is large when vectors point in similar directions and small (or negative) when they point in different directions. This makes it perfect for measuring similarity.
+
+\textbf{Application in Transformers:} Attention mechanisms use dot products to determine which words in a sentence should "attend to" each other. When processing "The cat sat on the mat," the model computes dot products between word representations to determine that "cat" and "sat" are related (subject-verb relationship).
+
+\textbf{Concrete Example:}
+
+Query vector for "cat": [0.5, 0.8, 0.3]
+Key vector for "sat": [0.6, 0.7, 0.2]
+Key vector for "mat": [-0.3, 0.1, 0.9]
+
+Dot product (cat, sat) = 0.5×0.6 + 0.8×0.7 + 0.3×0.2 = 0.92
+Dot product (cat, mat) = 0.5×(-0.3) + 0.8×0.1 + 0.3×0.9 = 0.20
+
+The higher score (0.92) indicates "cat" should attend more to "sat" than to "mat" (0.20).
+
+\subsection{Why These Operations Scale Cubically}
+
+Understanding computational scaling is crucial for cost estimation:
+
+\textbf{Matrix Storage (Quadratic):} An $n \times n$ matrix contains $n^2$ numbers. Doubling $n$ quadruples storage requirements.
+
+\textbf{Matrix Multiplication (Cubic):} Multiplying two $n \times n$ matrices requires $n^3$ operations:
+\begin{itemize}
+    \item Output has $n^2$ positions (quadratic)
+    \item Each position requires $n$ multiply-add operations (linear)
+    \item Total: $n^2 \times n = n^3$ (cubic)
+\end{itemize}
+
+\textbf{Practical Impact:} Doubling model dimensions increases:
+\begin{itemize}
+    \item Parameters by 4× (quadratic)
+    \item Computation by 8× (cubic)
+    \item Memory by 4× (quadratic)
+\end{itemize}
+
+This is why BERT-large (1024 dimensions) requires approximately 8× more computation per layer than BERT-base (768 dimensions), despite only a 33\% dimensional increase.
+
 \section{Computational Foundations}
 
 \subsection{Matrix Operations as Core Primitives}
 
-Neural networks perform transformations through matrix operations—structured mathematical operations on arrays of numbers. Each layer applies a learned transformation, implemented as matrix multiplication, to its input data. The computational cost and memory requirements scale predictably with matrix dimensions.
+With the mathematical foundation established, we can now examine how these operations translate to computational costs. Neural networks perform transformations through matrix operations—structured mathematical operations on arrays of numbers. Each layer applies a learned transformation, implemented as matrix multiplication, to its input data. The computational cost and memory requirements scale predictably with matrix dimensions.
 
 A transformation layer with 768-dimensional input and output requires a 768×768 weight matrix containing approximately 590,000 parameters. Each forward pass performs roughly 590,000 multiply-accumulate operations. Modern GPUs execute these operations in parallel, but the total work remains proportional to matrix size.
 
