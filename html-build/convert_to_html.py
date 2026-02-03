@@ -382,12 +382,32 @@ def convert_latex_to_html(latex_content):
         """Convert entire table environment including wrapper and tabular"""
         full_content = match.group(0)
         
-        # Extract just the tabular content
-        tabular_match = re.search(r'\\begin\{tabular\}\{[^}]+\}(.*?)\\end\{tabular\}', full_content, re.DOTALL)
-        if not tabular_match:
+        # Extract tabular content - need to handle nested braces in column spec
+        # Find \begin{tabular}{ and then match balanced braces
+        start_match = re.search(r'\\begin\{tabular\}\{', full_content)
+        if not start_match:
             return full_content
         
-        table_content = tabular_match.group(1)
+        # Find the matching closing brace for column spec
+        pos = start_match.end()
+        brace_count = 1
+        while pos < len(full_content) and brace_count > 0:
+            if full_content[pos] == '{':
+                brace_count += 1
+            elif full_content[pos] == '}':
+                brace_count -= 1
+            pos += 1
+        
+        if brace_count != 0:
+            return full_content  # Unbalanced braces
+        
+        # Now extract content between column spec end and \end{tabular}
+        content_start = pos
+        end_match = re.search(r'\\end\{tabular\}', full_content[content_start:])
+        if not end_match:
+            return full_content
+        
+        table_content = full_content[content_start:content_start + end_match.start()]
         
         # Remove all booktabs and table formatting commands with surrounding whitespace
         # These can appear on their own lines or inline
@@ -526,7 +546,33 @@ def convert_latex_to_html(latex_content):
     # Convert standalone tabular environments (not wrapped in table environment)
     def convert_standalone_tabular(match):
         """Convert tabular environments that aren't inside table environments"""
-        table_content = match.group(1)
+        full_content = match.group(0)
+        
+        # Find \begin{tabular}{ and then match balanced braces
+        start_match = re.search(r'\\begin\{tabular\}\{', full_content)
+        if not start_match:
+            return full_content
+        
+        # Find the matching closing brace for column spec
+        pos = start_match.end()
+        brace_count = 1
+        while pos < len(full_content) and brace_count > 0:
+            if full_content[pos] == '{':
+                brace_count += 1
+            elif full_content[pos] == '}':
+                brace_count -= 1
+            pos += 1
+        
+        if brace_count != 0:
+            return full_content  # Unbalanced braces
+        
+        # Now extract content between column spec end and \end{tabular}
+        content_start = pos
+        end_match = re.search(r'\\end\{tabular\}', full_content[content_start:])
+        if not end_match:
+            return full_content
+        
+        table_content = full_content[content_start:content_start + end_match.start()]
         
         # Remove all booktabs and table formatting commands with surrounding whitespace
         table_content = re.sub(r'\s*\\toprule\s*', '\n', table_content)
@@ -560,7 +606,7 @@ def convert_latex_to_html(latex_content):
         return '\n<table>\n' + '\n'.join(html_rows) + '\n</table>\n'
     
     # Convert standalone tabular environments
-    html = re.sub(r'\\begin\{tabular\}\{[^}]+\}(.*?)\\end\{tabular\}', convert_standalone_tabular, html, flags=re.DOTALL)
+    html = re.sub(r'\\begin\{tabular\}\{[^}]+\}.*?\\end\{tabular\}', convert_standalone_tabular, html, flags=re.DOTALL)
     
     # Convert text formatting - handle nested braces properly
     def convert_textbf(match):
