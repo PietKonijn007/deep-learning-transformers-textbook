@@ -339,6 +339,7 @@ async function loadChapter(chapterId, index) {
         // Wait a bit for DOM to settle, then render math
         setTimeout(() => {
             if (window.MathJax && window.MathJax.typesetPromise) {
+                console.log('Calling MathJax.typesetPromise...');
                 window.MathJax.typesetPromise([elements.chapterContent]).then(() => {
                     console.log('MathJax rendering complete');
                     hideLoading();
@@ -347,8 +348,23 @@ async function loadChapter(chapterId, index) {
                     hideLoading();
                 });
             } else {
-                console.warn('MathJax not ready yet');
-                hideLoading();
+                console.warn('MathJax not ready yet, waiting...');
+                // If MathJax isn't ready, wait longer and try again
+                setTimeout(() => {
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        console.log('MathJax now ready, rendering...');
+                        window.MathJax.typesetPromise([elements.chapterContent]).then(() => {
+                            console.log('MathJax rendering complete (delayed)');
+                            hideLoading();
+                        }).catch(err => {
+                            console.error('MathJax error (delayed):', err);
+                            hideLoading();
+                        });
+                    } else {
+                        console.error('MathJax still not available after waiting');
+                        hideLoading();
+                    }
+                }, 2000);
             }
         }, 100);
         
