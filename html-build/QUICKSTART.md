@@ -91,15 +91,44 @@ nodejs-version/public/
 
 ### Vercel (Recommended)
 
+**Important**: Vercel deploys from the **root directory**, so you need to sync files after conversion.
+
+#### Complete Deployment Workflow
+
 ```bash
-cd nodejs-version
-vercel deploy
+# 1. Convert chapters (as needed)
+python3 html-build/convert_to_html.py              # Deep tech book
+python3 html-build/convert_leadership_final.py     # Leadership book
+
+# 2. Sync to root for Vercel
+./sync-to-root.sh
+
+# 3. Commit and push
+git add -A
+git commit -m "Update chapters"
+git push origin main
 ```
 
-The `vercel.json` configuration is already set up for:
-- Node.js runtime
-- Static file serving
-- Proper routing
+Vercel will automatically deploy when you push to GitHub.
+
+#### What sync-to-root.sh Does
+
+The sync script copies files from `nodejs-version/public/` to the root directory:
+- `index.html` (book selector landing page)
+- `deeptech.html` and `deeptech-app.js`
+- `leadership.html` and `leadership-app.js`
+- `chapters/deeptech/` (36 HTML chapters)
+- `chapters/leadership/` (21 HTML chapters)
+- `chapters/diagrams/` (all diagram files)
+
+This ensures Vercel serves the multi-book structure correctly.
+
+### Manual Vercel Deploy
+
+```bash
+cd nodejs-version
+vercel deploy --prod
+```
 
 ### Other Platforms
 
@@ -132,10 +161,20 @@ The `nodejs-version/` folder is a complete Express.js app that can be deployed t
 
 ## Development Workflow
 
+### For Local Testing Only
+
 1. **Edit LaTeX source** in `chapters/` or `leadership-book/chapters/`
 2. **Run conversion script** to regenerate HTML
-3. **Test locally** with `node server.js`
-4. **Deploy** when ready
+3. **Test locally** with `node server.js` in `nodejs-version/`
+
+### For Vercel Deployment
+
+1. **Edit LaTeX source** in `chapters/` or `leadership-book/chapters/`
+2. **Run conversion script** to regenerate HTML
+3. **Sync to root**: `./sync-to-root.sh`
+4. **Commit and push**: `git add -A && git commit -m "Update" && git push`
+
+**Why sync?** Vercel deploys from the root directory, not from `nodejs-version/`. The sync script ensures all files are in the correct location for Vercel to serve them.
 
 ## File Locations
 

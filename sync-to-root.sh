@@ -1,43 +1,47 @@
 #!/bin/bash
-# Sync nodejs-version/public files to root for Vercel deployment
+# Sync multi-book structure from nodejs-version to root for Vercel deployment
 
 set -e  # Exit on error
 
-echo "🔄 Syncing nodejs-version/public to root directory..."
-echo ""
+echo "🔄 Syncing multi-book structure to root for Vercel deployment..."
 
-# Sync core application files
-echo "📦 Syncing core files..."
-cp nodejs-version/public/app.js app.js
-echo "  ✓ app.js"
+# Colors for output
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
+# Copy main HTML files
+echo -e "${BLUE}📄 Copying main HTML files...${NC}"
 cp nodejs-version/public/index.html index.html
-echo "  ✓ index.html"
+cp nodejs-version/public/deeptech.html deeptech.html
+cp nodejs-version/public/leadership.html leadership.html
+echo -e "${GREEN}   ✓ HTML files copied${NC}"
 
-cp nodejs-version/public/styles.css styles.css
-echo "  ✓ styles.css"
+# Copy JavaScript files
+echo -e "${BLUE}📜 Copying JavaScript files...${NC}"
+cp nodejs-version/public/deeptech-app.js deeptech-app.js
+cp nodejs-version/public/leadership-app.js leadership-app.js
+echo -e "${GREEN}   ✓ JavaScript files copied${NC}"
 
-# Sync chapters to nodejs-version first (from source)
-echo ""
-echo "📚 Syncing chapters from source to nodejs-version..."
-cp chapters/*.html nodejs-version/public/chapters/ 2>/dev/null || echo "  ⚠ No HTML files in chapters/ to sync"
+# Sync chapter directories
+echo -e "${BLUE}📚 Syncing chapter directories...${NC}"
 
-# Count files
-APP_SIZE=$(wc -l < app.js | tr -d ' ')
-CHAPTERS_COUNT=$(ls -1 chapters/*.html 2>/dev/null | wc -l | tr -d ' ')
-CHAPTERS_IN_APP=$(grep -c "id: 'chapter" app.js || echo "0")
+# Remove old chapter structure if exists
+rm -rf chapters/deeptech chapters/leadership chapters/diagrams
+
+# Copy new structure
+cp -r nodejs-version/public/chapters/deeptech chapters/deeptech
+cp -r nodejs-version/public/chapters/leadership chapters/leadership
+cp -r nodejs-version/public/chapters/diagrams chapters/diagrams
+
+echo -e "${GREEN}   ✓ Deep tech chapters: $(ls chapters/deeptech/*.html | wc -l | tr -d ' ') files${NC}"
+echo -e "${GREEN}   ✓ Leadership chapters: $(ls chapters/leadership/*.html | wc -l | tr -d ' ') files${NC}"
+echo -e "${GREEN}   ✓ Diagrams: $(ls chapters/diagrams/*.{png,svg} 2>/dev/null | wc -l | tr -d ' ') files${NC}"
 
 echo ""
-echo "✅ Sync complete!"
-echo ""
-echo "📊 Summary:"
-echo "  • app.js: $APP_SIZE lines"
-echo "  • Chapters in app.js: $CHAPTERS_IN_APP"
-echo "  • HTML chapters: $CHAPTERS_COUNT files"
-echo ""
-echo "🚀 Ready to commit and deploy!"
+echo -e "${GREEN}✅ Sync complete!${NC}"
 echo ""
 echo "Next steps:"
-echo "  git add app.js index.html styles.css chapters/"
-echo "  git commit -m 'Sync updated files to root'"
-echo "  git push"
+echo "  1. Review changes: git status"
+echo "  2. Commit: git add -A && git commit -m 'Sync multi-book structure'"
+echo "  3. Push: git push origin main"
