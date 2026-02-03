@@ -3,107 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Interactive textbooks on Deep Learning, Transformers, and LLMs">
-    <title>Deep Learning Textbooks - Choose Your Path</title>
+    <meta name="description" content="Interactive textbooks on Deep Learning, Transformers, and LLMs - Understanding the full stack from mathematics to business impact">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Deep Learning Textbooks - Full Stack Understanding</title>
     <link rel="stylesheet" href="styles.css">
     <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
         .book-selector {
             max-width: 1200px;
-            margin: 4rem auto;
-            padding: 2rem;
+            margin: 0 auto;
+            padding: 4rem 2rem;
         }
         
         .selector-header {
             text-align: center;
-            margin-bottom: 4rem;
+            margin-bottom: 3rem;
         }
         
         .selector-header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: #1a1a1a;
+            font-size: 2.8rem;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         
-        .selector-header p {
-            font-size: 1.2rem;
-            color: #666;
+        .selector-header .tagline {
+            font-size: 1.3rem;
+            color: #a8b2d1;
+            margin-bottom: 2.5rem;
+            font-weight: 300;
+        }
+        
+        .mission-statement {
+            max-width: 900px;
+            margin: 0 auto 4rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .mission-statement p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #ccd6f6;
+            margin: 0;
+            text-align: left;
         }
         
         .books-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 3rem;
+            gap: 2.5rem;
             margin-top: 3rem;
         }
         
         .book-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
             padding: 2.5rem;
             color: white;
             text-decoration: none;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .book-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #64ffda 0%, #00d4ff 100%);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .book-card:hover::before {
+            transform: scaleX(1);
         }
         
         .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(100, 255, 218, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         
-        .book-card.leadership {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        .book-card.leadership::before {
+            background: linear-gradient(90deg, #ff6b9d 0%, #c06c84 100%);
         }
         
         .book-icon {
             font-size: 3rem;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
+            display: block;
         }
         
         .book-title {
             font-size: 1.8rem;
-            font-weight: bold;
+            font-weight: 700;
             margin-bottom: 0.5rem;
+            color: #ccd6f6;
         }
         
         .book-subtitle {
             font-size: 1.1rem;
-            opacity: 0.9;
+            color: #64ffda;
             margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+        
+        .book-card.leadership .book-subtitle {
+            color: #ff6b9d;
         }
         
         .book-description {
             font-size: 1rem;
-            line-height: 1.6;
-            opacity: 0.95;
+            line-height: 1.7;
+            color: #a8b2d1;
             margin-bottom: 1.5rem;
         }
         
         .book-stats {
             display: flex;
             gap: 1.5rem;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             font-size: 0.9rem;
+            flex-wrap: wrap;
         }
         
         .book-stat {
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            color: #8892b0;
         }
         
         .book-cta {
             display: inline-block;
-            background: rgba(255,255,255,0.2);
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
-            font-weight: bold;
-            margin-top: 1rem;
-            backdrop-filter: blur(10px);
+            background: rgba(100, 255, 218, 0.1);
+            color: #64ffda;
+            padding: 0.875rem 1.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid rgba(100, 255, 218, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .book-card.leadership .book-cta {
+            background: rgba(255, 107, 157, 0.1);
+            color: #ff6b9d;
+            border-color: rgba(255, 107, 157, 0.3);
         }
         
         .book-card:hover .book-cta {
-            background: rgba(255,255,255,0.3);
+            background: rgba(100, 255, 218, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .book-card.leadership:hover .book-cta {
+            background: rgba(255, 107, 157, 0.2);
         }
         
         @media (max-width: 768px) {
@@ -114,14 +188,28 @@
             .selector-header h1 {
                 font-size: 2rem;
             }
+            
+            .mission-statement {
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="book-selector">
         <div class="selector-header">
-            <h1>📚 Deep Learning Textbooks</h1>
-            <p>Choose your learning path based on your role and goals</p>
+            <h1>📚 Deep Learning & Transformers</h1>
+            <p class="tagline">Understanding the Full Stack: From Mathematics to Business Impact</p>
+        </div>
+        
+        <div class="mission-statement">
+            <p>
+                Most AI resources focus narrowly on either pure mathematics and code, or specific frameworks like PyTorch. 
+                But there's a critical gap: understanding how design choices—in application architecture, model selection, 
+                and AI strategy—directly impact project costs, ROI, and business outcomes. To make informed decisions, 
+                you need to understand the full stack. That's why I created these two books: one for engineers who need 
+                deep technical mastery, and one for technical leaders who need to connect technology choices to business value.
+            </p>
         </div>
         
         <div class="books-grid">
