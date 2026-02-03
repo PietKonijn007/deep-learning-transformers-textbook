@@ -61,14 +61,24 @@ def convert_tcolorbox(latex_content):
         title = title_match.group(1) if title_match else ''
         title = title.replace('\\textbf{', '').replace('}', '')
         
-        # Determine style
+        # Determine style based on title and color
         box_class = 'keypoint'
-        if 'blue' in options:
-            box_class = 'keypoint'
+        
+        # Check if it's a mental model (highest priority)
+        if 'MENTAL MODEL' in title:
+            box_class = 'mental-model'
+        # Check if it's a cautionary tale
+        elif 'CAUTIONARY TALE' in title:
+            box_class = 'caution'
+        # Otherwise use color-based mapping
+        elif 'red' in options:
+            box_class = 'caution'
         elif 'green' in options:
             box_class = 'example'
-        elif 'red' in options or 'orange' in options:
+        elif 'orange' in options:
             box_class = 'caution'
+        elif 'blue' in options or 'purple' in options or 'cyan' in options or 'yellow' in options:
+            box_class = 'keypoint'
         
         html_box = f'<div class="{box_class}">'
         if title:
