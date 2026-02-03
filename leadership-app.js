@@ -110,6 +110,9 @@ function generateChapterToc() {
 // Load chapters from API
 async function loadChapters() {
     try {
+        console.log('=== LOADING CHAPTERS ===');
+        console.log('Chapter list element:', elements.chapterList);
+        
         // Static chapter list - no API needed
         state.chapters = [
             { id: 'preface', title: 'Preface', part: 'Front Matter' },
@@ -134,7 +137,10 @@ async function loadChapters() {
             { id: 'chapter16_synthesis', title: 'Chapter 16: Strategic Synthesis', part: 'Part V: Strategic Synthesis' },
             { id: 'chapter17_frontiers', title: 'Chapter 17: Future Frontiers', part: 'Part V: Strategic Synthesis' }
         ];
+        console.log('Chapters loaded:', state.chapters.length);
+        console.log('Calling renderChapterList...');
         renderChapterList();
+        console.log('renderChapterList completed');
     } catch (error) {
         console.error('Failed to load chapters:', error);
         elements.chapterList.innerHTML = '<div class="loading">Failed to load chapters</div>';

@@ -71,11 +71,129 @@
     <li>How do you recognize when training dynamics indicate project failure?
 </ul>
 
+<h2>Mathematical Foundations: What Optimization Actually Is</h2>
+
+<p>Before examining training costs and resource requirements, it's essential to understand what happens mathematically during training and why certain algorithmic choices matter.</p>
+
+<h3>The Optimization Problem</h3>
+
+<p>Training a neural network means finding the best values for millions or billions of parameters. "Best" means minimizing a loss function—a mathematical measure of how wrong the model's predictions are.</p>
+
+<p><strong>Concrete Example:</strong></p>
+
+<p>Suppose we're training a simple model with just two parameters, $w_1$ and $w_2$, to predict house prices. The loss function might be:</p>
+
+<div class="equation">
+$$
+\text{Loss}(w_1, w_2) = \frac{1}{N} \sum_{i=1}^{N} (\text{predicted price}_i - \text{actual price}_i)^2
+$$
+</div>
+
+<p>This creates a "loss landscape"—imagine a hilly terrain where height represents prediction error. Training means finding the lowest point in this landscape.</p>
+
+<p><strong>The Challenge:</strong> For BERT-base with 110 million parameters, this landscape exists in 110-million-dimensional space. We can't visualize it or exhaustively search it. We need an efficient algorithm.</p>
+
+<h3>Gradients: The Direction of Steepest Descent</h3>
+
+<p>The <strong>gradient</strong> is a vector that points in the direction where the loss increases most rapidly. It tells us which direction to adjust parameters to reduce error.</p>
+
+<p><strong>Intuitive Analogy:</strong> Imagine you're hiking in fog and want to descend a mountain. You can't see the valley, but you can feel which direction slopes downward most steeply. The gradient is like that local slope information—it tells you which way to step.</p>
+
+<p><strong>Mathematical Definition:</strong> For a loss function $L(w_1, w_2, \ldots, w_n)$, the gradient is:</p>
+
+<div class="equation">
+$$
+\nabla L = \left[\frac{\partial L}{\partial w_1}, \frac{\partial L}{\partial w_2}, \ldots, \frac{\partial L}{\partial w_n}\right]
+$$
+</div>
+
+<p>Each component tells us how much the loss changes when we adjust that specific parameter.</p>
+
+<p><strong>Concrete Example:</strong></p>
+
+<p>For our house price model with current parameters $w_1 = 2.0$, $w_2 = 1.5$:
+<ul>
+    <li>Gradient component for $w_1$: -4.0 (loss decreases if we increase $w_1$)
+    <li>Gradient component for $w_2$: +2.0 (loss decreases if we decrease $w_2$)
+</ul>
+
+<p>To reduce loss, we adjust: $w_1 \leftarrow 2.0 + 0.1 \times 4.0 = 2.4$ and $w_2 \leftarrow 1.5 - 0.1 \times 2.0 = 1.3$</p>
+
+<p>The factor 0.1 is the <strong>learning rate</strong>—how big a step we take.</p>
+
+<h3>Backpropagation: Efficient Gradient Computation</h3>
+
+<p>Computing gradients naively would require evaluating the loss function once for each parameter (110 million times for BERT-base). Backpropagation is an algorithm that computes all gradients in essentially the same time as one forward pass through the network.</p>
+
+<p><strong>The Key Insight:</strong> Neural networks are composed of layers, and the chain rule from calculus lets us reuse computations. If we know how the loss changes with respect to layer 12's output, we can efficiently compute how it changes with respect to layer 11's output, then layer 10, and so on.</p>
+
+<p><strong>Why This Matters:</strong> Backpropagation's efficiency (linear time, not exponential) is what makes training deep networks feasible. Without it, training BERT would take millions of years instead of days.</p>
+
+<p><strong>Computational Cost:</strong> Computing gradients via backpropagation requires approximately 2× the computation of a forward pass:
+<ul>
+    <li>1× for the forward pass (make predictions)
+    <li>1× for the backward pass (compute gradients)
+</ul>
+
+<p>For BERT-base processing a batch, if the forward pass takes 0.1 seconds, the full training iteration (forward + backward + update) takes approximately 0.3 seconds.</p>
+
+<h3>Gradient Descent: The Basic Algorithm</h3>
+
+<p>The simplest optimization algorithm repeatedly:
+<ol>
+    <li>Compute the gradient (which direction reduces loss)
+    <li>Take a small step in the opposite direction (negative gradient)
+    <li>Repeat until loss stops decreasing
+</ol>
+
+<strong>Pseudocode:</strong>
+<pre><code>
+for iteration in 1 to 1,000,000:
+    gradient = compute_gradient(current_parameters)
+    current_parameters = current_parameters - learning_rate * gradient
+</code></pre>
+
+<p><strong>The Learning Rate Problem:</strong> Too large, and you overshoot the minimum (imagine taking giant steps while descending a mountain—you might jump over the valley). Too small, and training takes forever (tiny steps mean slow progress).</p>
+
+<p><strong>Concrete Example:</strong></p>
+
+<p>Minimizing $f(w) = w^2$ starting from $w = 3.0$ with learning rate 0.1:
+<ul>
+    <li>Iteration 1: gradient = 6.0, new $w$ = 3.0 - 0.1×6.0 = 2.4
+    <li>Iteration 2: gradient = 4.8, new $w$ = 2.4 - 0.1×4.8 = 1.92
+    <li>Iteration 3: gradient = 3.84, new $w$ = 1.92 - 0.1×3.84 = 1.536
+    <li>... converges to $w = 0$ (the minimum)
+</ul>
+
+<p>With learning rate 0.5 (too large): $w$ oscillates wildly and never converges.
+With learning rate 0.001 (too small): takes 10,000 iterations instead of 100.</p>
+
+<h3>Why Adam Optimizer Matters</h3>
+
+<p>Standard gradient descent uses the same learning rate for all parameters. Adam (Adaptive Moment Estimation) adapts the learning rate for each parameter individually based on gradient history.</p>
+
+<p><strong>The Intuition:</strong> Some parameters need large updates (they're far from optimal), while others need small updates (they're close to optimal). Adam automatically figures this out by tracking:
+<ul>
+    <li><strong>First moment</strong>: Average gradient direction (like momentum—builds up speed in consistent directions)
+    <li><strong>Second moment</strong>: Gradient variance (parameters with noisy gradients get smaller learning rates)
+</ul>
+
+<p><strong>Why This Costs 2× Memory:</strong> Adam stores two numbers per parameter (first and second moments), doubling optimizer memory from 1× parameters (standard gradient descent) to 2× parameters.</p>
+
+<p><strong>Why It's Worth It:</strong> Adam typically converges 2-5× faster than standard gradient descent. For a \$10,000 training run, spending \$20,000 on memory to finish in 3 days instead of 10 days is usually worthwhile—especially when iterating on experiments.</p>
+
+<p><strong>Concrete Example:</strong></p>
+
+<p>Training BERT-base with standard gradient descent: 25 GPU-days, \$1,500
+Training BERT-base with Adam: 10 GPU-days, \$600 (despite 2× memory overhead)</p>
+
+<p>The faster convergence more than compensates for the memory cost.</p>
+
 <h2>Optimization Fundamentals</h2>
 
 <h3>Gradient-Based Parameter Adjustment</h3>
 
-<p>Training optimizes model parameters through iterative gradient-based updates. The algorithm computes the direction and magnitude of parameter adjustments that reduce prediction error, then applies these adjustments across all parameters simultaneously. This process repeats thousands or millions of times until the model converges to acceptable performance.</p>
+<p>With the mathematical foundation established, we can now examine how optimization translates to training costs and resource requirements. Training optimizes model parameters through iterative gradient-based updates. The algorithm computes the direction and magnitude of parameter adjustments that reduce prediction error, then applies these adjustments across all parameters simultaneously. This process repeats thousands or millions of times until the model converges to acceptable performance.</p>
 
 <p>The efficiency of this optimization depends critically on the learning rate—the scaling factor applied to computed adjustments. An appropriately calibrated learning rate enables rapid convergence. Excessive learning rates cause instability and divergence. Insufficient learning rates waste computational resources through unnecessarily slow convergence.</p>
 
