@@ -212,26 +212,25 @@ where $\mathbf{h}_t$ is the output of the transformer at step $t$.
 
 <p><strong>Transformer-Capsule Graph (TCG-CS):</strong> The TCG-CS architecture combines transformers' sequence modeling capabilities with capsule networks' ability to capture hierarchical relationships and graph neural networks' structural reasoning. This hybrid approach achieves 94.2\% accuracy on cold-start recommendation tasks, significantly outperforming previous methods.</p>
 
-<p><strong>Key innovations:</strong></p>
+<p><strong>Key innovations:</strong> Several breakthrough techniques enable TCG-CS to achieve superior cold-start performance.</p>
 
-<ul>
-<li><strong>Capsule-based user representation:</strong> Instead of single embedding vectors, represent users as capsules (groups of neurons) that encode different aspects of preferences (genre preferences, temporal patterns, quality sensitivity). Capsules enable learning from limited data by capturing structured preference representations.
+<p>Capsule-based user representation replaces single embedding vectors with capsules, which are groups of neurons that encode different aspects of preferences such as genre preferences, temporal patterns, and quality sensitivity. This structured representation enables learning from limited data by capturing the multifaceted nature of user preferences. Unlike flat embeddings that compress all preference information into a single vector, capsules maintain separate representations for different preference dimensions, making it easier to generalize from sparse interactions.</p>
 
-<p><li><strong>Graph-based item relationships:</strong> Model items as a graph where edges represent similarities (same genre, same director, co-purchased). Graph neural networks propagate information from items with rich interaction history to cold-start items, enabling better initial embeddings for new items.</p>
+<p>Graph-based item relationships model items as a graph where edges represent similarities such as same genre, same director, or co-purchased patterns. Graph neural networks propagate information from items with rich interaction history to cold-start items, enabling better initial embeddings for new items. This structural approach leverages the principle that similar items should have similar embeddings, allowing new items to benefit from the interaction history of related items even before receiving their own interactions.</p>
 
-<p><li><strong>Meta-learning for rapid adaptation:</strong> Use meta-learning (Model-Agnostic Meta-Learning, MAML) to train models that can quickly adapt to new users with just 3-5 interactions. The model learns to learn—it discovers which features and patterns are most informative for rapid personalization.</p>
+<p>Meta-learning for rapid adaptation uses techniques like Model-Agnostic Meta-Learning (MAML) to train models that can quickly adapt to new users with just 3-5 interactions. The model learns to learn, discovering which features and patterns are most informative for rapid personalization. This meta-learning approach is fundamentally different from standard training: instead of learning fixed parameters, the model learns initialization parameters that can be quickly fine-tuned to individual users with minimal data.</p>
 
-<p><li><strong>Content-collaborative hybrid:</strong> Combine content features (item metadata, descriptions, images) with collaborative signals (user-item interactions). For cold-start items, rely more heavily on content features; as interactions accumulate, gradually shift weight to collaborative signals.
-</ul>
+<p>Content-collaborative hybrid approaches combine content features such as item metadata, descriptions, and images with collaborative signals from user-item interactions. For cold-start items, the system relies more heavily on content features to make initial recommendations. As interactions accumulate, the system gradually shifts weight to collaborative signals, which typically provide stronger personalization. This adaptive weighting ensures that recommendations remain relevant throughout an item's lifecycle, from launch through maturity.</p>
 
 <p><strong>Business Impact:</strong> Cold-start is particularly critical for platforms with high user or item churn. E-commerce platforms add thousands of new products daily. Streaming platforms onboard millions of new users monthly. Poor cold-start recommendations cause early churn—users who don't find relevant content in their first session are 3-5x more likely to abandon the platform.</p>
 
-<p>Platforms implementing TCG-CS report:
-<ul>
-<li>25-35\% improvement in new user retention (measured at day 7)
-<li>40-50\% improvement in new item discovery (fraction of new items that receive engagement)
-<li>15-20\% reduction in time-to-personalization (time until recommendations become personalized)
-</ul>
+<p>Platforms implementing TCG-CS report substantial improvements across multiple metrics that directly impact business outcomes.</p>
+
+<p>New user retention improves by 25-35\% when measured at day 7, meaning significantly more users continue using the platform after their first week. This improvement is critical because early retention is highly predictive of long-term user value. Users who remain engaged through the first week are 5-10x more likely to become long-term active users.</p>
+
+<p>New item discovery improves by 40-50\%, measured as the fraction of new items that receive engagement within their first week. This metric is crucial for platforms with high content velocity, as it determines how quickly new content can find its audience. Better cold-start recommendations accelerate the discovery process, benefiting both users (who find relevant new content faster) and creators (whose content gains traction more quickly).</p>
+
+<p>Time-to-personalization reduces by 15-20\%, meaning the system delivers personalized recommendations sooner in a user's lifecycle. Traditional systems might require weeks of interaction data before recommendations become truly personalized. TCG-CS achieves meaningful personalization within hours or days, dramatically improving the new user experience and reducing early churn.</p>
 
 <p>Example: E-commerce platform with 1M new users monthly and 30\% day-7 retention. Improving retention by 5 percentage points (to 35\%) retains 50,000 additional users. At \$50 customer lifetime value, this generates \$2.5M monthly = \$30M annually. Development cost: \$500K. ROI: 60x.</p>
 
@@ -251,11 +250,7 @@ $$\begin{align}
 \text{Event} = \{\text{user\_id}, \text{item\_id}, \text{timestamp}, \text{event\_type}, \text{context}\}
 \end{align}$$
 </div>
-where:
-<ul>
-<li><code>event\_type</code> $\in$ \{view, click, purchase, add-to-cart, share, rate\}
-<li><code>context</code> includes device, location, query (if applicable), etc.
-</ul>
+where several components define the structure of each interaction event. The <code>event\_type</code> field categorizes the interaction, taking values from the set \{view, click, purchase, add-to-cart, share, rate\}, with each type carrying different signals about user intent and engagement level. The <code>context</code> field captures situational information including device type, geographic location, search query if applicable, and other environmental factors that influence user behavior and preferences.
 </div>
 
 The sequence of events becomes the user's ``behavior language.'' A user's history might be:
@@ -270,32 +265,37 @@ The sequence of events becomes the user's ``behavior language.'' A user's histor
 
 <h3>Dense and Sparse Features</h3>
 
-<p>Feature engineering bridges item history with demographic and contextual signals. Dense features include:
-<ul>
-<li>User embeddings (learned during pre-training on user similarity)
-<li>Item embeddings (from product taxonomy or content embeddings)
-<li>Temporal signals: time-of-day, day-of-week, seasonality
-<li>Historical aggregates: average rating user gives, popularity of items user likes
-</ul>
+<p>Feature engineering bridges item history with demographic and contextual signals. Dense features provide continuous numerical representations that capture various aspects of users, items, and context.</p>
 
-<p>Sparse categorical features include:
-<ul>
-<li>User demographics: age range, location, language
-<li>Item metadata: category, subcategory, brand, author
-<li>Context: device type, app vs. web, time zone
-</ul>
+<p>User embeddings are learned during pre-training on user similarity tasks, capturing latent user characteristics and preferences in a continuous vector space. These embeddings encode patterns like which types of users tend to have similar preferences, enabling the model to generalize across similar users.</p>
 
-<p>Embedding these sparse features increases model capacity. A categorical feature with 10,000 categories (e.g., user's home country) is embedded into a 16--32 dimensional vector, increasing model parameters significantly but enabling the model to learn feature interactions.</p>
+<p>Item embeddings derive from product taxonomy or content embeddings, representing items in a semantic space where similar items are positioned nearby. These embeddings can be learned from item metadata, collaborative filtering patterns, or content features like text descriptions and images.</p>
+
+<p>Temporal signals capture time-dependent patterns including time-of-day effects (users browse differently in morning vs. evening), day-of-week patterns (weekend vs. weekday behavior), and seasonality (holiday shopping, summer content preferences). These temporal features help the model adapt recommendations to the current context.</p>
+
+<p>Historical aggregates summarize past behavior through statistics like the average rating a user gives (indicating rating strictness), the popularity of items the user likes (indicating mainstream vs. niche preferences), and engagement patterns (binge-watching vs. casual browsing). These aggregates provide stable signals about long-term user characteristics.</p>
+
+<p>Sparse categorical features represent discrete attributes that take values from large vocabularies, requiring special handling through embedding layers.</p>
+
+<p>User demographics include categorical attributes like age range, geographic location, and language preference. These features help the model understand how different user segments have different preferences and behaviors.</p>
+
+<p>Item metadata captures categorical properties including category, subcategory, brand, and author. These attributes provide content-based signals that complement collaborative filtering, especially for cold-start items with limited interaction history.</p>
+
+<p>Context features describe the interaction environment including device type (mobile, tablet, desktop), platform (app vs. web), and time zone. These contextual factors significantly influence user behavior and should be incorporated into recommendations.</p>
+
+<p>Embedding these sparse features increases model capacity substantially. A categorical feature with 10,000 categories, such as user's home country, is embedded into a 16--32 dimensional vector. While this increases model parameters significantly, it enables the model to learn complex feature interactions and capture nuanced patterns that would be impossible with one-hot encoding.</p>
 
 <h3>Multi-Task Learning for Recommendations</h3>
 
-<p>Real recommendation systems optimize multiple objectives:
-<ul>
-<li><strong>CTR (click-through rate):</strong> Will the user click this item?
-<li><strong>Conversion:</strong> Will the user purchase?
-<li><strong>Engagement time:</strong> How long will the user engage with this item (video watch time, article reading time)?
-<li><strong>Long-term value:</strong> Will this recommendation lead to sustained engagement (user retention)?
-</ul>
+<p>Real recommendation systems optimize multiple objectives simultaneously, each capturing different aspects of user engagement and business value.</p>
+
+<p>CTR (click-through rate) predicts whether the user will click on a recommended item, serving as a primary signal of immediate interest. High CTR indicates that recommendations are relevant and appealing enough to capture user attention. This metric is easy to measure and provides abundant training signal since every impression generates a click or no-click label.</p>
+
+<p>Conversion predicts whether the user will complete a desired action such as making a purchase, subscribing, or completing a form. Conversion is a stronger signal than clicks because it represents actual business value, but it's also sparser—only a small fraction of clicks convert. Optimizing for conversion ensures recommendations drive revenue, not just engagement.</p>
+
+<p>Engagement time predicts how long the user will engage with the recommended item, measured as video watch time, article reading time, or time spent on a product page. This metric captures content quality and user satisfaction better than binary click signals. A user who watches an entire video is more satisfied than one who clicks but immediately leaves.</p>
+
+<p>Long-term value predicts whether the recommendation will lead to sustained engagement and user retention over weeks or months. This forward-looking metric is crucial because optimizing only for immediate engagement can harm long-term retention through clickbait, filter bubbles, or content that satisfies curiosity but doesn't build lasting interest. Long-term value is difficult to measure (requires long observation windows) but essential for platform health.</p>
 
 <p>Multi-task learning trains a shared backbone with task-specific heads. The losses are combined with weights:
 <div class="equation">
@@ -321,14 +321,17 @@ $$\begin{align}
 
 <h3>Candidate Generation Strategies</h3>
 
-<p>Candidate generation uses simple, fast methods:</p>
+<h3>Candidate Generation Strategies</h3>
 
-<ul>
-<li><strong>Embedding-based retrieval:</strong> Embed the user and items; retrieve items nearest to the user embedding. This is fast (milliseconds for MIPS---maximum inner product search---on GPU-accelerated indices like Faiss).
-<li><strong>Collaborative filtering:</strong> For similar users, recommend items they liked. Compute user similarity offline; retrieve candidates by finding similar users.
-<li><strong>Content-based filtering:</strong> Retrieve items similar to those the user has interacted with.
-<li><strong>Hybrid:</strong> Combine multiple signals (e.g., top-k trending items + personalized candidates + content-based candidates). Diversity of sources improves coverage and serendipity.
-</ul>
+<p>Candidate generation uses simple, fast methods to narrow the search space from millions of items to a manageable set for detailed ranking.</p>
+
+<p>Embedding-based retrieval embeds both the user and all items into a shared vector space, then retrieves items nearest to the user embedding using efficient similarity search. This approach is fast, typically taking only milliseconds for MIPS (maximum inner product search) on GPU-accelerated indices like Faiss. The quality depends on the embedding space—well-trained embeddings that capture semantic similarity produce relevant candidates.</p>
+
+<p>Collaborative filtering identifies similar users based on their interaction patterns, then recommends items that those similar users liked. User similarity can be computed offline using techniques like cosine similarity on interaction vectors or learned embeddings. At serving time, the system retrieves candidates by finding similar users and aggregating their preferences. This approach is effective because users with similar past behavior often have similar future preferences.</p>
+
+<p>Content-based filtering retrieves items similar to those the user has previously interacted with, using item features like category, tags, or content embeddings. This approach works well for users with consistent preferences and provides good coverage for new items with rich metadata. However, it can create filter bubbles by only recommending items similar to past interactions.</p>
+
+<p>Hybrid approaches combine multiple candidate sources to improve both relevance and diversity. A typical hybrid strategy might retrieve top-k trending items (ensuring popular content is considered), personalized candidates from collaborative filtering (ensuring personalization), and content-based candidates (ensuring coverage of user interests). The diversity of sources improves coverage and serendipity, exposing users to a broader range of relevant content than any single method would provide.</p>
 
 <h3>Ranking Model and Latency Budget</h3>
 
@@ -338,13 +341,15 @@ $$\begin{align}
 
 <h3>Real-Time Updates and Freshness</h3>
 
-<p>Recommendation scores must be updated as new items arrive and user preferences change. Naive approaches recompute scores for all users at each step; this is prohibitively expensive. Practical approaches:</p>
+<h3>Real-Time Updates and Freshness</h3>
 
-<ul>
-<li><strong>Batch serving:</strong> Precompute recommendations for all users nightly. Store in a cache. Serve from cache with occasional refreshes for active users.
-<li><strong>Online serving with feature caching:</strong> Compute item embeddings and candidate sets offline. At request time, fetch precomputed features and score with a fast model.
-<li><strong>Streaming updates:</strong> Track user behavior in real-time; update embeddings and candidate sets incrementally.
-</ul>
+<p>Recommendation scores must be updated as new items arrive and user preferences change. Naive approaches that recompute scores for all users at each step are prohibitively expensive. Practical approaches balance freshness with computational feasibility.</p>
+
+<p>Batch serving precomputes recommendations for all users nightly, storing results in a cache for fast retrieval. The system serves recommendations from the cache with occasional refreshes for highly active users who might have significantly changed preferences since the last batch update. This approach minimizes serving latency and computational cost but sacrifices freshness—recommendations can be up to 24 hours stale.</p>
+
+<p>Online serving with feature caching computes expensive features like item embeddings and candidate sets offline, then fetches these precomputed features at request time to score with a fast model. This hybrid approach maintains reasonable freshness for features that change slowly (item embeddings) while enabling real-time scoring based on current user state. The fast scoring model can incorporate recent user actions without recomputing all features.</p>
+
+<p>Streaming updates track user behavior in real-time using stream processing frameworks, updating embeddings and candidate sets incrementally as new interactions arrive. This approach provides the freshest recommendations but requires sophisticated infrastructure to handle high-throughput event streams and maintain consistency. Streaming updates are most valuable for highly active users whose preferences change rapidly within a session.</p>
 
 <p>Freshness vs. latency is a trade-off. Highly personalized real-time recommendations are better but slower. Pre-computed recommendations are faster but stale.</p>
 
@@ -356,40 +361,45 @@ $$\begin{align}
 
 <p>If a user watches many political videos from one perspective, a system optimizing for watch time may recommend only that perspective, reinforcing views and reducing exposure to alternative viewpoints. While maximizing engagement, this harms user growth and societal polarization.</p>
 
-<p>Solutions include:</p>
+<p>Solutions include several complementary approaches to increase recommendation diversity and reduce filter bubble effects.</p>
 
-<ul>
-<li><strong>Diversity metrics:</strong> Measure diversity of recommendations (e.g., entropy of recommended categories). Include diversity in the ranking objective.
-<li><strong>Exploration:</strong> Recommend some items outside the user's typical preferences (10\% of recommendations for discovery).
-<li><strong>Fairness constraints:</strong> Ensure underrepresented creators/items receive exposure. Dynamic allocation balances personalization with fairness.
-<li><strong>User control:</strong> Allow users to adjust recommendation diversity or opt for curated feeds.
-</ul>
+<p>Diversity metrics measure the variety of recommendations using measures like entropy of recommended categories. By including diversity as an explicit term in the ranking objective, the system can balance relevance with variety. For example, the ranking score might be a weighted combination of predicted engagement and category diversity, ensuring that highly relevant but homogeneous recommendations don't dominate.</p>
+
+<p>Exploration allocates a portion of recommendations (typically 10\%) to items outside the user's typical preferences, enabling discovery of new interests. This exploration can be random or guided by uncertainty estimates—recommending items where the model is uncertain about user preferences. Exploration serves dual purposes: it helps users discover new content they might enjoy, and it generates training data for underexplored items and user segments.</p>
+
+<p>Fairness constraints ensure that underrepresented creators and items receive exposure proportional to their quality, not just their historical popularity. Dynamic allocation algorithms balance personalization with fairness by setting minimum exposure thresholds for different creator demographics or content categories. This prevents winner-take-all dynamics where popular content dominates recommendations at the expense of quality niche content.</p>
+
+<p>User control empowers users to adjust recommendation diversity or opt for curated feeds rather than purely algorithmic recommendations. Providing transparency about why items are recommended ("because you watched X") and controls to adjust recommendation behavior ("show me more diverse content") increases user trust and satisfaction. Users who feel in control of their experience are more likely to remain engaged long-term.</p>
 
 <h3>Handling Demographic Bias</h3>
 
-<p>Models trained on interaction data inherit biases. If women historically receive fewer views for technical content, the model may downrank women creators. Mitigation strategies:</p>
+<h3>Handling Demographic Bias</h3>
 
-<ul>
-<li><strong>Balanced datasets:</strong> Oversample interactions from underrepresented groups during training.
-<li><strong>Fairness-aware loss:</strong> Add a loss term penalizing disparate performance across demographic groups.
-<li><strong>Allocation fairness:</strong> Ensure a minimum fraction of recommendations go to creators from all demographics.
-</ul>
+<p>Models trained on interaction data inherit biases present in historical patterns. If women historically receive fewer views for technical content due to societal biases, the model may learn to downrank women creators in technical categories, perpetuating and amplifying the bias. Mitigation strategies address these biases at multiple stages of the recommendation pipeline.</p>
+
+<p>Balanced datasets oversample interactions from underrepresented groups during training, ensuring the model sees sufficient examples of diverse creator-user interactions. For example, if women creators represent 20\% of technical content but receive only 10\% of views, oversampling their interactions to 20\% of training data helps the model learn unbiased quality signals. This rebalancing corrects for historical underexposure without requiring the model to explicitly reason about fairness.</p>
+
+<p>Fairness-aware loss functions add a penalty term that discourages disparate performance across demographic groups. The loss function might include a term measuring the difference in average recommendation scores between demographic groups, encouraging the model to provide similar quality recommendations regardless of creator demographics. This approach directly optimizes for fairness as a training objective.</p>
+
+<p>Allocation fairness ensures that a minimum fraction of recommendations go to creators from all demographics, regardless of predicted engagement. Post-processing algorithms can enforce these constraints by adjusting recommendation rankings to meet fairness targets while minimizing impact on overall engagement. For example, if the top-10 recommendations contain no creators from underrepresented groups, the system might replace the lowest-ranked item with the highest-ranked item from an underrepresented group.</p>
 
 <h3>A/B Testing for Recommendation Changes</h3>
 
-<p>Before deploying recommendation model improvements, validate with A/B tests. Randomly split users:
-<ul>
-<li>Control group: existing recommendation algorithm
-<li>Treatment group: new model
-</ul>
+<p>Before deploying recommendation model improvements, validate with A/B tests that randomly split users into control and treatment groups.</p>
 
-<p>Measure metrics over 2--4 weeks:
-<ul>
-<li>Engagement: watch time, clicks, session length
-<li>Retention: return rate (fraction who return the next day/week)
-<li>Diversity: entropy of categories recommended
-<li>Fairness: recommendation volume for different creator demographics
-</ul>
+<p>The control group continues using the existing recommendation algorithm, providing a baseline for comparison. This group represents the status quo performance and helps account for external factors like seasonality or platform-wide changes that affect all users.</p>
+
+<p>The treatment group receives recommendations from the new model, enabling direct measurement of the model's impact. The random assignment ensures that differences between groups are attributable to the model change rather than pre-existing user differences.</p>
+
+<p>Measure metrics over 2--4 weeks to account for short-term novelty effects and capture longer-term impacts on user behavior.</p>
+
+<p>Engagement metrics including watch time, clicks, and session length measure immediate user response to recommendations. These metrics are sensitive and provide quick feedback on whether the new model improves user experience. However, they can be gamed by clickbait or sensational content that attracts clicks but doesn't satisfy users.</p>
+
+<p>Retention metrics measure the return rate, calculating the fraction of users who return the next day or week. Retention is a stronger signal of recommendation quality than engagement because it reflects sustained satisfaction. Users who receive consistently good recommendations are more likely to return, while poor recommendations drive churn.</p>
+
+<p>Diversity metrics measure the entropy of categories recommended, ensuring that improvements in engagement don't come at the cost of reduced variety. A model that only recommends popular mainstream content might achieve high engagement but create filter bubbles and reduce long-term user satisfaction.</p>
+
+<p>Fairness metrics track recommendation volume for different creator demographics, ensuring that model improvements don't disproportionately benefit or harm specific groups. Measuring fairness explicitly prevents unintended bias amplification and ensures the platform serves all creators equitably.</p>
 
 <p>If the treatment significantly improves key metrics without degrading others, roll out to all users. This empirical validation is critical; models that perform well on offline metrics may hurt business KPIs in practice.</p>
 
@@ -399,57 +409,65 @@ $$\begin{align}
 
 <h3>System Architecture</h3>
 
-<p><strong>Candidate Generation:</strong>
-<ul>
-<li>User embedding: Pretrain using a siamese network on user-user similarity (users who watch similar videos have similar embeddings)
-<li>Item embedding: Video embeddings from a collaborative filtering model + content embeddings from video metadata
-<li>Retrieval: MIPS (maximum inner product search) using Faiss, returning top-500 candidates in 20 ms
-</ul>
+<p><strong>Candidate Generation:</strong> The first stage rapidly narrows millions of videos to a manageable candidate set.</p>
 
-<p><strong>Ranking:</strong>
-<ul>
-<li>Model: XGBoost with 500 features (user features, item features, candidate-specific features)
-<li>Features: user watch time, historical CTR, video popularity, recency, user-item co-occurrence, genre match
-<li>Latency: 80 ms to score 500 candidates and rank top-10
-</ul>
+<p>User embedding is pretrained using a siamese network on user-user similarity, where users who watch similar videos receive similar embeddings. This embedding captures latent user preferences and enables fast similarity-based retrieval.</p>
 
-<p><strong>Post-processing:</strong>
-<ul>
-<li>Diversity filter: If top-10 contains 5 videos from the same genre, rerank to ensure max 3 per genre
-<li>Freshness boost: Increase score of videos uploaded < 1 week ago
-<li>Creator fairness: Ensure top-10 includes creators from different regions and demographics
-</ul>
+<p>Item embedding combines video embeddings from a collaborative filtering model (capturing which videos are watched together) with content embeddings from video metadata (title, description, tags, thumbnails). This hybrid embedding represents both collaborative patterns and content semantics.</p>
+
+<p>Retrieval uses MIPS (maximum inner product search) with the Faiss library to find the top-500 candidates most similar to the user embedding in just 20 milliseconds. This fast approximate search makes real-time candidate generation feasible at scale.</p>
+
+<p><strong>Ranking:</strong> The second stage scores candidates with a more sophisticated model to produce the final top-10 recommendations.</p>
+
+<p>The model uses XGBoost, a gradient-boosted decision tree algorithm, with 500 features capturing user characteristics, item properties, and user-item interactions. XGBoost provides excellent performance with reasonable latency, making it suitable for real-time serving.</p>
+
+<p>Features include user watch time patterns, historical CTR for similar content, video popularity metrics, recency (how recently uploaded), user-item co-occurrence (how often users like this user watch this video), and genre match between user preferences and video category. These diverse features enable the model to capture multiple signals of relevance.</p>
+
+<p>Latency is constrained to 80 milliseconds to score all 500 candidates and rank the top-10, fitting within the overall 200ms latency budget for the recommendation request. This tight latency constraint requires careful model optimization and efficient feature computation.</p>
+
+<p><strong>Post-processing:</strong> The final stage applies business rules and fairness constraints to the ranked list.</p>
+
+<p>A diversity filter ensures variety by checking if the top-10 contains too many videos from the same genre (e.g., 5 action movies). If so, the system reranks to ensure a maximum of 3 videos per genre, promoting exploration of different content types.</p>
+
+<p>A freshness boost increases the score of videos uploaded less than 1 week ago, ensuring that new content receives exposure even if it hasn't accumulated many interactions yet. This helps new creators gain traction and keeps the platform feeling current.</p>
+
+<p>Creator fairness constraints ensure the top-10 includes creators from different regions and demographics, preventing the recommendations from being dominated by a small set of popular creators. This promotes platform diversity and gives all creators fair opportunity for exposure.</p>
 
 <h3>Training and Offline Evaluation</h3>
 
 <p><strong>Data:</strong> 100 billion historical events (views, clicks, shares) over 3 months</p>
 
-<p><strong>Metrics:</strong>
-<ul>
-<li>Recall@10: Among videos the user watched next, what fraction appear in top-10 recommendations? Target: $\geq 8\%$
-<li>NDCG@10: Ranking quality; videos watched (clicks) are ranked higher. Target: $\geq 0.45$
-</ul>
+<p><strong>Metrics:</strong> The system is evaluated using standard recommendation metrics that measure both coverage and ranking quality.</p>
 
-<p><strong>Results:</strong>
-<ul>
-<li>Collaborative filtering baseline: NDCG@10 = 0.38
-<li>Sequence model (SASRec): NDCG@10 = 0.43
-<li>SASRec + multi-task learning: NDCG@10 = 0.46
-</ul>
+<p>Recall@10 measures what fraction of videos the user actually watched next appear in the top-10 recommendations. This metric captures whether the system successfully identifies relevant content, with a target of at least 8\%. Higher recall means users are more likely to find content they want in the recommendations.</p>
+
+<p>NDCG@10 (Normalized Discounted Cumulative Gain) measures ranking quality by assigning higher value to relevant items that appear earlier in the list. Videos that users clicked or watched receive higher scores, and the metric penalizes relevant items that appear lower in the ranking. The target is at least 0.45, indicating that relevant content consistently appears near the top of recommendations.</p>
+
+<p><strong>Results:</strong> Progressive model improvements demonstrate clear gains in recommendation quality.</p>
+
+<p>The collaborative filtering baseline achieves NDCG@10 of 0.38, providing a strong foundation but missing temporal patterns in user behavior. This traditional approach serves as the performance floor that newer methods must exceed.</p>
+
+<p>The sequence model (SASRec) improves to NDCG@10 of 0.43, a 13\% improvement over the baseline. By modeling user interaction sequences with transformers, the system captures temporal dynamics and session-level patterns that collaborative filtering misses.</p>
+
+<p>SASRec with multi-task learning reaches NDCG@10 of 0.46, adding another 7\% improvement. By jointly optimizing for multiple objectives (CTR, watch time, retention), the model learns richer representations that better predict user satisfaction across different dimensions.</p>
 
 <h3>Online A/B Test</h3>
 
 <p>Deploy the improved recommender to 10\% of users.</p>
 
-<p><strong>Results over 4 weeks:</strong>
-<ul>
-<li>Watch time: +4.2\% (statistically significant)
-<li>CTR on recommendations: +3.8\%
-<li>Session length: +2.1\% (users explore more)
-<li>Retention (30-day): +1.5\% (more users return)
-<li>Diversity: +8\% (more diverse recommendations; users explore new genres)
-<li>Creator fairness: +12\% watch share for underrepresented creators (increase from 5\% to 5.6\%)
-</ul>
+<p><strong>Results over 4 weeks:</strong> The online test validates that offline improvements translate to real business impact.</p>
+
+<p>Watch time increases by 4.2\%, a statistically significant improvement indicating that users engage more deeply with the improved recommendations. This translates to millions of additional hours of content consumption, directly impacting platform value and advertising revenue.</p>
+
+<p>CTR on recommendations improves by 3.8\%, showing that users find the recommendations more appealing and relevant. Higher CTR indicates better matching between recommended content and user interests.</p>
+
+<p>Session length increases by 2.1\%, meaning users explore more content per visit. This suggests that good recommendations create positive momentum, encouraging users to continue browsing and watching rather than leaving the platform.</p>
+
+<p>Retention (30-day) improves by 1.5\%, with more users returning to the platform over the following month. This long-term metric is crucial because it indicates sustained satisfaction rather than just short-term engagement spikes. Improved retention has compounding effects on platform growth and user lifetime value.</p>
+
+<p>Diversity increases by 8\%, measured as entropy of recommended categories. Users explore new genres and content types rather than staying in narrow filter bubbles. This diversity benefits both users (who discover new interests) and creators (who reach broader audiences).</p>
+
+<p>Creator fairness improves with a 12\% increase in watch share for underrepresented creators, rising from 5\% to 5.6\% of total watch time. While seemingly small in absolute terms, this represents thousands of additional creators receiving meaningful exposure and represents progress toward equitable content distribution.</p>
 
 <p>No negative impact on fairness or diversity metrics. The model improved both engagement and societal goals. Deployment proceeds to all users, expected to recover millions of hours of additional user engagement annually.</p>
 
@@ -580,66 +598,6 @@ $$\begin{align}
 <p><strong>Chapter 30 (Healthcare):</strong> Healthcare recommendation systems (treatment recommendations, care pathways) face drift as medical knowledge evolves and patient populations change. However, the stakes are higher (patient safety) and the pace is slower (medical knowledge evolves over years, not days). The continuous learning strategies must be adapted to prioritize safety and regulatory compliance over rapid adaptation.</p>
 
 <p><strong>Chapter 33 (Observability):</strong> Monitoring recommendation systems requires specialized observability infrastructure discussed in Chapter~[ref]. Recommendation quality is multidimensional (accuracy, diversity, fairness) and difficult to measure in real-time. Effective observability is essential for detecting drift early and diagnosing root causes. Invest in recommendation-specific monitoring tools and dashboards.</p>
-
-<h2>Case Study: Video Recommendation for a Streaming Platform</h2>
-
-<p>A video streaming platform with 100 million users and 10 million videos seeks to improve watch time and retention through better recommendations.</p>
-
-<h3>System Architecture</h3>
-
-<p><strong>Candidate Generation:</strong>
-<ul>
-<li>User embedding: Pretrain using a siamese network on user-user similarity (users who watch similar videos have similar embeddings)
-<li>Item embedding: Video embeddings from a collaborative filtering model + content embeddings from video metadata
-<li>Retrieval: MIPS (maximum inner product search) using Faiss, returning top-500 candidates in 20 ms
-</ul>
-
-<p><strong>Ranking:</strong>
-<ul>
-<li>Model: XGBoost with 500 features (user features, item features, candidate-specific features)
-<li>Features: user watch time, historical CTR, video popularity, recency, user-item co-occurrence, genre match
-<li>Latency: 80 ms to score 500 candidates and rank top-10
-</ul>
-
-<p><strong>Post-processing:</strong>
-<ul>
-<li>Diversity filter: If top-10 contains 5 videos from the same genre, rerank to ensure max 3 per genre
-<li>Freshness boost: Increase score of videos uploaded < 1 week ago
-<li>Creator fairness: Ensure top-10 includes creators from different regions and demographics
-</ul>
-
-<h3>Training and Offline Evaluation</h3>
-
-<p><strong>Data:</strong> 100 billion historical events (views, clicks, shares) over 3 months</p>
-
-<p><strong>Metrics:</strong>
-<ul>
-<li>Recall@10: Among videos the user watched next, what fraction appear in top-10 recommendations? Target: $\geq 8\%$
-<li>NDCG@10: Ranking quality; videos watched (clicks) are ranked higher. Target: $\geq 0.45$
-</ul>
-
-<p><strong>Results:</strong>
-<ul>
-<li>Collaborative filtering baseline: NDCG@10 = 0.38
-<li>Sequence model (SASRec): NDCG@10 = 0.43
-<li>SASRec + multi-task learning: NDCG@10 = 0.46
-</ul>
-
-<h3>Online A/B Test</h3>
-
-<p>Deploy the improved recommender to 10\% of users.</p>
-
-<p><strong>Results over 4 weeks:</strong>
-<ul>
-<li>Watch time: +4.2\% (statistically significant)
-<li>CTR on recommendations: +3.8\%
-<li>Session length: +2.1\% (users explore more)
-<li>Retention (30-day): +1.5\% (more users return)
-<li>Diversity: +8\% (more diverse recommendations; users explore new genres)
-<li>Creator fairness: +12\% watch share for underrepresented creators (increase from 5\% to 5.6\%)
-</ul>
-
-<p>No negative impact on fairness or diversity metrics. The model improved both engagement and societal goals. Deployment proceeds to all users, expected to recover millions of hours of additional user engagement annually.</p>
 
 <h2>Exercises</h2>
 

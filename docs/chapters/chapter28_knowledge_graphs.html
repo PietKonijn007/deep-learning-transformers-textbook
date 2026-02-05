@@ -153,14 +153,17 @@
 
 <p>A knowledge graph is a directed, typed, attributed multigraph:</p>
 
-<div class="definition"><strong>Definition:</strong> 
-<ul>
-<li><strong>Entities:</strong> Unique objects, concepts, or things. Example: ``Barack Obama'' (person), ``United States'' (country), ``2008'' (year)
-<li><strong>Relationships (edges):</strong> Typed connections between entities. Example: (Barack Obama) --<code>born\_in</code>--> (Honolulu)
-<li><strong>Types:</strong> Semantic categories. Example: Barack Obama has type ``Person'' and ``Politician''
-<li><strong>Attributes:</strong> Properties of entities. Example: Barack Obama has ``birth\_date'' = August 4, 1961
-<li><strong>Triples:</strong> The basic unit: (subject, predicate, object). Example: (<code>Barack Obama</code>, <code>born\_in</code>, <code>Honolulu</code>)
-</ul>
+<div class="definition"><strong>Definition:</strong>
+
+<p>A knowledge graph consists of several fundamental components that work together to represent structured information about the world. Entities are unique objects, concepts, or things that exist in the domain being modeled. For example, ``Barack Obama'' represents a specific person, ``United States'' represents a particular country, and ``2008'' represents a specific year. Each entity has a unique identifier that distinguishes it from all other entities in the graph.</p>
+
+<p>Relationships, also called edges, are typed connections between entities that express how entities relate to each other. These relationships have specific semantic meanings that define the nature of the connection. For example, the relationship (Barack Obama) --<code>born\_in</code>--> (Honolulu) expresses that Barack Obama was born in the city of Honolulu. The directionality of relationships matters: being born in a location is different from a location being the birthplace of someone, even though they express related concepts.</p>
+
+<p>Types provide semantic categories that classify entities into meaningful groups. An entity can have multiple types that describe different aspects of its nature. For example, Barack Obama has type ``Person'' indicating he is a human being, and type ``Politician'' indicating his professional role. These types enable reasoning about what properties and relationships are valid for an entity.</p>
+
+<p>Attributes are properties of entities that describe their characteristics through key-value pairs. For example, Barack Obama has an attribute ``birth\_date'' with value August 4, 1961. Attributes differ from relationships in that they connect entities to literal values (strings, numbers, dates) rather than to other entities.</p>
+
+<p>Triples form the basic unit of information in a knowledge graph, expressed as (subject, predicate, object) tuples. For example, (<code>Barack Obama</code>, <code>born\_in</code>, <code>Honolulu</code>) is a triple where Barack Obama is the subject, born\_in is the predicate (relationship type), and Honolulu is the object. This triple structure provides a simple yet powerful way to represent factual statements about the world.
 </div>
 
 <p>Knowledge graphs are semi-formal: they have structure (typed entities, relationships) but allow uncertainty (confidence scores, probability distributions).</p>
@@ -179,13 +182,17 @@
 
 <h3>Why Knowledge Graphs Matter</h3>
 
-<ul>
-<li><strong>Semantic search:</strong> Query ``movies directed by Steven Spielberg released after 2010.'' Knowledge graph allows structured queries, not just keyword matching.
-<li><strong>Question answering:</strong> ``Who was Barack Obama's wife?'' Directly answered by following edges in graph.
-<li><strong>Reasoning:</strong> If A is related to B, and B is related to C, infer possible relationships between A and C.
-<li><strong>Disambiguation:</strong> Distinguish ``Barack Obama'' (politician) from ``Obama'' (surname) through type information.
-<li><strong>Incompleteness handling:</strong> Most facts are unknown. Predict missing relationships based on learned patterns.
-</ul>
+<p>Knowledge graphs provide capabilities that are difficult or impossible to achieve with unstructured data alone, making them essential for many modern AI applications.</p>
+
+<p>Semantic search enables structured queries that go far beyond keyword matching. A query like ``movies directed by Steven Spielberg released after 2010'' requires understanding the concepts of directors, movies, and temporal relationships. A knowledge graph allows this query to be expressed precisely and answered directly by traversing the graph structure, while keyword search would struggle to distinguish between movies Spielberg directed versus movies he merely appeared in or produced.</p>
+
+<p>Question answering becomes straightforward when facts are explicitly represented in a knowledge graph. The question ``Who was Barack Obama's wife?'' can be answered by directly following the spouse relationship edge from the Barack Obama entity, yielding Michelle Obama. This direct lookup is faster and more reliable than extracting the answer from unstructured text, where the information might be expressed in many different ways or require complex inference.</p>
+
+<p>Reasoning capabilities emerge from the graph structure, enabling inference of new facts from existing ones. If entity A is related to entity B through some relationship, and B is related to C through another relationship, the system can infer possible relationships between A and C. For example, if Barack Obama was president of the United States, and the United States is located in North America, we can infer that Barack Obama was president of a country in North America. This transitive reasoning is natural in graph structures but difficult in unstructured text.</p>
+
+<p>Disambiguation resolves ambiguity by using type information and context. The name ``Obama'' could refer to Barack Obama the politician, Michelle Obama the former first lady, or Obama as a surname in general. The knowledge graph distinguishes these through entity types and relationships, ensuring that queries and reasoning operate on the correct entity. This disambiguation is crucial for accurate information retrieval and reasoning.</p>
+
+<p>Incompleteness handling addresses the reality that most facts about the world are unknown rather than explicitly false. Knowledge graphs are inherently incomplete---they contain only a tiny fraction of all true facts. Machine learning models can predict missing relationships based on learned patterns, inferring likely facts even when they haven't been explicitly stated. This ability to reason about what is probably true, not just what is known to be true, makes knowledge graphs far more useful than static databases.</p>
 
 <h2>Entity and Relation Extraction from Text</h2>
 
@@ -211,13 +218,9 @@ Entities:
 
 <p><strong>Deep learning approach:</strong> Token classification using sequence labeling (BIO tagging):</p>
 
-<ul>
-<li><strong>B-</strong> (Begin): Start of entity
-<li><strong>I-</strong> (Inside): Continuation of entity
-<li><strong>O</strong> (Outside): Not part of entity
-</ul>
+<p>The BIO tagging scheme provides a systematic way to mark entity boundaries in text. The B- (Begin) tag marks the start of an entity, indicating that a new entity mention begins at this token. The I- (Inside) tag marks the continuation of an entity, indicating that this token is part of the entity that started with the previous B- tag. The O (Outside) tag indicates that this token is not part of any entity. This scheme handles multi-token entities naturally: ``Barack Obama'' would be tagged as ``B-Person I-Person'', clearly marking both tokens as part of a single person entity.</p>
 
-<p>Architecture: BERT or similar transformer, token-level classification head.</p>
+<p>The architecture typically uses BERT or a similar transformer model as the encoder, which processes the entire input sequence and produces contextual embeddings for each token. These embeddings capture not just the token itself but its meaning in context, which is crucial for entity recognition. A token-level classification head sits on top of the transformer, predicting the BIO tag for each token independently. During training, the model learns to recognize entity patterns from labeled examples, and during inference, it applies these learned patterns to identify entities in new text.</p>
 
 <h3>Relation Extraction</h3>
 
@@ -236,21 +239,23 @@ Triple: (Barack Obama, born_in, Honolulu)
 </code></pre>
 </div>
 
-<p><strong>Challenges:</strong>
-<ul>
-<li><strong>Long-range dependencies:</strong> Entities may be far apart in text
-<li><strong>Implicit relations:</strong> ``John married Mary'' states relationship directly; ``John's wife, Mary'' implies it
-<li><strong>Multiple relationships:</strong> Sentence may express multiple triples
-<li><strong>Noise:</strong> Not all mentions are asserting facts; some are hypothetical or negated
-</ul>
+<p><strong>Challenges:</strong> Relation extraction faces several fundamental difficulties that make it more complex than entity recognition alone.</p>
 
-<p><strong>Deep learning approaches:</strong></p>
+<p>Long-range dependencies occur when entities that are related appear far apart in the text, separated by many intervening words or even sentences. For example, in ``John, who had been working at the company for fifteen years and was known for his dedication, finally received the promotion he deserved from Mary,'' the relationship between John and Mary (reporting structure or promotion relationship) spans a long distance with substantial intervening content. Models must maintain context over these long distances to correctly identify the relationship.</p>
 
-<ul>
-<li><strong>Sequence classification:</strong> Classify (entity1, entity2) pair based on text between them
-<li><strong>Sequence tagging:</strong> Tag text to identify relation arguments (similar to NER)
-<li><strong>Structured prediction:</strong> Joint entity and relation extraction (joint model outperforms pipeline)
-</ul>
+<p>Implicit relations present another challenge because not all relationships are stated explicitly. The sentence ``John married Mary'' directly states the marriage relationship, making extraction straightforward. However, ``John's wife, Mary'' implies the same relationship without using the verb ``married.'' The model must learn to recognize these implicit expressions of relationships, which can take many forms depending on the relationship type and the writing style.</p>
+
+<p>Multiple relationships within a single sentence require the model to identify and extract all relevant triples, not just one. A sentence like ``John founded Microsoft in Seattle in 1975'' expresses at least three relationships: (John, founded, Microsoft), (Microsoft, located\_in, Seattle), and (Microsoft, founded\_in, 1975). The model must recognize that multiple facts are being asserted and extract each one correctly.</p>
+
+<p>Noise in the form of non-factual statements complicates extraction because not all mentions of entities and relationships are asserting facts. Hypothetical statements (``If John were to marry Mary''), negations (``John did not marry Mary''), and questions (``Did John marry Mary?'') all mention entities and relationships but don't assert that the relationship actually holds. The model must distinguish factual assertions from these other types of statements to avoid extracting false information.</p>
+
+<p><strong>Deep learning approaches:</strong> Several architectural strategies have emerged for relation extraction, each with different trade-offs between accuracy, complexity, and computational cost.</p>
+
+<p>Sequence classification treats relation extraction as a classification problem where the model classifies each (entity1, entity2) pair based on the text between them. The model encodes the text span connecting the two entities and predicts which relationship type (if any) connects them. This approach is simple and works well when relationships are expressed locally, but it struggles with long-range dependencies and may miss context outside the span between entities.</p>
+
+<p>Sequence tagging extends the BIO tagging approach from NER to identify relation arguments. The model tags each token to indicate whether it's part of a relation expression and which role it plays (subject, predicate, object). This approach can handle complex sentence structures and multiple overlapping relations, but it requires more complex annotation and training procedures.</p>
+
+<p>Structured prediction performs joint entity and relation extraction in a single unified model rather than as separate pipeline stages. The model simultaneously identifies entities and the relationships between them, allowing entity recognition decisions to inform relation extraction and vice versa. This joint approach consistently outperforms pipeline methods because it can leverage the mutual constraints between entities and relations---for example, knowing that a ``born\_in'' relationship exists helps identify that one entity is a person and the other is a location.</p>
 
 <h3>Joint Entity and Relation Extraction</h3>
 
@@ -264,12 +269,13 @@ Triple: (Barack Obama, born_in, Honolulu)
 <li>Output: Set of triples
 </ol>
 
-<p><strong>Advantages:</strong>
-<ul>
-<li>Entities recognized in context of their relationships (better accuracy)
-<li>Shared representations between entity and relation tasks
-<li>Supports multi-token entities naturally
-</ul>
+<p><strong>Advantages:</strong> The joint extraction approach provides several benefits over pipeline methods that process entities and relations separately.</p>
+
+<p>Entities are recognized in the context of their relationships, leading to better accuracy. When the model knows that a ``born\_in'' relationship is being expressed, it can use this information to help identify that one entity must be a person and the other must be a location. This mutual reinforcement between entity and relation recognition reduces errors that would occur if each task were performed in isolation.</p>
+
+<p>Shared representations between entity and relation tasks allow the model to learn features that are useful for both tasks simultaneously. The transformer encoder learns to produce embeddings that capture both entity boundaries and relationship expressions, making the model more parameter-efficient and often more accurate than separate models.</p>
+
+<p>Multi-token entities are supported naturally because the joint model understands entity boundaries as part of its core functionality. Complex entity names like ``United States of America'' or ``Barack Hussein Obama II'' are handled correctly because the model learns to recognize complete entity spans while simultaneously identifying their relationships.</p>
 
 <h2>Knowledge Graph Embeddings</h2>
 
@@ -302,56 +308,39 @@ $$\begin{align}
 <p>Positive triples minimized; negative triples have margin.
 </div>
 
-<p><strong>Training:</strong>
-<ul>
-<li>Start with random embeddings
-<li>For each true triple (h, r, t), minimize distance
-<li>For each false triple (h', r, t'), maximize distance (with margin)
-<li>Sample negative examples: corrupt head or tail entity
-</ul>
+<p><strong>Training:</strong> The TransE model is trained through an iterative process that learns to position entity and relationship embeddings in vector space such that valid triples satisfy the translation property.</p>
 
-<p><strong>Advantages:</strong>
-<ul>
-<li>Simple and interpretable
-<li>Scales to large graphs (billions of entities)
-<li>Captures simple relationships well
-</ul>
+<p>The process starts with random embeddings for all entities and relationships, initializing them to small random values in the embedding space. For each true triple (h, r, t) in the training set, the model minimizes the distance between $\mathbf{h} + \mathbf{r}$ and $\mathbf{t}$, encouraging the head entity embedding plus the relationship embedding to be close to the tail entity embedding. This teaches the model that these three elements form a valid fact.</p>
 
-<p><strong>Limitations:</strong>
-<ul>
-<li>Cannot handle complex relations (many-to-many, composition)
-<li>Assumes additive relationship (not suitable for all relation types)
-</ul>
+<p>For each false triple (h', r, t'), the model maximizes the distance between $\mathbf{h}' + \mathbf{r}$ and $\mathbf{t}'$ up to a margin, ensuring that invalid triples have embeddings that don't satisfy the translation property. The margin prevents the model from pushing false triples infinitely far apart, which would lead to unstable training.</p>
+
+<p>Negative examples are sampled by corrupting true triples, typically by replacing either the head or tail entity with a random entity while keeping the relationship fixed. For example, from the true triple (Barack Obama, born\_in, Honolulu), we might generate negative examples like (Joe Biden, born\_in, Honolulu) or (Barack Obama, born\_in, Paris). This corruption strategy ensures that negative examples are similar to positive ones, forcing the model to learn fine-grained distinctions.</p>
+
+<p><strong>Advantages:</strong> TransE offers several practical benefits that have made it a foundational model in knowledge graph embedding.</p>
+
+<p>The model is simple and interpretable, with the geometric translation property providing an intuitive understanding of how relationships work. The idea that relationships are translations in embedding space is easy to visualize and explain, making the model accessible to practitioners.</p>
+
+<p>TransE scales to large graphs with billions of entities because the model complexity grows linearly with the number of entities and relationships. Each entity and relationship requires only a single embedding vector, and training can be parallelized efficiently across multiple GPUs.</p>
+
+<p>The model captures simple relationships well, particularly one-to-one relationships like ``spouse'' or ``capital\_of'' where each entity has at most one related entity. For these relationship types, the translation property is a natural fit.</p>
+
+<p><strong>Limitations:</strong> Despite its strengths, TransE has fundamental limitations that motivated the development of more sophisticated models.</p>
+
+<p>The model cannot handle complex relations, particularly many-to-many relationships where multiple entities can be related to multiple other entities. For example, the ``acted\_in'' relationship connects many actors to many movies, and the translation property doesn't capture this multiplicity well.</p>
+
+<p>TransE assumes an additive relationship structure where $\mathbf{h} + \mathbf{r} \approx \mathbf{t}$, but not all relationship types fit this pattern. Symmetric relationships (like ``married\_to'') and compositional relationships (like ``grandfather\_of'' being composed of two ``father\_of'' relationships) require different geometric properties that TransE cannot express.</p>
 
 <h3>Advanced Models: DistMult, ComplEx, RotatE</h3>
 
-<p>More sophisticated models address limitations:</p>
+<p>More sophisticated models address the limitations of TransE by using different geometric operations and embedding spaces, each offering improved expressiveness at the cost of additional complexity.</p>
 
-<ul>
-<li><strong>DistMult:</strong> Replace addition with element-wise multiplication. Better for symmetric relations.
-  <div class="equation">
-$$\begin{align}
-  \text{score}(h, r, t) = \mathbf{h}^T \text{diag}(\mathbf{r}) \mathbf{t}
-  \end{align}$$
-</div>
+<p>DistMult replaces the additive translation of TransE with element-wise multiplication, computing the score as $\text{score}(h, r, t) = \mathbf{h}^T \text{diag}(\mathbf{r}) \mathbf{t}$. This formulation is better suited for symmetric relations where the order of entities doesn't matter, such as ``married\_to'' or ``sibling\_of''. The diagonal matrix $\text{diag}(\mathbf{r})$ allows each dimension of the relationship to scale the corresponding dimensions of the head and tail entities independently, providing more flexibility than simple addition. However, DistMult cannot model asymmetric relations well because the multiplication operation is commutative.</p>
 
-<p><li><strong>ComplEx:</strong> Use complex-valued embeddings. Model asymmetric relations and composition better.
-  <div class="equation">
-$$\begin{align}
-  \text{score}(h, r, t) = \text{Re}(\mathbf{h}^T \text{diag}(\mathbf{r}) \overline{\mathbf{t}})
-  \end{align}$$
-</div>
+<p>ComplEx extends DistMult to complex-valued embeddings, where each entity and relationship is represented as a complex vector with both real and imaginary components. The scoring function becomes $\text{score}(h, r, t) = \text{Re}(\mathbf{h}^T \text{diag}(\mathbf{r}) \overline{\mathbf{t}})$, where $\overline{\mathbf{t}}$ denotes the complex conjugate of the tail embedding. This complex formulation can model both symmetric and asymmetric relations because the complex conjugate operation breaks the symmetry. ComplEx also handles compositional relationships better, as complex multiplication naturally captures the composition of rotations in the complex plane.</p>
 
-<p><li><strong>RotatE:</strong> Represent relations as rotations in complex space. Captures composition and inversion.
-  <div class="equation">
-$$\begin{align}
-  \mathbf{h} \circ \mathbf{r} = \mathbf{t}
-  \end{align}$$
-</div>
-  where \(\circ\) is element-wise product in complex space.
-</ul>
+<p>RotatE represents relations as rotations in complex space, where each relationship corresponds to a rotation that transforms the head entity embedding into the tail entity embedding through element-wise multiplication: $\mathbf{h} \circ \mathbf{r} = \mathbf{t}$. In this formulation, relationship embeddings are constrained to have unit magnitude, making them pure rotations. This geometric interpretation is particularly powerful for capturing relation composition (rotating by $r_1$ then $r_2$ is equivalent to rotating by $r_1 \circ r_2$) and relation inversion (the inverse of a rotation is simply the conjugate). RotatE achieves state-of-the-art performance on many benchmarks but requires more computation than simpler models.</p>
 
-<p>Each model trades simplicity for expressiveness. TransE is fastest; RotatE is most expressive but slower.</p>
+<p>Each model trades simplicity for expressiveness along a spectrum. TransE is the fastest and simplest, making it suitable for very large graphs where computational efficiency is paramount. DistMult adds modest complexity to handle symmetric relations better. ComplEx provides a good balance of expressiveness and efficiency, handling most relationship types well. RotatE is the most expressive, capturing complex patterns like composition and inversion, but it's also the slowest due to complex-valued operations. The choice depends on the specific knowledge graph characteristics and computational constraints.</p>
 
 <h2>Link Prediction and Reasoning</h2>
 
@@ -405,28 +394,31 @@ $$\begin{align}
 
 <h3>Type Constraints</h3>
 
-<p>Each relation has type constraints:</p>
+<h3>Type Constraints</h3>
 
-<ul>
-<li><em>born\_in</em>: head type = Person, tail type = Location
-<li><em>founder</em>: head type = Person, tail type = Organization
-<li><em>contains</em>: head type = Container, tail type = Thing
-</ul>
+<p>Each relation has type constraints that specify what kinds of entities can participate in that relationship, providing crucial information for reasoning and validation.</p>
+
+<p>The <em>born\_in</em> relation requires that the head entity must be of type Person (since only people are born) and the tail entity must be of type Location (since birth occurs in a place). This constraint immediately rules out nonsensical triples like (Apple Inc., born\_in, California) where a company cannot be born.</p>
+
+<p>The <em>founder</em> relation specifies that the head type must be Person (founders are people) and the tail type must be Organization (things that are founded are organizations). This constraint helps distinguish between different senses of "founder" and ensures that extracted relationships make semantic sense.</p>
+
+<p>The <em>contains</em> relation has head type Container and tail type Thing, representing a general containment relationship. This more abstract typing allows the relation to apply broadly while still providing useful constraints for reasoning.</p>
 
 <p>Type constraints reduce link prediction space. For (Barack Obama, born\_in, ?), candidates must be locations.</p>
 
 <h3>Reasoning Rules</h3>
 
-<p>Knowledge graphs support inference rules:</p>
+<p>Knowledge graphs support several types of inference rules that enable deriving new facts from existing ones, providing powerful reasoning capabilities beyond simple lookup.</p>
 
-<ul>
-<li><strong>Composition:</strong> (X, father\_of, Y) ∧ (Y, father\_of, Z) → (X, grandfather\_of, Z)
-<li><strong>Symmetry:</strong> (X, married\_to, Y) → (Y, married\_to, X)
-<li><strong>Inversion:</strong> (X, parent\_of, Y) → (Y, child\_of, X)
-<li><strong>Subrelation:</strong> (X, parent\_of, Y) → (X, ancestor\_of, Y)
-</ul>
+<p>Composition rules allow chaining relationships to infer indirect connections. For example, if X is the father of Y, and Y is the father of Z, we can infer that X is the grandfather of Z. This transitive composition extends to many relationship types: if person A works for company B, and company B is owned by company C, we can infer that person A is indirectly associated with company C. Composition is particularly powerful for multi-hop reasoning where direct relationships don't exist but can be inferred through intermediate entities.</p>
 
-<p>Deep models (especially RotatE) capture these patterns in learned embeddings without explicit rules.</p>
+<p>Symmetry rules capture relationships that work in both directions. The married\_to relationship is symmetric: if X is married to Y, then Y is married to X. Similarly, sibling\_of, colleague\_of, and friend\_of are typically symmetric relationships. Recognizing symmetry reduces the amount of information that needs to be stored explicitly and ensures consistency in the knowledge graph.</p>
+
+<p>Inversion rules express relationships that are logical inverses of each other. If X is the parent of Y, then Y is the child of X. These inverse relationships are deterministic transformations: knowing one direction automatically implies the other. Other examples include employer/employee, teacher/student, and buyer/seller relationships. Inversion rules help maintain bidirectional navigability in the graph.</p>
+
+<p>Subrelation rules capture hierarchical relationships between relation types. The parent\_of relationship is a specific case of the more general ancestor\_of relationship: if X is the parent of Y, then X is also an ancestor of Y. This hierarchical structure allows reasoning at different levels of abstraction and enables generalization from specific relationships to broader categories.</p>
+
+<p>Deep models, especially RotatE, capture these patterns in learned embeddings without requiring explicit rule programming. The geometric properties of the embedding space naturally encode composition (rotation composition), symmetry (equal forward and backward rotations), and inversion (conjugate rotations), making these inference patterns emergent properties of the learned representations rather than hard-coded logic.</p>
 
 <h2>Temporal Knowledge Graphs and Dynamic Knowledge</h2>
 
@@ -435,23 +427,28 @@ $$\begin{align}
 <h3>Temporal Knowledge Representation</h3>
 
 <div class="definition"><strong>Definition:</strong> 
-A temporal knowledge graph extends standard KGs with time information:
-<ul>
-<li><strong>Temporal triples:</strong> (subject, predicate, object, timestamp) or (subject, predicate, object, [start, end])
-<li><strong>Example:</strong> (Barack Obama, president\_of, USA, [2009-01-20, 2017-01-20])
-<li><strong>Point-in-time facts:</strong> (Company X, stock\_price, \$150, 2024-01-30)
-<li><strong>Event sequences:</strong> Ordered series of facts representing processes
-</ul>
+A temporal knowledge graph extends standard KGs with time information, enabling representation of facts that change over time and events that occur at specific moments.
+
+<p>Temporal triples augment the standard (subject, predicate, object) structure with time information, expressed either as a single timestamp for point events or as a time interval [start, end] for facts with duration. This temporal annotation makes it possible to track when facts become true and when they cease to be valid.</p>
+
+<p>For example, the triple (Barack Obama, president\_of, USA, [2009-01-20, 2017-01-20]) captures not just that Barack Obama was president of the United States, but precisely when this relationship held. The interval notation makes it clear that this fact was true during the specified period and is no longer true after the end date.</p>
+
+<p>Point-in-time facts represent measurements or observations at specific moments, such as (Company X, stock\_price, \$150, 2024-01-30). These facts capture the state of the world at a particular instant and are essential for tracking rapidly changing information like financial data, sensor readings, or real-time status updates.</p>
+
+<p>Event sequences represent ordered series of facts that together describe a process or narrative. For example, a corporate acquisition might be represented as a sequence: announcement event, regulatory approval event, shareholder vote event, and completion event, each with its own timestamp. These sequences enable reasoning about causality, temporal ordering, and process dynamics.
 </div>
 
 <h3>Temporal Reasoning Challenges</h3>
 
-<ul>
-<li><strong>Validity periods:</strong> When is a fact true? (Barack Obama, president\_of, USA) is only valid 2009--2017
-<li><strong>Temporal consistency:</strong> A person cannot be in two places simultaneously
-<li><strong>Temporal inference:</strong> If X was true at time T1, and no contradicting fact exists, is X still true at T2?
-<li><strong>Forecasting:</strong> Predict future facts based on historical patterns
-</ul>
+<p>Temporal knowledge graphs introduce several fundamental challenges that don't exist in static graphs, requiring specialized reasoning techniques.</p>
+
+<p>Validity periods determine when a fact is true versus when it is false or unknown. The triple (Barack Obama, president\_of, USA) is only valid during the period 2009--2017. Queries must respect these temporal bounds: asking ``Who was president of the USA in 2015?'' should return Barack Obama, but the same query for 2020 should not. This requires temporal indexing and query evaluation that considers time ranges, not just entity and relationship matching.</p>
+
+<p>Temporal consistency enforces logical constraints on facts across time. A person cannot be in two different physical locations simultaneously, so if the knowledge graph contains (Person X, located\_in, New York, 2024-01-15 10:00) and (Person X, located\_in, London, 2024-01-15 10:00), there is a consistency violation. Detecting and resolving such conflicts requires reasoning about the semantics of relationships and their temporal constraints. Some relationships allow simultaneous instances (a person can have multiple job titles at once) while others are mutually exclusive (a person can only have one birthplace).</p>
+
+<p>Temporal inference addresses the question of whether facts persist over time in the absence of contradicting information. If X was true at time T1, and no fact explicitly contradicts X at time T2, should we infer that X is still true at T2? This depends on the relationship type: some facts are permanent (birth\_date never changes), some have default persistence (employment typically continues until explicitly ended), and some are ephemeral (location changes frequently). The knowledge graph must encode or learn these persistence patterns to make valid temporal inferences.</p>
+
+<p>Forecasting predicts future facts based on historical patterns observed in the temporal graph. By analyzing sequences of events and their temporal relationships, models can predict likely future occurrences. For example, if companies in a particular industry typically acquire competitors within two years of receiving major funding rounds, the model can predict which acquisitions are likely to occur next. This predictive capability transforms knowledge graphs from passive repositories of past facts into active tools for anticipating future events.</p>
 
 <h3>Temporal Embedding Models</h3>
 
@@ -494,12 +491,13 @@ $$\begin{align}
 
 <p><strong>Example:</strong> Historical pattern shows companies acquire competitors before IPO. Predict: (Company X, will\_acquire, Company Y, 2025).</p>
 
-<p><strong>Applications:</strong>
-<ul>
-<li>Stock market prediction: Predict corporate events (mergers, partnerships)
-<li>Geopolitical forecasting: Predict diplomatic relationships, conflicts
-<li>Healthcare: Predict disease progression based on patient history
-</ul>
+<p><strong>Applications:</strong> Temporal link prediction enables several high-value applications across different domains.</p>
+
+<p>Stock market prediction uses temporal knowledge graphs to forecast corporate events such as mergers, partnerships, and strategic alliances. By analyzing historical patterns of corporate relationships and their evolution over time, models can identify signals that precede major events. For example, increased collaboration relationships between two companies, combined with executive movements and patent filings, might predict an upcoming acquisition.</p>
+
+<p>Geopolitical forecasting applies temporal reasoning to predict diplomatic relationships, conflicts, and international agreements. The temporal knowledge graph captures historical patterns of alliances, trade relationships, and conflicts, enabling models to forecast future geopolitical developments. If historical data shows that trade disputes often escalate to diplomatic tensions within six months, the model can provide early warnings of potential conflicts.</p>
+
+<p>Healthcare applications use temporal knowledge graphs to predict disease progression based on patient history. By modeling how patient conditions, treatments, and outcomes evolve over time, the system can forecast likely disease trajectories and recommend interventions. For example, if patients with a particular combination of symptoms and biomarkers typically develop a specific condition within a certain timeframe, the model can predict this progression and enable preventive care.</p>
 
 <h3>Recent Advances in Temporal Knowledge Graph Reasoning (2024-2025)</h3>
 
@@ -509,17 +507,15 @@ $$\begin{align}
 
 <p>Example: A corporate merger involves multiple entities: acquiring company, target company, regulatory bodies, financial advisors, and shareholders. A hyperedge represents this multi-party event with temporal validity. Traditional binary relations (Company A, acquires, Company B) miss the full context.</p>
 
-<p><strong>Key innovations in 2024-2025:</strong></p>
+<p><strong>Key innovations in 2024-2025:</strong> Several breakthrough techniques have emerged that significantly advance temporal knowledge graph reasoning capabilities.</p>
 
-<ul>
-<li><strong>Temporal hypergraph attention:</strong> Attention mechanisms that weight the importance of different entities within a hyperedge and across time. This enables learning which participants in multi-entity events are most predictive of future events.
+<p>Temporal hypergraph attention mechanisms weight the importance of different entities within a hyperedge and across time, enabling the model to learn which participants in multi-entity events are most predictive of future events. Unlike traditional attention that operates on pairs of entities, hypergraph attention considers the full context of multi-party interactions. For example, in a corporate merger involving acquiring company, target company, regulatory bodies, and financial advisors, the attention mechanism learns that regulatory approval timing is often the most predictive signal for completion dates, while financial advisor involvement is less informative.</p>
 
-<p><li><strong>Continuous-time modeling:</strong> Instead of discrete timestamps, model events in continuous time using neural ordinary differential equations (Neural ODEs). This enables interpolation between observed events and more accurate forecasting.</p>
+<p>Continuous-time modeling represents events in continuous time rather than discrete timestamps, using neural ordinary differential equations (Neural ODEs). This approach naturally handles irregular event spacing and enables interpolation between observed events. Instead of treating time as discrete buckets, the model learns continuous dynamics that govern how entity states evolve, enabling more accurate forecasting and better handling of sparse temporal data.</p>
 
-<p><li><strong>Causal temporal reasoning:</strong> Distinguish correlation from causation in temporal patterns. If event A precedes event B, is A causing B, or are both caused by hidden factor C? Causal inference methods (do-calculus, counterfactual reasoning) integrated with temporal KG embeddings improve prediction accuracy by 15-25\% on forecasting tasks.</p>
+<p>Causal temporal reasoning distinguishes correlation from causation in temporal patterns, addressing the fundamental question: if event A precedes event B, is A causing B, or are both caused by hidden factor C? Causal inference methods including do-calculus and counterfactual reasoning are integrated with temporal KG embeddings to identify true causal relationships rather than mere temporal correlations. This improves prediction accuracy by 15-25\% on forecasting tasks because the model learns to focus on causal drivers rather than spurious correlations.</p>
 
-<p><li><strong>Multi-scale temporal modeling:</strong> Events occur at different timescales—some relationships change daily (stock prices), others yearly (corporate structure). Hierarchical temporal models with separate encoders for different timescales capture both short-term dynamics and long-term trends.
-</ul>
+<p>Multi-scale temporal modeling recognizes that events occur at different timescales, with some relationships changing daily (stock prices) while others change yearly (corporate structure). Hierarchical temporal models employ separate encoders for different timescales, capturing both short-term dynamics and long-term trends. The model learns to combine these multi-scale representations, understanding that some predictions require short-term signals while others depend on long-term patterns.</p>
 
 <p><strong>Implementation Considerations:</strong> Dynamic hypergraph methods are computationally expensive—training requires 3-5x more compute than standard temporal KG methods. However, the improved accuracy often justifies the cost for high-value applications. Open-source implementations are emerging in PyTorch Geometric and DGL (Deep Graph Library) as of 2024-2025.</p>
 
@@ -539,13 +535,7 @@ $$\begin{align}
 \end{align}$$
 </div>
 
-<p>where:
-<ul>
-<li>$\mathcal{R}$ is the set of relation types
-<li>$\mathcal{N}_i^r$ is the set of neighbors connected via relation $r$
-<li>$\mathbf{W}_r^{(l)}$ is a relation-specific weight matrix
-<li>$\mathbf{W}_0^{(l)}$ is a self-loop weight matrix
-</ul>
+<p>where several key components work together to enable multi-relational message passing. The set $\mathcal{R}$ contains all relation types in the knowledge graph, allowing the model to distinguish between different kinds of relationships. The neighborhood $\mathcal{N}_i^r$ consists of all entities connected to entity $i$ via relation type $r$, enabling relation-specific aggregation. The relation-specific weight matrix $\mathbf{W}_r^{(l)}$ transforms neighbor embeddings differently depending on the relationship type, capturing the semantic differences between relations. Finally, the self-loop weight matrix $\mathbf{W}_0^{(l)}$ allows each entity to retain information from its previous layer representation, preventing information loss during aggregation.
 </div>
 
 <p><strong>Key insight:</strong> Different relation types have different semantics; use separate weight matrices.</p>
@@ -575,22 +565,23 @@ $$\begin{align}
 </div>
 </div>
 
-<p><strong>Advantages:</strong>
-<ul>
-<li>Learns importance of different neighbors dynamically
-<li>Handles varying neighborhood sizes naturally
-<li>Interpretable: attention weights show which relationships matter
-</ul>
+<p><strong>Advantages:</strong> Graph attention networks provide several key benefits for knowledge graph reasoning.</p>
+
+<p>The model learns the importance of different neighbors dynamically through attention weights, rather than treating all neighbors equally. This allows the model to focus on the most relevant relationships for each entity, improving both accuracy and interpretability. For example, when predicting a person's occupation, the model might learn to pay more attention to ``works\_for'' relationships than to ``friend\_of'' relationships.</p>
+
+<p>Attention mechanisms handle varying neighborhood sizes naturally without requiring normalization tricks or padding. Entities with many neighbors don't dominate the aggregation simply due to their degree, and entities with few neighbors aren't disadvantaged. The attention weights automatically adjust to the local graph structure, ensuring that each entity receives appropriately weighted information from its neighborhood.</p>
+
+<p>The attention weights are interpretable, showing which relationships matter most for each prediction. By examining the learned attention patterns, practitioners can understand what the model considers important and validate that it's learning meaningful semantic patterns rather than spurious correlations. This interpretability is crucial for debugging models and building trust in production systems.</p>
 
 <h3>Multi-Hop Reasoning with GNNs</h3>
 
-<p>GNNs naturally support multi-hop reasoning by stacking layers:</p>
+<p>GNNs naturally support multi-hop reasoning by stacking layers, where each layer extends the receptive field by one hop in the graph.</p>
 
-<ul>
-<li><strong>1-hop:</strong> Direct neighbors (1 layer)
-<li><strong>2-hop:</strong> Neighbors of neighbors (2 layers)
-<li><strong>k-hop:</strong> k layers capture k-hop neighborhood
-</ul>
+<p>A 1-hop model with a single layer captures only direct neighbors, learning representations based on immediately connected entities. This is sufficient for simple tasks where the answer depends only on direct relationships, such as predicting an entity's type based on its immediate connections.</p>
+
+<p>A 2-hop model with two layers captures neighbors of neighbors, enabling reasoning over paths of length two. This allows the model to infer indirect relationships and discover patterns that span multiple edges. For example, to predict whether two people know each other, a 2-hop model can consider their mutual friends.</p>
+
+<p>A k-hop model with k layers captures the k-hop neighborhood around each entity, enabling reasoning over increasingly complex graph patterns. However, deeper models face challenges including oversmoothing (where all entity representations become similar) and increased computational cost. In practice, 2-4 layers are typically sufficient for most knowledge graph tasks.</p>
 
 <strong>Example reasoning:</strong>
 <pre><code>
@@ -641,12 +632,13 @@ For query (h, r, ?), find paths from h to candidate tails:
 
 <p><strong>Example:</strong>
 Query: (Barack Obama, nationality, ?)
-Paths:
-<ul>
-<li>born\_in $\rightarrow$ located\_in $\rightarrow$ USA (strong signal)
-<li>president\_of $\rightarrow$ USA (strong signal)
-<li>spouse $\rightarrow$ nationality $\rightarrow$ USA (weaker signal)
-</ul>
+Paths connecting Barack Obama to candidate answers provide evidence for the prediction:</p>
+
+<p>The path born\_in $\rightarrow$ located\_in $\rightarrow$ USA provides strong signal because birthplace typically determines nationality. If Barack Obama was born in Honolulu, and Honolulu is located in the USA, this strongly suggests USA nationality.</p>
+
+<p>The path president\_of $\rightarrow$ USA also provides strong signal because presidents must typically be citizens of the country they lead. This direct relationship between political office and nationality makes this path highly predictive.</p>
+
+<p>The path spouse $\rightarrow$ nationality $\rightarrow$ USA provides weaker signal because spouses don't necessarily share nationality. While Michelle Obama's nationality might correlate with Barack Obama's, this relationship is less deterministic than birthplace or political office.
 </div>
 
 <h3>Neural Logic Programming</h3>
@@ -662,12 +654,13 @@ $$\begin{align}
 
 <p>The model learns which rule chains (paths) are most predictive.</p>
 
-<p><strong>Advantages:</strong>
-<ul>
-<li>Interpretable: Rules can be extracted and understood
-<li>Compositional: Learns to compose relations
-<li>Data-efficient: Generalizes from fewer examples
-</ul>
+<p><strong>Advantages:</strong> Neural logic programming offers several compelling benefits for knowledge graph reasoning.</p>
+
+<p>The learned rules are interpretable because they can be extracted and understood by humans. Unlike black-box neural networks, Neural LP produces explicit rule chains that explain why a particular prediction was made. For example, the model might learn that ``born\_in(X, Y) ∧ located\_in(Y, Z) → nationality(X, Z)'' is a reliable rule, and this rule can be inspected and validated by domain experts.</p>
+
+<p>The compositional nature of the approach allows the model to learn how to compose relations to form complex reasoning chains. Rather than learning each multi-hop pattern independently, the model learns general composition principles that generalize to unseen combinations of relationships. This compositional generalization is particularly valuable for knowledge graphs where many possible path patterns exist but training data is sparse.</p>
+
+<p>Neural LP is data-efficient, generalizing from fewer examples than pure embedding methods. Because the model learns explicit rules rather than just memorizing patterns in embeddings, it can apply learned rules to new entities and relationships even with limited training data. This makes Neural LP particularly suitable for domains where labeled data is expensive or difficult to obtain.</p>
 
 <h3>Query Answering Beyond Link Prediction</h3>
 
@@ -682,13 +675,15 @@ Query: (?, starred_in, ?m) ∧ (?m, directed_by, Spielberg)
        ∧ (?m, release_year, >2000)
 </code></pre>
 
-<p><strong>Query2Box:</strong> Represent queries as geometric regions (boxes) in embedding space:
-<ul>
-<li>Entities are points
-<li>Queries are boxes (hyperrectangles)
-<li>Intersection of boxes = conjunction
-<li>Entities inside box satisfy query
-</ul>
+<p><strong>Query2Box:</strong> Represent queries as geometric regions (boxes) in embedding space, providing an elegant framework for complex query answering.</p>
+
+<p>Entities are represented as points in the embedding space, with each entity having a fixed position determined by its learned embedding. This point representation is consistent with standard knowledge graph embedding approaches.</p>
+
+<p>Queries are represented as boxes (hyperrectangles) in the embedding space, where a box is defined by its center and offset vectors. The box represents the set of all entities that satisfy the query, with entities inside the box being valid answers and entities outside the box being invalid.</p>
+
+<p>Intersection of boxes implements conjunction in queries. When a query requires multiple conditions to be satisfied simultaneously (AND logic), the corresponding boxes are intersected geometrically. The resulting box contains only entities that satisfy all conditions, naturally implementing logical conjunction through geometric operations.</p>
+
+<p>Entities inside a box satisfy the query, providing a simple decision rule for query answering. To determine if an entity is a valid answer, the model checks whether the entity's point embedding falls within the query box. This geometric approach to query answering is both efficient and interpretable, as the box structure explicitly represents the query semantics.</p>
 
 <h2>Ontology Alignment and Knowledge Integration</h2>
 
@@ -697,21 +692,20 @@ Query: (?, starred_in, ?m) ∧ (?m, directed_by, Spielberg)
 <h3>Entity Alignment Problem</h3>
 
 <div class="definition"><strong>Definition:</strong> 
-Given two knowledge graphs $KG_1$ and $KG_2$, identify entity pairs that refer to the same real-world object:
-<ul>
-<li>$KG_1$: ``Barack\_Obama'' (entity ID: 12345)
-<li>$KG_2$: ``Obama, Barack'' (entity ID: 98765)
-<li>Goal: Recognize these refer to the same person
-</ul>
+Given two knowledge graphs $KG_1$ and $KG_2$, identify entity pairs that refer to the same real-world object despite potentially different identifiers and representations.
+
+<p>For example, $KG_1$ might contain an entity ``Barack\_Obama'' with entity ID 12345, while $KG_2$ contains an entity ``Obama, Barack'' with entity ID 98765. The goal is to recognize that these two entities refer to the same person despite the different naming conventions and identifiers. This alignment enables integrating information from both knowledge graphs and reasoning across their combined knowledge.
 </div>
 
-<p><strong>Challenges:</strong>
-<ul>
-<li>Name variations: ``NYC'' vs. ``New York City'' vs. ``New York, NY''
-<li>Different schemas: One KG has ``birth\_date'', another has ``born\_on''
-<li>Incomplete information: Entities may have different attributes in each KG
-<li>Scale: Billions of entities; quadratic comparison infeasible
-</ul>
+<p><strong>Challenges:</strong> Entity alignment faces several fundamental difficulties that make it a complex problem.</p>
+
+<p>Name variations present a major challenge because the same entity can be referred to in many different ways. ``NYC'', ``New York City'', and ``New York, NY'' all refer to the same location, but string matching alone cannot reliably identify these as equivalent. The variations can include abbreviations, different word orders, inclusion or omission of qualifiers, and alternative names. Handling these variations requires semantic understanding beyond simple string comparison.</p>
+
+<p>Different schemas across knowledge graphs mean that equivalent information may be represented using different property names and structures. One knowledge graph might use a ``birth\_date'' property while another uses ``born\_on'', even though they represent the same concept. These schema differences require mapping not just entities but also the properties and relationships used to describe them.</p>
+
+<p>Incomplete information complicates alignment because entities may have different attributes in each knowledge graph. One graph might have extensive biographical information about a person while another has only basic facts. The alignment system must determine whether two entities are the same despite having different amounts and types of information, which requires reasoning about what information is expected versus what is merely missing.</p>
+
+<p>Scale makes entity alignment computationally challenging because comparing all entities across two knowledge graphs requires quadratic comparisons. With billions of entities in each graph, exhaustive pairwise comparison is infeasible. Efficient alignment methods must use blocking, indexing, or embedding-based similarity search to reduce the search space to tractable sizes while still finding correct matches.</p>
 
 <h3>Embedding-Based Entity Alignment</h3>
 
@@ -729,48 +723,45 @@ $$\begin{align}
 <li><strong>Inference:</strong> For unmatched entities, find nearest neighbor in other KG
 </ol>
 
-<p><strong>Advanced methods:</strong>
-<ul>
-<li><strong>GNN-based:</strong> Use graph structure to improve alignment (neighbors of aligned entities likely align)
-<li><strong>Attribute matching:</strong> Compare entity attributes (names, descriptions) using text similarity
-<li><strong>Iterative refinement:</strong> Bootstrap from seed alignments; iteratively add confident matches
-</ul>
+<p><strong>Advanced methods:</strong> Several sophisticated techniques have been developed to improve entity alignment accuracy beyond basic embedding similarity.</p>
+
+<p>GNN-based approaches use graph structure to improve alignment by leveraging the principle that neighbors of aligned entities are likely to align as well. If entity A in $KG_1$ aligns with entity A' in $KG_2$, and both have neighbors B and B' connected by similar relationships, then B and B' are likely to be alignments. Graph neural networks propagate alignment information through the graph structure, using confirmed alignments to discover new ones through neighborhood similarity.</p>
+
+<p>Attribute matching compares entity attributes such as names, descriptions, and other textual properties using text similarity measures. Rather than relying solely on graph structure, this approach uses the content associated with entities. Modern methods employ pre-trained language models like BERT to compute semantic similarity between entity descriptions, capturing synonyms and paraphrases that simple string matching would miss.</p>
+
+<p>Iterative refinement bootstraps from seed alignments by iteratively adding confident matches and retraining the alignment model. The process starts with a small set of known alignments (seeds), uses these to train an initial model, applies the model to find high-confidence new alignments, adds these to the training set, and repeats. This bootstrapping approach gradually expands the set of known alignments while maintaining high precision by only adding confident matches at each iteration.</p>
 
 <h3>Cross-Lingual Knowledge Graph Alignment</h3>
 
 <p>Align KGs in different languages:</p>
 
-<p><strong>Example:</strong>
-<ul>
-<li>English KG: ``Paris'' (city entity)
-<li>French KG: ``Paris'' (ville entity)
-<li>Goal: Recognize these are the same despite language difference
-</ul>
+<p><strong>Example:</strong> Cross-lingual knowledge graph alignment addresses the challenge of aligning entities across language barriers.</p>
 
-<p><strong>Approach:</strong>
-<ul>
-<li>Use multilingual embeddings (mBERT, XLM-R) for entity names
-<li>Leverage cross-lingual links (Wikipedia interlanguage links)
-<li>Learn language-invariant entity representations
-</ul>
+<p>An English knowledge graph might contain an entity ``Paris'' representing the city, while a French knowledge graph contains an entity ``Paris'' (ville entity) representing the same location. The goal is to recognize that these entities refer to the same real-world city despite being described in different languages. This cross-lingual alignment enables building multilingual knowledge bases that integrate information from sources in many languages.</p>
+
+<p><strong>Approach:</strong> Several techniques enable effective cross-lingual entity alignment.</p>
+
+<p>Multilingual embeddings such as mBERT (multilingual BERT) and XLM-R (Cross-lingual Language Model - RoBERTa) provide language-invariant representations of entity names and descriptions. These models are pre-trained on text in many languages and learn to map semantically similar text to similar embeddings regardless of language. By encoding entity names using these multilingual models, the alignment system can identify matches even when entities are described in different languages.</p>
+
+<p>Cross-lingual links from resources like Wikipedia interlanguage links provide supervision for alignment. Wikipedia articles about the same topic in different languages are explicitly linked, providing a large set of known cross-lingual entity correspondences. These links serve as training data for learning alignment models and as seeds for bootstrapping approaches.</p>
+
+<p>Language-invariant entity representations are learned by training models to produce similar embeddings for entities that refer to the same real-world object regardless of the language used to describe them. The model learns to focus on semantic content rather than surface linguistic features, enabling alignment across language boundaries.</p>
 
 <h3>Schema Matching</h3>
 
 <p>Beyond entities, align relation types and ontologies:</p>
 
-<p><strong>Example:</strong>
-<ul>
-<li>$KG_1$ uses: ``born\_in'' (relation)
-<li>$KG_2$ uses: ``birthplace'' (relation)
-<li>Goal: Recognize semantic equivalence
-</ul>
+<p><strong>Example:</strong> Schema matching addresses the problem of aligning relation types and ontologies across knowledge graphs.</p>
 
-<p><strong>Methods:</strong>
-<ul>
-<li>String similarity: Edit distance, token overlap
-<li>Semantic similarity: Embed relation names; compare embeddings
-<li>Instance-based: If entities connected by $r_1$ in $KG_1$ align with entities connected by $r_2$ in $KG_2$, relations likely equivalent
-</ul>
+<p>$KG_1$ might use a relation ``born\_in'' to connect people to their birthplaces, while $KG_2$ uses a relation ``birthplace'' for the same concept. The goal is to recognize that these relations are semantically equivalent despite different naming conventions. This schema-level alignment is essential for integrating knowledge graphs and enabling queries that span multiple sources.</p>
+
+<p><strong>Methods:</strong> Several complementary approaches enable effective schema matching.</p>
+
+<p>String similarity measures such as edit distance and token overlap provide a baseline for matching relation names. If two relation names are very similar lexically (e.g., ``birthPlace'' and ``birth\_place''), they are likely to be equivalent. These methods handle minor variations in naming conventions like capitalization, separators, and word order.</p>
+
+<p>Semantic similarity embeds relation names using language models and compares the resulting embeddings. This approach captures synonyms and semantically related terms that string matching would miss. For example, ``born\_in'' and ``birthplace'' have different surface forms but similar semantic meanings, which embedding-based similarity can detect.</p>
+
+<p>Instance-based matching leverages the principle that if entities connected by relation $r_1$ in $KG_1$ consistently align with entities connected by relation $r_2$ in $KG_2$, then the relations are likely equivalent. This approach uses the actual usage patterns of relations rather than just their names. For example, if people connected by ``born\_in'' in $KG_1$ consistently align with people connected by ``birthplace'' in $KG_2$, this provides strong evidence that the relations are equivalent even if their names are completely different.</p>
 
 <h2>Knowledge-Aware Neural Networks</h2>
 
@@ -869,25 +860,27 @@ For query (h, r, ?):
 
 <h3>Knowledge Graph Storage Systems</h3>
 
-<p><strong>RDF Triple Stores:</strong>
-<ul>
-<li><strong>Apache Jena:</strong> Java-based RDF store with SPARQL query support
-<li><strong>Virtuoso:</strong> High-performance RDF database; scales to billions of triples
-<li><strong>Blazegraph:</strong> GPU-accelerated graph database
-</ul>
+<p><strong>RDF Triple Stores:</strong> Several mature systems provide RDF (Resource Description Framework) storage and querying capabilities.</p>
 
-<p><strong>Property Graph Databases:</strong>
-<ul>
-<li><strong>Neo4j:</strong> Most popular graph database; Cypher query language
-<li><strong>Amazon Neptune:</strong> Managed graph database (RDF + property graphs)
-<li><strong>JanusGraph:</strong> Distributed graph database built on Cassandra/HBase
-</ul>
+<p>Apache Jena is a Java-based RDF store with comprehensive SPARQL query support, providing a robust foundation for semantic web applications. It offers both in-memory and persistent storage options, making it suitable for development and production use. Jena includes reasoning capabilities that can infer new triples based on ontology rules.</p>
 
-<p><strong>Trade-offs:</strong>
-<ul>
-<li>RDF stores: Standards-compliant, semantic web integration, complex queries
-<li>Property graphs: Simpler model, better performance for traversals, richer data model
-</ul>
+<p>Virtuoso is a high-performance RDF database that scales to billions of triples, designed for enterprise-scale knowledge graph applications. It provides both RDF and relational database capabilities, enabling hybrid workloads. Virtuoso's query optimizer and indexing strategies make it one of the fastest RDF stores available.</p>
+
+<p>Blazegraph is a GPU-accelerated graph database that leverages parallel processing for improved query performance. It supports both RDF and property graph models, providing flexibility in data modeling. The GPU acceleration is particularly beneficial for complex graph traversals and analytical queries.</p>
+
+<p><strong>Property Graph Databases:</strong> An alternative to RDF, property graph databases offer a different data model optimized for certain use cases.</p>
+
+<p>Neo4j is the most popular graph database, using the Cypher query language for intuitive graph pattern matching. It provides ACID transactions, high availability clustering, and extensive tooling for graph visualization and analysis. Neo4j's native graph storage and processing engine delivers excellent performance for traversal-heavy workloads.</p>
+
+<p>Amazon Neptune is a fully managed graph database service that supports both RDF and property graph models, providing flexibility in choosing the appropriate data model. As a managed service, Neptune handles infrastructure management, backups, and scaling automatically. It integrates seamlessly with other AWS services for building complete cloud-native applications.</p>
+
+<p>JanusGraph is a distributed graph database built on top of scalable storage backends like Apache Cassandra or HBase. It's designed for massive-scale graphs that don't fit on a single machine, providing horizontal scalability through data partitioning. JanusGraph supports pluggable storage and indexing backends, allowing optimization for specific workload characteristics.</p>
+
+<p><strong>Trade-offs:</strong> Choosing between RDF stores and property graph databases involves several considerations.</p>
+
+<p>RDF stores are standards-compliant, following W3C specifications for semantic web technologies. They provide excellent semantic web integration, making it easy to consume and publish linked data. RDF stores excel at complex queries involving reasoning and inference, leveraging ontologies to derive new knowledge. However, the RDF model can be more complex to work with than property graphs, and query performance may be slower for simple traversals.</p>
+
+<p>Property graphs offer a simpler data model that's more intuitive for developers familiar with object-oriented programming. They provide better performance for graph traversals, as the native graph storage is optimized for following relationships. Property graphs support a richer data model with properties on both nodes and edges, making it easier to model complex domains. However, they lack the standardization and semantic web integration of RDF stores, and reasoning capabilities are typically more limited.</p>
 
 <h3>KG Embedding Libraries</h3>
 
@@ -1052,29 +1045,25 @@ $$\begin{align}
 
 <p>For Freebase (1.9B entities, 3B relations), this is intractable.</p>
 
-<p><strong>Solutions:</strong>
-<ul>
-<li><strong>Negative sampling:</strong> Instead of all entities, sample small number of negatives (100--1000)
-<li><strong>Batch optimization:</strong> Group triples, batch compute similarities
-<li><strong>Sparse storage:</strong> Store only non-zero parts of embeddings
-<li><strong>Hierarchical models:</strong> Partition entities into clusters; compute within clusters
-</ul>
+<p><strong>Solutions:</strong> Several techniques address the computational challenges of training embeddings on massive knowledge graphs.</p>
+
+<p>Negative sampling reduces the computational burden by sampling only a small number of negative examples (typically 100--1000) instead of scoring all possible entities. For each positive triple, the model generates a few corrupted triples by randomly replacing the head or tail entity. This sampling strategy provides sufficient training signal while reducing computation from $O(|E|)$ to $O(k)$ where $k$ is the number of negative samples.</p>
+
+<p>Batch optimization groups triples together and computes similarities in batches, leveraging vectorized operations and GPU parallelism. By processing many triples simultaneously, the model amortizes the overhead of data loading and achieves much higher throughput than processing triples individually. Modern implementations can process millions of triples per second using batch optimization.</p>
+
+<p>Sparse storage stores only the non-zero parts of embeddings, reducing memory footprint for high-dimensional embeddings. Many embedding dimensions may be near zero for any given entity, and sparse representations exploit this sparsity. This is particularly important for billion-scale knowledge graphs where dense storage of all embeddings would exceed available memory.</p>
+
+<p>Hierarchical models partition entities into clusters and compute embeddings within clusters, reducing the effective search space. By organizing entities hierarchically (e.g., by type or domain), the model can focus computation on relevant subsets. For example, when predicting relationships for a person entity, the model might only consider other person and organization entities rather than all entities in the graph.</p>
 
 <h3>Incompleteness and Noise</h3>
 
-<p>Knowledge graphs have two inherent problems:</p>
+<p>Knowledge graphs face two inherent problems that fundamentally affect how they must be used and maintained.</p>
 
-<ul>
-<li><strong>Incompleteness:</strong> Most relationships are unknown, not just absent. Freebase is estimated <5\% complete.
-<li><strong>Noise:</strong> Extracted facts may be incorrect (extraction errors, outdated information)
-</ul>
+<p>Incompleteness means that most relationships are unknown rather than explicitly false. The absence of a triple in the knowledge graph doesn't mean the relationship doesn't exist in the real world---it simply means the relationship hasn't been observed or recorded. Freebase, one of the largest knowledge graphs, is estimated to be less than 5\% complete, meaning that over 95\% of true facts about the world are missing. This massive incompleteness is inevitable because the number of possible facts vastly exceeds what can be practically collected and verified.</p>
 
-<p>Deep learning must handle both:
-<ul>
-<li>Learn robust representations despite missing training data
-<li>Noise-aware loss functions (soft labels, confidence scores)
-<li>Continuous retraining as new information arrives
-</ul>
+<p>Noise arises because extracted facts may be incorrect due to extraction errors, outdated information, or conflicting sources. Automated extraction from text inevitably produces some errors, and even manually curated knowledge graphs contain mistakes. Information becomes outdated as the world changes: a person's job title, a company's CEO, or a country's population are all facts that change over time but may not be updated promptly in the knowledge graph.</p>
+
+<p>Deep learning must handle both challenges through specialized techniques. Models must learn robust representations despite missing training data, treating the absence of a triple as unknown rather than negative. Noise-aware loss functions use soft labels and confidence scores rather than treating all training examples as equally reliable. Continuous retraining as new information arrives helps keep the knowledge graph current, with models that can incrementally update their representations without retraining from scratch.</p>
 
 <h2>Applications: From Search to Drug Discovery</h2>
 
@@ -1109,13 +1098,13 @@ $$\begin{align}
 
 <h3>Cybersecurity: Attack Pattern Detection</h3>
 
-<p>A KG models:
-<ul>
-<li>Entities: IP addresses, domains, malware families, attack techniques
-<li>Relationships: communicates\_with, infected\_by, exploits
-</ul>
+<p>A knowledge graph for cybersecurity models the complex relationships between threats, vulnerabilities, and assets.</p>
 
-<p>Link prediction identifies likely attack patterns: if A communicated with C, and B typically attacks C, predict A is infected with B.</p>
+<p>Entities in the cybersecurity knowledge graph include IP addresses representing network endpoints, domains identifying web properties, malware families categorizing malicious software, and attack techniques describing methods used by adversaries. Each entity type captures a different aspect of the threat landscape, and the relationships between them reveal attack patterns.</p>
+
+<p>Relationships such as communicates\_with connect IP addresses that exchange network traffic, infected\_by links systems to the malware affecting them, and exploits connects malware to the vulnerabilities it targets. These relationships form patterns that characterize different types of attacks and enable detection of ongoing threats.</p>
+
+<p>Link prediction identifies likely attack patterns by reasoning over the graph structure. If IP address A communicated with server C, and malware family B typically attacks server C, the system can predict that A is likely infected with B even before direct evidence of infection is observed. This predictive capability enables proactive threat detection and response.</p>
 
 <h2>Case Study: Enterprise Knowledge Graph for Customer Intelligence</h2>
 
@@ -1123,29 +1112,25 @@ $$\begin{align}
 
 <h3>Data Sources</h3>
 
-<ul>
-<li>Customer records: name, contact, demographics
-<li>Account data: account type, balance, transaction history
-<li>Relationships: family members, business associates, employer
-<li>Transactions: transfers, purchases, patterns
-<li>External: credit scores, public records, news mentions
-</ul>
+<p>The enterprise knowledge graph integrates information from multiple disparate systems across the organization.</p>
+
+<p>Customer records provide foundational information including names, contact details, and demographic data. This core customer information serves as the starting point for building entity profiles and establishing identity.</p>
+
+<p>Account data captures financial relationships including account types (checking, savings, investment), current balances, and detailed transaction histories. This information reveals customer financial behavior and enables analysis of banking patterns.</p>
+
+<p>Relationships map connections between customers including family members, business associates, and employers. These social and professional networks provide context for understanding customer behavior and enable graph-based reasoning about risk and opportunity.</p>
+
+<p>Transactions record all financial activities including transfers, purchases, and payment patterns. The temporal sequence of transactions reveals behavior patterns and enables detection of anomalies that might indicate fraud or other issues.</p>
+
+<p>External data sources augment internal information with credit scores, public records, and news mentions. This external context enriches customer profiles and enables more informed decision-making about risk and opportunity.</p>
 
 <h3>Knowledge Graph Schema</h3>
 
-<p>Entities:
-<ul>
-<li>Person: customer, employee, beneficiary
-<li>Organization: employer, business partner
-<li>Account: checking, savings, investment
-<li>Transaction: payment, transfer, purchase
-</ul>
+<p>The schema defines the entity types and relationships that structure the knowledge graph.</p>
 
-<p>Relationships:
-<ul>
-<li>owns\_account, employed\_by, related\_to, transacted\_with
-<li>account\_has\_transaction, person\_has\_credit\_score
-</ul>
+<p>Entities represent the key objects in the domain. Person entities include customers, employees, and beneficiaries, capturing all individuals relevant to the business. Organization entities represent employers and business partners, modeling the institutional relationships. Account entities distinguish between checking, savings, and investment accounts, each with different characteristics. Transaction entities record individual financial activities including payments, transfers, and purchases.</p>
+
+<p>Relationships connect entities to express their associations. The owns\_account relationship links people to their financial accounts. The employed\_by relationship connects people to their employers, providing employment context. The related\_to relationship captures family and personal connections between individuals. The transacted\_with relationship records financial interactions between entities. The account\_has\_transaction relationship links accounts to their transaction history, and person\_has\_credit\_score associates individuals with their creditworthiness metrics.</p>
 
 <h3>Applications</h3>
 
@@ -1157,12 +1142,15 @@ $$\begin{align}
 
 <h3>Results</h3>
 
-<ul>
-<li>Fraud detection improved from 85\% to 92\% precision (fewer false alarms)
-<li>Customer segmentation identified high-value customer clusters (3x avg transaction volume)
-<li>Cross-selling improved: 8\% increase in secondary products purchased
-<li>Entity resolution: Matched 98\% of duplicate customer records
-</ul>
+<p>The knowledge graph implementation delivered measurable improvements across multiple business metrics.</p>
+
+<p>Fraud detection improved from 85\% to 92\% precision, meaning fewer false alarms and more efficient use of investigation resources. The graph-based approach identified suspicious patterns that rule-based systems missed, such as complex networks of related accounts involved in coordinated fraud schemes. The reduction in false positives saved significant investigation time while the improved detection rate prevented more fraudulent transactions.</p>
+
+<p>Customer segmentation identified high-value customer clusters with 3x average transaction volume compared to the general customer base. By analyzing the network structure of customer relationships and transaction patterns, the knowledge graph revealed groups of customers with similar characteristics and behaviors. These segments enabled targeted marketing and service strategies tailored to each group's needs and preferences.</p>
+
+<p>Cross-selling improved with an 8\% increase in secondary products purchased. The knowledge graph enabled recommendations based on what similar customers (defined by network position and attributes) had purchased, leading to more relevant product suggestions. Understanding customer relationships also enabled household-level marketing where products could be recommended based on family member needs.</p>
+
+<p>Entity resolution matched 98\% of duplicate customer records, significantly improving data quality. The knowledge graph's ability to reason about entity similarity using multiple signals (name, address, relationships, transaction patterns) enabled accurate matching even when records had inconsistencies or errors. This deduplication provided a unified view of each customer across all systems.</p>
 
 <h2>Exercises</h2>
 
