@@ -40,37 +40,46 @@ EHRs contain multiple data types:
 
 \begin{definition}[EHR Data Types]
 \label{def:ehrdata}
-\begin{itemize}
-\item \textbf{Clinical notes:} Narrative text written by physicians, nurses, and other clinicians. Format varies; quality varies.
-\item \textbf{Structured data:} Lab values (hemoglobin, glucose), vital signs (blood pressure, heart rate), medications
-\item \textbf{Codes:} ICD-10 (diagnosis codes), CPT (procedure codes), SNOMED CT (standardized clinical terminology)
-\item \textbf{Orders:} Medication prescriptions, lab orders, imaging orders
-\item \textbf{Results:} Lab results, imaging reports, pathology reports
-\item \textbf{Timelines:} Temporal ordering critical; diagnoses develop over time
-\end{itemize}
+Electronic health records contain multiple interconnected data types that together provide a comprehensive view of patient care.
+
+Clinical notes are narrative text written by physicians, nurses, and other clinicians documenting patient encounters, assessments, and treatment plans. The format and quality of these notes vary significantly across institutions and individual clinicians, ranging from brief bullet points to detailed prose narratives.
+
+Structured data includes quantitative measurements such as lab values (hemoglobin levels, glucose concentrations), vital signs (blood pressure, heart rate, temperature), and medication lists with dosages and schedules. This structured information is easily queryable but lacks the nuanced clinical reasoning captured in narrative notes.
+
+Codes provide standardized representations of diagnoses, procedures, and clinical concepts. ICD-10 codes classify diseases and health conditions, CPT codes describe medical procedures, and SNOMED CT provides a comprehensive standardized clinical terminology. These codes enable billing, research, and cross-institutional data sharing.
+
+Orders document clinical decisions including medication prescriptions, laboratory test orders, and imaging study requests. The pattern and timing of orders reveal clinical thinking and diagnostic strategies.
+
+Results contain the outcomes of ordered tests including laboratory results, imaging reports, and pathology findings. These results drive clinical decision-making and often trigger subsequent orders or treatment changes.
+
+Timelines establish the temporal ordering of all these elements, which is critical for understanding disease progression and treatment responses. Diagnoses develop over time, and the sequence of events often determines the correct interpretation of clinical data.
 \end{definition}
 
-Clinical language differs from general English:
+Clinical language differs from general English in several fundamental ways that require specialized processing.
 
-\begin{itemize}
-\item \textbf{Abbreviations:} CHF (congestive heart failure), MI (myocardial infarction), HTN (hypertension)
-\item \textbf{Negations:} ``No fever'' means absence, not presence. Negation detection is critical.
-\item \textbf{Uncertainty:} ``Rule out sepsis'' means sepsis is suspected but not confirmed. Confidence levels matter.
-\item \textbf{Temporal references:} ``Worsening over past week'' establishes timeline crucial for diagnosis
-\item \textbf{Medical jargon:} Billenteric fistula, heterotaxy, stridor---terms unfamiliar to general models
-\end{itemize}
+Abbreviations are ubiquitous in clinical documentation, with terms like CHF (congestive heart failure), MI (myocardial infarction), and HTN (hypertension) appearing frequently. These abbreviations are often ambiguous—MS could mean multiple sclerosis, mitral stenosis, or morphine sulfate depending on context. Models must learn to disambiguate based on surrounding clinical information.
+
+Negations are critical for correct interpretation because they completely reverse meaning. The phrase "no fever" indicates the absence of fever, not its presence. Negation detection is essential for accurate information extraction, as failing to recognize negation can lead to opposite conclusions about patient status.
+
+Uncertainty expressions convey the degree of diagnostic confidence, which is crucial for clinical decision-making. The phrase "rule out sepsis" means sepsis is suspected but not yet confirmed, requiring different clinical actions than a confirmed diagnosis. Models must capture these confidence levels to provide appropriate recommendations.
+
+Temporal references establish timelines that are crucial for diagnosis and treatment. A symptom "worsening over the past week" suggests a different clinical picture than one that developed suddenly. Understanding temporal progression helps distinguish between acute and chronic conditions and guides appropriate interventions.
+
+Medical jargon includes highly specialized terms unfamiliar to general language models, such as bilenteric fistula, heterotaxy, and stridor. These technical terms carry precise clinical meanings that general-purpose models trained on web text cannot capture without domain-specific training.
 
 \subsection{Domain-Adaptive Pre-Training}
 
 General BERT, trained on Wikipedia and Books, performs poorly on clinical text. BioBERT and ClinicalBERT are BERT models continued pre-trained on biomedical literature (PubMed) and clinical notes respectively.
 
-\textbf{ClinicalBERT pre-training:}
-\begin{itemize}
-\item Dataset: 2 million clinical notes from MIMIC-III (public ICU database)
-\item Masked language modeling: Predict masked clinical terms
-\item Vocabulary: Clinical-specific tokenization preserving medical terms
-\item Result: Outperforms general BERT on clinical NLP tasks by 5--15\% absolute
-\end{itemize}
+\textbf{ClinicalBERT pre-training:} The model is trained through continued pre-training on clinical text to adapt general language understanding to the medical domain.
+
+The dataset consists of 2 million clinical notes from MIMIC-III, a publicly available ICU database that provides real-world clinical documentation. This large corpus of authentic clinical text enables the model to learn the patterns, terminology, and structure of medical documentation.
+
+Masked language modeling serves as the pre-training objective, where the model predicts masked clinical terms based on surrounding context. This self-supervised approach allows the model to learn clinical language patterns without requiring labeled data.
+
+The vocabulary uses clinical-specific tokenization that preserves medical terms as single tokens rather than breaking them into subwords. This ensures that important clinical concepts like "myocardial infarction" are treated as coherent units rather than fragmented pieces.
+
+The result is a model that outperforms general BERT on clinical NLP tasks by 5--15\% absolute, demonstrating the value of domain-adaptive pre-training. This performance improvement translates directly to better clinical decision support and more accurate information extraction from medical records.
 
 \subsection{Clinical NLP Applications}
 
@@ -92,13 +101,13 @@ Many clinical tasks benefit from both sources:
 \text{Prediction} = \text{Model}(\text{ClinicalNotes}, \text{LabValues}, \text{Vitals}, \text{Medications})
 \end{align}
 
-Architecture options:
+Architecture options: Several architectural approaches exist for combining text and structured data, each with different trade-offs.
 
-\begin{itemize}
-\item \textbf{Concatenation:} Treat all data as tokens; feed to transformer. Simple but loses structure.
-\item \textbf{Multi-input:} Separate encoders for text and structured data; combine at output. Preserves modality structure.
-\item \textbf{Fusion networks:} Learn cross-modality interactions through attention. More complex but potentially more effective.
-\end{itemize}
+Concatenation treats all data as tokens by converting structured values to text and feeding everything to a single transformer. This approach is simple to implement and requires minimal architectural changes, but it loses the inherent structure of numerical data and may not effectively capture the different statistical properties of text versus structured features.
+
+Multi-input architectures use separate encoders for text and structured data, then combine their outputs at the final layer. Text passes through a transformer encoder (like ClinicalBERT) while structured data goes through embedding layers for categorical variables and direct connections for numerical values. The separate encoders preserve the modality-specific structure and allow each encoder to specialize in its data type before fusion.
+
+Fusion networks learn cross-modality interactions through attention mechanisms that allow text and structured features to interact at multiple layers. This more complex approach enables the model to discover which text patterns correlate with which lab values or vital signs, potentially capturing clinically meaningful relationships. For example, the model might learn that mentions of "shortness of breath" in notes combined with elevated heart rate in vitals strongly predicts heart failure. While more computationally expensive, fusion networks can be more effective when cross-modal interactions are important for the prediction task.
 
 \section{Medical Imaging Analysis}
 \label{sec:medicalimaging}
@@ -118,12 +127,13 @@ A vision transformer adapted for medical images:
 
 \subsection{Domain-Specific Considerations}
 
-\textbf{3D Medical Images:} MRI and CT produce 3D volumes (e.g., 512$\times$512$\times$100 voxels). Processing all voxels is memory-prohibitive. Solutions:
-\begin{itemize}
-\item 2D slices: Process image slice-by-slice (middle 50 slices); aggregate predictions
-\item 3D patches: Divide volume into 3D patches; process with 3D attention
-\item Hierarchical: Process low-resolution full volume, then high-resolution regions of interest
-\end{itemize}
+\textbf{3D Medical Images:} MRI and CT scans produce 3D volumes with dimensions like 512$\times$512$\times$100 voxels, making it memory-prohibitive to process all voxels simultaneously. Several solutions address this computational challenge.
+
+The 2D slices approach processes the image slice-by-slice, typically focusing on the middle 50 slices where pathology is most likely, then aggregates predictions across slices. This reduces memory requirements dramatically but may miss information from inter-slice relationships and 3D spatial patterns.
+
+The 3D patches method divides the volume into smaller 3D patches that can fit in memory, then processes each patch with 3D attention mechanisms. This preserves 3D spatial relationships within patches but requires careful handling of patch boundaries and aggregation of patch-level predictions.
+
+The hierarchical approach first processes a low-resolution version of the full volume to identify regions of interest, then applies high-resolution processing only to those regions. This multi-scale strategy balances computational efficiency with the need to analyze the entire volume, focusing computational resources where they're most needed.
 
 \textbf{Data Scarcity:} Medical imaging datasets are smaller than ImageNet. Transfer learning is essential. Pretrain on large datasets (CheXpert for chest X-rays with 223K images), then fine-tune on task-specific data.
 
@@ -155,37 +165,42 @@ A DNA sequence is a string of 4 letters (A, T, G, C). Tokenization is trivial; t
 
 \begin{definition}[Bio-Sequence Language]
 \label{def:bioseq}
-\begin{itemize}
-\item \textbf{DNA:} 4-letter alphabet; sequences millions of bases long
-\item \textbf{RNA:} 4-letter alphabet (A, U, G, C); forms secondary structures (stem-loop, hairpins)
-\item \textbf{Proteins:} 20-letter alphabet (amino acids); sequences hundreds of residues; folds into 3D structures
-\item \textbf{Codons:} DNA triplets encoding amino acids; mutations changing codons may or may not change protein
-\end{itemize}
+Biological sequences can be understood as languages with specific alphabets and structural rules.
+
+DNA uses a 4-letter alphabet (A, T, G, C) representing the four nucleotide bases. DNA sequences can be millions of bases long, encoding the genetic information for entire organisms. The challenge lies in understanding long-range dependencies and regulatory relationships that span thousands of bases.
+
+RNA also uses a 4-letter alphabet (A, U, G, C), where uracil (U) replaces thymine (T). RNA molecules form complex secondary structures including stem-loops and hairpins through base pairing, which are critical for their biological function. These structural elements must be considered when modeling RNA sequences.
+
+Proteins use a 20-letter alphabet corresponding to the 20 standard amino acids. Protein sequences are typically hundreds of residues long and fold into intricate 3D structures that determine their function. The relationship between sequence and structure is complex, with distant amino acids in the sequence often interacting in the folded structure.
+
+Codons are DNA triplets that encode amino acids, with the genetic code mapping 64 possible triplets to 20 amino acids (plus stop signals). This redundancy means that mutations changing codons may or may not change the resulting protein, a distinction critical for predicting the functional impact of genetic variants.
 \end{definition}
 
 \subsection{ESM: Large-Scale Protein Language Models}
 
 ESM (Evolutionary Scale Modeling) is a transformer trained on 250 million protein sequences from UniRef100. The model learns protein language without explicit 3D structure supervision.
 
-\textbf{ESM-2:} 15B parameters, trained with masked language modeling on protein sequences. Inference embeddings from ESM-2 enable:
+\textbf{ESM-2:} This 15-billion parameter model is trained with masked language modeling on protein sequences, learning protein language patterns without explicit 3D structure supervision. The inference embeddings from ESM-2 enable multiple downstream applications that advance biological research and medicine.
 
-\begin{itemize}
-\item \textbf{Structure prediction:} OmegaFold and ESMFold use ESM embeddings as input to structure prediction networks. Achieves structure prediction accuracy approaching experimental methods.
-\item \textbf{Function prediction:} Predict protein properties (thermostability, binding affinity, catalytic activity) from embeddings
-\item \textbf{Variant effect prediction:} Predict how mutations affect protein function. Critical for interpreting genetic variants in patient genomes.
-\item \textbf{Protein design:} Use ESM in reverse: given desired properties, design new proteins with those properties
-\end{itemize}
+Structure prediction uses ESM embeddings as input to structure prediction networks like OmegaFold and ESMFold. These methods achieve structure prediction accuracy approaching experimental methods like X-ray crystallography and cryo-EM, but at a fraction of the time and cost. This breakthrough enables structural analysis of millions of proteins that would be impractical to solve experimentally.
+
+Function prediction leverages ESM embeddings to predict protein properties including thermostability (how well proteins withstand heat), binding affinity (how strongly proteins interact with other molecules), and catalytic activity (how efficiently enzymes catalyze reactions). These predictions guide protein engineering and drug development.
+
+Variant effect prediction determines how mutations affect protein function, which is critical for interpreting genetic variants found in patient genomes. By comparing embeddings of wild-type and mutant proteins, the model predicts whether a variant is likely to be pathogenic or benign, informing clinical decision-making.
+
+Protein design uses ESM in reverse: given desired properties, the model can design new proteins with those properties. This capability enables engineering proteins for therapeutic applications, industrial enzymes, and novel biomaterials.
 
 \subsection{Case Study: Variant Effect Prediction}
 
 Precision medicine aims to predict drug response and disease risk from individual genomes. A key challenge: interpreting genetic variants (mutations).
 
-A novel variant found in patient DNA has unknown effect:
-\begin{itemize}
-\item Does it cause disease?
-\item Will the drug work for this patient?
-\item Should we warn the family?
-\end{itemize}
+A novel variant found in patient DNA raises critical clinical questions that must be answered to guide treatment and counseling.
+
+Does the variant cause disease? Determining pathogenicity is essential for diagnosis and treatment planning. A pathogenic variant might explain the patient's symptoms and guide therapeutic interventions, while a benign variant can be ruled out as a cause.
+
+Will the drug work for this patient? Pharmacogenomic variants affect drug metabolism and response. A variant in a drug-metabolizing enzyme might require dose adjustment or alternative medication selection to ensure efficacy and avoid toxicity.
+
+Should we warn the family? If a variant is pathogenic and heritable, family members may be at risk and should be offered genetic testing and counseling. This information enables preventive care and early intervention for at-risk relatives.
 
 ESM-based models predict variant effects:
 \begin{enumerate}
@@ -195,11 +210,11 @@ ESM-based models predict variant effects:
 \item Measure embedding similarity: high similarity suggests benign; low suggests deleterious
 \end{enumerate}
 
-Validation on ClinVar (gold-standard variant database):
-\begin{itemize}
-\item Pathogenic vs. benign classification: 92\% accuracy
-\item Ranking variants by effect magnitude: Top-ranked variants often proven pathogenic in follow-up studies
-\end{itemize}
+Validation on ClinVar, the gold-standard variant database, demonstrates the model's clinical utility.
+
+Pathogenic versus benign classification achieves 92\% accuracy, correctly distinguishing disease-causing variants from harmless genetic variations in the vast majority of cases. This high accuracy enables confident clinical interpretation of novel variants.
+
+Ranking variants by effect magnitude provides additional value beyond binary classification. The model's top-ranked variants are often proven pathogenic in follow-up studies, validating that the model's confidence scores correlate with true biological impact. This ranking capability helps prioritize which variants require experimental validation or immediate clinical action.
 
 \section{Regulatory and Clinical Validation}
 \label{sec:clinicalvalidation}
@@ -222,24 +237,27 @@ Retrospective → Prospective → Trial takes 2--5 years and costs millions of d
 
 Regulations require explainability: ``Why did the model recommend this treatment?''
 
-Solutions:
-\begin{itemize}
-\item \textbf{Attention analysis:} Show which parts of the patient record influenced the prediction
-\item \textbf{Feature importance:} Rank features (lab values, notes, medications) by impact
-\item \textbf{Similar cases:} Retrieve similar past patients and their outcomes to support reasoning
-\item \textbf{Audit logs:} Complete record of all predictions and decisions for review
-\end{itemize}
+Solutions: Several complementary approaches enable explainability and support regulatory requirements.
+
+Attention analysis shows which parts of the patient record influenced the prediction by visualizing attention weights. For example, the model might highlight specific sentences in clinical notes or particular time periods in the patient timeline that drove the risk assessment. This transparency helps clinicians understand and validate the model's reasoning.
+
+Feature importance ranks features such as lab values, clinical notes, and medications by their impact on the prediction. Techniques like SHAP (SHapley Additive exPlanations) quantify each feature's contribution, enabling clinicians to see that, for instance, elevated creatinine and mentions of "shortness of breath" were the primary drivers of a heart failure prediction.
+
+Similar cases retrieval finds past patients with similar characteristics and shows their outcomes to support the current prediction. If the model predicts high readmission risk, it can present 5-10 similar historical patients who also readmitted, providing evidence-based justification for the prediction and helping clinicians understand the reasoning by analogy.
+
+Audit logs maintain a complete record of all predictions and decisions for regulatory review and quality assurance. These logs enable retrospective analysis of model performance, investigation of adverse events, and demonstration of compliance with regulatory requirements.
 
 \subsection{Fairness and Bias}
 
 AI systems trained on historical data inherit biases. Example: Sepsis models historically trained on majority-white populations may perform worse on minorities.
 
-Mitigation:
-\begin{itemize}
-\item \textbf{Stratified evaluation:} Report performance separately for each demographic group
-\item \textbf{Bias-aware training:} Explicitly optimize for fairness across groups
-\item \textbf{Monitoring in deployment:} Track performance over time and by group; retrain if disparities emerge
-\end{itemize}
+Mitigation: Several strategies address bias and ensure equitable performance across patient populations.
+
+Stratified evaluation reports performance separately for each demographic group, making disparities visible. Rather than reporting a single overall accuracy, the evaluation breaks down performance by race, ethnicity, age, gender, and socioeconomic status. This transparency ensures that the model doesn't achieve high average performance while failing for specific subgroups.
+
+Bias-aware training explicitly optimizes for fairness across groups by incorporating fairness constraints or objectives into the training process. Techniques include reweighting training examples from underrepresented groups, adding fairness penalty terms to the loss function, or using adversarial debiasing to remove demographic information from learned representations while maintaining predictive performance.
+
+Monitoring in deployment tracks performance over time and by demographic group, enabling detection of emerging disparities. If the model's performance degrades for a particular group, the system triggers alerts and initiates retraining with updated data. This continuous monitoring ensures that the model remains fair as patient populations and clinical practices evolve.
 
 \section{Case Study: Clinical Risk Prediction at Scale}
 \label{sec:caseclinicalrisk}
@@ -432,44 +450,27 @@ A large health system wants to identify high-risk patients for preventive care i
 
 \textbf{Target:} Predict 30-day readmission risk for patients with chronic conditions
 
-\textbf{Data:}
-\begin{itemize}
-\item 100K patients, 500K admissions (historical)
-\item EHR features: 50K unique clinical notes, 200 structured variables
-\item Outcome: Readmission within 30 days (15\% positive rate; class imbalance)
-\end{itemize}
+\textbf{Data:} The system uses comprehensive historical data to train the prediction model.
 
-\textbf{Model Architecture:}
-\begin{itemize}
-\item Clinical notes encoder: ClinicalBERT
-\item Structured data: Embedding layer for categorical variables, concatenation for numeric
-\item Fusion: Combine note embeddings + structured features via attention
-\item Output: Logistic regression on 50-dim combined representation
-\end{itemize}
+The dataset includes 100,000 patients with 500,000 admissions from historical records, providing substantial training data. EHR features comprise 50,000 unique clinical notes capturing narrative clinical information and 200 structured variables including lab values, vital signs, and medications. The outcome is readmission within 30 days, which occurs at a 15\% positive rate, creating a class imbalance challenge that must be addressed during training.
+
+\textbf{Model Architecture:} The system uses a multi-modal architecture that combines text and structured data.
+
+The clinical notes encoder uses ClinicalBERT to process narrative documentation, capturing clinical reasoning and observations that aren't available in structured data. Structured data processing uses an embedding layer for categorical variables (like diagnosis codes and medication names) and direct concatenation for numeric values (lab results, vital signs). Fusion combines note embeddings and structured features via attention mechanisms, allowing the model to learn which combinations of text and structured signals are most predictive. The output layer applies logistic regression on a 50-dimensional combined representation to produce the final readmission risk score.
 
 \subsection{Results}
 
-\textbf{Offline validation (test set):}
-\begin{itemize}
-\item AUROC: 0.84 (strong predictive signal)
-\item Precision@20\% recall: 25\% (of flagged high-risk patients, 25\% actually readmit)
-\item Precision@50\% recall: 18\%
-\end{itemize}
+\textbf{Offline validation (test set):} Initial validation on held-out historical data demonstrates strong predictive performance.
 
-\textbf{Prospective study (100 patients):}
-\begin{itemize}
-\item Split: 50 patients assigned to care coordinator follow-up (AI identified high-risk); 50 standard care
-\item Result: 12\% readmission in intervention group vs. 18\% control (not statistically significant; small sample)
-\item Learnings: Patients identified by model did benefit from intervention, but sample size insufficient
-\end{itemize}
+AUROC of 0.84 indicates strong predictive signal, with the model effectively distinguishing high-risk from low-risk patients. Precision at 20\% recall reaches 25\%, meaning that of flagged high-risk patients, 25\% actually readmit—five times the base rate. Precision at 50\% recall is 18\%, showing that even when capturing half of all readmissions, the model maintains precision well above the baseline.
 
-\textbf{Deployment:}
-\begin{itemize}
-\item Daily: Score all admitted patients; flag top 10\% highest risk
-\item Care coordinator reviews flagged patients, provides targeted education/follow-up
-\item Estimated impact: 5--10\% reduction in readmissions
-\item Cost: \$200K development + \$50K/year operations
-\end{itemize}
+\textbf{Prospective study (100 patients):} A small prospective trial tests the intervention in real clinical practice.
+
+The study splits patients into two groups: 50 patients assigned to care coordinator follow-up based on AI-identified high risk, and 50 receiving standard care. Results show 12\% readmission in the intervention group versus 18\% in control, a promising trend but not statistically significant due to the small sample size. The key learning is that patients identified by the model did benefit from intervention, but a larger sample is needed to demonstrate statistical significance.
+
+\textbf{Deployment:} The system operates daily to support preventive care.
+
+Daily scoring evaluates all admitted patients and flags the top 10\% at highest risk for readmission. Care coordinators review flagged patients and provide targeted education and follow-up interventions tailored to each patient's specific risk factors. Estimated impact projects a 5--10\% reduction in readmissions, which translates to significant cost savings and improved patient outcomes. The cost structure includes \$200,000 for initial development and \$50,000 per year for ongoing operations, making the system economically viable given the high cost of readmissions.
 
 \section{Exercises}
 
