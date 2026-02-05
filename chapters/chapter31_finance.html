@@ -166,15 +166,9 @@
 A time series is non-stationary if its statistical properties (mean, variance, autocorrelation) change over time. Financial returns are approximately stationary (mean ≈ 0, variance varies); prices themselves are non-stationary.
 </div>
 
-<p>Challenges for deep learning:</p>
+<p>Deep learning faces several fundamental challenges when applied to financial time series. Non-stationarity is perhaps the most severe: models trained on 2020 data often fail completely in 2024 as market regimes evolve and statistical properties change. This is compounded by regime shifts, where market behavior changes suddenly and dramatically—the 2008 financial crisis, COVID-19 crash, and 2022 inflation shock all represented regime shifts that broke many quantitative models overnight. Models must continuously adapt to these changing conditions or risk catastrophic failure.</p>
 
-<ul>
-<li><strong>Non-stationarity:</strong> Models trained on 2020 data don't work in 2024; market regimes change
-<li><strong>Regime shifts:</strong> Market behavior changes suddenly (e.g., 2008 financial crisis). Models must adapt.
-<li><strong>Limited data:</strong> Unlike ImageNet (millions of images), we have limited years of market history
-<li><strong>Overfitting risk:</strong> With few samples and many parameters, models easily overfit
-<li><strong>Look-ahead bias:</strong> Accidental use of future information in training is easy to miss
-</ul>
+<p>The limited data problem is unique to finance. Unlike computer vision with millions of labeled images or NLP with billions of text documents, financial markets provide only decades of historical data with relatively few independent samples. A model trained on 10 years of daily data has only 2,500 trading days—far fewer than the millions of examples typical in other domains. This scarcity makes overfitting a constant danger: with few samples and many parameters, models easily memorize noise rather than learning genuine patterns. Finally, look-ahead bias—accidentally using future information during training—is surprisingly easy to introduce and can make worthless models appear profitable in backtesting.</p>
 
 <h3>Transformer-Based Time Series Models</h3>
 
@@ -190,45 +184,19 @@ A time series is non-stationary if its statistical properties (mean, variance, a
 </ol>
 </div>
 
-<p>Advantages of transformers for time series:</p>
-
-<ul>
-<li><strong>Parallelization:</strong> Process entire history in parallel (vs. RNN sequential processing)
-<li><strong>Long-range dependencies:</strong> Attention can capture long-term patterns (e.g., mean reversion over months)
-<li><strong>Interpretability:</strong> Attention weights show which past days influenced prediction
-</ul>
+<p>Transformers offer several key advantages for financial time series modeling. Parallelization enables processing the entire price history simultaneously, unlike RNNs which must process sequences step-by-step. This dramatically reduces training time and enables efficient use of modern GPU hardware. The attention mechanism naturally captures long-range dependencies, allowing the model to identify patterns like mean reversion over months or seasonal effects over years—relationships that RNNs struggle to learn due to vanishing gradients. Finally, attention weights provide interpretability by revealing which historical days most influenced each prediction, helping traders understand and trust model decisions.</p>
 
 <h3>Addressing Non-Stationarity</h3>
 
-<ul>
-<li><strong>Differencing:</strong> Model log-returns instead of prices. Returns are closer to stationary.
-<li><strong>Normalization:</strong> Normalize features (return to zero mean, unit variance) before feeding to model
-<li><strong>Regime detection:</strong> Explicitly model regime changes; use different models for different regimes
-<li><strong>Online learning:</strong> Continuously retrain model on recent data; weight recent data more highly
-<li><strong>Ensemble:</strong> Combine predictions from models trained on different time periods
-</ul>
+<p>Several techniques help address non-stationarity in financial models. Differencing transforms the problem by modeling log-returns instead of raw prices—returns are approximately stationary with mean near zero, while prices exhibit clear trends and non-stationarity. Normalization standardizes features to zero mean and unit variance before feeding them to the model, preventing scale differences from dominating learning. Regime detection explicitly models market state changes, using different models or parameters for bull markets, bear markets, and crisis periods. Online learning continuously retrains models on recent data, weighting recent observations more heavily to adapt to current conditions. Finally, ensemble methods combine predictions from models trained on different time periods, providing robustness when any single model fails due to regime changes.</p>
 
 <h3>Evaluation and Backtesting</h3>
 
 <p>Standard accuracy metrics (RMSE, MAE) are misleading for trading. A model could predict prices with low RMSE but lose money trading.</p>
 
-<p><strong>Trading-specific metrics:</strong>
-<ul>
-<li><strong>Sharpe ratio:</strong> Return / volatility; higher is better. Standard metric for strategy evaluation.
-<li><strong>Maximum drawdown:</strong> Largest peak-to-trough decline. Important for risk management.
-<li><strong>Win rate:</strong> Fraction of profitable trades
-<li><strong>Profit factor:</strong> Gross profit / gross loss
-<li><strong>Calmar ratio:</strong> Return / maximum drawdown
-</ul>
+<p>Trading-specific metrics evaluate what actually matters for profitability. The Sharpe ratio measures risk-adjusted returns by dividing average return by volatility—higher values indicate better performance per unit of risk, with values above 1.0 considered good and above 2.0 exceptional. Maximum drawdown captures the largest peak-to-trough decline, critical for risk management since large drawdowns can trigger margin calls or investor redemptions regardless of long-term returns. Win rate measures the fraction of profitable trades, though a strategy can be profitable with low win rate if winning trades are much larger than losing trades. Profit factor divides gross profits by gross losses, with values above 1.5 indicating robust strategies. The Calmar ratio divides annualized return by maximum drawdown, rewarding strategies that generate returns without large drawdowns.</p>
 
-<p><strong>Backtesting best practices:</strong>
-<ul>
-<li><strong>Walk-forward validation:</strong> Train on year 1, test on year 2, retrain on years 1--2, test on year 3, etc. Prevents look-ahead bias.
-<li><strong>Transaction costs:</strong> Include commissions, bid-ask spread, slippage in realistic simulation
-<li><strong>Market impact:</strong> Large orders move prices; must model this
-<li><strong>Regulatory requirements:</strong> Capital requirements, position limits
-<li><strong>Out-of-sample test:</strong> Final validation on completely held-out recent data
-</ul>
+<p>Rigorous backtesting requires several critical practices. Walk-forward validation prevents look-ahead bias by training on historical data and testing on subsequent periods, then rolling forward: train on year 1, test on year 2, retrain on years 1-2, test on year 3, and so on. This simulates realistic deployment where models only have access to past data. Transaction costs must include all real-world expenses: commissions, bid-ask spreads, and slippage (the difference between expected and actual execution prices). Market impact modeling accounts for how large orders move prices against the trader—a strategy that works with small positions may fail at scale. Regulatory requirements impose capital requirements, position limits, and reporting obligations that constrain real-world trading. Finally, out-of-sample testing on completely held-out recent data provides the ultimate validation before deployment, ensuring the model works on data it has never seen during development.</p>
 
 <h2>Financial NLP</h2>
 
@@ -236,35 +204,13 @@ A time series is non-stationary if its statistical properties (mean, variance, a
 
 <h3>Financial Domain Text</h3>
 
-<p>Financial text has characteristics:</p>
-
-<ul>
-<li><strong>Earnings calls:</strong> Transcripts of company calls with analysts. Forward guidance signals market expectations.
-<li><strong>SEC filings:</strong> 10-K (annual report), 10-Q (quarterly), 8-K (events). Detailed financial and operational information.
-<li><strong>News:</strong> Reuters, Bloomberg, CNBC. Time-sensitive; price reactions happen in seconds.
-<li><strong>Analyst reports:</strong> Recommendations (buy, hold, sell). Institutional influence.
-<li><strong>Twitter/Social media:</strong> Retail sentiment, rumors, market commentary.
-</ul>
+<p>Financial text comes in several distinct forms, each with unique characteristics and information content. Earnings calls provide transcripts of quarterly conference calls where company executives discuss results and answer analyst questions—forward guidance and management tone often signal future performance before it appears in financial statements. SEC filings include 10-K annual reports, 10-Q quarterly reports, and 8-K event disclosures, containing detailed financial and operational information required by regulators. News from Reuters, Bloomberg, and CNBC is highly time-sensitive, with price reactions occurring within seconds of publication. Analyst reports from investment banks provide buy, hold, or sell recommendations with significant influence on institutional investors. Finally, Twitter and social media capture retail sentiment, rumors, and market commentary that increasingly affects stock prices, particularly for retail-popular stocks.</p>
 
 <h3>Information Extraction</h3>
 
-<ul>
-<li><strong>Named entity recognition:</strong> Identify companies, executives, financial instruments
-<li><strong>Event extraction:</strong> M\&A announcements, earnings surprises, executive changes
-<li><strong>Sentiment analysis:</strong> Positive, negative, or neutral tone
-<li><strong>Relationship extraction:</strong> Who acquired whom, which companies compete
-</ul>
+<p>Information extraction from financial text involves several key tasks. Named entity recognition identifies companies, executives, and financial instruments mentioned in text, enabling tracking of which entities are discussed and in what context. Event extraction detects significant occurrences like merger and acquisition announcements, earnings surprises, and executive changes—events that typically trigger immediate market reactions. Sentiment analysis classifies text tone as positive, negative, or neutral, capturing market psychology and expectations. Relationship extraction identifies connections between entities, such as which company acquired whom or which companies compete in the same market, building knowledge graphs of corporate relationships.</p>
 
-<p><strong>Example:</strong> A news headline: ``Apple Announces Record Q4 Revenue; Beats Analyst Expectations''</p>
-
-<p>Extraction:
-<ul>
-<li>Company: Apple
-<li>Event: Earnings announcement
-<li>Metric: Q4 revenue
-<li>Sentiment: Positive (record, beats expectations)
-<li>Predicted impact: Stock price likely to rise
-</ul>
+<p>Consider a news headline: ``Apple Announces Record Q4 Revenue; Beats Analyst Expectations.'' Information extraction would identify the company as Apple, classify the event as an earnings announcement, extract the metric as Q4 revenue, and determine the sentiment as positive based on the words ``record'' and ``beats expectations.'' The predicted market impact would be a likely stock price increase, as positive earnings surprises typically drive immediate buying. This structured information can then feed into trading algorithms that act on news before human traders can react.</p>
 
 <h3>Sentiment Analysis for Trading</h3>
 
@@ -285,14 +231,7 @@ A time series is non-stationary if its statistical properties (mean, variance, a
 
 <h3>Credit Risk Assessment</h3>
 
-<p>Traditional credit scoring uses logistic regression on 20--50 features (income, credit history, debt-to-income ratio). Deep learning can incorporate more complex patterns:</p>
-
-<ul>
-<li><strong>Time series:</strong> Payment history over years, not just summary statistics
-<li><strong>Text:</strong> Loan applications and explanations; unusual language may indicate fraud
-<li><strong>Network:</strong> Relationships between borrowers (e.g., fraud rings)
-<li><strong>Behavioral:</strong> How borrower interacts with the app (hesitation, retries)
-</ul>
+<p>Deep learning enables credit models to incorporate richer information than traditional approaches. Time series analysis processes payment history over years rather than just summary statistics, capturing patterns like seasonal payment behavior or gradual deterioration. Text analysis examines loan applications and borrower explanations, where unusual language patterns or inconsistencies may indicate fraud or misrepresentation. Network analysis identifies relationships between borrowers, detecting fraud rings where multiple applications share suspicious connections. Behavioral analysis tracks how borrowers interact with the application system—hesitation, multiple retries, or unusual navigation patterns can signal uncertainty or deception.</p>
 
 <h3>Deep Learning for Credit</h3>
 
@@ -304,13 +243,7 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 <p>Loss: Cross-entropy on default labels (highly imbalanced: 2--5\% default rate)
 </div>
 
-<p>Architecture:
-<ul>
-<li>Feature embedding: Encode categorical variables (employment status, zip code) as embeddings
-<li>Temporal modules: LSTM or transformer to process payment history
-<li>Attention: Model importance of different factors in the decision
-<li>Regularization: L1/L2 + dropout to prevent overfitting with limited default examples
-</ul>
+<p>Deep learning credit models employ several architectural components. Feature embedding encodes categorical variables like employment status and zip code as learned dense vectors, capturing semantic similarities (e.g., neighboring zip codes have similar embeddings). Temporal modules use LSTMs or transformers to process payment history sequences, learning patterns like improving or deteriorating payment behavior over time. Attention mechanisms identify which factors most influenced each decision, providing interpretability required for regulatory compliance. Regularization through L1/L2 penalties and dropout prevents overfitting, critical when default examples are scarce (typically 2-5</p>
 
 <h3>Fairness in Credit Decisions</h3>
 
@@ -318,25 +251,13 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 
 <p>If minorities historically received higher interest rates, the model learns to predict higher risk for minorities.</p>
 
-<p>Solutions:
-<ul>
-<li><strong>Constraint-based fairness:</strong> Require equal acceptance rates across demographic groups
-<li><strong>Adversarial debiasing:</strong> Add a classifier trying to predict protected attributes from model predictions; train main model to fool this classifier
-<li><strong>Monitoring:</strong> Continuously measure disparate impact; alert if approval rates diverge
-<li><strong>Threshold tuning:</strong> Adjust decision boundary separately for each demographic group
-</ul>
+<p>Several approaches address fairness in credit decisions. Constraint-based fairness requires equal acceptance rates across demographic groups, enforced during training through constrained optimization. Adversarial debiasing adds a classifier that attempts to predict protected attributes from model predictions, then trains the main model to fool this classifier—if the adversary cannot predict race from the model's outputs, the model is not using race as a proxy. Continuous monitoring measures disparate impact in production, alerting when approval rates diverge across groups beyond acceptable thresholds. Threshold tuning adjusts decision boundaries separately for each demographic group to achieve equal approval rates, though this approach raises legal questions about differential treatment.</p>
 
 <h3>Explainability for Credit Decisions</h3>
 
 <p>When a loan is denied, applicants have the right to explanation. ``The AI said no'' is insufficient.</p>
 
-<p>Interpretability methods:
-<ul>
-<li><strong>SHAP values:</strong> Decompose model prediction into contributions from each feature
-<li><strong>Attention analysis:</strong> Show which factors the model weighted most
-<li><strong>Counterfactual explanation:</strong> ``If income were \$10K higher, you would be approved''
-<li><strong>Prototype examples:</strong> ``Similar applicants with these features were approved''
-</ul>
+<p>Several interpretability methods provide explanations for credit decisions. SHAP values decompose each prediction into contributions from individual features, showing exactly how much each factor (income, credit score, payment history) influenced the decision. Attention analysis reveals which factors the model weighted most heavily, providing insight into the decision process. Counterfactual explanations answer ``what if'' questions: ``If your income were \$10,000 higher, you would be approved''—giving applicants actionable guidance. Prototype examples show similar applicants who were approved, helping applicants understand what successful profiles look like and how their application compares.</p>
 
 <h2>Risk Management and Regulatory Requirements</h2>
 
@@ -344,30 +265,13 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 
 <h3>Model Risk Management Framework</h3>
 
-<p>Regulations (Basel III, Dodd-Frank, MiFID II) require:</p>
-
-<ol>
-<li><strong>Model documentation:</strong> Detailed specification of model, assumptions, limitations
-<li><strong>Governance:</strong> Model review and approval by risk committee
-<li><strong>Validation:</strong> Independent testing on data not used in development
-<li><strong>Monitoring:</strong> Ongoing performance tracking; alert if performance degrades
-<li><strong>Backtesting:</strong> Historical testing of predictions vs. outcomes
-<li><strong>Stress testing:</strong> Performance under extreme market conditions
-</ol>
+<p>Financial regulations require comprehensive model risk management. Model documentation must provide detailed specifications of the model architecture, training data, assumptions, and known limitations—sufficient for independent reviewers to understand and reproduce the model. Governance requires model review and approval by a risk committee before deployment, with ongoing oversight and periodic re-approval. Validation involves independent testing on data not used in development, performed by teams separate from model developers to ensure objectivity. Monitoring tracks ongoing performance in production, alerting when metrics degrade beyond acceptable thresholds. Backtesting compares historical predictions against actual outcomes to verify model accuracy and calibration. Stress testing evaluates performance under extreme market conditions like the 2008 financial crisis or COVID-19 crash, ensuring models remain safe during tail events.</p>
 
 <h3>Value at Risk (VaR) Estimation</h3>
 
 <p>VaR is the maximum loss expected at a given confidence level (e.g., 95\% VaR for a portfolio).</p>
 
-<p><strong>Traditional methods:</strong> Parametric VaR assumes returns are normal-distributed (assumption often violated).</p>
-
-<p><strong>Deep learning approach:</strong>
-<ol>
-<li>Model return distribution using neural network or flow-based model
-<li>Sample from learned distribution or use quantile regression
-<li>Estimate VaR at desired confidence level
-<li>Result: More accurate VaR capturing tail risk (extreme losses)
-</ol>
+<p>Deep learning provides a more sophisticated approach to VaR estimation. Rather than assuming returns follow a normal distribution (an assumption frequently violated in financial markets), neural networks or flow-based models learn the actual return distribution from data, capturing fat tails, skewness, and other non-normal characteristics. The model can then sample from this learned distribution or use quantile regression to directly estimate VaR at the desired confidence level (e.g., 95th or 99th percentile). This approach produces more accurate VaR estimates that better capture tail risk—the extreme losses that matter most for risk management but are poorly modeled by traditional parametric methods.</p>
 
 <h2>Case Study: Fraud Detection System</h2>
 
@@ -375,38 +279,17 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 
 <h3>Problem Setup</h3>
 
-<ul>
-<li><strong>Data:</strong> 10 billion transactions/year; 0.1\% fraud rate (10M fraudulent)
-<li><strong>Latency:</strong> Prediction must happen in <100ms at checkout
-<li><strong>Cost:</strong> False positives block legitimate transactions (user friction); false negatives cause fraud loss
-<li><strong>Scale:</strong> System must process 100K transactions/second peak
-</ul>
+<p>The fraud detection problem presents several challenges. The dataset contains 10 billion transactions annually with only 0.1</p>
 
 <h3>Model Architecture</h3>
 
-<ul>
-<li><strong>Features:</strong> Card, merchant, amount, location, time, velocity (transactions per card per hour)
-<li><strong>Embeddings:</strong> Card ID, merchant category, country, device fingerprint
-<li><strong>Temporal:</strong> RNN/transformer on past 10 transactions for same card
-<li><strong>Output:</strong> Fraud probability; if > threshold, request additional verification
-</ul>
+<p>The fraud detection architecture combines multiple components. Features include card ID, merchant information, transaction amount, location, time, and velocity metrics like transactions per card per hour. Embeddings encode high-cardinality categorical variables like card ID, merchant category, country, and device fingerprint as dense vectors. Temporal modeling uses RNNs or transformers to process the sequence of past 10 transactions for each card, learning patterns like normal spending behavior versus suspicious sequences. The output is a fraud probability score; transactions exceeding a threshold trigger additional verification like two-factor authentication or manual review.</p>
 
 <h3>Results</h3>
 
-<p><strong>Offline evaluation:</strong>
-<ul>
-<li>Recall@FPR=1\%: Can we catch 60\% of fraud with only 1\% legitimate blocked?
-<li>ROC-AUC: 0.94 (strong discrimination)
-</ul>
+<p>Offline evaluation measured performance on historical data. The key metric was recall at 1</p>
 
-<p><strong>Online deployment:</strong>
-<ul>
-<li>Fraud detection rate: 88\% (catch 88\% of fraudsters)
-<li>False positive rate: 0.8\% (0.8\% of legitimate users asked for verification)
-<li>User friction: Minimal; most 2FA challenges completed in <30 seconds
-<li>Fraud savings: \$200M/year (prevented fraudulent charges)
-<li>Cost: \$50M/year (model development, infrastructure, monitoring)
-</ul>
+<p>Online deployment results demonstrated real-world effectiveness. The system achieved 88</p>
 
 <h2>Model Maintenance and Drift in Financial AI Systems</h2>
 
