@@ -211,13 +211,7 @@ The most successful applications of deep learning to real domains follow this pa
 
 <h3>DSL Design Principles</h3>
 
-<ul>
-<li><strong>Clarity:</strong> Every field should be unambiguous. Avoid free-text fields where discrete categories exist.
-<li><strong>Completeness:</strong> Include all information relevant to the task. Missing fields create ambiguity.
-<li><strong>Consistency:</strong> Enforce consistent types and units across examples. All dates in ISO 8601, all sizes in bytes, etc.
-<li><strong>Expandability:</strong> Design with room for future extensions. Use versioning or optional fields.
-<li><strong>Human readability:</strong> Humans should understand the DSL (JSON, YAML, structured text) for debugging and annotation.
-</ul>
+<p>DSL design follows several key principles. Clarity requires that every field be unambiguous, avoiding free-text fields where discrete categories exist. Completeness demands including all information relevant to the task, as missing fields create ambiguity that degrades model performance. Consistency enforces uniform types and units across examples—all dates in ISO 8601 format, all sizes in bytes, all currencies explicitly specified. Expandability designs for future extensions through versioning or optional fields, preventing breaking changes as requirements evolve. Human readability ensures that humans can understand the DSL format (JSON, YAML, structured text) for debugging, annotation, and quality assurance.</p>
 
 <h3>Formal DSL Specification</h3>
 
@@ -246,13 +240,7 @@ The most successful applications of deep learning to real domains follow this pa
 }
 </code></pre>
 
-<p>Formal specification enables:
-<ul>
-<li>Validation: Check model outputs conform to schema before use
-<li>Code generation: Auto-generate parsing/serialization code from schema
-<li>Documentation: Schema serves as specification for data handling
-<li>Testing: Generate test cases covering all schema types and edge cases
-</ul>
+<p>Formal specification enables several critical capabilities. Validation checks that model outputs conform to schema before use, preventing malformed data from reaching downstream systems. Code generation automatically produces parsing and serialization code from schema definitions, ensuring consistency between specification and implementation. Documentation uses the schema as the authoritative specification for data handling, reducing ambiguity and miscommunication. Testing generates comprehensive test cases covering all schema types and edge cases, improving system robustness.</p>
 
 <h2>Tool-Augmented Models</h2>
 
@@ -329,14 +317,7 @@ Tool call: lookup_order(order_id="12345")
 
 <h3>Reliability and Error Handling</h3>
 
-<p>Tool-augmented systems must handle errors gracefully:</p>
-
-<ul>
-<li><strong>Tool failure:</strong> API returns error (customer not found, timeout). Model should acknowledge failure and offer alternatives.
-<li><strong>Invalid parameters:</strong> Model generates tool call with missing/invalid parameters. Validation catches errors; model is prompted to retry.
-<li><strong>Hallucinated tools:</strong> Model calls a tool that doesn't exist. System should list available tools; model tries again.
-<li><strong>Infinite loops:</strong> Model calls the same tool repeatedly without progress. Implement call limits and break loops.
-</ul>
+<p>Tool-augmented systems must handle errors gracefully through several mechanisms. Tool failures occur when APIs return errors such as customer not found or timeout—the model should acknowledge the failure and offer alternatives. Invalid parameters happen when the model generates tool calls with missing or incorrect parameters—validation catches these errors and prompts the model to retry with corrections. Hallucinated tools arise when the model calls non-existent tools—the system should list available tools and allow the model to try again. Infinite loops occur when the model repeatedly calls the same tool without making progress—implementing call limits and loop detection prevents this failure mode.</p>
 
 <h2>Agents and Workflow Orchestration</h2>
 
@@ -388,20 +369,9 @@ Actions:
 
 <h3>Memory and State Management</h3>
 
-<p>Agents need memory across interactions. State can include:</p>
+<p>Agents require memory across interactions to maintain context and continuity. State management includes several components. Interaction history tracks previous queries, actions, and results, enabling the agent to reference past conversations and avoid repeating work. User preferences learned from past interactions allow personalization and improved recommendations. Task progress tracking is essential for multi-step workflows that may span hours or days, requiring checkpoints to resume interrupted work.</p>
 
-<ul>
-<li><strong>Interaction history:</strong> Previous queries, actions, and results
-<li><strong>User preferences:</strong> Learned from past interactions
-<li><strong>Task progress:</strong> Multi-step workflows may span hours; checkpoint progress
-</ul>
-
-<p>Long-term memory requires careful management:
-<ul>
-<li>Summarize old history to avoid token explosion
-<li>Retrieve relevant past interactions (semantic search) when context matters
-<li>Use structured state (databases) rather than pure context window
-</ul>
+<p>Long-term memory requires careful management to remain effective. Summarizing old history prevents token explosion as conversations grow lengthy. Retrieving relevant past interactions through semantic search ensures important context is available when needed. Using structured state storage in databases rather than relying solely on the context window enables scalable memory management for production systems.</p>
 
 <h2>Structured Output and Validation</h2>
 

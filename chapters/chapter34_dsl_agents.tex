@@ -83,13 +83,7 @@ Structured DSL reduces model ambiguity. Models learn to extract and classify inf
 
 \subsection{DSL Design Principles}
 
-\begin{itemize}
-\item \textbf{Clarity:} Every field should be unambiguous. Avoid free-text fields where discrete categories exist.
-\item \textbf{Completeness:} Include all information relevant to the task. Missing fields create ambiguity.
-\item \textbf{Consistency:} Enforce consistent types and units across examples. All dates in ISO 8601, all sizes in bytes, etc.
-\item \textbf{Expandability:} Design with room for future extensions. Use versioning or optional fields.
-\item \textbf{Human readability:} Humans should understand the DSL (JSON, YAML, structured text) for debugging and annotation.
-\end{itemize}
+DSL design follows several key principles. Clarity requires that every field be unambiguous, avoiding free-text fields where discrete categories exist. Completeness demands including all information relevant to the task, as missing fields create ambiguity that degrades model performance. Consistency enforces uniform types and units across examples—all dates in ISO 8601 format, all sizes in bytes, all currencies explicitly specified. Expandability designs for future extensions through versioning or optional fields, preventing breaking changes as requirements evolve. Human readability ensures that humans can understand the DSL format (JSON, YAML, structured text) for debugging, annotation, and quality assurance.
 
 \subsection{Formal DSL Specification}
 
@@ -118,13 +112,7 @@ For complex domains, define the DSL formally using schemas:
 }
 \end{verbatim}
 
-Formal specification enables:
-\begin{itemize}
-\item Validation: Check model outputs conform to schema before use
-\item Code generation: Auto-generate parsing/serialization code from schema
-\item Documentation: Schema serves as specification for data handling
-\item Testing: Generate test cases covering all schema types and edge cases
-\end{itemize}
+Formal specification enables several critical capabilities. Validation checks that model outputs conform to schema before use, preventing malformed data from reaching downstream systems. Code generation automatically produces parsing and serialization code from schema definitions, ensuring consistency between specification and implementation. Documentation uses the schema as the authoritative specification for data handling, reducing ambiguity and miscommunication. Testing generates comprehensive test cases covering all schema types and edge cases, improving system robustness.
 
 \section{Tool-Augmented Models}
 \label{sec:toolaugmentedmodels}
@@ -202,14 +190,7 @@ The model learns to decompose queries into tool calls and orchestrate them.
 
 \subsection{Reliability and Error Handling}
 
-Tool-augmented systems must handle errors gracefully:
-
-\begin{itemize}
-\item \textbf{Tool failure:} API returns error (customer not found, timeout). Model should acknowledge failure and offer alternatives.
-\item \textbf{Invalid parameters:} Model generates tool call with missing/invalid parameters. Validation catches errors; model is prompted to retry.
-\item \textbf{Hallucinated tools:} Model calls a tool that doesn't exist. System should list available tools; model tries again.
-\item \textbf{Infinite loops:} Model calls the same tool repeatedly without progress. Implement call limits and break loops.
-\end{itemize}
+Tool-augmented systems must handle errors gracefully through several mechanisms. Tool failures occur when APIs return errors such as customer not found or timeout—the model should acknowledge the failure and offer alternatives. Invalid parameters happen when the model generates tool calls with missing or incorrect parameters—validation catches these errors and prompts the model to retry with corrections. Hallucinated tools arise when the model calls non-existent tools—the system should list available tools and allow the model to try again. Infinite loops occur when the model repeatedly calls the same tool without making progress—implementing call limits and loop detection prevents this failure mode.
 
 \section{Agents and Workflow Orchestration}
 \label{sec:agents}
@@ -264,20 +245,9 @@ Planning increases accuracy and transparency. Users understand the agent's reaso
 
 \subsection{Memory and State Management}
 
-Agents need memory across interactions. State can include:
+Agents require memory across interactions to maintain context and continuity. State management includes several components. Interaction history tracks previous queries, actions, and results, enabling the agent to reference past conversations and avoid repeating work. User preferences learned from past interactions allow personalization and improved recommendations. Task progress tracking is essential for multi-step workflows that may span hours or days, requiring checkpoints to resume interrupted work.
 
-\begin{itemize}
-\item \textbf{Interaction history:} Previous queries, actions, and results
-\item \textbf{User preferences:} Learned from past interactions
-\item \textbf{Task progress:} Multi-step workflows may span hours; checkpoint progress
-\end{itemize}
-
-Long-term memory requires careful management:
-\begin{itemize}
-\item Summarize old history to avoid token explosion
-\item Retrieve relevant past interactions (semantic search) when context matters
-\item Use structured state (databases) rather than pure context window
-\end{itemize}
+Long-term memory requires careful management to remain effective. Summarizing old history prevents token explosion as conversations grow lengthy. Retrieving relevant past interactions through semantic search ensures important context is available when needed. Using structured state storage in databases rather than relying solely on the context window enables scalable memory management for production systems.
 
 \section{Structured Output and Validation}
 \label{sec:structuredoutput}

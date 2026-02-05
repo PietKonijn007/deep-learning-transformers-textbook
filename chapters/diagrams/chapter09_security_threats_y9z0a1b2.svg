@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000">
+  <defs>
+    <style>
+      .title { font: bold 24px sans-serif; fill: #1f2937; }
+      .subtitle { font: bold 18px sans-serif; fill: #1f2937; }
+      .label { font: 16px sans-serif; fill: #1f2937; }
+      .small { font: 14px sans-serif; fill: #4b5563; }
+      .tiny { font: 12px sans-serif; fill: #6b7280; }
+      .cost { font: bold 14px sans-serif; fill: #059669; }
+      .primary { fill: #667eea; }
+      .error { fill: #ef4444; }
+      .warning { fill: #fbbf24; }
+      .success { fill: #10b981; }
+      .neutral { fill: #6b7280; }
+    </style>
+    <marker id="threat-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#ef4444" />
+    </marker>
+    <marker id="defense-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#10b981" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="700" y="35" text-anchor="middle" class="title">AI System Security Threat Model</text>
+
+  <!-- Center: AI System -->
+  <rect x="500" y="350" width="400" height="250" rx="15" class="primary" opacity="0.2" stroke="#667eea" stroke-width="4"/>
+  <text x="700" y="390" text-anchor="middle" class="subtitle">Production AI System</text>
+  
+  <!-- System Components -->
+  <rect x="530" y="410" width="160" height="50" rx="5" fill="#667eea" opacity="0.3" stroke="#667eea" stroke-width="2"/>
+  <text x="610" y="440" text-anchor="middle" class="label">Model</text>
+  
+  <rect x="710" y="410" width="160" height="50" rx="5" fill="#667eea" opacity="0.3" stroke="#667eea" stroke-width="2"/>
+  <text x="790" y="440" text-anchor="middle" class="label">API</text>
+  
+  <rect x="530" y="480" width="160" height="50" rx="5" fill="#667eea" opacity="0.3" stroke="#667eea" stroke-width="2"/>
+  <text x="610" y="510" text-anchor="middle" class="label">Training Data</text>
+  
+  <rect x="710" y="480" width="160" height="50" rx="5" fill="#667eea" opacity="0.3" stroke="#667eea" stroke-width="2"/>
+  <text x="790" y="510" text-anchor="middle" class="label">Infrastructure</text>
+  
+  <text x="700" y="570" text-anchor="middle" class="small" fill="#667eea" font-weight="bold">Attack Surface</text>
+
+  <!-- Threat 1: Model Theft (Top) -->
+  <rect x="500" y="80" width="400" height="180" rx="10" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+  <text x="700" y="110" text-anchor="middle" class="subtitle" fill="#ef4444">⚠ Model Theft</text>
+  
+  <text x="520" y="140" class="label" font-weight="bold">Attack Method:</text>
+  <text x="530" y="165" class="small">API querying → collect input-output pairs → train substitute model</text>
+  <text x="530" y="185" class="small">Example: 10 queries/sec × 24 hrs = 864K training examples</text>
+  
+  <text x="520" y="215" class="label" font-weight="bold">Defenses:</text>
+  <text x="530" y="235" class="small">✓ Rate limiting: 10-1,000 queries/min per user</text>
+  <text x="530" y="252" class="small">✓ Query monitoring and anomaly detection</text>
+  
+  <text x="800" y="235" class="cost">Cost: $500-$2K/month</text>
+  
+  <!-- Arrow from threat to system -->
+  <line x1="700" y1="260" x2="700" y2="340" stroke="#ef4444" stroke-width="3" marker-end="url(#threat-arrow)"/>
+
+  <!-- Threat 2: Adversarial Attacks (Right) -->
+  <rect x="1000" y="350" width="380" height="180" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="3"/>
+  <text x="1190" y="380" text-anchor="middle" class="subtitle" fill="#f59e0b">⚠ Adversarial Attacks</text>
+  
+  <text x="1020" y="410" class="label" font-weight="bold">Attack Method:</text>
+  <text x="1030" y="430" class="small">Crafted inputs → model failures</text>
+  <text x="1030" y="448" class="small">Adversarial examples, prompt injection</text>
+  
+  <text x="1020" y="475" class="label" font-weight="bold">Defenses:</text>
+  <text x="1030" y="495" class="small">✓ Adversarial training</text>
+  <text x="1030" y="512" class="small">✓ Input validation &amp; output filtering</text>
+  
+  <text x="1190" y="495" text-anchor="middle" class="cost">+20-50% training cost</text>
+  <text x="1190" y="512" text-anchor="middle" class="cost">+5-15% latency</text>
+  
+  <!-- Arrow from threat to system -->
+  <line x1="1000" y1="475" x2="910" y2="475" stroke="#f59e0b" stroke-width="3" marker-end="url(#threat-arrow)"/>
+
+  <!-- Threat 3: Data Poisoning (Bottom) -->
+  <rect x="500" y="700" width="400" height="180" rx="10" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+  <text x="700" y="730" text-anchor="middle" class="subtitle" fill="#ef4444">⚠ Data Poisoning</text>
+  
+  <text x="520" y="760" class="label" font-weight="bold">Attack Method:</text>
+  <text x="530" y="780" class="small">Inject malicious examples into training data</text>
+  <text x="530" y="798" class="small">User-generated content, web scraping vulnerabilities</text>
+  
+  <text x="520" y="825" class="label" font-weight="bold">Defenses:</text>
+  <text x="530" y="845" class="small">✓ Data validation and anomaly detection</text>
+  <text x="530" y="862" class="small">✓ Robust training procedures</text>
+  
+  <text x="800" y="845" class="cost">+20-50% preprocessing cost</text>
+  
+  <!-- Arrow from threat to system -->
+  <line x1="700" y1="700" x2="700" y2="610" stroke="#ef4444" stroke-width="3" marker-end="url(#threat-arrow)"/>
+
+  <!-- Threat 4: Privacy Violations (Left) -->
+  <rect x="20" y="350" width="380" height="180" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="3"/>
+  <text x="210" y="380" text-anchor="middle" class="subtitle" fill="#f59e0b">⚠ Privacy Violations</text>
+  
+  <text x="40" y="410" class="label" font-weight="bold">Attack Method:</text>
+  <text x="50" y="430" class="small">Training data leakage, memorization</text>
+  <text x="50" y="448" class="small">Model reproduces sensitive training data</text>
+  
+  <text x="40" y="475" class="label" font-weight="bold">Defenses:</text>
+  <text x="50" y="495" class="small">✓ Differential privacy</text>
+  <text x="50" y="512" class="small">✓ Federated learning</text>
+  
+  <text x="210" y="495" text-anchor="middle" class="cost">-1-5% accuracy</text>
+  <text x="210" y="512" text-anchor="middle" class="cost">2-5× training cost</text>
+  
+  <!-- Arrow from threat to system -->
+  <line x1="400" y1="475" x2="490" y2="475" stroke="#f59e0b" stroke-width="3" marker-end="url(#threat-arrow)"/>
+
+  <!-- Compliance Requirements Section (Bottom) -->
+  <rect x="50" y="920" width="1300" height="60" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="2"/>
+  <text x="700" y="945" text-anchor="middle" class="subtitle">Regulatory Compliance Requirements</text>
+  
+  <!-- GDPR -->
+  <rect x="80" y="955" width="360" height="15" rx="3" fill="#3b82f6" opacity="0.3"/>
+  <text x="90" y="966" class="small" font-weight="bold">GDPR:</text>
+  <text x="145" y="966" class="small">Data minimization, right to deletion, retraining costs</text>
+  
+  <!-- HIPAA -->
+  <rect x="470" y="955" width="360" height="15" rx="3" fill="#8b5cf6" opacity="0.3"/>
+  <text x="480" y="966" class="small" font-weight="bold">HIPAA:</text>
+  <text x="540" y="966" class="small">Encryption, access controls, $10K-$50K setup, $2K-$10K/mo</text>
+  
+  <!-- SOC 2 -->
+  <rect x="860" y="955" width="460" height="15" rx="3" fill="#ec4899" opacity="0.3"/>
+  <text x="870" y="966" class="small" font-weight="bold">SOC 2:</text>
+  <text x="925" y="966" class="small">Security policies, audits, $20K-$100K setup, $10K-$30K/yr</text>
+
+  <!-- Defense Techniques Detail (Top Right) -->
+  <rect x="1000" y="80" width="380" height="180" rx="10" fill="#d1fae5" stroke="#10b981" stroke-width="3"/>
+  <text x="1190" y="110" text-anchor="middle" class="subtitle" fill="#10b981">🛡 Defense Techniques</text>
+  
+  <text x="1020" y="140" class="label" font-weight="bold">Rate Limiting:</text>
+  <text x="1030" y="160" class="small">• 10-1,000 queries/min per user/API key</text>
+  <text x="1030" y="177" class="small">• Requires API gateway + auth</text>
+  
+  <text x="1020" y="202" class="label" font-weight="bold">Query Monitoring:</text>
+  <text x="1030" y="222" class="small">• Detect suspicious patterns</text>
+  <text x="1030" y="239" class="small">• Logging + analysis + alerting</text>
+  
+  <text x="1190" y="160" text-anchor="middle" class="cost">$500-$2K/mo</text>
+  <text x="1190" y="222" text-anchor="middle" class="cost">$2K-$10K/mo</text>
+
+  <!-- Privacy Techniques Detail (Bottom Left) -->
+  <rect x="20" y="700" width="380" height="180" rx="10" fill="#d1fae5" stroke="#10b981" stroke-width="3"/>
+  <text x="210" y="730" text-anchor="middle" class="subtitle" fill="#10b981">🛡 Privacy Techniques</text>
+  
+  <text x="40" y="760" class="label" font-weight="bold">Differential Privacy:</text>
+  <text x="50" y="780" class="small">• Mathematical privacy guarantees</text>
+  <text x="50" y="797" class="small">• Epsilon: 1 (strong) to 10 (weak)</text>
+  <text x="50" y="814" class="small">• Trade-off: -1-5% accuracy, +20-40% time</text>
+  
+  <text x="40" y="840" class="label" font-weight="bold">Federated Learning:</text>
+  <text x="50" y="860" class="small">• Train on distributed data without centralization</text>
+  <text x="50" y="877" class="small">• 2-5× training complexity and cost</text>
+
+  <!-- Impact Indicators -->
+  <circle cx="950" cy="475" r="40" fill="#ef4444" opacity="0.2" stroke="#ef4444" stroke-width="2"/>
+  <text x="950" y="470" text-anchor="middle" class="label" fill="#ef4444" font-weight="bold">HIGH</text>
+  <text x="950" y="488" text-anchor="middle" class="tiny" fill="#ef4444">RISK</text>
+
+  <circle cx="450" cy="475" r="40" fill="#f59e0b" opacity="0.2" stroke="#f59e0b" stroke-width="2"/>
+  <text x="450" y="470" text-anchor="middle" class="label" fill="#f59e0b" font-weight="bold">MED</text>
+  <text x="450" y="488" text-anchor="middle" class="tiny" fill="#f59e0b">RISK</text>
+
+  <!-- Cost Summary Box -->
+  <rect x="1000" y="580" width="380" height="100" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="1190" y="605" text-anchor="middle" class="label" font-weight="bold">Total Security Investment</text>
+  
+  <text x="1020" y="630" class="small">Infrastructure: $500-$2K/month</text>
+  <text x="1020" y="650" class="small">Training overhead: +20-50%</text>
+  <text x="1020" y="670" class="small">Compliance: $10K-$100K setup + ongoing</text>
+</svg>

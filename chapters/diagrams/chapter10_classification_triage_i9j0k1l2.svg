@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="850" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title-text { font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; fill: #1f2937; }
+      .component-box { fill: #667eea; stroke: #4f46e5; stroke-width: 2; }
+      .component-box-alt { fill: #764ba2; stroke: #5b21b6; stroke-width: 2; }
+      .high-conf { fill: #10b981; stroke: #059669; stroke-width: 2; }
+      .med-conf { fill: #f59e0b; stroke: #d97706; stroke-width: 2; }
+      .low-conf { fill: #ef4444; stroke: #dc2626; stroke-width: 2; }
+      .component-text { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: white; text-anchor: middle; }
+      .component-detail { font-family: Arial, sans-serif; font-size: 11px; fill: white; text-anchor: middle; }
+      .label-text { font-family: Arial, sans-serif; font-size: 12px; fill: #1f2937; }
+      .metric-text { font-family: Arial, sans-serif; font-size: 13px; fill: #1f2937; font-weight: 600; }
+      .arrow { stroke: #4b5563; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrow-green { stroke: #10b981; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-green); }
+      .arrow-orange { stroke: #f59e0b; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-orange); }
+      .arrow-red { stroke: #ef4444; stroke-width: 2.5; fill: none; marker-end: url(#arrowhead-red); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#4b5563" />
+    </marker>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#10b981" />
+    </marker>
+    <marker id="arrowhead-orange" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#f59e0b" />
+    </marker>
+    <marker id="arrowhead-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#ef4444" />
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="600" y="35" text-anchor="middle" class="title-text">Email Classification with Confidence-Based Routing</text>
+  
+  <!-- Input: Incoming Emails -->
+  <rect x="480" y="80" width="240" height="70" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  <text x="600" y="105" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; fill: #1e40af;">Incoming Emails</text>
+  <text x="600" y="130" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 13px; fill: #1e40af;">150,000 emails/month</text>
+  
+  <!-- Arrow down -->
+  <line x1="600" y1="150" x2="600" y2="190" class="arrow"/>
+  
+  <!-- BERT Classifier -->
+  <rect x="480" y="190" width="240" height="80" rx="8" class="component-box"/>
+  <text x="600" y="215" class="component-text">BERT-based Classifier</text>
+  <text x="600" y="235" class="component-detail">12 categories</text>
+  <text x="600" y="250" class="component-detail">93% overall accuracy</text>
+  <text x="600" y="265" class="component-detail">15ms inference latency</text>
+  
+  <!-- Arrow down to decision -->
+  <line x1="600" y1="270" x2="600" y2="320" class="arrow"/>
+  
+  <!-- Confidence Decision Diamond -->
+  <path d="M 600,320 L 720,380 L 600,440 L 480,380 Z" fill="#8b5cf6" stroke="#7c3aed" stroke-width="2"/>
+  <text x="600" y="375" class="component-text">Confidence</text>
+  <text x="600" y="395" class="component-text">Score</text>
+  
+  <!-- High Confidence Path (left) -->
+  <line x1="480" y1="380" x2="280" y2="380" class="arrow-green"/>
+  <text x="370" y="365" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #10b981;">&gt; 0.9 (80%)</text>
+  
+  <rect x="100" y="340" width="180" height="80" rx="8" class="high-conf"/>
+  <text x="190" y="365" class="component-text">Auto-Route</text>
+  <text x="190" y="385" class="component-detail">Immediate routing</text>
+  <text x="190" y="400" class="component-detail">No human review</text>
+  <text x="190" y="440" style="font-family: Arial, sans-serif; font-size: 12px; fill: #065f46; font-weight: 600;">120,000 emails</text>
+  
+  <!-- Medium Confidence Path (center-down) -->
+  <line x1="600" y1="440" x2="600" y2="500" class="arrow-orange"/>
+  <text x="630" y="470" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #f59e0b;">0.6-0.9 (15%)</text>
+  
+  <rect x="510" y="500" width="180" height="80" rx="8" class="med-conf"/>
+  <text x="600" y="525" class="component-text">Partial Review</text>
+  <text x="600" y="545" class="component-detail">Suggested routing</text>
+  <text x="600" y="560" class="component-detail">Human confirms</text>
+  <text x="600" y="600" style="font-family: Arial, sans-serif; font-size: 12px; fill: #92400e; font-weight: 600;">22,500 emails</text>
+  
+  <!-- Low Confidence Path (right) -->
+  <line x1="720" y1="380" x2="920" y2="380" class="arrow-red"/>
+  <text x="830" y="365" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #ef4444;">&lt; 0.6 (5%)</text>
+  
+  <rect x="920" y="340" width="180" height="80" rx="8" class="low-conf"/>
+  <text x="1010" y="365" class="component-text">Full Triage</text>
+  <text x="1010" y="385" class="component-detail">Manual review</text>
+  <text x="1010" y="400" class="component-detail">Human decision</text>
+  <text x="1010" y="440" style="font-family: Arial, sans-serif; font-size: 12px; fill: #7f1d1d; font-weight: 600;">7,500 emails</text>
+  
+  <!-- Results Box -->
+  <rect x="50" y="650" width="550" height="180" rx="8" fill="#f0fdf4" stroke="#10b981" stroke-width="2"/>
+  <text x="325" y="675" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #065f46;">Performance Metrics</text>
+  
+  <text x="70" y="705" class="metric-text">Overall Accuracy: 93%</text>
+  <text x="70" y="730" class="metric-text">High-Volume Classes: 95%+ accuracy</text>
+  <text x="70" y="755" class="metric-text">Manual Effort Reduction: 60%</text>
+  <text x="70" y="780" class="metric-text">Monthly Cost Reduction: $65K → $25K</text>
+  <text x="70" y="805" style="font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #065f46;">ROI: $40K monthly savings</text>
+  
+  <!-- Cost Breakdown Box -->
+  <rect x="650" y="650" width="500" height="180" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="900" y="675" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #92400e;">Cost Breakdown</text>
+  
+  <text x="670" y="705" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #92400e;">Initial Setup:</text>
+  <text x="670" y="725" style="font-family: Arial, sans-serif; font-size: 12px; fill: #92400e;">• Training data labeling: Existing tickets</text>
+  <text x="670" y="745" style="font-family: Arial, sans-serif; font-size: 12px; fill: #92400e;">• Model training: &lt;$500 (6 hours GPU)</text>
+  <text x="670" y="765" style="font-family: Arial, sans-serif; font-size: 12px; fill: #92400e;">• Integration: 2 weeks engineering</text>
+  
+  <text x="670" y="790" style="font-family: Arial, sans-serif; font-size: 13px; font-weight: bold; fill: #92400e;">Monthly Operational:</text>
+  <text x="670" y="810" style="font-family: Arial, sans-serif; font-size: 12px; fill: #92400e;">• Inference serving: $400/month</text>
+  
+  <!-- Architecture Patterns Box -->
+  <rect x="50" y="850" width="1100" height="0" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+  
+  <!-- Labels for categories -->
+  <text x="190" y="470" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 11px; fill: #065f46; font-style: italic;">Billing, Tech Support</text>
+  <text x="190" y="485" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 11px; fill: #065f46; font-style: italic;">Product Questions</text>
+  
+  <text x="600" y="630" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 11px; fill: #92400e; font-style: italic;">Ambiguous cases</text>
+  <text x="600" y="645" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 11px; fill: #92400e; font-style: italic;">Edge categories</text>
+  
+  <text x="1010" y="470" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 11px; fill: #7f1d1d; font-style: italic;">Regulatory Complaints</text>
+  <text x="1010" y="485" text-anchor="middle" style="font-family: Arial, sans-serif; font-size: 11px; fill: #7f1d1d; font-style: italic;">Complex Issues</text>
+</svg>
