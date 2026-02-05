@@ -163,39 +163,20 @@
 <h3>Hierarchical Structure of Legal Documents</h3>
 
 <div class="definition"><strong>Definition:</strong> 
-<ul>
-<li><strong>Statutes and regulations:</strong> Hierarchical: Title → Chapter → Section → Subsection → Clause. Each level has defined meaning.
-<li><strong>Case law:</strong> Organized as: Case name, year, court → Facts → Legal issue → Holding → Reasoning. Precedent critical.
-<li><strong>Contracts:</strong> Sections (parties, recitals, definitions, terms, conditions, signatures). Cross-references to defined terms.
-<li><strong>Regulatory documents:</strong> Rules, interpretations, guidance. Often redundant; latest version supersedes earlier.
-</ul>
+Legal documents follow distinct structural patterns depending on their type. Statutes and regulations are hierarchically organized from Title down through Chapter, Section, Subsection, to individual Clauses, with each level carrying defined legal meaning and scope. Case law follows a standardized format beginning with case name, year, and court, then proceeding through Facts, Legal Issue, Holding, and Reasoning—with precedent value being critical for future cases. Contracts are structured into sections covering parties, recitals, definitions, terms, conditions, and signatures, with extensive cross-references to defined terms throughout. Regulatory documents contain rules, interpretations, and guidance that are often redundant across versions, with the latest version superseding earlier ones.
 </div>
 
 <h3>Formal Language Elements</h3>
 
 <p>Legal language has precise meanings often divorced from common usage:</p>
 
-<ul>
-<li><strong>Defined terms:</strong> ``Customer'' is defined as <em>[specific definition]</em>; all uses refer to this definition
-<li><strong>Conditions:</strong> ``If X occurs, then Y is obligated to Z.'' Conditions create obligations.
-<li><strong>Exceptions:</strong> ``X is liable for damages except where caused by force majeure.'' Exceptions modify obligations.
-<li><strong>Temporal:</strong> ``Effective as of [date]'' vs. ``Retroactive to [date]'' has different legal effect
-<li><strong>Negations:</strong> ``Party A shall not be liable for indirect damages'' negates liability; critical to parse correctly
-</ul>
+<p>Legal language employs precise meanings that often diverge from common usage. Defined terms establish specific meanings—for example, ``Customer'' is defined with a specific definition, and all subsequent uses refer exclusively to that definition. Conditions create obligations through if-then structures: ``If X occurs, then Y is obligated to Z.'' Exceptions modify obligations by carving out specific circumstances: ``X is liable for damages except where caused by force majeure.'' Temporal language has precise legal effects—``Effective as of [date]'' differs legally from ``Retroactive to [date].'' Negations are critical to parse correctly, as ``Party A shall not be liable for indirect damages'' negates liability entirely.</p>
 
 <h3>Domain-Specific Ontology</h3>
 
 <p>Legal concepts form a formal ontology:</p>
 
-<ul>
-<li><strong>Parties:</strong> Signatories, beneficiaries, third-party beneficiaries
-<li><strong>Rights:</strong> Grant, restriction, termination, remedies
-<li><strong>Obligations:</strong> Performance requirements, conditions precedent, conditions subsequent
-<li><strong>Remedies:</strong> Damages, injunctions, specific performance, indemnification
-<li><strong>Risk allocation:</strong> Who bears risk of loss, liability caps, force majeure
-</ul>
-
-<p>Models must learn this ontology to understand contracts meaningfully.</p>
+<p>Legal concepts form a formal ontology that models must learn to understand contracts meaningfully. Parties include signatories, beneficiaries, and third-party beneficiaries, each with different rights and obligations. Rights encompass grants, restrictions, terminations, and remedies available to parties. Obligations specify performance requirements, conditions precedent (what must occur before obligations arise), and conditions subsequent (what terminates obligations). Remedies include damages, injunctions, specific performance, and indemnification. Risk allocation determines who bears risk of loss, establishes liability caps, and defines force majeure exceptions.</p>
 
 <h2>Contract Analysis and Document Understanding</h2>
 
@@ -205,18 +186,7 @@
 
 <p>A contract review system should extract:</p>
 
-<ul>
-<li><strong>Parties:</strong> Who are the contracting parties?
-<li><strong>Effective date:</strong> When does the contract become effective?
-<li><strong>Term and termination:</strong> Duration, renewal conditions, termination rights and consequences
-<li><strong>Payment terms:</strong> Price, payment schedule, late fees, currency
-<li><strong>Conditions precedent:</strong> What must occur before obligations arise?
-<li><strong>Representations and warranties:</strong> What does each party assert to be true?
-<li><strong>Indemnification:</strong> Who indemnifies whom for what?
-<li><strong>Limitation of liability:</strong> Caps on damages, exclusions of consequential damages
-<li><strong>Confidentiality:</strong> Trade secrets, non-disclosure obligations, exceptions
-<li><strong>Dispute resolution:</strong> Governing law, jurisdiction, arbitration, remedies
-</ul>
+<p>A comprehensive contract review system should extract several critical elements. It must identify the parties to the contract and determine the effective date when the contract becomes binding. The system should extract term and termination provisions, including duration, renewal conditions, and termination rights with their consequences. Payment terms covering price, payment schedule, late fees, and currency must be identified. Conditions precedent—what must occur before obligations arise—require extraction. Representations and warranties, where each party asserts certain facts to be true, must be captured. Indemnification clauses specifying who indemnifies whom for what circumstances are critical. Limitation of liability provisions, including caps on damages and exclusions of consequential damages, significantly affect risk allocation. Confidentiality obligations covering trade secrets, non-disclosure requirements, and exceptions must be identified. Finally, dispute resolution mechanisms including governing law, jurisdiction, arbitration procedures, and available remedies must be extracted.</p>
 
 <h3>Architecture for Contract Analysis</h3>
 
@@ -237,14 +207,7 @@
 
 <p><strong>Transformer-based approach:</strong></p>
 
-<ul>
-<li><strong>Pre-training:</strong> Continued pre-training on legal corpus (LexGLUE: legal documents)
-<li><strong>Token classification:</strong> Mark each token as being part of a clause type (binary classification per token)
-<li><strong>Relation extraction:</strong> Identify relationships between entities and obligations
-<li><strong>Multi-task learning:</strong> Jointly train on clause classification, entity extraction, obligation extraction
-</ul>
-
-<p>Models like LegalBERT (continued pre-training of BERT on legal documents) achieve strong performance on legal NLP tasks.</p>
+<p>Transformer-based approaches to contract understanding employ several techniques. Pre-training involves continued pre-training on legal corpora like LexGLUE, which contains diverse legal documents. Token classification marks each token as belonging to a specific clause type through binary classification per token. Relation extraction identifies relationships between entities and obligations, capturing the semantic structure of contracts. Multi-task learning jointly trains on clause classification, entity extraction, and obligation extraction, enabling the model to learn shared representations across these related tasks. Models like LegalBERT, which continues pre-training BERT on legal documents, achieve strong performance on legal NLP tasks.</p>
 
 <h2>Legal Research and Citation Networks</h2>
 
@@ -254,12 +217,7 @@
 
 <p>Cases cite prior cases; legal concepts form a web of precedent. A case might cite 50+ prior cases, creating a citation graph. Understanding the graph is essential:</p>
 
-<ul>
-<li><strong>Following precedent:</strong> A case must follow binding precedent from higher courts
-<li><strong>Distinguishing cases:</strong> Argue why precedent doesn't apply because facts differ
-<li><strong>Overruling:</strong> Higher court can overrule lower court; law changes
-<li><strong>Trends:</strong> Newer cases reflect evolved law; old cases may be outdated
-</ul>
+<p>Citation networks and precedent form the foundation of legal reasoning. Cases cite prior cases, creating a web of precedent that defines legal concepts. A single case might cite 50 or more prior cases, building a complex citation graph. Understanding this graph is essential for legal research. Following precedent means a case must adhere to binding precedent from higher courts in the same jurisdiction. Distinguishing cases involves arguing why precedent doesn't apply because the facts differ materially. Overruling occurs when a higher court can overrule a lower court's decision, causing the law to change. Trends in case law matter—newer cases reflect evolved legal thinking, while old cases may be outdated or superseded by subsequent decisions.</p>
 
 <h3>Semantic Search for Legal Documents</h3>
 
@@ -309,14 +267,7 @@
 <h3>Copilot Design Principles</h3>
 
 <div class="definition"><strong>Definition:</strong> 
-<ol>
-<li><strong>Transparency:</strong> Show reasoning. For flagged clauses, cite the rule and explain why it's flagged.
-<li><strong>Human authority:</strong> Lawyer always makes final decision. AI suggests; human confirms.
-<li><strong>Accuracy over recall:</strong> Better to miss an issue than incorrectly flag. False positives erode trust.
-<li><strong>Explainability:</strong> Lawyer must understand why AI made a recommendation. Black boxes unacceptable.
-<li><strong>Scope clarity:</strong> AI handles specific tasks (clause extraction, citation finding). Not intended for legal judgment.
-<li><strong>Training and oversight:</strong> Lawyers trained on system capabilities and limitations.
-</ol>
+Effective legal AI copilots follow several critical design principles. Transparency requires showing reasoning—for flagged clauses, the system must cite the rule and explain why it's flagged. Human authority ensures lawyers always make final decisions, with AI suggesting and humans confirming. Accuracy over recall prioritizes avoiding false positives, as it's better to miss an issue than incorrectly flag one—false positives erode trust. Explainability means lawyers must understand why AI made each recommendation, as black boxes are unacceptable in legal practice. Scope clarity defines that AI handles specific tasks like clause extraction and citation finding, but is not intended for legal judgment. Training and oversight ensure lawyers are trained on system capabilities and limitations before use.
 </div>
 
 <h3>Practical Copilot Workflow</h3>
@@ -337,34 +288,19 @@
 
 <h3>Professional Responsibility</h3>
 
-<p>Bar associations (e.g., ABA) have ethics rules:
-<ul>
-<li>Lawyers must understand their tools and their limitations
-<li>Lawyers remain responsible for work product even if AI-assisted
-<li>Lawyers must communicate with clients about use of AI
-<li>Lawyers cannot use AI to create unauthorized practice of law
-</ul>
+<p>Bar associations impose strict ethics rules governing AI use in legal practice. Lawyers must understand their tools and their limitations—ignorance is not a defense. Lawyers remain responsible for work product even if AI-assisted, maintaining full professional liability. Lawyers must communicate with clients about use of AI, obtaining informed consent where appropriate. Lawyers cannot use AI to create unauthorized practice of law, ensuring human lawyers maintain control over legal judgment.</p>
 
 <h3>Hallucination and Fabrication</h3>
 
 <p>LLMs can hallucinate case citations. A lawyer using an AI tool that cites ``Smith v. Jones, 500 F.2d 123'' must verify the citation exists. Hallucinated citations are malpractice.</p>
 
-<p>Mitigation:
-<ul>
-<li>Retrieval-based: System only cites cases actually in database, not generated
-<li>Confidence scores: Model expresses uncertainty; lawyer knows when to verify
-<li>Explicit non-recommendation: ``I did not find direct precedent; here are related cases''
-</ul>
+<p>Several mitigation strategies address the hallucination problem. Retrieval-based systems only cite cases actually in the database rather than generating citations, eliminating fabrication risk. Confidence scores allow models to express uncertainty, signaling to lawyers when verification is needed. Explicit non-recommendations acknowledge limitations: ``I did not find direct precedent; here are related cases'' rather than fabricating citations.</p>
 
 <h3>Access to Justice</h3>
 
 <p>AI-assisted legal work could democratize access, enabling individuals to understand contracts without expensive lawyers. However:</p>
 
-<ul>
-<li>Unbridged gap: AI for contract understanding is useful; AI for legal strategy requires judgment
-<li>Liability: If AI gives bad advice and person is harmed, who is liable?
-<li>Regulation: Bar associations are developing rules for AI-assisted law practice
-</ul>
+<p>AI-assisted legal work could democratize access to justice, enabling individuals to understand contracts without expensive lawyers. However, significant challenges remain. An unbridged gap exists—AI for contract understanding is useful, but AI for legal strategy requires judgment that current systems cannot provide. Liability questions arise: if AI gives bad advice and a person is harmed, determining who is liable remains unclear. Regulation is evolving as bar associations develop rules for AI-assisted law practice, creating uncertainty about permissible uses.</p>
 
 <h2>Case Study: Contract Review and Risk Assessment</h2>
 

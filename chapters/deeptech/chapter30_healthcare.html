@@ -169,37 +169,46 @@
 <p>EHRs contain multiple data types:</p>
 
 <div class="definition"><strong>Definition:</strong> 
-<ul>
-<li><strong>Clinical notes:</strong> Narrative text written by physicians, nurses, and other clinicians. Format varies; quality varies.
-<li><strong>Structured data:</strong> Lab values (hemoglobin, glucose), vital signs (blood pressure, heart rate), medications
-<li><strong>Codes:</strong> ICD-10 (diagnosis codes), CPT (procedure codes), SNOMED CT (standardized clinical terminology)
-<li><strong>Orders:</strong> Medication prescriptions, lab orders, imaging orders
-<li><strong>Results:</strong> Lab results, imaging reports, pathology reports
-<li><strong>Timelines:</strong> Temporal ordering critical; diagnoses develop over time
-</ul>
+Electronic health records contain multiple interconnected data types that together provide a comprehensive view of patient care.
+
+<p>Clinical notes are narrative text written by physicians, nurses, and other clinicians documenting patient encounters, assessments, and treatment plans. The format and quality of these notes vary significantly across institutions and individual clinicians, ranging from brief bullet points to detailed prose narratives.</p>
+
+<p>Structured data includes quantitative measurements such as lab values (hemoglobin levels, glucose concentrations), vital signs (blood pressure, heart rate, temperature), and medication lists with dosages and schedules. This structured information is easily queryable but lacks the nuanced clinical reasoning captured in narrative notes.</p>
+
+<p>Codes provide standardized representations of diagnoses, procedures, and clinical concepts. ICD-10 codes classify diseases and health conditions, CPT codes describe medical procedures, and SNOMED CT provides a comprehensive standardized clinical terminology. These codes enable billing, research, and cross-institutional data sharing.</p>
+
+<p>Orders document clinical decisions including medication prescriptions, laboratory test orders, and imaging study requests. The pattern and timing of orders reveal clinical thinking and diagnostic strategies.</p>
+
+<p>Results contain the outcomes of ordered tests including laboratory results, imaging reports, and pathology findings. These results drive clinical decision-making and often trigger subsequent orders or treatment changes.</p>
+
+<p>Timelines establish the temporal ordering of all these elements, which is critical for understanding disease progression and treatment responses. Diagnoses develop over time, and the sequence of events often determines the correct interpretation of clinical data.
 </div>
 
-<p>Clinical language differs from general English:</p>
+<p>Clinical language differs from general English in several fundamental ways that require specialized processing.</p>
 
-<ul>
-<li><strong>Abbreviations:</strong> CHF (congestive heart failure), MI (myocardial infarction), HTN (hypertension)
-<li><strong>Negations:</strong> ``No fever'' means absence, not presence. Negation detection is critical.
-<li><strong>Uncertainty:</strong> ``Rule out sepsis'' means sepsis is suspected but not confirmed. Confidence levels matter.
-<li><strong>Temporal references:</strong> ``Worsening over past week'' establishes timeline crucial for diagnosis
-<li><strong>Medical jargon:</strong> Billenteric fistula, heterotaxy, stridor---terms unfamiliar to general models
-</ul>
+<p>Abbreviations are ubiquitous in clinical documentation, with terms like CHF (congestive heart failure), MI (myocardial infarction), and HTN (hypertension) appearing frequently. These abbreviations are often ambiguous—MS could mean multiple sclerosis, mitral stenosis, or morphine sulfate depending on context. Models must learn to disambiguate based on surrounding clinical information.</p>
+
+<p>Negations are critical for correct interpretation because they completely reverse meaning. The phrase "no fever" indicates the absence of fever, not its presence. Negation detection is essential for accurate information extraction, as failing to recognize negation can lead to opposite conclusions about patient status.</p>
+
+<p>Uncertainty expressions convey the degree of diagnostic confidence, which is crucial for clinical decision-making. The phrase "rule out sepsis" means sepsis is suspected but not yet confirmed, requiring different clinical actions than a confirmed diagnosis. Models must capture these confidence levels to provide appropriate recommendations.</p>
+
+<p>Temporal references establish timelines that are crucial for diagnosis and treatment. A symptom "worsening over the past week" suggests a different clinical picture than one that developed suddenly. Understanding temporal progression helps distinguish between acute and chronic conditions and guides appropriate interventions.</p>
+
+<p>Medical jargon includes highly specialized terms unfamiliar to general language models, such as bilenteric fistula, heterotaxy, and stridor. These technical terms carry precise clinical meanings that general-purpose models trained on web text cannot capture without domain-specific training.</p>
 
 <h3>Domain-Adaptive Pre-Training</h3>
 
 <p>General BERT, trained on Wikipedia and Books, performs poorly on clinical text. BioBERT and ClinicalBERT are BERT models continued pre-trained on biomedical literature (PubMed) and clinical notes respectively.</p>
 
-<p><strong>ClinicalBERT pre-training:</strong>
-<ul>
-<li>Dataset: 2 million clinical notes from MIMIC-III (public ICU database)
-<li>Masked language modeling: Predict masked clinical terms
-<li>Vocabulary: Clinical-specific tokenization preserving medical terms
-<li>Result: Outperforms general BERT on clinical NLP tasks by 5--15\% absolute
-</ul>
+<p><strong>ClinicalBERT pre-training:</strong> The model is trained through continued pre-training on clinical text to adapt general language understanding to the medical domain.</p>
+
+<p>The dataset consists of 2 million clinical notes from MIMIC-III, a publicly available ICU database that provides real-world clinical documentation. This large corpus of authentic clinical text enables the model to learn the patterns, terminology, and structure of medical documentation.</p>
+
+<p>Masked language modeling serves as the pre-training objective, where the model predicts masked clinical terms based on surrounding context. This self-supervised approach allows the model to learn clinical language patterns without requiring labeled data.</p>
+
+<p>The vocabulary uses clinical-specific tokenization that preserves medical terms as single tokens rather than breaking them into subwords. This ensures that important clinical concepts like "myocardial infarction" are treated as coherent units rather than fragmented pieces.</p>
+
+<p>The result is a model that outperforms general BERT on clinical NLP tasks by 5--15\% absolute, demonstrating the value of domain-adaptive pre-training. This performance improvement translates directly to better clinical decision support and more accurate information extraction from medical records.</p>
 
 <h3>Clinical NLP Applications</h3>
 
@@ -223,13 +232,13 @@ $$\begin{align}
 \end{align}$$
 </div>
 
-<p>Architecture options:</p>
+<p>Architecture options: Several architectural approaches exist for combining text and structured data, each with different trade-offs.</p>
 
-<ul>
-<li><strong>Concatenation:</strong> Treat all data as tokens; feed to transformer. Simple but loses structure.
-<li><strong>Multi-input:</strong> Separate encoders for text and structured data; combine at output. Preserves modality structure.
-<li><strong>Fusion networks:</strong> Learn cross-modality interactions through attention. More complex but potentially more effective.
-</ul>
+<p>Concatenation treats all data as tokens by converting structured values to text and feeding everything to a single transformer. This approach is simple to implement and requires minimal architectural changes, but it loses the inherent structure of numerical data and may not effectively capture the different statistical properties of text versus structured features.</p>
+
+<p>Multi-input architectures use separate encoders for text and structured data, then combine their outputs at the final layer. Text passes through a transformer encoder (like ClinicalBERT) while structured data goes through embedding layers for categorical variables and direct connections for numerical values. The separate encoders preserve the modality-specific structure and allow each encoder to specialize in its data type before fusion.</p>
+
+<p>Fusion networks learn cross-modality interactions through attention mechanisms that allow text and structured features to interact at multiple layers. This more complex approach enables the model to discover which text patterns correlate with which lab values or vital signs, potentially capturing clinically meaningful relationships. For example, the model might learn that mentions of "shortness of breath" in notes combined with elevated heart rate in vitals strongly predicts heart failure. While more computationally expensive, fusion networks can be more effective when cross-modal interactions are important for the prediction task.</p>
 
 <h2>Medical Imaging Analysis</h2>
 
@@ -248,12 +257,13 @@ $$\begin{align}
 
 <h3>Domain-Specific Considerations</h3>
 
-<p><strong>3D Medical Images:</strong> MRI and CT produce 3D volumes (e.g., 512$\times$512$\times$100 voxels). Processing all voxels is memory-prohibitive. Solutions:
-<ul>
-<li>2D slices: Process image slice-by-slice (middle 50 slices); aggregate predictions
-<li>3D patches: Divide volume into 3D patches; process with 3D attention
-<li>Hierarchical: Process low-resolution full volume, then high-resolution regions of interest
-</ul>
+<p><strong>3D Medical Images:</strong> MRI and CT scans produce 3D volumes with dimensions like 512$\times$512$\times$100 voxels, making it memory-prohibitive to process all voxels simultaneously. Several solutions address this computational challenge.</p>
+
+<p>The 2D slices approach processes the image slice-by-slice, typically focusing on the middle 50 slices where pathology is most likely, then aggregates predictions across slices. This reduces memory requirements dramatically but may miss information from inter-slice relationships and 3D spatial patterns.</p>
+
+<p>The 3D patches method divides the volume into smaller 3D patches that can fit in memory, then processes each patch with 3D attention mechanisms. This preserves 3D spatial relationships within patches but requires careful handling of patch boundaries and aggregation of patch-level predictions.</p>
+
+<p>The hierarchical approach first processes a low-resolution version of the full volume to identify regions of interest, then applies high-resolution processing only to those regions. This multi-scale strategy balances computational efficiency with the need to analyze the entire volume, focusing computational resources where they're most needed.</p>
 
 <p><strong>Data Scarcity:</strong> Medical imaging datasets are smaller than ImageNet. Transfer learning is essential. Pretrain on large datasets (CheXpert for chest X-rays with 223K images), then fine-tune on task-specific data.</p>
 
@@ -283,37 +293,202 @@ $$\begin{align}
 <p>A DNA sequence is a string of 4 letters (A, T, G, C). Tokenization is trivial; the challenge is understanding long-range dependencies and structure.</p>
 
 <div class="definition"><strong>Definition:</strong> 
-<ul>
-<li><strong>DNA:</strong> 4-letter alphabet; sequences millions of bases long
-<li><strong>RNA:</strong> 4-letter alphabet (A, U, G, C); forms secondary structures (stem-loop, hairpins)
-<li><strong>Proteins:</strong> 20-letter alphabet (amino acids); sequences hundreds of residues; folds into 3D structures
-<li><strong>Codons:</strong> DNA triplets encoding amino acids; mutations changing codons may or may not change protein
-</ul>
+Biological sequences can be understood as languages with specific alphabets and structural rules.
+
+<p>DNA uses a 4-letter alphabet (A, T, G, C) representing the four nucleotide bases. DNA sequences can be millions of bases long, encoding the genetic information for entire organisms. The challenge lies in understanding long-range dependencies and regulatory relationships that span thousands of bases.</p>
+
+<p>RNA also uses a 4-letter alphabet (A, U, G, C), where uracil (U) replaces thymine (T). RNA molecules form complex secondary structures including stem-loops and hairpins through base pairing, which are critical for their biological function. These structural elements must be considered when modeling RNA sequences.</p>
+
+<p>Proteins use a 20-letter alphabet corresponding to the 20 standard amino acids. Protein sequences are typically hundreds of residues long and fold into intricate 3D structures that determine their function. The relationship between sequence and structure is complex, with distant amino acids in the sequence often interacting in the folded structure.</p>
+
+<p>Codons are DNA triplets that encode amino acids, with the genetic code mapping 64 possible triplets to 20 amino acids (plus stop signals). This redundancy means that mutations changing codons may or may not change the resulting protein, a distinction critical for predicting the functional impact of genetic variants.
 </div>
 
 <h3>ESM: Large-Scale Protein Language Models</h3>
 
 <p>ESM (Evolutionary Scale Modeling) is a transformer trained on 250 million protein sequences from UniRef100. The model learns protein language without explicit 3D structure supervision.</p>
 
-<p><strong>ESM-2:</strong> 15B parameters, trained with masked language modeling on protein sequences. Inference embeddings from ESM-2 enable:</p>
+<p><strong>ESM-2:</strong> This 15-billion parameter model is trained with masked language modeling on protein sequences, learning protein language patterns without explicit 3D structure supervision. The inference embeddings from ESM-2 enable multiple downstream applications that advance biological research and medicine.</p>
 
-<ul>
-<li><strong>Structure prediction:</strong> OmegaFold and ESMFold use ESM embeddings as input to structure prediction networks. Achieves structure prediction accuracy approaching experimental methods.
-<li><strong>Function prediction:</strong> Predict protein properties (thermostability, binding affinity, catalytic activity) from embeddings
-<li><strong>Variant effect prediction:</strong> Predict how mutations affect protein function. Critical for interpreting genetic variants in patient genomes.
-<li><strong>Protein design:</strong> Use ESM in reverse: given desired properties, design new proteins with those properties
-</ul>
+<p>Structure prediction uses ESM embeddings as input to structure prediction networks like OmegaFold and ESMFold. These methods achieve structure prediction accuracy approaching experimental methods like X-ray crystallography and cryo-EM, but at a fraction of the time and cost. This breakthrough enables structural analysis of millions of proteins that would be impractical to solve experimentally.</p>
+
+<p>Function prediction leverages ESM embeddings to predict protein properties including thermostability (how well proteins withstand heat), binding affinity (how strongly proteins interact with other molecules), and catalytic activity (how efficiently enzymes catalyze reactions). These predictions guide protein engineering and drug development.</p>
+
+<p>Variant effect prediction determines how mutations affect protein function, which is critical for interpreting genetic variants found in patient genomes. By comparing embeddings of wild-type and mutant proteins, the model predicts whether a variant is likely to be pathogenic or benign, informing clinical decision-making.</p>
+
+<p>Protein design uses ESM in reverse: given desired properties, the model can design new proteins with those properties. This capability enables engineering proteins for therapeutic applications, industrial enzymes, and novel biomaterials.</p>
+
+<h3>Protein Structure Prediction and Folding</h3>
+
+<p>The protein folding problem—predicting a protein's 3D structure from its amino acid sequence—has been called one of the grand challenges of computational biology. A protein's function is determined by its 3D structure, yet predicting structure from sequence remained largely unsolved for 50 years. Recent transformer-based approaches, particularly AlphaFold2, AlphaFold3, and ESMFold, have achieved breakthrough accuracy, revolutionizing structural biology and drug discovery.</p>
+
+<h4>The Evolution from MSA-Based to Language Model Approaches</h4>
+
+<p>Traditional protein structure prediction relied heavily on Multiple Sequence Alignments (MSAs)—collections of evolutionarily related protein sequences. The rationale was that evolution preserves structurally important residue pairs: if two amino acids are spatially close in the 3D structure, mutations in one position often correlate with compensatory mutations in the other across evolutionary time. By analyzing these co-evolutionary patterns in MSAs containing hundreds to thousands of related sequences, models could infer which residues likely interact in 3D space.</p>
+
+<p>AlphaFold2, released in 2020, leveraged this evolutionary information through a sophisticated architecture combining MSA processing with geometric reasoning. The model's Evoformer module processes MSAs to extract co-evolutionary signals, while the Structure module iteratively refines 3D coordinates using geometric constraints. This approach achieved unprecedented accuracy, with predictions often matching experimental structures within 1-2 Angstroms RMSD (Root Mean Square Deviation). However, AlphaFold2's dependence on MSAs created limitations: for orphan proteins without evolutionary relatives, or for newly designed proteins, MSA quality was poor, degrading prediction accuracy.</p>
+
+<p>The paradigm shifted with large-scale protein language models like ESM-2. By pre-training transformers on 250+ million protein sequences—orders of magnitude more than used for MSA-based methods—these models learn protein language patterns directly from sequence alone. The key insight: with sufficient scale, transformers internalize evolutionary constraints, structural preferences, and sequence-structure relationships without explicit MSA input. ESMFold, built on ESM-2 embeddings, achieves structure prediction accuracy approaching AlphaFold2 but operates on single sequences, eliminating MSA search entirely. This enables predictions in seconds rather than minutes and works for orphan proteins where MSA-based methods fail.</p>
+
+<p>The architectural comparison reveals complementary strengths. AlphaFold2's Evoformer explicitly models pairwise residue relationships through attention mechanisms operating on MSA representations, then feeds these representations to a Structure module that iteratively refines atomic coordinates using Invariant Point Attention (IPA). ESMFold takes a more direct path: ESM-2's transformer backbone generates sequence embeddings, which feed into a folding head that predicts inter-residue distances and angles, then reconstructs 3D coordinates. AlphaFold2 excels when high-quality MSAs are available, particularly for proteins with many evolutionary relatives. ESMFold excels for speed, orphan proteins, and designed sequences. In practice, researchers often use both approaches, comparing predictions to assess confidence.</p>
+
+<h4>AlphaFold3: From Static Structures to Biomolecular Interactions</h4>
+
+<p>AlphaFold3, released in 2024, represents a fundamental architectural shift from predicting static protein structures to modeling dynamic biomolecular complexes. While AlphaFold2 focused on single proteins or protein-protein complexes, AlphaFold3 predicts how proteins interact with ligands (drug molecules), nucleic acids (DNA/RNA), ions, post-translational modifications, and other biomolecules. This capability is transformative for drug discovery: rather than predicting protein structure then separately docking drug candidates, AlphaFold3 directly predicts protein-ligand complexes, revealing binding modes and conformational changes.</p>
+
+<p>The architecture employs a diffusion-based approach, a departure from AlphaFold2's iterative refinement. Diffusion models, successful in image generation (DALL-E, Stable Diffusion), gradually denoise random structures into coherent predictions. AlphaFold3 starts with random atomic coordinates and iteratively denoises them, guided by learned priors about biomolecular geometry, physics, and interactions. This approach naturally handles the flexibility and conformational diversity of biomolecular complexes—proteins often change shape upon ligand binding (induced fit), and diffusion models can explore this conformational space.</p>
+
+<p>The three-stage encoder provides rich input representations. The Template module searches structural databases for homologous structures, providing geometric priors when evolutionary relatives exist. The MSA module processes multiple sequence alignments to extract co-evolutionary signals, similar to AlphaFold2 but extended to handle multi-chain complexes with different molecule types. The Pairformer module performs deep feature extraction on pairwise residue relationships, building representations that capture both local interactions (hydrogen bonds, van der Waals contacts) and global topology (domain arrangements, quaternary structure).</p>
+
+<p>AlphaFold3's ability to predict biomolecular interactions, not just static structures, is critical for understanding drug binding. A drug's efficacy depends on how it binds to its target protein: binding pose (orientation and position), binding affinity (strength of interaction), and induced conformational changes. AlphaFold3 predicts all three, enabling computational screening of drug candidates before expensive synthesis and testing. Early results show AlphaFold3 predictions of protein-ligand complexes often match experimental crystal structures within 2-3 Angstroms, sufficient accuracy for drug discovery applications.</p>
+
+<h4>Key Technical Components for Implementation</h4>
+
+<p>Students pursuing implementation should understand several core technical components that enable accurate structure prediction.</p>
+
+<p>Invariant Point Attention (IPA) is AlphaFold2's key innovation for maintaining 3D geometric consistency. Standard attention mechanisms operate on abstract feature vectors without geometric constraints. IPA extends attention to 3D space: each residue has an associated local coordinate frame (position and orientation), and attention weights depend on both feature similarity and geometric proximity in 3D. Critically, IPA is equivariant to rotations and translations—if you rotate the entire protein, the model's predictions rotate identically. This geometric inductive bias dramatically improves learning efficiency and prediction accuracy. Implementation requires careful handling of SO(3) rotations using quaternions or rotation matrices, and efficient computation of geometric attention scores.</p>
+
+<p>Pairwise representations encode relationships between all residue pairs, capturing which residues are likely to be spatially close, form hydrogen bonds, or participate in secondary structures. These representations are updated through attention mechanisms that allow information to flow between pairs: if residues A-B and B-C are predicted to be close, the model can infer that A and C might also interact. The pairwise representation is a key bottleneck: for a protein with N residues, the representation is N×N, requiring O(N²) memory and computation. Efficient implementations use sparse attention, gradient checkpointing, and mixed-precision training to handle proteins with thousands of residues.</p>
+
+<p>Confidence metrics are essential for interpreting predictions. pLDDT (predicted Local Distance Difference Test) provides per-residue confidence scores from 0-100, indicating how accurately each residue's position is predicted. Regions with pLDDT > 90 are typically accurate to experimental resolution; pLDDT < 50 indicates disordered or poorly predicted regions. pTM (predicted Template Modeling score) provides global confidence for the entire structure. These metrics enable users to identify which parts of a prediction are reliable and which require experimental validation. Implementation involves training auxiliary heads that predict these confidence scores alongside structure, using experimental structures as ground truth.</p>
+
+<p>Single-sequence versus MSA mode presents a fundamental tradeoff. MSA mode (AlphaFold2, ESMFold with MSA) provides higher accuracy when high-quality MSAs are available, particularly for proteins with many evolutionary relatives. The model leverages co-evolutionary signals that directly indicate residue-residue contacts. However, MSA search is computationally expensive (minutes to hours) and fails for orphan proteins. Single-sequence mode (ESMFold, AlphaFold2 without MSA) is dramatically faster (seconds) and works for any sequence, but may be less accurate for proteins without clear evolutionary patterns. In practice, researchers use single-sequence mode for rapid screening and MSA mode for high-confidence predictions of critical targets.</p>
+
+<h4>Practical Considerations for Deployment</h4>
+
+<p>Computational requirements vary dramatically across methods. ESMFold requires a single GPU (16-32GB VRAM) and predicts structures in 5-30 seconds per protein, enabling high-throughput screening of millions of sequences. AlphaFold2 requires more resources: MSA search uses CPUs (8-16 cores, 30-60 minutes), then structure prediction uses GPUs (16-32GB VRAM, 5-10 minutes). AlphaFold3 is more expensive due to diffusion sampling, requiring 32-64GB VRAM and 10-30 minutes per complex. For large-scale applications (predicting structures for entire proteomes), ESMFold's speed advantage is decisive. For critical drug targets requiring maximum accuracy, AlphaFold2/3's higher accuracy justifies the cost.</p>
+
+<p>Handling multi-domain proteins, protein complexes, and conformational flexibility presents ongoing challenges. Multi-domain proteins contain multiple folded regions connected by flexible linkers. Predicting the relative orientation of domains is difficult because linkers allow conformational freedom. Current models often predict each domain accurately but misplace their relative positions. Protein complexes (multiple proteins binding together) are better handled by AlphaFold2/3, which can predict quaternary structure, but accuracy degrades for large complexes (>5 proteins). Conformational flexibility—proteins adopting multiple structures—is fundamentally challenging for single-structure prediction models. Proteins like kinases exist in active and inactive conformations; predicting both requires multiple predictions or specialized ensemble methods.</p>
+
+<p>Limitations remain despite breakthrough accuracy. Fold-switching proteins change their entire fold in response to environmental conditions, a phenomenon current models cannot predict because they output single static structures. Highly dynamic regions like intrinsically disordered regions (IDRs) lack stable structure and are inherently unpredictable—models correctly predict low confidence for these regions, but cannot predict their dynamic ensembles. Novel folds without training data analogs are challenging: if a protein adopts a fold never seen in the training data, models may hallucinate plausible but incorrect structures. Membrane proteins, which fold in lipid bilayers rather than aqueous solution, remain less accurate than soluble proteins due to limited training data.</p>
+
+<h4>Validation and Evaluation Metrics</h4>
+
+<p>Understanding evaluation metrics is essential for interpreting prediction quality and comparing methods.</p>
+
+<p>TM-score (Template Modeling score) measures global structure similarity, ranging from 0 (completely different) to 1 (identical). TM-score > 0.5 indicates the same fold; > 0.7 indicates high similarity suitable for homology modeling; > 0.9 indicates near-experimental accuracy. TM-score is length-normalized, enabling fair comparison of predictions for proteins of different sizes. Unlike RMSD, TM-score is less sensitive to local errors in flexible regions, providing a better measure of overall fold correctness.</p>
+
+<p>LDDT (Local Distance Difference Test) measures local structure accuracy by comparing predicted and experimental inter-atomic distances within local neighborhoods (typically 15 Angstrom radius). LDDT ranges from 0-100, with scores > 90 indicating excellent local accuracy, 70-90 good, 50-70 acceptable, and < 50 poor. LDDT is particularly useful for identifying which regions of a prediction are accurate versus poorly modeled. The predicted version (pLDDT) is what models output as confidence scores.</p>
+
+<p>RMSD (Root Mean Square Deviation) measures the average distance between corresponding atoms in predicted and experimental structures after optimal superposition. RMSD is reported in Angstroms: < 1Å is excellent (near-experimental accuracy), 1-2Å is very good, 2-4Å is acceptable for many applications, > 4Å indicates significant errors. However, RMSD is sensitive to outliers—a single misplaced domain can dominate RMSD even if the rest of the structure is accurate. RMSD is most useful for comparing predictions of the same protein or assessing local accuracy of specific regions.</p>
+
+<p>Interpreting confidence scores and knowing when experimental validation is required is critical for practical applications. High confidence (pLDDT > 90, pTM > 0.8) predictions are typically reliable for most applications including drug docking and protein engineering. Medium confidence (pLDDT 70-90, pTM 0.5-0.8) predictions capture the overall fold but may have local errors; use with caution for applications requiring atomic-level accuracy. Low confidence (pLDDT < 70, pTM < 0.5) predictions are unreliable and should not be used without experimental validation. Experimental validation through X-ray crystallography, cryo-EM, or NMR remains the gold standard for critical applications like drug development, even when computational predictions show high confidence.</p>
+
+<h3>AI-Driven Drug Discovery</h3>
+
+<p>Drug discovery is extraordinarily expensive and time-consuming: developing a new drug costs \$2.6 billion on average and takes 10-15 years, with 90\% of candidates failing in clinical trials. AI promises to accelerate discovery, reduce costs, and improve success rates by computationally screening billions of molecules, predicting binding affinity, and designing novel compounds with desired properties. Recent successes demonstrate AI's potential: several AI-discovered drugs have entered clinical trials, and computational screening has identified active compounds in weeks rather than years.</p>
+
+<h4>Virtual Screening and Molecular Docking Pipeline</h4>
+
+<p>Virtual screening computationally evaluates millions to billions of compounds to identify promising drug candidates before expensive synthesis and testing. The process begins with molecular docking, which predicts how small molecules (ligands) bind to target proteins. Docking algorithms sample the conformational space of ligand-protein complexes: the ligand can adopt different shapes (conformers), orient itself in different ways, and bind at different positions in the protein's binding pocket. For each sampled pose, a scoring function estimates binding affinity—how strongly the ligand binds.</p>
+
+<p>Scoring functions come in three main types, each with strengths and limitations. Physics-based scoring functions use molecular mechanics force fields to calculate interaction energies: van der Waals forces, electrostatics, hydrogen bonds, and desolvation penalties. These methods are grounded in physical principles but are computationally expensive and often inaccurate due to approximations in force fields and neglect of entropic effects. Empirical scoring functions are trained on experimental binding affinity data, learning weights for different interaction types (hydrogen bonds, hydrophobic contacts, etc.). These methods are fast and reasonably accurate for molecules similar to training data, but generalize poorly to novel chemotypes. Knowledge-based scoring functions use statistical potentials derived from known protein-ligand structures, capturing preferences for certain atom-atom distances and interaction geometries. These methods balance speed and accuracy but depend on the quality and diversity of structural databases.</p>
+
+<p>High-Throughput Virtual Screening (HTVS) applies docking to massive chemical libraries. ZINC contains 230 million purchasable compounds; PubChem contains 110 million compounds; proprietary pharmaceutical libraries contain millions more. Screening billions of compounds requires computational efficiency: simplified scoring functions, parallel processing on GPU clusters, and hierarchical screening (fast filters eliminate obvious non-binders, then expensive docking for promising candidates). A typical HTVS campaign might screen 100 million compounds in 1-2 weeks using 100-1000 GPUs, identifying 1,000-10,000 hits for further evaluation.</p>
+
+<p>Active learning integration dramatically improves screening efficiency. Rather than screening all compounds with the same expensive docking protocol, active learning trains target-specific neural networks that triage compounds. The process: (1) dock a small random sample (10,000-100,000 compounds) with expensive accurate docking, (2) train a neural network to predict docking scores from molecular descriptors, (3) use the neural network to rapidly screen millions of compounds, selecting top candidates for expensive docking, (4) retrain the network on new docking results, iterating until convergence. This approach reduces computational cost by 10-100x while maintaining hit discovery rates. The neural network learns target-specific binding preferences, becoming increasingly accurate as more data accumulates.</p>
+
+<h4>De Novo Drug Design with Transformers</h4>
+
+<p>Rather than screening existing compounds, de novo design generates novel molecular structures optimized for desired properties. Transformer-based generative models, trained on millions of known compounds, learn the grammar of chemistry—which atoms can bond, which structures are stable, which functional groups confer drug-like properties.</p>
+
+<p>The architecture typically uses transformer encoder-decoder models trained on vast compound datasets. ChEMBL contains 2 million bioactive compounds with measured activities; PubChem contains 110 million compounds; proprietary datasets add millions more. Training objectives include: (1) reconstruction—encode a molecule, decode it back, (2) property prediction—predict bioactivity, solubility, toxicity from structure, (3) conditional generation—generate molecules with specified properties. The model learns to represent molecules as sequences, understand structure-activity relationships, and generate novel compounds.</p>
+
+<p>SMILES representation (Simplified Molecular Input Line Entry System) encodes molecules as text strings, enabling transformer processing. For example, aspirin is "CC(=O)Oc1ccccc1C(=O)O". SMILES captures molecular structure including atoms, bonds, rings, and stereochemistry in a compact text format. Tokenization treats each character or atom as a token. The transformer processes SMILES sequences like natural language, learning chemical syntax (valid bond patterns) and semantics (structure-property relationships). Alternative representations include SELFIES (SELF-referencing Embedded Strings), which guarantees all generated strings are valid molecules, and graph neural networks, which directly operate on molecular graphs.</p>
+
+<p>The generative process uses sequence-to-sequence generation. Given a prompt (desired properties, scaffold constraints, or partial structure), the model generates SMILES strings character-by-character using autoregressive decoding. Sampling strategies control diversity: greedy decoding generates the most likely molecule, beam search explores multiple high-probability candidates, and stochastic sampling with temperature control balances novelty and validity. Post-processing filters invalid SMILES and checks chemical validity (valence rules, ring strain, reactive groups).</p>
+
+<p>Reinforcement learning integration optimizes generated molecules for multiple objectives. The generative model is the policy; generated molecules are actions; rewards are computed from predicted properties. Monte Carlo Tree Search (MCTS) explores the space of possible molecules, balancing exploitation (refining promising molecules) and exploration (trying novel structures). Policy gradient methods (REINFORCE, PPO) directly optimize the generative model to maximize expected reward. The reward function incorporates domain knowledge: high binding affinity (predicted by docking or ML models), drug-likeness (Lipinski's Rule of Five: molecular weight < 500, logP < 5, hydrogen bond donors < 5, acceptors < 10), synthesizability (penalizing complex or reactive structures), and ADMET properties (Absorption, Distribution, Metabolism, Excretion, Toxicity predicted by specialized models).</p>
+
+<h4>Multi-Objective Optimization and Practical Constraints</h4>
+
+<p>Drug discovery requires balancing multiple conflicting objectives. High binding affinity is necessary but insufficient—a molecule that binds tightly but is toxic, insoluble, or impossible to synthesize is useless. Multi-objective optimization navigates these tradeoffs.</p>
+
+<p>Binding affinity and selectivity must be balanced. A drug should bind strongly to its target (nanomolar affinity) but weakly to off-targets to avoid side effects. Selectivity is challenging because many proteins share similar binding pockets (kinases, proteases, GPCRs). Computational models predict selectivity by docking to panels of off-target proteins, penalizing molecules that bind promiscuously.</p>
+
+<p>Synthesizability is critical but often neglected. Generative models can design molecules that are chemically valid but practically impossible to synthesize due to complex stereochemistry, unstable intermediates, or expensive reagents. Synthesizability scores estimate synthetic accessibility: retrosynthesis models predict synthetic routes, penalizing molecules requiring many steps or rare reagents. Alternatively, models can be constrained to generate molecules from known building blocks and reactions.</p>
+
+<p>Pharmacokinetics (PK) and ADMET properties determine whether a molecule becomes a drug. Absorption: can the molecule cross membranes and reach the bloodstream? Distribution: does it reach the target tissue? Metabolism: is it rapidly degraded or does it persist? Excretion: is it eliminated safely? Toxicity: does it cause liver damage, cardiac issues, or other adverse effects? Specialized ML models predict these properties from structure, trained on experimental data. Reward functions penalize molecules with poor predicted PK/ADMET.</p>
+
+<p>Reward functions incorporate domain knowledge through carefully designed penalties and bonuses. Reactive groups (aldehydes, epoxides, Michael acceptors) are penalized because they cause off-target reactivity and toxicity. Known pharmacophores (structural motifs associated with activity) are rewarded. Structural alerts (PAINS—Pan-Assay Interference Compounds) are penalized because they cause false positives in assays. Lipinski's Rule of Five and related guidelines are enforced as soft constraints.</p>
+
+<p>Iterative refinement implements a generate-dock-evaluate-retrain loop. (1) Generate a batch of molecules using the current model. (2) Dock them to the target protein, predicting binding affinity. (3) Evaluate ADMET properties using predictive models. (4) Select top candidates based on multi-objective scoring. (5) Retrain the generative model on successful molecules, biasing future generation toward promising chemical space. (6) Repeat for multiple iterations, progressively improving molecule quality. This loop typically runs for 5-10 iterations, generating and evaluating 10,000-100,000 molecules per iteration.</p>
+
+<h4>Structure-Based vs. Ligand-Based Approaches</h4>
+
+<p>Drug discovery employs two complementary paradigms depending on available information.</p>
+
+<p>Structure-Based Drug Design (SBDD) uses the 3D structure of the target protein to guide molecule design. With AlphaFold3 predicting protein-ligand complexes, SBDD has become more accessible—even for targets without experimental structures. SBDD enables rational design: identify the binding pocket, analyze which interactions (hydrogen bonds, hydrophobic contacts, electrostatics) are favorable, and design molecules that maximize these interactions. Docking and molecular dynamics simulations evaluate designed molecules. SBDD is most powerful when high-quality structures are available and the binding site is well-defined.</p>
+
+<p>Ligand-Based Drug Design (LBDD) uses known active compounds to train predictive models when structure is unavailable or binding sites are unclear. QSAR (Quantitative Structure-Activity Relationship) models predict activity from molecular descriptors. Pharmacophore models identify essential structural features for activity. Similarity searching finds molecules similar to known actives. LBDD is faster and requires less structural information but provides less mechanistic insight and may miss novel chemotypes.</p>
+
+<p>Hybrid approaches combine both methods for improved accuracy. Use LBDD to identify promising scaffolds and chemical space, then refine with SBDD to optimize binding interactions. Use AlphaFold3 to predict structures for LBDD-identified hits, enabling structure-guided optimization. Ensemble models combine SBDD and LBDD predictions, improving robustness.</p>
+
+<h4>Integration with Protein Structure Prediction</h4>
+
+<p>AlphaFold3's ability to predict protein-ligand complexes directly transforms drug discovery workflows. Traditional approaches required experimental structures (X-ray crystallography, cryo-EM), limiting drug discovery to well-studied targets. AlphaFold3 enables structure-based design for any target, including orphan proteins, membrane proteins, and proteins from pathogens.</p>
+
+<p>Predicting binding sites and conformational changes upon ligand binding is critical for accurate docking. Proteins are flexible—binding pockets often change shape when ligands bind (induced fit). AlphaFold3 can predict these conformational changes by modeling protein-ligand complexes, revealing the bound conformation. This enables more accurate docking: rather than docking to the apo (unbound) structure, dock to the predicted holo (bound) structure.</p>
+
+<p>Virtual screening directly on predicted structures versus experimental structures presents a tradeoff. Experimental structures are more accurate but available for only ~200,000 proteins. Predicted structures are available for any sequence but may contain errors, particularly in binding pocket geometry. Validation studies show that high-confidence AlphaFold predictions (pLDDT > 90 in binding pocket) perform comparably to experimental structures for virtual screening, while low-confidence predictions degrade screening performance. Best practice: use experimental structures when available, predicted structures for novel targets, and validate predictions with experimental assays.</p>
+
+<h4>Complete Workflow: From Target to Clinical Candidate</h4>
+
+<p>A realistic drug discovery workflow integrates all these components:</p>
+
+<p><strong>Target Identification:</strong> Select a disease-relevant protein. Example: SARS-CoV-2 Mpro protease, essential for viral replication. Validate that inhibiting the target treats the disease (genetic evidence, animal models).</p>
+
+<p><strong>Structure Preparation:</strong> Obtain or predict the 3D structure. For Mpro, experimental structures are available (PDB: 6LU7). For novel targets, use AlphaFold3. Identify the binding pocket using cavity detection algorithms or known ligand binding sites. Prepare the structure for docking: add hydrogens, assign charges, define the docking box.</p>
+
+<p><strong>Library Preparation:</strong> Curate or generate a compound library. For virtual screening, use commercial libraries (ZINC, Enamine REAL with 30 billion compounds). For de novo design, train a generative model on relevant chemical space (protease inhibitors, antiviral compounds).</p>
+
+<p><strong>Virtual Screening:</strong> Dock millions to billions of compounds using HTVS platforms. Use active learning to accelerate screening: train neural networks to predict docking scores, screen billions of compounds with the neural network, dock top candidates with expensive accurate docking. Typical throughput: 1-10 million compounds per day on a GPU cluster.</p>
+
+<p><strong>Hit Selection:</strong> Select top-k candidates (typically 100-1,000 from millions screened). Criteria: predicted binding affinity (< 1 μM), drug-likeness (Lipinski's Rule of Five), predicted ADMET properties (non-toxic, orally bioavailable), synthesizability (< 10 synthetic steps), novelty (not previously tested).</p>
+
+<p><strong>De Novo Optimization:</strong> Use transformer models to generate analogs with improved properties. Start with hit compounds, generate variations using the generative model with RL optimization, evaluate with docking and ADMET prediction, iterate to improve potency, selectivity, and drug-likeness. Generate 1,000-10,000 analogs per hit, select top 10-100 for synthesis.</p>
+
+<p><strong>Experimental Validation:</strong> Synthesize top candidates (10-100 compounds). Test binding affinity in vitro using biochemical assays (IC50, Kd). Validate binding mode with crystallography or cryo-EM—compare experimental structure to computational prediction. Test cellular activity (does the compound inhibit viral replication in cells?). Measure ADMET properties experimentally (solubility, permeability, metabolic stability, toxicity).</p>
+
+<p><strong>Iteration:</strong> Refine based on experimental results. Compounds that bind but are inactive may have poor cell permeability—optimize for permeability. Compounds with off-target effects—optimize for selectivity. Compounds with poor PK—optimize for metabolic stability. Use experimental data to retrain models, improving predictions for subsequent rounds. Typical discovery campaigns require 3-5 iterations over 1-2 years to identify clinical candidates.</p>
+
+<h4>Success Metrics and Validation</h4>
+
+<p>Evaluating AI-driven drug discovery requires domain-specific metrics.</p>
+
+<p>Enrichment factor measures how well screening prioritizes true binders versus random selection. If 1\% of a library contains active compounds, and the top 1\% of screened compounds contains 10\% actives, the enrichment factor is 10x. Good screening achieves 10-100x enrichment, dramatically reducing experimental testing burden.</p>
+
+<p>Hit rate is the percentage of tested compounds showing activity. Random screening typically yields 0.01-0.1\% hit rates. AI-guided screening achieves 1-10\% hit rates, a 10-100x improvement. Higher hit rates reduce synthesis and testing costs.</p>
+
+<p>Crystallographic validation compares predicted binding poses to experimental structures. RMSD < 2Å between predicted and experimental poses indicates accurate docking. Validation studies show that modern docking achieves < 2Å RMSD for 70-80\% of cases when binding pockets are well-defined.</p>
+
+<p>ROC-AUC for classifier-based screening approaches measures the ability to distinguish actives from inactives. AUC > 0.8 indicates good discrimination; > 0.9 is excellent. Classifiers trained on target-specific data typically achieve AUC 0.7-0.9, substantially better than random (AUC = 0.5).</p>
+
+<h4>Challenges and Limitations</h4>
+
+<p>Despite progress, significant challenges remain.</p>
+
+<p>Scoring function accuracy limits docking reliability. Binding affinity prediction errors of ±2 kcal/mol are common, corresponding to 30-fold errors in binding affinity. This limits the ability to distinguish strong binders (nanomolar) from weak binders (micromolar). Improved scoring functions using deep learning show promise but require extensive training data.</p>
+
+<p>Protein flexibility and induced fit are poorly captured by rigid docking. Proteins change conformation upon ligand binding, but most docking treats proteins as rigid. Flexible docking (allowing protein side chains to move) is more accurate but computationally expensive. Molecular dynamics simulations capture full flexibility but are too slow for large-scale screening.</p>
+
+<p>False positives are inevitable—computational predictions require experimental validation. Even with 90\% precision, screening 1 million compounds yields 100,000 false positives. Experimental validation is the bottleneck: synthesizing and testing compounds costs \$1,000-10,000 per compound and takes weeks. Improving precision from 90\% to 99\% would reduce false positives 10-fold, dramatically accelerating discovery.</p>
+
+<p>Chemical space exploration balances exploitation versus exploration. Exploiting known chemotypes (scaffolds similar to known drugs) is safer but limits novelty. Exploring novel scaffolds may discover breakthrough drugs but risks synthesizing inactive compounds. Generative models tend to exploit, generating molecules similar to training data. Encouraging exploration requires careful reward design and diversity penalties.</p>
+
+<p>Synthesizability remains a major challenge. Generative models can design molecules that are chemically valid but practically impossible to synthesize. Retrosynthesis models predict synthetic routes but are imperfect. Collaborating with medicinal chemists early in the design process ensures generated molecules are synthetically accessible.</p>
 
 <h3>Case Study: Variant Effect Prediction</h3>
 
 <p>Precision medicine aims to predict drug response and disease risk from individual genomes. A key challenge: interpreting genetic variants (mutations).</p>
 
-<p>A novel variant found in patient DNA has unknown effect:
-<ul>
-<li>Does it cause disease?
-<li>Will the drug work for this patient?
-<li>Should we warn the family?
-</ul>
+<p>A novel variant found in patient DNA raises critical clinical questions that must be answered to guide treatment and counseling.</p>
+
+<p>Does the variant cause disease? Determining pathogenicity is essential for diagnosis and treatment planning. A pathogenic variant might explain the patient's symptoms and guide therapeutic interventions, while a benign variant can be ruled out as a cause.</p>
+
+<p>Will the drug work for this patient? Pharmacogenomic variants affect drug metabolism and response. A variant in a drug-metabolizing enzyme might require dose adjustment or alternative medication selection to ensure efficacy and avoid toxicity.</p>
+
+<p>Should we warn the family? If a variant is pathogenic and heritable, family members may be at risk and should be offered genetic testing and counseling. This information enables preventive care and early intervention for at-risk relatives.</p>
 
 <p>ESM-based models predict variant effects:
 <ol>
@@ -323,11 +498,11 @@ $$\begin{align}
 <li>Measure embedding similarity: high similarity suggests benign; low suggests deleterious
 </ol>
 
-<p>Validation on ClinVar (gold-standard variant database):
-<ul>
-<li>Pathogenic vs. benign classification: 92\% accuracy
-<li>Ranking variants by effect magnitude: Top-ranked variants often proven pathogenic in follow-up studies
-</ul>
+<p>Validation on ClinVar, the gold-standard variant database, demonstrates the model's clinical utility.</p>
+
+<p>Pathogenic versus benign classification achieves 92\% accuracy, correctly distinguishing disease-causing variants from harmless genetic variations in the vast majority of cases. This high accuracy enables confident clinical interpretation of novel variants.</p>
+
+<p>Ranking variants by effect magnitude provides additional value beyond binary classification. The model's top-ranked variants are often proven pathogenic in follow-up studies, validating that the model's confidence scores correlate with true biological impact. This ranking capability helps prioritize which variants require experimental validation or immediate clinical action.</p>
 
 <h2>Regulatory and Clinical Validation</h2>
 
@@ -349,24 +524,27 @@ $$\begin{align}
 
 <p>Regulations require explainability: ``Why did the model recommend this treatment?''</p>
 
-<p>Solutions:
-<ul>
-<li><strong>Attention analysis:</strong> Show which parts of the patient record influenced the prediction
-<li><strong>Feature importance:</strong> Rank features (lab values, notes, medications) by impact
-<li><strong>Similar cases:</strong> Retrieve similar past patients and their outcomes to support reasoning
-<li><strong>Audit logs:</strong> Complete record of all predictions and decisions for review
-</ul>
+<p>Solutions: Several complementary approaches enable explainability and support regulatory requirements.</p>
+
+<p>Attention analysis shows which parts of the patient record influenced the prediction by visualizing attention weights. For example, the model might highlight specific sentences in clinical notes or particular time periods in the patient timeline that drove the risk assessment. This transparency helps clinicians understand and validate the model's reasoning.</p>
+
+<p>Feature importance ranks features such as lab values, clinical notes, and medications by their impact on the prediction. Techniques like SHAP (SHapley Additive exPlanations) quantify each feature's contribution, enabling clinicians to see that, for instance, elevated creatinine and mentions of "shortness of breath" were the primary drivers of a heart failure prediction.</p>
+
+<p>Similar cases retrieval finds past patients with similar characteristics and shows their outcomes to support the current prediction. If the model predicts high readmission risk, it can present 5-10 similar historical patients who also readmitted, providing evidence-based justification for the prediction and helping clinicians understand the reasoning by analogy.</p>
+
+<p>Audit logs maintain a complete record of all predictions and decisions for regulatory review and quality assurance. These logs enable retrospective analysis of model performance, investigation of adverse events, and demonstration of compliance with regulatory requirements.</p>
 
 <h3>Fairness and Bias</h3>
 
 <p>AI systems trained on historical data inherit biases. Example: Sepsis models historically trained on majority-white populations may perform worse on minorities.</p>
 
-<p>Mitigation:
-<ul>
-<li><strong>Stratified evaluation:</strong> Report performance separately for each demographic group
-<li><strong>Bias-aware training:</strong> Explicitly optimize for fairness across groups
-<li><strong>Monitoring in deployment:</strong> Track performance over time and by group; retrain if disparities emerge
-</ul>
+<p>Mitigation: Several strategies address bias and ensure equitable performance across patient populations.</p>
+
+<p>Stratified evaluation reports performance separately for each demographic group, making disparities visible. Rather than reporting a single overall accuracy, the evaluation breaks down performance by race, ethnicity, age, gender, and socioeconomic status. This transparency ensures that the model doesn't achieve high average performance while failing for specific subgroups.</p>
+
+<p>Bias-aware training explicitly optimizes for fairness across groups by incorporating fairness constraints or objectives into the training process. Techniques include reweighting training examples from underrepresented groups, adding fairness penalty terms to the loss function, or using adversarial debiasing to remove demographic information from learned representations while maintaining predictive performance.</p>
+
+<p>Monitoring in deployment tracks performance over time and by demographic group, enabling detection of emerging disparities. If the model's performance degrades for a particular group, the system triggers alerts and initiates retraining with updated data. This continuous monitoring ensures that the model remains fair as patient populations and clinical practices evolve.</p>
 
 <h2>Case Study: Clinical Risk Prediction at Scale</h2>
 
@@ -556,44 +734,27 @@ $$\begin{align}
 
 <p><strong>Target:</strong> Predict 30-day readmission risk for patients with chronic conditions</p>
 
-<p><strong>Data:</strong>
-<ul>
-<li>100K patients, 500K admissions (historical)
-<li>EHR features: 50K unique clinical notes, 200 structured variables
-<li>Outcome: Readmission within 30 days (15\% positive rate; class imbalance)
-</ul>
+<p><strong>Data:</strong> The system uses comprehensive historical data to train the prediction model.</p>
 
-<p><strong>Model Architecture:</strong>
-<ul>
-<li>Clinical notes encoder: ClinicalBERT
-<li>Structured data: Embedding layer for categorical variables, concatenation for numeric
-<li>Fusion: Combine note embeddings + structured features via attention
-<li>Output: Logistic regression on 50-dim combined representation
-</ul>
+<p>The dataset includes 100,000 patients with 500,000 admissions from historical records, providing substantial training data. EHR features comprise 50,000 unique clinical notes capturing narrative clinical information and 200 structured variables including lab values, vital signs, and medications. The outcome is readmission within 30 days, which occurs at a 15\% positive rate, creating a class imbalance challenge that must be addressed during training.</p>
+
+<p><strong>Model Architecture:</strong> The system uses a multi-modal architecture that combines text and structured data.</p>
+
+<p>The clinical notes encoder uses ClinicalBERT to process narrative documentation, capturing clinical reasoning and observations that aren't available in structured data. Structured data processing uses an embedding layer for categorical variables (like diagnosis codes and medication names) and direct concatenation for numeric values (lab results, vital signs). Fusion combines note embeddings and structured features via attention mechanisms, allowing the model to learn which combinations of text and structured signals are most predictive. The output layer applies logistic regression on a 50-dimensional combined representation to produce the final readmission risk score.</p>
 
 <h3>Results</h3>
 
-<p><strong>Offline validation (test set):</strong>
-<ul>
-<li>AUROC: 0.84 (strong predictive signal)
-<li>Precision@20\% recall: 25\% (of flagged high-risk patients, 25\% actually readmit)
-<li>Precision@50\% recall: 18\%
-</ul>
+<p><strong>Offline validation (test set):</strong> Initial validation on held-out historical data demonstrates strong predictive performance.</p>
 
-<p><strong>Prospective study (100 patients):</strong>
-<ul>
-<li>Split: 50 patients assigned to care coordinator follow-up (AI identified high-risk); 50 standard care
-<li>Result: 12\% readmission in intervention group vs. 18\% control (not statistically significant; small sample)
-<li>Learnings: Patients identified by model did benefit from intervention, but sample size insufficient
-</ul>
+<p>AUROC of 0.84 indicates strong predictive signal, with the model effectively distinguishing high-risk from low-risk patients. Precision at 20\% recall reaches 25\%, meaning that of flagged high-risk patients, 25\% actually readmit—five times the base rate. Precision at 50\% recall is 18\%, showing that even when capturing half of all readmissions, the model maintains precision well above the baseline.</p>
 
-<p><strong>Deployment:</strong>
-<ul>
-<li>Daily: Score all admitted patients; flag top 10\% highest risk
-<li>Care coordinator reviews flagged patients, provides targeted education/follow-up
-<li>Estimated impact: 5--10\% reduction in readmissions
-<li>Cost: \$200K development + \$50K/year operations
-</ul>
+<p><strong>Prospective study (100 patients):</strong> A small prospective trial tests the intervention in real clinical practice.</p>
+
+<p>The study splits patients into two groups: 50 patients assigned to care coordinator follow-up based on AI-identified high risk, and 50 receiving standard care. Results show 12\% readmission in the intervention group versus 18\% in control, a promising trend but not statistically significant due to the small sample size. The key learning is that patients identified by the model did benefit from intervention, but a larger sample is needed to demonstrate statistical significance.</p>
+
+<p><strong>Deployment:</strong> The system operates daily to support preventive care.</p>
+
+<p>Daily scoring evaluates all admitted patients and flags the top 10\% at highest risk for readmission. Care coordinators review flagged patients and provide targeted education and follow-up interventions tailored to each patient's specific risk factors. Estimated impact projects a 5--10\% reduction in readmissions, which translates to significant cost savings and improved patient outcomes. The cost structure includes \$200,000 for initial development and \$50,000 per year for ongoing operations, making the system economically viable given the high cost of readmissions.</p>
 
 <h2>Exercises</h2>
 
@@ -603,7 +764,16 @@ $$\begin{align}
 <div class="exercise" id="exercise-2"><strong>Exercise 2:</strong> Propose a radiology report generation system. Given a chest X-ray image, generate a clinical report describing findings. What evaluation metrics would you use? How would you ensure quality and safety?
 </div>
 
-<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Build a protein folding predictor using AlphaFold or ESMFold. Compare to experimental structure (if available). For variant effect prediction, validate on ClinVar data: can your method distinguish pathogenic from benign variants?
+<div class="exercise" id="exercise-3"><strong>Exercise 3:</strong> Build a protein structure prediction system using ESMFold or AlphaFold2. Predict structures for 10 proteins with known experimental structures from the PDB. Evaluate using TM-score, LDDT, and RMSD. Compare single-sequence mode (ESMFold) versus MSA mode (AlphaFold2) performance. For which proteins does MSA provide significant improvement? Analyze confidence scores (pLDDT) and identify low-confidence regions—do they correspond to disordered regions or prediction errors?
+</div>
+
+<div class="exercise" id="exercise-4"><strong>Exercise 4:</strong> Implement a virtual screening pipeline for drug discovery. Select a target protein (e.g., SARS-CoV-2 Mpro protease, PDB: 6LU7). Screen a library of 10,000 compounds from ZINC using molecular docking (AutoDock Vina or similar). Rank compounds by predicted binding affinity. Select the top 100 hits and evaluate their drug-likeness using Lipinski's Rule of Five. Compare your top hits to known inhibitors—did you rediscover any? Calculate enrichment factor if known actives are available in your library.
+</div>
+
+<div class="exercise" id="exercise-5"><strong>Exercise 5:</strong> Build a de novo drug design system using a transformer-based generative model. Train on ChEMBL compounds (or use a pre-trained model like MolGPT). Generate 1,000 novel molecules conditioned on desired properties (e.g., molecular weight 300-500, logP 2-4). Evaluate generated molecules for: (1) validity (percentage of valid SMILES), (2) uniqueness (percentage of unique molecules), (3) novelty (percentage not in training data), (4) drug-likeness (percentage passing Lipinski's Rule of Five). Implement a simple reinforcement learning loop to optimize for a specific property (e.g., predicted solubility).
+</div>
+
+<div class="exercise" id="exercise-6"><strong>Exercise 6:</strong> For variant effect prediction, build a model using ESM-2 embeddings. Download ClinVar variants (pathogenic and benign). For each variant: (1) extract the affected protein sequence, (2) compute wild-type embedding using ESM-2, (3) compute variant embedding, (4) measure embedding distance or train a classifier on embedding differences. Evaluate classification accuracy, precision, recall, and ROC-AUC. Compare to existing tools like PolyPhen-2 or SIFT. Analyze failure cases—which types of variants are hardest to classify?
 </div>
 
 <h2>Solutions</h2>
@@ -680,7 +850,113 @@ Use RNN or transformer with time-aware features:
 </ul>
 </div>
 
-<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Variant Effect Prediction</strong>
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Protein Structure Prediction</strong>
+
+<p>\itshape Implementation approach:
+<ol>
+<li>Select 10 diverse proteins from PDB with high-resolution structures (< 2Å resolution): mix of small proteins (< 100 residues), medium (100-300), and large (> 300); include alpha-helical, beta-sheet, and mixed folds
+<li>Run ESMFold (single-sequence mode): Use ESM-2 embeddings + folding head; prediction time: 5-30 seconds per protein
+<li>Run AlphaFold2 (MSA mode): Generate MSAs using HHblits/JackHMMER; prediction time: 5-15 minutes per protein
+<li>Evaluate predictions: Align predicted structures to experimental structures using TM-align; calculate TM-score, LDDT, and RMSD
+</ol>
+
+<p>\itshape Results (typical):
+<ul>
+<li>ESMFold: Average TM-score 0.85, LDDT 82, RMSD 2.3Å (very good overall)
+<li>AlphaFold2: Average TM-score 0.92, LDDT 89, RMSD 1.5Å (excellent, better than ESMFold)
+<li>MSA benefit: AlphaFold2 outperforms ESMFold by 5-10\% on proteins with rich MSAs (> 100 sequences)
+<li>Orphan proteins: ESMFold and AlphaFold2 perform similarly when MSA depth < 30 sequences
+</ul>
+
+<p>\itshape Confidence analysis:
+<ul>
+<li>High pLDDT regions (> 90): Typically match experimental structures within 1Å; correspond to well-ordered secondary structures
+<li>Low pLDDT regions (< 50): Often correspond to disordered regions in experimental structures (flexible loops, termini) or prediction errors in novel folds
+<li>Validation: Compare low-confidence regions to crystallographic B-factors (high B-factors indicate disorder)—strong correlation confirms confidence scores are meaningful
+</ul>
+
+<p>\itshape Practical insights:
+<ul>
+<li>Use ESMFold for rapid screening (proteome-scale predictions); use AlphaFold2 for high-accuracy predictions of critical targets
+<li>Trust high-confidence predictions (pLDDT > 90) for most applications; validate low-confidence predictions experimentally
+<li>Multi-domain proteins: Domains are often predicted accurately, but relative orientations may be incorrect—check inter-domain confidence scores
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 4: Virtual Screening Pipeline</strong>
+
+<p>\itshape Setup:
+<ol>
+<li>Target: SARS-CoV-2 Mpro protease (PDB: 6LU7); binding pocket well-defined; known inhibitors available for validation
+<li>Library: Download 10,000 drug-like compounds from ZINC15 (MW 300-500, logP 1-4, rotatable bonds < 10)
+<li>Docking: Use AutoDock Vina with binding box centered on catalytic site (His41, Cys145); exhaustiveness = 8; generate top 3 poses per compound
+<li>Scoring: Rank compounds by best (most negative) binding affinity score
+</ol>
+
+<p>\itshape Results:
+<ul>
+<li>Docking scores: Range from -4 to -10 kcal/mol; top 100 hits have scores < -7 kcal/mol (predicted low micromolar affinity)
+<li>Drug-likeness: 87\% of top 100 hits pass Lipinski's Rule of Five (good drug-like properties)
+<li>Known inhibitors: If library includes known Mpro inhibitors (e.g., nirmatrelvir), check if they rank in top 1\%—successful rediscovery validates screening
+<li>Enrichment factor: If 10 known actives in 10,000 compounds (0.1\% prevalence), and 5 appear in top 100 (5\% hit rate), enrichment = 50x (excellent)
+</ul>
+
+<p>\itshape Analysis:
+<ul>
+<li>Binding modes: Visualize top hits in PyMOL; check for key interactions (hydrogen bonds to His41, Cys145, Glu166; hydrophobic contacts in S1/S2 pockets)
+<li>Diversity: Cluster top hits by chemical similarity; select diverse representatives for experimental testing
+<li>False positives: Docking scores are noisy (±2 kcal/mol error); expect 50-70\% of top hits to be inactive experimentally—still 10-100x better than random
+</ul>
+
+<p>\itshape Next steps:
+<ul>
+<li>Synthesize or purchase top 10-20 hits; test binding affinity experimentally (fluorescence assay, SPR, ITC)
+<li>Validate binding mode with crystallography; compare to docking prediction
+<li>Optimize hits with medicinal chemistry: improve potency, selectivity, ADMET properties
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 5: De Novo Drug Design</strong>
+
+<p>\itshape Model setup:
+<ol>
+<li>Use pre-trained MolGPT or train transformer on ChEMBL (2M compounds): tokenize SMILES, train with causal language modeling objective
+<li>Architecture: 12-layer transformer, 768 hidden dim, 12 attention heads; trained for 100K steps on 8 GPUs
+<li>Generation: Sample from model with temperature 0.8 (balance novelty and validity); generate 1,000 molecules
+</ol>
+
+<p>\itshape Evaluation metrics:
+<ul>
+<li>Validity: 94\% of generated SMILES are chemically valid (can be parsed by RDKit)—good, but 6\% invalid
+<li>Uniqueness: 87\% of valid molecules are unique (not duplicates)—indicates diverse generation
+<li>Novelty: 76\% of molecules not in ChEMBL training data—model generates novel structures, not just memorization
+<li>Drug-likeness: 68\% pass Lipinski's Rule of Five—reasonable, but could be improved with conditional generation
+</ul>
+
+<p>\itshape Reinforcement learning for property optimization:
+<ol>
+<li>Objective: Maximize predicted aqueous solubility (logS > -3)
+<li>Reward function: R = logS\_pred (use pre-trained solubility predictor)
+<li>Training: REINFORCE algorithm; sample molecules, compute rewards, update policy to increase probability of high-reward molecules
+<li>Results after 10 RL iterations: 85\% of generated molecules have logS > -3 (vs. 45\% before RL)—successful optimization
+</ol>
+
+<p>\itshape Challenges observed:
+<ul>
+<li>Mode collapse: RL tends to generate similar molecules (exploit high-reward regions); add diversity penalty to encourage exploration
+<li>Validity degradation: RL can reduce validity to 80\% as model generates unusual structures; add validity penalty to reward
+<li>Multi-objective optimization: Optimizing solubility may hurt other properties (potency, permeability); need multi-objective reward function
+</ul>
+
+<p>\itshape Practical deployment:
+<ul>
+<li>Generate 10,000 molecules with RL-optimized model; filter for validity, drug-likeness, synthesizability
+<li>Dock to target protein; select top 100 by binding affinity
+<li>Cluster by chemical similarity; select 10-20 diverse representatives for synthesis and testing
+</ul>
+</div>
+
+<div class="solution"><strong>Solution:</strong> <strong>Exercise 6: Variant Effect Prediction with ESM-2</strong>
 
 <p>\itshape Method using ESMFold/AlphaFold:
 <ol>
