@@ -13,11 +13,12 @@
 | Category | Status | Lines Removed | Files Changed |
 |----------|--------|--------------|---------------|
 | **B: Within-Chapter Verbosity Cuts** | **DONE** | **~1,838** | **15 files** |
-| A: Structural Consolidations | Not started | — | — |
+| **A1: Consolidate Drift Sections** | **DONE** | **~619** | **8 files** |
+| A2–A7: Other Structural Consolidations | Not started | — | — |
 | C: Duplicate Section Removals | Not started | — | — |
 | D: Minor Cleanups | **DONE** (D1, D2 included in B) | included above | — |
 
-**Total lines before Category B:** 33,904 | **After:** 32,119 | **Net reduction:** 1,785 lines (~35–40 pages)
+**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **Net reduction:** ~2,404 lines (~48–52 pages)
 
 ---
 
@@ -39,7 +40,7 @@ These are high-impact changes that address content repeated across many chapters
 
 ### A1. Consolidate "Continuous Learning and Model Drift" into Chapter 24
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Chapters 24–33 (10 chapters) each contain a near-identical "Continuous Learning and Model Drift" section following the same template: drift types → detecting drift → strategies for continuous learning → practical implementation → cross-domain patterns. The template alone accounts for ~1,000–1,200 lines of highly repetitive content.
 
@@ -61,6 +62,8 @@ These are high-impact changes that address content repeated across many chapters
 **Proposal:** Keep Chapter 24 as the canonical home for the generic drift framework (drift types, detection strategies, continuous learning strategies, MLOps infrastructure). In each domain chapter (25–33), replace the full drift section with a short (10–15 line) domain-specific addendum that covers ONLY what is unique to that domain (e.g., "alpha decay" in finance, "case law evolution" in legal, "API deprecation" in code). Remove the generic framework, business impact template, and cross-domain patterns subsections from each domain chapter. In Ch34, replace the 97-line synthesis prose with a single comparison table.
 
 **Estimated savings:** ~900–1,000 lines → **~20–25 pages**
+
+**Actual savings:** 619 lines removed across 8 files (Ch25, Ch26, Ch27, Ch29, Ch30, Ch32, Ch33, Ch34). Ch31 was already condensed in B15. Ch24 retained as canonical framework. Each domain chapter now keeps only its unique drift patterns + a keypoint referencing Ch24 + domain-specific strategies as bullet points. Ch34 synthesis replaced with comparison table + 3 universal principles.
 
 ---
 
