@@ -14,11 +14,12 @@
 |----------|--------|--------------|---------------|
 | **B: Within-Chapter Verbosity Cuts** | **DONE** | **~1,838** | **15 files** |
 | **A1: Consolidate Drift Sections** | **DONE** | **~619** | **8 files** |
-| A2–A7: Other Structural Consolidations | Not started | — | — |
+| **A2+A3+A4: Exclude Solutions from PDF** | **DONE** | **~10,809** (from PDF) | **35 files** |
+| A5–A7: Other Structural Consolidations | Not started | — | — |
 | C: Duplicate Section Removals | Not started | — | — |
 | D: Minor Cleanups | **DONE** (D1, D2 included in B) | included above | — |
 
-**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **Net reduction:** ~2,404 lines (~48–52 pages)
+**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **After A2 (PDF):** ~20,691 | **Net PDF reduction:** ~13,213 lines (~264 pages)
 
 ---
 
@@ -69,7 +70,7 @@ These are high-impact changes that address content repeated across many chapters
 
 ### A2. Cut Exercise Solutions by 50–60% Across Chapters 10–20
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED (global solution exclusion — see note below)
 
 **Problem:** Across chapters 10–20, exercise solutions consume 7,834 lines — **49% of all content** in those 11 chapters. Some chapters are worse than others:
 
@@ -91,11 +92,13 @@ Solutions currently include complete runnable Python implementations with benchm
 
 **Estimated savings:** ~4,000–4,500 lines → **~80–100 pages**
 
+**Actual implementation:** Rather than shortening solutions, all `\begin{solution}...\end{solution}` blocks are excluded from PDF compilation via `\excludecomment{solution}` (LaTeX `comment` package) in `main_pro.tex`. Solutions remain in the `.tex` source files and are still converted to HTML for the companion website. Each chapter's `\section{Solutions}` now includes a reference directing PDF readers to `https://deeplearning.hofkensvermeulen.be`. This approach was applied globally to all 34 chapters, also accomplishing A3 and A4. Total: 10,809 lines excluded from PDF across 34 chapters. To re-include solutions, comment out `\excludecomment{solution}` in `main_pro.tex`.
+
 ---
 
 ### A3. Cut Exercise Solutions by 40–50% Across Chapters 1–9
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED (included in A2 global solution exclusion)
 
 **Problem:** Chapters 1–9 also have substantial solution sections:
 
@@ -114,7 +117,7 @@ Exercises 5–8 in Ch1 are increasingly specialized hardware/FLOP calculations t
 
 ### A4. Cut Exercise Solutions by 40–50% Across Chapters 21–34
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED (included in A2 global solution exclusion)
 
 **Problem:** Ch28 Knowledge Graphs has 266 lines of solutions (20% of chapter), Ch30 Healthcare has 220 lines (25%), and Ch21 PyTorch Implementation has 200 lines (10%).
 
