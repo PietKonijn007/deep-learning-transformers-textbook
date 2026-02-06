@@ -8,10 +8,23 @@
 
 ---
 
+## Implementation Progress
+
+| Category | Status | Lines Removed | Files Changed |
+|----------|--------|--------------|---------------|
+| **B: Within-Chapter Verbosity Cuts** | **DONE** | **~1,838** | **15 files** |
+| A: Structural Consolidations | Not started | — | — |
+| C: Duplicate Section Removals | Not started | — | — |
+| D: Minor Cleanups | **DONE** (D1, D2 included in B) | included above | — |
+
+**Total lines before Category B:** 33,904 | **After:** 32,119 | **Net reduction:** 1,785 lines (~35–40 pages)
+
+---
+
 ## Table of Contents
 
 - [Category A: Structural / Cross-Chapter Consolidations](#category-a-structural--cross-chapter-consolidations) (~120–150 pages)
-- [Category B: Within-Chapter Verbosity Cuts](#category-b-within-chapter-verbosity-cuts) (~60–75 pages)
+- [Category B: Within-Chapter Verbosity Cuts](#category-b-within-chapter-verbosity-cuts) (~60–75 pages) **[IMPLEMENTED]**
 - [Category C: Duplicate Section Removals](#category-c-duplicate-section-removals) (~30–40 pages)
 - [Category D: Minor Cleanups](#category-d-minor-cleanups) (~10–15 pages)
 - [Summary Table](#summary-table)
@@ -192,7 +205,7 @@ These target specific sections that are excessively wordy within a single chapte
 
 ### B1. Chapter 11: Condense Training Cost Estimation and Practical Recipe
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch11 (2,366 lines — the longest chapter) has three verbose sections:
 - "Training Cost Estimation" (lines 1087–1251, ~165 lines): Extremely detailed GPT-3 cost analysis with hardware costs, energy costs, cloud vs on-premise comparison. This same analysis appears in Ch10, Ch12, Ch14, and Ch20.
@@ -207,7 +220,7 @@ These target specific sections that are excessively wordy within a single chapte
 
 ### B2. Chapter 2: Condense Adam Optimizer and Hardware Sections
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch2 (1,441 lines) devotes ~145 lines to Adam across 4 subsections ("Intuition Behind Adam", "Understanding Each Component", "Why Adam Works Better", "Practical Considerations"). The "Why Adam Works Better" list rehashes what the math already showed. "Practical Considerations" is a hyperparameter list that could be a single table.
 
@@ -221,7 +234,7 @@ Additionally, "Hardware Considerations for Gradient Computation" (lines 928–10
 
 ### B3. Chapter 3: Remove Hardware Tangent from Probability Chapter
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch3 (521 lines) pivots from probability theory into GPU engineering midway through. "Cross-Entropy Loss: Computational and Memory Analysis" (lines 165–201) computes logits memory for BERT/GPT-2/GPT-3. "Hardware Implications of Softmax and Large Vocabularies" (lines 257–306) covers GPU bandwidth, vocabulary impact on training speed, and optimization techniques (sampled softmax, adaptive softmax, vocabulary pruning). Almost none of this is probability theory.
 
@@ -233,7 +246,7 @@ Additionally, "Hardware Considerations for Gradient Computation" (lines 928–10
 
 ### B4. Chapter 4: Trim Hardware Analysis from Feed-Forward Networks
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch4 (539 lines) buries its core MLP/activation/initialization content under hardware analysis:
 - "Memory and Computation Analysis" (lines 140–198): GPU utilization at different batch sizes, CUDA core utilization percentages
@@ -248,7 +261,7 @@ Additionally, "Hardware Considerations for Gradient Computation" (lines 928–10
 
 ### B5. Chapter 5: Move ViT Comparison Out of CNN Fundamentals
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch5 (492 lines) contains a 47-line "Parameter Efficiency: CNNs vs Transformers" section (lines 189–236) comparing CNNs to Vision Transformers, including accuracy numbers, parameter breakdowns, and hybrid architectures (CvT, Swin). This forward-references ViT (Ch17) which hasn't been introduced yet.
 
@@ -262,7 +275,7 @@ Additionally, "Hardware Optimization for Convolutions" (lines 238–293, 55 line
 
 ### B6. Chapter 7: Remove Duplicated Attention Scoring Comparison and RNN Rehash
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch7 (868 lines) has two redundant sections:
 - "Attention Score Computation Methods" (lines 444–516): Re-describes all four attention mechanisms (Bahdanau, dot-product, scaled dot-product, general) that were already introduced earlier in the same chapter. The Bahdanau description repeats lines 80–104 nearly verbatim.
@@ -276,7 +289,7 @@ Additionally, "Hardware Optimization for Convolutions" (lines 238–293, 55 line
 
 ### B7. Chapter 15: Remove Self-Duplicated T5 Model Sizes
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** In Ch15, lines 224–232 present five T5 model sizes (Small, Base, Large, 3B, 11B) as verbose prose paragraphs. Then lines 234–261 present the **exact same data** as a bulleted list. The information is literally duplicated within the same section.
 
@@ -288,7 +301,7 @@ Additionally, "Hardware Optimization for Convolutions" (lines 238–293, 55 line
 
 ### B8. Chapter 18: Condense Fusion Strategies and Computational Analysis
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch18 (1,836 lines) has verbose prose in:
 - "Fusion Strategies" (lines 24–101, 80 lines): Early/late/cross-modal fusion each get multi-paragraph treatments for straightforward concepts
@@ -303,7 +316,7 @@ Additionally, "Hardware Optimization for Convolutions" (lines 238–293, 55 line
 
 ### B9. Chapter 10: Remove Premature Computational Analysis and Variant Previews
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch10 (1,276 lines) contains:
 - "Computational Complexity and Hardware Analysis" (lines 495–655, ~160 lines): Duplicates nearly all of Ch12's core material. This reads like a preview of Ch12 within the architecture chapter.
@@ -317,7 +330,7 @@ Additionally, "Hardware Optimization for Convolutions" (lines 238–293, 55 line
 
 ### B10. Chapter 21: Eliminate Redundant Second Implementation Pass
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch21 (1,975 lines) contains:
 - "Complete Implementation Examples" (lines 975–1200, ~225 lines): Re-implements MultiHeadAttention, FeedForward, TransformerLayer, and TransformerModel classes that were already shown in earlier sections of the same chapter, with minor variations (combined QKV projection, FusedLayerNorm).
@@ -331,7 +344,7 @@ Additionally, "Hardware Optimization for Convolutions" (lines 238–293, 55 line
 
 ### B11. Chapter 22: Remove "In Practice" Restatement Subsections
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch22 has three "...in Practice" subsections that simply restate the preceding formal treatment in prose:
 - "Quantization in Practice" (lines 309–319): Restates lines 225–307
@@ -348,7 +361,7 @@ Each begins with a sentence that is essentially the definition of the technique 
 
 ### B12. Chapter 23: Restructure as Decision Guide, Not Technical Recap
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch23 (1,056 lines) functions as an abbreviated retelling of Ch21 and Ch22. Nearly every section has a more detailed counterpart:
 - "Memory Management" (lines 87–133) → Ch21 memory profiling
@@ -364,7 +377,7 @@ Each begins with a sentence that is essentially the definition of the technique 
 
 ### B13. Chapter 6: Trim RNN vs Transformer Comparison
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch6's "RNNs vs Transformers: A Computational Comparison" (lines 345–401, 56 lines) contains 5 subsections making the same argument from different angles. The training time estimation (lines 370–380) involves speculative calculations about a hypothetical LSTM-based BERT that was never built. This entire comparison is repeated in Ch7 (lines 613–693) at even greater length.
 
@@ -376,7 +389,7 @@ Each begins with a sentence that is essentially the definition of the technique 
 
 ### B14. Chapter 28: Tighten Case Study and Cross-Chapter Connections
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch28 (1,316 lines — second longest in Part VII–X) has:
 - Case study data sources (lines 982–995) and schema (lines 996–1003): Verbose descriptions of standard enterprise data patterns
@@ -391,7 +404,7 @@ Each begins with a sentence that is essentially the definition of the technique 
 
 ### B15. Chapter 31: Reduce Drift Section from 33% to ~10% of Chapter
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Ch31 Finance (439 lines) devotes 145 lines — **33% of the chapter** — to drift content. This is the worst ratio of any chapter. The finance-specific patterns (regime shifts, alpha decay, adversarial fraud) are valuable, but the generic framework, 6-item business impact list, detection strategies, and MLOps practices are template content.
 
@@ -522,7 +535,7 @@ These target specific sections that are near-identical copies of content in anot
 
 ### D1. Fix Calculation Error in Ch7
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED (included in B6)
 
 **Problem:** Ch7 line 690 contains a self-noted calculation error: "wait, that's wrong. Let me recalculate" — this appears to be a draft artifact that was never cleaned up.
 
@@ -534,7 +547,7 @@ These target specific sections that are near-identical copies of content in anot
 
 ### D2. Fix Duplicate Subsection Header in Ch28
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED (included in B14)
 
 **Problem:** Ch28 lines 264 and 266 both declare `\subsection{Type Constraints}` — a copy-paste error.
 
