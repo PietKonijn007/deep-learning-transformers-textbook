@@ -562,7 +562,7 @@ The output $\mA \mV \in \R^{5 \times 64}$ provides an attended representation fo
 Attention mechanisms align well with modern GPU architectures for two key reasons. First, attention eliminates the sequential bottleneck of RNNs: all positions are processed simultaneously via batched matrix multiplications, achieving 75\% GPU utilization compared to $\sim$5\% for LSTMs (see Chapter~6 for the detailed comparison). Second, the core $\mQ\mK\transpose$ operation achieves high arithmetic intensity ($\sim$256 FLOPs/byte for typical dimensions), keeping compute units busy rather than waiting for memory transfers.
 
 \begin{keypoint}
-The attention matrix requires $b \times h \times n^2 \times 4$ bytes of memory (batch size $\times$ heads $\times$ sequence length squared $\times$ FP32). For BERT-base ($b=32$, $h=12$, $n=512$), this is $\sim$403~MB per layer, or $\sim$4.8~GB across 12 layers. This quadratic memory cost is the primary bottleneck for long sequences and motivates efficient attention methods (Chapters~9 and~16).
+The attention matrix requires $b \times h \times n^2 \times 4$ bytes of memory (batch size $\times$ heads $\times$ sequence length squared $\times$ FP32). For BERT-base ($b=32$, $h=12$, $n=512$), this is $\sim$402~MB per layer, accounting for 57\% of per-layer activation memory (see Section~\ref{sec:bert_base_analysis} for the complete memory breakdown). This quadratic cost is the primary bottleneck for long sequences and motivates efficient attention methods (Chapters~9 and~16).
 \end{keypoint}
 
 \section{Attention Variants}

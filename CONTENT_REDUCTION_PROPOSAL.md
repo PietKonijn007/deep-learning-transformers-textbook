@@ -16,11 +16,12 @@
 | **A1: Consolidate Drift Sections** | **DONE** | **~619** | **8 files** |
 | **A2+A3+A4: Exclude Solutions from PDF** | **DONE** | **~10,809** (from PDF) | **35 files** |
 | **A6: Ch21/22/23 Triple Coverage** | **DONE** | **~30** | **3 files** |
-| A5, A7: Other Structural Consolidations | Not started | — | — |
+| **A7: BERT-base Consolidation** | **DONE** | **~105 net** | **9 files** |
+| A5: Hardware Analysis Consolidation | Not started | — | — |
 | C: Duplicate Section Removals | Not started | — | — |
 | D: Minor Cleanups | **DONE** (D1, D2 included in B) | included above | — |
 
-**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **After A2 (PDF):** ~20,691 | **Net PDF reduction:** ~13,213 lines (~264 pages)
+**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **After A2 (PDF):** ~20,691 | **After A6+A7:** ~20,556 | **Net PDF reduction:** ~13,348 lines (~267 pages)
 
 ---
 
@@ -184,25 +185,13 @@ Exercises 5–8 in Ch1 are increasingly specialized hardware/FLOP calculations t
 
 ### A7. Consolidate BERT-base Parameter/FLOP Calculations into One Canonical Location
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED (canonical location: Ch1 Section 1.X "BERT-base: A Canonical Worked Analysis")
 
-**Problem:** The same BERT-base analysis (110M params, 12 layers, d=768, n=512) is derived from scratch in at least 6 chapters:
+**Problem:** The same BERT-base analysis (110M params, 12 layers, d=768, n=512) was derived from scratch in at least 9 chapters.
 
-| Chapter | Lines | What's Computed |
-|---------|-------|----------------|
-| Ch1 | 556–561 | Complete parameter + FLOP count |
-| Ch2 | 468–490 | Memory + optimizer state breakdown |
-| Ch4 | 159–163, 187–197 | FFN cost analysis |
-| Ch7 | 562–574 | QKV projection parameters |
-| Ch8 | 217–252 | Multi-head attention parameters |
-| Ch10 | 123–255 | Full parameter breakdown (130+ lines) |
-| Ch12 | 236–324 | Full FLOPs derivation |
-| Ch13 | 62–70 | Repeated parameter count |
-| Ch15 | 327–356 | Same methodology applied to BART |
+**Implementation:** Created a comprehensive canonical section in Chapter 1 (`\label{sec:bert_base_analysis}`) covering architecture specification, parameter count (per-layer + complete model), dimension tracking, activation memory, FLOPs analysis, training memory budget, and hardware timing. Replaced detailed derivations in Ch2, Ch4, Ch7, Ch8, Ch10 (two examples), Ch12, Ch13 with condensed summaries + `Section~\ref{sec:bert_base_analysis}` cross-references. Ch15 (BART-large) retained its unique content with a methodology reference added.
 
-**Proposal:** Keep the full derivation in Ch10 (The Transformer Model) as the canonical reference. In all other chapters, replace repeated derivations with a 1–2 line back-reference: "Applying the methodology from Chapter 10, BERT-base requires X FLOPs for this operation." Keep only the operation-specific delta (e.g., Ch7 only needs to show the attention-specific calculation, not re-derive all parameters).
-
-**Estimated savings:** ~250–300 lines → **~5–7 pages**
+**Lines saved:** ~220 lines removed from Ch2/Ch4/Ch7/Ch8/Ch10/Ch12/Ch13, ~115 lines added to Ch1 canonical section → **~105 net lines removed (~2 pages)**. Primary benefit is eliminating 8× redundancy rather than raw line count.
 
 ---
 

@@ -553,12 +553,7 @@ For a batch of $B = 32$ sequences of length $n = 2048$, the input consists of in
 
 \subsection{Complete Transformer Layer Analysis}
 
-\begin{example}[Full Transformer Layer Breakdown]
-\label{ex:transformer_layer_full}
-Consider a single transformer layer with $d_{\text{model}} = 768$, $h = 12$ attention heads, $d_k = d_v = 64$ per head, and feed-forward dimension $d_{ff} = 3072$. The multi-head attention mechanism requires four weight matrices: $\mW_Q, \mW_K, \mW_V \in \R^{768 \times 768}$ for projecting to queries, keys, and values, plus $\mW_O \in \R^{768 \times 768}$ for the output projection, totaling $4 \times 768^2 = 2{,}359{,}296$ parameters. The feed-forward network uses $\mW_1 \in \R^{3072 \times 768}$ with bias $\vb_1 \in \R^{3072}$ for the expansion, and $\mW_2 \in \R^{768 \times 3072}$ with bias $\vb_2 \in \R^{768}$ for the projection back, totaling $2 \times (768 \times 3072) + 3072 + 768 = 4{,}722{,}432$ parameters. Two layer normalization operations add $2 \times 2 \times 768 = 3{,}072$ parameters (scale and shift for each), bringing the total per layer to $2{,}359{,}296 + 4{,}722{,}432 + 3{,}072 = 7{,}084{,}800$ parameters.
-
-For BERT-base with 12 such layers, the transformer stack contains $12 \times 7{,}084{,}800 = 85{,}017{,}600$ parameters (excluding embeddings), requiring $85{,}017{,}600 \times 4 = 340{,}070{,}400$ bytes or approximately 324 MB of memory for 32-bit weights. The computational cost for processing a batch of $B=32$ sequences of length $n=512$ includes approximately 154.6 GFLOPs for attention (from $4Bnd_{\text{model}}^2 + 2Bn^2d_{\text{model}}$) and 154.6 GFLOPs for the feed-forward network (from $4Bnd_{\text{model}}d_{ff}$), totaling approximately 309 GFLOPs per layer or 3.7 TFLOPs for all 12 layers. On an NVIDIA A100 GPU with 312 TFLOPS peak performance, a forward pass takes approximately 12 ms, though actual performance depends on memory bandwidth, kernel launch overhead, and other factors.
-\end{example}
+Understanding the full computational profile of a transformer layer---parameters, FLOPs, memory, and hardware utilization---is essential for practical deep learning engineering. Section~\ref{sec:bert_base_analysis} provides a comprehensive, self-contained worked analysis of BERT-base, the standard baseline configuration used as a running example throughout this textbook.
 
 \subsection{Common Dimension Errors and Debugging}
 
@@ -600,6 +595,159 @@ output = x + bias  # bias broadcasts to [32, 512, 768]
 output = x + bias.view(1, 1, 768)
 \end{lstlisting}
 \end{implementation}
+
+\section{BERT-base: A Canonical Worked Analysis}
+\label{sec:bert_base_analysis}
+
+BERT-base has become the standard baseline configuration for transformer analysis. Its dimensions are adopted throughout this textbook as a running example for parameter counts, memory estimates, and computational costs. This section provides a self-contained reference; subsequent chapters cite these results rather than re-derive them.
+
+\subsection{Architecture Specification}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Value} \\
+\midrule
+Layers & $N = 12$ \\
+Model dimension & $d_{\text{model}} = 768$ \\
+Attention heads & $h = 12$ \quad ($d_k = d_v = 64$ per head) \\
+Feed-forward dimension & $d_{ff} = 3072$ \quad ($4 \times d_{\text{model}}$) \\
+Vocabulary size & $V = 30{,}000$ (WordPiece) \\
+Maximum sequence length & $n_{\max} = 512$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Unless stated otherwise, worked examples use batch size $B = 32$ and full sequence length $n = 512$.
+
+\subsection{Parameter Count}
+
+\textbf{Per encoder layer.} Each layer has three components:
+\begin{align}
+\text{Multi-head attention:} \quad &4 \times 768^2 = 2{,}359{,}296 \quad \text{(Q, K, V, O projections)} \\
+\text{Feed-forward network:} \quad &2 \times 768 \times 3072 + 3072 + 768 = 4{,}722{,}432 \\
+\text{Layer normalization (2$\times$):} \quad &2 \times 2 \times 768 = 3{,}072 \\[4pt]
+\textbf{Total per layer:} \quad &\mathbf{7{,}084{,}800} \text{ parameters}
+\end{align}
+
+The feed-forward network contains approximately twice as many parameters as the attention mechanism ($4.7$M vs $2.4$M), despite attention being conceptually more complex. This is because the $4\times$ expansion to $d_{ff}$ creates two large weight matrices.
+
+\textbf{Complete model:}
+\begin{align}
+\text{Token embeddings:} \quad &30{,}000 \times 768 = 23{,}040{,}000 \\
+\text{Position embeddings:} \quad &512 \times 768 = 393{,}216 \\
+\text{Token type embeddings:} \quad &2 \times 768 = 1{,}536 \\
+\text{Embedding layer norm:} \quad &2 \times 768 = 1{,}536 \\
+\text{12 encoder layers:} \quad &12 \times 7{,}084{,}800 = 85{,}017{,}600 \\
+\text{Pooler:} \quad &768 \times 768 + 768 = 590{,}592 \\[4pt]
+\textbf{Total:} \quad &\mathbf{109{,}044{,}480 \approx 110\text{M parameters}}
+\end{align}
+
+Embeddings account for $\sim$21\% of total parameters ($23$M out of $110$M), while the transformer layers account for $\sim$78\%. This ratio shifts with vocabulary size---a 50K-token vocabulary would push embeddings to 35\% of total parameters.
+
+\subsection{Dimension Tracking Through One Layer}
+\label{subsec:bert_dimension_tracking}
+
+\textbf{Input:} $\mX \in \R^{32 \times 512 \times 768}$ (batch $\times$ sequence $\times$ model dimension)
+
+\textbf{Multi-Head Attention:}
+\begin{align}
+\text{Q, K, V projections:} \quad &\R^{32 \times 512 \times 768} \to \R^{32 \times 512 \times 768} \\
+\text{Reshape for heads:} \quad &\R^{32 \times 512 \times 768} \to \R^{32 \times 12 \times 512 \times 64} \\
+\text{Attention scores:} \quad &\R^{32 \times 12 \times 512 \times 512} \quad \text{(quadratic in } n\text{)} \\
+\text{Attention output:} \quad &\R^{32 \times 12 \times 512 \times 64} \\
+\text{Concatenate heads:} \quad &\R^{32 \times 512 \times 768} \\
+\text{Output projection:} \quad &\R^{32 \times 512 \times 768}
+\end{align}
+
+\textbf{Feed-Forward Network:}
+\begin{align}
+\text{Expand:} \quad &\R^{32 \times 512 \times 768} \xrightarrow{\mW_1} \R^{32 \times 512 \times 3072} \\
+\text{Activate + project:} \quad &\R^{32 \times 512 \times 3072} \xrightarrow{\mW_2} \R^{32 \times 512 \times 768}
+\end{align}
+
+\subsection{Activation Memory}
+
+Intermediate activations stored for backpropagation dominate training memory:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Component (per layer)} & \textbf{Memory (FP32)} \\
+\midrule
+Q, K, V projections ($3 \times Bnd$) & 113 MB \\
+Attention scores ($Bhn^2$) & 402 MB \\
+Attention output ($Bnd$) & 38 MB \\
+FFN intermediate ($Bn \cdot 4d$) & 151 MB \\
+\midrule
+\textbf{Per-layer total} & \textbf{704 MB} \\
+\textbf{12 layers} & \textbf{8.4 GB} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The attention scores alone ($B \times h \times n^2 \times 4$ bytes $= 402$~MB per layer) account for 57\% of per-layer activation memory, illustrating the quadratic cost of self-attention. Doubling the sequence length to $n = 1024$ would quadruple the attention memory to 1.6~GB per layer.
+
+\subsection{FLOPs Analysis}
+
+Counting each multiply-accumulate as 2 FLOPs:
+
+\textbf{Self-Attention (per layer):}
+\begin{align}
+\text{QKV projections:} \quad &3 \times 2 \times 512 \times 768^2 = 1.81\text{ GFLOPs} \\
+\text{Attention scores ($\mQ\mK\transpose$):} \quad &12 \times 2 \times 512^2 \times 64 = 0.40\text{ GFLOPs} \\
+\text{Attention output ($\mA\mV$):} \quad &12 \times 2 \times 512^2 \times 64 = 0.40\text{ GFLOPs} \\
+\text{Output projection:} \quad &2 \times 512 \times 768^2 = 0.60\text{ GFLOPs} \\
+\text{Subtotal:} \quad &3.21\text{ GFLOPs}
+\end{align}
+
+\textbf{Feed-Forward Network (per layer):}
+\begin{align}
+\text{Expand ($\mW_1$):} \quad &2 \times 512 \times 768 \times 3072 = 2.42\text{ GFLOPs} \\
+\text{Project ($\mW_2$):} \quad &2 \times 512 \times 3072 \times 768 = 2.42\text{ GFLOPs} \\
+\text{Subtotal:} \quad &4.84\text{ GFLOPs}
+\end{align}
+
+\textbf{Totals:}
+\begin{align}
+\text{Per layer:} \quad &3.21 + 4.84 = 8.05\text{ GFLOPs} \\
+\text{12 layers (forward pass):} \quad &96.6\text{ GFLOPs} \\
+\text{Training step ($\approx 3\times$ forward):} \quad &\approx 290\text{ GFLOPs}
+\end{align}
+
+The FFN accounts for 60\% of per-layer FLOPs, while the attention score computations ($\mQ\mK\transpose$ and $\mA\mV$) contribute only 10\%. For short sequences, optimizing FFN yields the largest gains; for long sequences, attention's $O(n^2)$ term becomes dominant.
+
+\subsection{Training Memory Budget}
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Component} & \textbf{Memory} \\
+\midrule
+Parameters (FP32) & 440 MB \\
+Gradients (FP32) & 440 MB \\
+Adam optimizer states ($m$, $v$) & 880 MB \\
+Activations (12 layers) & $\approx$8.4 GB \\
+Embeddings + overhead & $\approx$3.6 GB \\
+\midrule
+\textbf{Total} & $\approx$\textbf{13.8 GB} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Activations dominate at $\sim$87\% of total memory, motivating gradient checkpointing (recompute activations during the backward pass, trading 20--30\% slower training for 50--70\% memory reduction). This is why training BERT-base requires GPUs with at least 16~GB of memory.
+
+\subsection{Hardware Timing (NVIDIA A100)}
+
+The A100 provides 312~TFLOPS FP16 with Tensor Cores and 1.6~TB/s memory bandwidth. At 70\% utilization:
+\begin{align}
+\text{Forward pass (single sample):} \quad &\frac{96.6\text{ GFLOPs}}{312 \times 0.7\text{ TFLOPS}} \approx 0.44\text{ ms} \\
+\text{Batch of 32:} \quad &32 \times 0.44 \approx 14\text{ ms} \\
+\text{Training step ($3\times$ forward):} \quad &\approx 42\text{ ms} \\
+\text{Throughput:} \quad &\frac{32 \times 512}{42\text{ ms}} \approx 390{,}000\text{ tokens/sec}
+\end{align}
+
+\textbf{Memory bandwidth check:} Loading 110M parameters ($\times$ 4 bytes $= 440$~MB) takes $440/1600 \approx 0.28$~ms, comparable to compute time. For small batch sizes, BERT-base becomes memory-bandwidth bound rather than compute-bound; larger batches amortize parameter loading across more computation.
 
 \section{Exercises}
 

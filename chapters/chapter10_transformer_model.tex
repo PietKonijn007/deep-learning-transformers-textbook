@@ -121,64 +121,11 @@ The feed-forward network then expands each position's representation from $d_{\t
 
 \begin{example}[BERT-base Encoder Layer]
 \label{ex:bert_encoder_layer}
-BERT-base uses the following configuration, which has become a standard baseline for many transformer models:
-\begin{itemize}
-    \item Model dimension: $d_{\text{model}} = 768$
-    \item Attention heads: $h = 12$, so $d_k = d_v = 768/12 = 64$ per head
-    \item Feed-forward dimension: $d_{ff} = 3072$ (exactly $4 \times d_{\text{model}}$)
-    \item Sequence length: $n = 512$ (maximum)
-    \item Batch size: $B = 32$ (typical for training)
-\end{itemize}
+BERT-base uses $d_{\text{model}} = 768$, $h = 12$ ($d_k = 64$), $d_{ff} = 3072$, with $B = 32$ and $n = 512$.
 
-\textbf{Dimension tracking through the layer:}
+The attention scores matrix $\R^{32 \times 12 \times 512 \times 512}$ requires 402~MB in FP32---the quadratic scaling means doubling sequence length to 1024 would require 1.6~GB per layer for attention scores alone.
 
-\textbf{Input:} $\mX \in \R^{32 \times 512 \times 768}$ (batch × sequence × model dimension)
-
-\textbf{Multi-Head Attention:}
-\begin{align}
-\text{Q, K, V projections:} \quad &\R^{32 \times 512 \times 768} \to \R^{32 \times 512 \times 768} \\
-\text{Reshape for heads:} \quad &\R^{32 \times 512 \times 768} \to \R^{32 \times 12 \times 512 \times 64} \\
-\text{Attention scores:} \quad &\R^{32 \times 12 \times 512 \times 512} \quad \text{(quadratic in } n\text{!)} \\
-\text{Attention output:} \quad &\R^{32 \times 12 \times 512 \times 64} \\
-\text{Concatenate heads:} \quad &\R^{32 \times 512 \times 768} \\
-\text{Output projection:} \quad &\R^{32 \times 512 \times 768}
-\end{align}
-
-The attention scores matrix $\R^{32 \times 12 \times 512 \times 512}$ requires $32 \times 12 \times 512 \times 512 \times 4 = 402$ MB in FP32. This quadratic scaling means that doubling the sequence length to 1024 would require 1.6 GB just for attention scores in a single layer.
-
-\textbf{Feed-Forward Network:}
-\begin{align}
-\text{First projection:} \quad &\R^{32 \times 512 \times 768} \xrightarrow{\mW_1} \R^{32 \times 512 \times 3072} \\
-\text{ReLU activation:} \quad &\R^{32 \times 512 \times 3072} \to \R^{32 \times 512 \times 3072} \\
-\text{Second projection:} \quad &\R^{32 \times 512 \times 3072} \xrightarrow{\mW_2} \R^{32 \times 512 \times 768}
-\end{align}
-
-The intermediate activations $\R^{32 \times 512 \times 3072}$ require $32 \times 512 \times 3072 \times 4 = 201$ MB in FP32.
-
-\textbf{Parameter count breakdown:}
-\begin{align}
-\text{Multi-head attention:} \quad &4 \times 768^2 = 2{,}359{,}296 \quad \text{(Q, K, V, O projections)} \\
-\text{Feed-forward network:} \quad &768 \times 3072 + 3072 + 3072 \times 768 + 768 \\
-&= 2{,}359{,}296 + 3{,}072 + 2{,}359{,}296 + 768 \\
-&= 4{,}722{,}432 \\
-\text{Layer normalization (2×):} \quad &2 \times 2 \times 768 = 3{,}072 \quad \text{(scale } \gamma \text{ and shift } \beta\text{)}
-\end{align}
-
-\textbf{Total per encoder layer:} $2{,}359{,}296 + 4{,}722{,}432 + 3{,}072 = 7{,}084{,}800$ parameters
-
-This reveals that the feed-forward network contains approximately twice as many parameters as the attention mechanism ($4.7$M vs $2.4$M), despite attention being conceptually more complex. This is because the feed-forward network's expansion to $4 \times d_{\text{model}}$ dimensions creates two large weight matrices, while attention's parameters are distributed across four projections of size $d_{\text{model}} \times d_{\text{model}}$.
-
-\textbf{Memory requirements during training:}
-\begin{align}
-\text{Parameters (FP32):} \quad &7{,}084{,}800 \times 4 = 28.3 \text{ MB} \\
-\text{Gradients (FP32):} \quad &7{,}084{,}800 \times 4 = 28.3 \text{ MB} \\
-\text{Adam optimizer states:} \quad &7{,}084{,}800 \times 8 = 56.7 \text{ MB} \\
-\text{Attention scores:} \quad &402 \text{ MB} \\
-\text{FFN intermediate:} \quad &201 \text{ MB} \\
-\text{Total per layer:} \quad &\approx 716 \text{ MB}
-\end{align}
-
-For BERT-base with 12 encoder layers, this amounts to approximately 8.6 GB just for the encoder layers, not including embeddings or other activations. This explains why training BERT-base requires GPUs with at least 16 GB of memory.
+Each encoder layer contains 7,084,800 parameters, with the feed-forward network ($4.7$M) contributing roughly twice the attention mechanism ($2.4$M). The per-layer activation memory totals $\approx$704~MB, dominated by attention scores. For all 12 layers, activations alone consume $\approx$8.4~GB. See Section~\ref{sec:bert_base_analysis} for the complete parameter, FLOPs, and memory analysis.
 \end{example}
 
 \subsection{Complete Encoder Stack}
@@ -205,52 +152,7 @@ The sequential application of encoder layers means that information flows throug
 
 \begin{example}[BERT-base Complete Encoder]
 \label{ex:bert_complete}
-BERT-base represents the standard configuration that has been widely adopted and serves as a baseline for many NLP tasks. The architecture is:
-\begin{itemize}
-    \item Layers: $N = 12$
-    \item Model dimension: $d_{\text{model}} = 768$
-    \item Attention heads: $h = 12$
-    \item Feed-forward dimension: $d_{ff} = 3072$
-    \item Vocabulary size: $V = 30{,}000$ (WordPiece tokenization)
-    \item Maximum sequence length: $n_{\max} = 512$
-\end{itemize}
-
-\textbf{Complete parameter count breakdown:}
-\begin{align}
-\text{Token embeddings:} \quad &30{,}000 \times 768 = 23{,}040{,}000 \\
-\text{Position embeddings:} \quad &512 \times 768 = 393{,}216 \\
-\text{Token type embeddings:} \quad &2 \times 768 = 1{,}536 \quad \text{(for segment A/B)} \\
-\text{Embedding layer norm:} \quad &2 \times 768 = 1{,}536 \\
-\text{12 encoder layers:} \quad &12 \times 7{,}084{,}800 = 85{,}017{,}600 \\
-\text{Pooler (for classification):} \quad &768 \times 768 + 768 = 590{,}592 \\
-\text{Total:} \quad &109{,}044{,}480 \approx \textbf{110M parameters}
-\end{align}
-
-This matches the reported BERT-base size of 110M parameters. Notice that the embeddings account for approximately 21\% of the total parameters ($23$M out of $110$M), while the transformer layers account for 78\%. This ratio changes dramatically for larger vocabularies—models with 50,000 token vocabularies would have embeddings consuming 35\% of parameters, motivating techniques like vocabulary pruning or shared embeddings.
-
-\textbf{Memory requirements for training (batch size 32, sequence length 512):}
-\begin{align}
-\text{Parameters (FP32):} \quad &110{,}000{,}000 \times 4 = 440 \text{ MB} \\
-\text{Gradients (FP32):} \quad &110{,}000{,}000 \times 4 = 440 \text{ MB} \\
-\text{Adam optimizer states:} \quad &110{,}000{,}000 \times 8 = 880 \text{ MB} \\
-\text{Activations (estimated):} \quad &\approx 12 \text{ GB} \\
-\text{Total:} \quad &\approx 13.8 \text{ GB}
-\end{align}
-
-The activation memory dominates, consuming approximately 87\% of total memory. This is why techniques like gradient checkpointing (recomputing activations during backward pass instead of storing them) can reduce memory consumption by 50-70\% at the cost of 20-30\% slower training.
-
-\textbf{Training throughput on NVIDIA A100 GPU:}
-
-The A100 provides 312 TFLOPS of FP16 compute with Tensor Cores. For BERT-base, a single forward pass with batch size 32 and sequence length 512 requires approximately:
-\begin{align}
-\text{FLOPs per layer:} \quad &24nd_{\text{model}}^2 + 4n^2d_{\text{model}} \\
-&= 24 \times 512 \times 768^2 + 4 \times 512^2 \times 768 \\
-&= 7.26 \text{ GFLOPs} \\
-\text{Total for 12 layers:} \quad &12 \times 7.26 = 87.1 \text{ GFLOPs} \\
-\text{With embeddings and overhead:} \quad &\approx 100 \text{ GFLOPs}
-\end{align}
-
-At 312 TFLOPS, this suggests a forward pass should take $100 / 312{,}000 = 0.32$ milliseconds. In practice, memory bandwidth limitations and kernel launch overhead mean actual forward pass time is approximately 5-10 milliseconds, achieving 10-20\% of peak FLOPS. With backward pass taking approximately 2× forward pass time, a complete training step takes 15-30 milliseconds, yielding throughput of 30-60 training steps per second, or approximately 500,000-1,000,000 tokens per second.
+BERT-base stacks $N = 12$ encoder layers with vocabulary $V = 30{,}000$, maximum sequence length 512, and learned position embeddings. The complete model has $\approx$110M parameters, of which embeddings account for $\sim$21\% and the transformer layers for $\sim$78\%. Training with batch size 32 and sequence length 512 requires $\approx$13.8~GB of GPU memory, dominated by activation storage ($\sim$87\%). See Section~\ref{sec:bert_base_analysis} for the full breakdown of parameters, activations, FLOPs, and hardware timing.
 \end{example}
 
 \section{Position-wise Feed-Forward Networks}

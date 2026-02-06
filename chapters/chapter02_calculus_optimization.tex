@@ -466,20 +466,7 @@ where $d_\ell$ is the dimension of layer $\ell$'s output.
 
 \begin{example}[BERT-base Activation Memory]
 \label{ex:bert_activation_memory}
-For BERT-base with batch size $B = 32$, sequence length $n = 512$, $d = 768$:
-
-\textbf{Per transformer layer:}
-\begin{itemize}
-    \item Query, Key, Value projections: $3 \times Bnd = 3 \times 32 \times 512 \times 768 \times 4 \text{ bytes} \approx 113$ MB
-    \item Attention scores: $B \times h \times n \times n = 32 \times 12 \times 512 \times 512 \times 4 \text{ bytes} \approx 402$ MB
-    \item Attention output: $Bnd \approx 38$ MB
-    \item Feed-forward intermediate: $B \times n \times 4d \approx 151$ MB
-    \item \textbf{Per layer total: $\approx 704$ MB}
-\end{itemize}
-
-\textbf{For 12 layers: $704 \times 12 \approx 8.4$ GB}
-
-This excludes gradients and optimizer states!
+For BERT-base ($B = 32$, $n = 512$, $d = 768$), per-layer activations total $\approx$704~MB in FP32---dominated by attention scores ($B \times h \times n^2 \times 4 = 402$~MB, or 57\% of per-layer memory). Across all 12 layers, activations alone consume $\approx$8.4~GB, excluding gradients and optimizer states. See Section~\ref{sec:bert_base_analysis} for the complete breakdown.
 \end{example}
 
 \subsection{Automatic Differentiation: Forward vs Reverse Mode}

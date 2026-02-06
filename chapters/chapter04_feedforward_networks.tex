@@ -144,7 +144,7 @@ For a single fully-connected layer computing $\vy = \mW\vx + \vb$ where $\mW \in
 
 During training, intermediate activations must be stored for the backward pass, and these often consume more memory than the model parameters. Activation memory scales linearly with batch size while parameter memory remains constant, so large batch sizes eventually become memory-limited. For transformer models, attention score matrices of size $B \times h \times n \times n$ dominate activation memory due to their $O(n^2)$ scaling with sequence length, dwarfing the $O(n)$ scaling of feed-forward activations.
 
-Transformer feed-forward networks use a standard two-layer architecture with $4\times$ expansion: projecting from model dimension $d$ to $4d$ with a GELU activation, then back to $d$. For BERT-base ($d = 768$, expansion to 3072), the feed-forward networks contain approximately 4.7M parameters per layer and 56.6M across 12 layers, accounting for $\sim$51\% of total parameters. They similarly account for $\sim$54\% of total FLOPs, making them the largest single component in terms of both parameters and computation.
+Transformer feed-forward networks use a standard two-layer architecture with $4\times$ expansion: projecting from model dimension $d$ to $4d$ with a GELU activation, then back to $d$. For BERT-base ($d = 768$, $d_{ff} = 3072$), the FFN contributes 4.7M parameters per layer---roughly twice the attention mechanism's 2.4M---and accounts for $\sim$60\% of per-layer FLOPs (see Section~\ref{sec:bert_base_analysis} for the complete breakdown).
 
 \section{Activation Functions}
 \label{sec:activations}

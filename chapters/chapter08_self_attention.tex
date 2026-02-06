@@ -216,40 +216,9 @@ where $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)} \in \R^{d_{\text{model}} \times d_k}$ 
 
 \begin{example}[BERT-base Multi-Head Attention]
 \label{ex:bert_mha}
-BERT-base parameters:
-\begin{itemize}
-    \item Model dimension: $d_{\text{model}} = 768$
-    \item Number of heads: $h = 12$
-    \item Dimension per head: $d_k = d_v = 768/12 = 64$
-    \item Sequence length: $n = 512$ (maximum)
-\end{itemize}
+BERT-base uses $d_{\text{model}} = 768$, $h = 12$ heads, $d_k = d_v = 64$ per head. For a single head, the projection $\mW^{Q(i)} \in \R^{768 \times 64}$ maps input $\mX \in \R^{512 \times 768}$ to queries $\mQ^{(i)} \in \R^{512 \times 64}$, and similarly for keys and values. Each head produces an attention matrix $\mA^{(i)} \in \R^{512 \times 512}$---a quadratic cost in sequence length.
 
-\textbf{For single head:}
-\begin{align}
-\mQ^{(i)} &= \mX \mW^{Q(i)} \in \R^{512 \times 64} \quad (\mW^{Q(i)} \in \R^{768 \times 64}) \\
-\mK^{(i)} &= \mX \mW^{K(i)} \in \R^{512 \times 64} \\
-\mV^{(i)} &= \mX \mW^{V(i)} \in \R^{512 \times 64}
-\end{align}
-
-Attention matrix: $\mA^{(i)} \in \R^{512 \times 512}$ (huge!)
-
-\textbf{Concatenate all 12 heads:}
-\begin{equation}
-[\text{head}_1; \ldots; \text{head}_{12}] \in \R^{512 \times 768}
-\end{equation}
-
-\textbf{Output projection:}
-\begin{equation}
-\text{Output} = [\text{head}_1; \ldots; \text{head}_{12}] \mW^O \in \R^{512 \times 768}
-\end{equation}
-where $\mW^O \in \R^{768 \times 768}$.
-
-\textbf{Parameter count:}
-\begin{align}
-\text{QKV projections:} \quad &3h \cdot d_{\text{model}} \cdot d_k = 3 \times 12 \times 768 \times 64 = 1{,}769{,}472 \\
-\text{Output projection:} \quad &d_{\text{model}}^2 = 768^2 = 589{,}824 \\
-\text{Total:} \quad &2{,}359{,}296 \text{ parameters per attention layer}
-\end{align}
+Concatenating all 12 heads yields $\R^{512 \times 768}$, which the output projection $\mW^O \in \R^{768 \times 768}$ maps back to $\R^{512 \times 768}$. The total is $4 \times 768^2 = 2{,}359{,}296$ attention parameters per layer (see Section~\ref{sec:bert_base_analysis} for the full model analysis).
 \end{example}
 
 \subsection{Parallel Computation and Memory Layout}
