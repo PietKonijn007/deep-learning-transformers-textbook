@@ -444,76 +444,22 @@ The output vector is a weighted combination of the value vectors, with weights d
 \section{Attention Score Computation Methods}
 \label{sec:attention_methods_comparison}
 
-The evolution of attention mechanisms reflects a progression toward greater computational efficiency and hardware compatibility. Understanding the trade-offs between different scoring functions illuminates why scaled dot-product attention became the standard for transformers, despite the apparent simplicity of alternatives.
-
-\subsection{Taxonomy of Attention Mechanisms}
-
-Attention mechanisms differ primarily in how they compute the compatibility score between a query and a key. This scoring function determines both the computational cost and the expressiveness of the attention mechanism. We examine four major variants that represent key points in the design space.
-
-\textbf{Additive Attention (Bahdanau):} Introduced in 2015 for neural machine translation, additive attention computes scores through a learned feedforward network:
-\begin{equation}
-\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
-\end{equation}
-
-This approach projects the query and key into a shared space of dimension $d_a$, applies a nonlinearity, and projects to a scalar. The nonlinearity allows the model to learn complex, non-linear compatibility functions. However, this flexibility comes at substantial computational cost: each score requires $O(d_a(d_q + d_k))$ operations and introduces $O(d_a(d_q + d_k))$ learnable parameters.
-
-For typical dimensions $d_q = d_k = 512$ and $d_a = 256$, computing one score requires approximately $2 \times 256 \times (512 + 512) = 524{,}288$ FLOPs. For a sequence of length 512 attending to itself, this amounts to $512^2 \times 524{,}288 \approx 137$ billion FLOPs just for score computation. The $\tanh$ nonlinearity and multiple matrix-vector products prevent efficient GPU utilization, achieving only 15-25\% of peak performance.
-
-\textbf{Dot-Product Attention:} The simplest scoring function is the unscaled dot product:
-\begin{equation}
-\text{score}(\vq, \vk) = \vq\transpose \vk
-\end{equation}
-
-This requires only $2d_k$ FLOPs (one multiply-add per dimension) and introduces zero parameters. The computation maps perfectly to GPU hardware through matrix multiplication: computing all scores $\mQ \mK\transpose$ is a single GEMM operation achieving 80-90\% of peak performance.
-
-However, unscaled dot-product attention suffers from the variance problem discussed earlier. For $d_k = 512$, dot products have standard deviation $\sqrt{512} \approx 22.6$, causing softmax saturation and vanishing gradients. This instability makes unscaled dot-product attention impractical for training deep networks, despite its computational advantages.
-
-\textbf{Scaled Dot-Product Attention:} Adding the scaling factor $1/\sqrt{d_k}$ solves the variance problem while preserving computational efficiency:
-\begin{equation}
-\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
-\end{equation}
-
-The scaling adds negligible computational cost (one division per score, or $n^2$ operations for an $n \times n$ attention matrix) but stabilizes training by maintaining unit variance. This mechanism achieves the best of both worlds: the computational efficiency of dot-product attention with the training stability of additive attention. For $n = 512$ and $d_k = 64$, computing all scores requires $2 \times 512^2 \times 64 = 33.5$ million FLOPs—250× fewer than additive attention.
-
-\textbf{General Attention (Luong):} Luong attention introduces a learned transformation matrix:
-\begin{equation}
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-\end{equation}
-
-where $\mW \in \R^{d_q \times d_k}$ is a learned parameter matrix. This allows the model to learn a task-specific similarity metric rather than using raw dot products. The transformation can project queries and keys into a shared space where their dot product is more meaningful.
-
-Computing one score requires $2d_q d_k$ FLOPs (matrix-vector product $\mW \vk$, then dot product with $\vq$), and the mechanism introduces $d_q d_k$ parameters. For $d_q = d_k = 512$, this is 262,144 parameters—substantial but manageable. The computational cost is $2 \times 512 \times 512 = 524{,}288$ FLOPs per score, similar to additive attention but without the nonlinearity.
-
-General attention achieves better GPU utilization than additive attention because the core operation $\mQ \mW \mK\transpose$ can be computed as two matrix multiplications. However, it still requires more computation than scaled dot-product attention and introduces parameters that must be learned.
-
-\subsection{Comparative Analysis}
-
-The following table summarizes the key characteristics of each attention mechanism:
+The following table summarizes the four major attention scoring functions introduced in this chapter:
 
 \begin{center}
 \begin{tabular}{lcccc}
 \hline
 \textbf{Method} & \textbf{Computation} & \textbf{Parameters} & \textbf{GPU Util.} & \textbf{Used In} \\
 \hline
-Additive (Bahdanau) & $\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$ & $O(d_a(d_q + d_k))$ & 15-25\% & Early seq2seq \\
-Dot-product & $\vq\transpose\vk$ & 0 & 80-90\% & Not used \\
-Scaled dot-product & $\vq\transpose\vk/\sqrt{d_k}$ & 0 & 80-90\% & Transformers \\
-General (Luong) & $\vq\transpose\mW\vk$ & $O(d_q d_k)$ & 50-70\% & Some seq2seq \\
+Additive (Bahdanau) & $\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$ & $O(d_a(d_q + d_k))$ & 15--25\% & Early seq2seq \\
+Dot-product & $\vq\transpose\vk$ & 0 & 80--90\% & Not used (unstable) \\
+Scaled dot-product & $\vq\transpose\vk/\sqrt{d_k}$ & 0 & 80--90\% & All transformers \\
+General (Luong) & $\vq\transpose\mW\vk$ & $O(d_q d_k)$ & 50--70\% & Some seq2seq \\
 \hline
 \end{tabular}
 \end{center}
 
-\textbf{Why Scaled Dot-Product Won:} The dominance of scaled dot-product attention in modern transformers reflects several factors beyond raw computational efficiency. First, the parameter-free nature means the model's capacity is concentrated in the QKV projection matrices and feed-forward networks rather than the scoring function. This architectural choice scales better to very large models—GPT-3 with 175 billion parameters would require even more parameters if using additive or general attention.
-
-Second, the simplicity of scaled dot-product attention makes it easier to optimize and implement efficiently. Hardware vendors can optimize specifically for the $\mQ \mK\transpose$ operation, and software frameworks can apply specialized kernels. FlashAttention and other efficient attention implementations focus on scaled dot-product attention because its regular structure enables aggressive optimization.
-
-Third, empirical results show that scaled dot-product attention performs as well as or better than more complex alternatives on most tasks. The learned transformations in additive or general attention provide little benefit in practice, suggesting that the model can learn appropriate representations through the QKV projections rather than the scoring function itself.
-
-\textbf{Memory Bandwidth Analysis:} Modern GPUs are often memory-bandwidth limited, meaning performance depends on how efficiently data is moved between memory and compute units. Scaled dot-product attention achieves high arithmetic intensity—many FLOPs per byte loaded—because the matrix multiplication $\mQ \mK\transpose$ reuses each element of $\mQ$ and $\mK$ multiple times.
-
-For $\mQ, \mK \in \R^{512 \times 64}$ in FP16, we load $2 \times 512 \times 64 \times 2 = 131$ KB and perform $2 \times 512^2 \times 64 = 33.5$ million FLOPs, achieving $33{,}500{,}000 / 131{,}072 \approx 256$ FLOPs per byte. This high intensity keeps compute units busy rather than waiting for memory.
-
-Additive attention achieves only 5-20 FLOPs per byte because element-wise operations and small matrix-vector products provide little data reuse. The GPU spends most of its time waiting for memory transfers, wasting compute capacity. This fundamental difference in memory access patterns explains much of the performance gap between attention mechanisms.
+Scaled dot-product attention dominates modern transformers due to its parameter-free nature, high GPU utilization from regular matrix multiplication structure, and strong empirical performance. The simplicity enables hardware-specific optimizations like FlashAttention (Chapter~16).
 
 \section{Query-Key-Value Paradigm}
 \label{sec:qkv_paradigm}
@@ -613,83 +559,11 @@ The output $\mA \mV \in \R^{5 \times 64}$ provides an attended representation fo
 \section{Hardware Implications of Attention}
 \label{sec:hardware_implications}
 
-The shift from RNN-based sequence models to attention-based transformers represents not just an algorithmic change but a fundamental realignment with modern hardware capabilities. Understanding why attention enables effective GPU utilization illuminates both the success of transformers and the design principles for future architectures.
+Attention mechanisms align well with modern GPU architectures for two key reasons. First, attention eliminates the sequential bottleneck of RNNs: all positions are processed simultaneously via batched matrix multiplications, achieving 75\% GPU utilization compared to $\sim$5\% for LSTMs (see Chapter~6 for the detailed comparison). Second, the core $\mQ\mK\transpose$ operation achieves high arithmetic intensity ($\sim$256 FLOPs/byte for typical dimensions), keeping compute units busy rather than waiting for memory transfers.
 
-\subsection{Parallelization: RNNs vs Attention}
-
-Recurrent neural networks process sequences sequentially by design. Each hidden state $\vh_t$ depends on the previous hidden state $\vh_{t-1}$:
-\begin{equation}
-\vh_t = \text{RNN}(\vx_t, \vh_{t-1})
-\end{equation}
-
-This recurrence creates a data dependency chain: we cannot compute $\vh_t$ until $\vh_{t-1}$ is available, which requires $\vh_{t-2}$, and so on back to $\vh_0$. For a sequence of length $n$, we must perform $n$ sequential operations, even if we have thousands of parallel compute units available.
-
-Modern GPUs contain thousands of CUDA cores (NVIDIA A100 has 6912 cores) capable of executing operations simultaneously. When processing a batch of 32 sequences of length 512, we have $32 \times 512 = 16{,}384$ positions to process. An RNN must process these sequentially in 512 time steps, using only 32 parallel threads (one per sequence in the batch). This achieves only $32 / 6912 \approx 0.5\%$ of the GPU's parallel capacity.
-
-Attention mechanisms eliminate this sequential bottleneck. The attention computation for position $i$ depends only on the input sequence, not on previous attention computations:
-\begin{equation}
-\text{output}_i = \sum_{j=1}^{n} \alpha_{ij} \vv_j
-\end{equation}
-
-All attention weights $\alpha_{ij}$ can be computed simultaneously because they depend only on the queries and keys, which are computed from the input via matrix multiplication. During training, when the entire target sequence is known, we can compute attention for all positions in parallel. For 32 sequences of length 512, we can utilize all 16,384 positions simultaneously, achieving near-full GPU utilization.
-
-\textbf{Practical Impact:} On an NVIDIA A100 GPU, processing a batch of 32 sequences of length 512 with hidden dimension 768:
-\begin{itemize}
-    \item LSTM encoder: $\approx 45$ ms (sequential processing, 5\% GPU utilization)
-    \item Transformer encoder: $\approx 3$ ms (parallel processing, 75\% GPU utilization)
-\end{itemize}
-
-The 15× speedup from parallelization is what makes training large transformers feasible. GPT-3 with 175 billion parameters was trained on 300 billion tokens—a task that would be impractical with sequential RNN processing.
-
-\subsection{Memory Bandwidth vs Compute}
-
-Modern GPUs have enormous compute capacity but limited memory bandwidth. The NVIDIA A100 provides 312 TFLOPS (FP16 with Tensor Cores) but only 1.5 TB/s memory bandwidth. This means the GPU can perform $312 \times 10^{12} / (1.5 \times 10^{12}) \approx 208$ FLOPs for every byte loaded from memory. Operations must achieve high arithmetic intensity (FLOPs per byte) to be compute-bound rather than memory-bound.
-
-Attention's core operation $\mQ \mK\transpose$ is a matrix multiplication, which achieves high arithmetic intensity through data reuse. For $\mQ, \mK \in \R^{512 \times 64}$:
-\begin{itemize}
-    \item Data loaded: $2 \times 512 \times 64 \times 2 = 131$ KB (FP16)
-    \item FLOPs performed: $2 \times 512^2 \times 64 = 33.5$ million
-    \item Arithmetic intensity: $33{,}500{,}000 / 131{,}072 \approx 256$ FLOPs/byte
-\end{itemize}
-
-This high intensity means the GPU's compute units stay busy rather than waiting for memory. The operation is compute-bound, achieving 80-90\% of peak FLOPS.
-
-In contrast, RNN operations like element-wise activations and small matrix-vector products achieve only 1-10 FLOPs per byte. The GPU spends most of its time waiting for memory transfers, achieving only 5-15\% of peak FLOPS. This fundamental difference in memory access patterns explains much of the performance gap between RNNs and transformers.
-
-\textbf{Memory Requirements:} Attention does require more memory than RNNs due to storing the attention matrix. For a sequence of length $n$ with batch size $b$ and $h$ heads:
-\begin{equation}
-\text{Attention matrix memory} = b \times h \times n^2 \times 4 \text{ bytes (FP32)}
-\end{equation}
-
-For BERT-base with $b = 32$, $h = 12$, $n = 512$:
-\begin{equation}
-32 \times 12 \times 512^2 \times 4 = 402{,}653{,}184 \text{ bytes} \approx 403 \text{ MB}
-\end{equation}
-
-This is substantial but manageable on modern GPUs with 40-80 GB of memory. The memory cost is the price paid for parallelization—we trade memory for speed.
-
-\subsection{Batch Processing Efficiency}
-
-Attention mechanisms benefit dramatically from batching because matrix multiplications become more efficient with larger matrices. For small matrices, memory transfer overhead dominates. For large matrices, the compute units stay busy and achieve high utilization.
-
-Consider computing $\mQ \mK\transpose$ for a single sequence ($b = 1$) versus a batch ($b = 32$):
-\begin{itemize}
-    \item Single sequence: $\mQ, \mK \in \R^{512 \times 64}$, output $\in \R^{512 \times 512}$
-    \begin{itemize}
-        \item FLOPs: $2 \times 512^2 \times 64 = 33.5$ million
-        \item Time on A100: $\approx 0.15$ ms (achieves 30\% peak, memory-bound)
-    \end{itemize}
-    
-    \item Batch of 32: $\mQ, \mK \in \R^{16384 \times 64}$, output $\in \R^{16384 \times 16384}$
-    \begin{itemize}
-        \item FLOPs: $2 \times 16384^2 \times 64 = 34.4$ billion
-        \item Time on A100: $\approx 120$ ms (achieves 85\% peak, compute-bound)
-    \end{itemize}
-\end{itemize}
-
-The batched computation achieves $34.4 / 33.5 = 1024$ times more FLOPs in $120 / 0.15 = 800$ times more time, demonstrating the efficiency gain from batching. Per-sequence processing time drops from 0.15 ms to $120 / 32 = 3.75$ ms, but the throughput increases from $1 / 0.15 = 6.7$ sequences/ms to $32 / 120 = 0.27$ sequences/ms... wait, that's wrong. Let me recalculate: throughput increases from $1 / 0.15 \approx 6.7$ sequences/second to $32 / 120 \approx 267$ sequences/second—a 40× improvement in throughput.
-
-This batching efficiency is crucial for both training (where large batches improve gradient estimates and enable higher learning rates) and inference (where serving multiple requests simultaneously improves throughput). Attention's regular structure makes it particularly amenable to batching, unlike RNNs where variable-length sequences complicate batch processing.
+\begin{keypoint}
+The attention matrix requires $b \times h \times n^2 \times 4$ bytes of memory (batch size $\times$ heads $\times$ sequence length squared $\times$ FP32). For BERT-base ($b=32$, $h=12$, $n=512$), this is $\sim$403~MB per layer, or $\sim$4.8~GB across 12 layers. This quadratic memory cost is the primary bottleneck for long sequences and motivates efficient attention methods (Chapters~9 and~16).
+\end{keypoint}
 
 \section{Attention Variants}
 \label{sec:attention_variants}
