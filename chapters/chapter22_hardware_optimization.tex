@@ -233,7 +233,7 @@ w_{\text{quant}} = \text{round}\left(\frac{w_{\text{float}}}{s}\right) + z
 where $s$ is scale factor, $z$ is zero-point.
 \end{definition}
 
-The choice of numerical precision fundamentally affects both the performance and accuracy of transformer models. Modern hardware supports several precision formats, each offering different trade-offs between memory usage, computational throughput, and numerical fidelity.
+The choice of numerical precision fundamentally affects both the performance and accuracy of transformer models. For PyTorch quantization implementation (dynamic, static, and QAT), see Chapter~\ref{chap:pytorchimplementation}. Modern hardware supports several precision formats, each offering different trade-offs between memory usage, computational throughput, and numerical fidelity.
 
 FP32 (32-bit floating point) serves as the baseline precision format, providing full numerical precision with a wide dynamic range. This format uses 1 bit for sign, 8 bits for exponent, and 23 bits for mantissa, allowing representation of values from approximately $10^{-38}$ to $10^{38}$ with about 7 decimal digits of precision. While FP32 ensures numerical stability and is the standard for training, it consumes significant memory and cannot leverage specialized hardware acceleration like Tensor Cores.
 
@@ -456,7 +456,7 @@ ONNX Runtime's optimization pipeline applies several transformations to improve 
 
 Graph optimization goes beyond individual operations to restructure the computational graph for better performance. This includes reordering operations to enable better fusion opportunities, inserting explicit memory layout transformations to ensure optimal data formats for hardware accelerators, and selecting specialized kernel implementations based on input shapes and hardware capabilities. For transformer models, ONNX Runtime includes optimizations specifically targeting attention mechanisms, layer normalization, and embedding operations.
 
-The combination of these optimizations typically delivers 1.5-2× speedup over PyTorch inference for transformer models, even before applying quantization or other model-level optimizations. When combined with INT8 quantization, ONNX Runtime can achieve 3-4× speedup, making it a popular choice for production deployment where inference efficiency is critical.
+The combination of these optimizations typically delivers 1.5--2$\times$ speedup over PyTorch inference for transformer models, even before applying quantization or other model-level optimizations. When combined with INT8 quantization, ONNX Runtime can achieve 3--4$\times$ speedup, making it a popular choice for production deployment where inference efficiency is critical. See Chapter~\ref{chap:pytorchimplementation} for ONNX export implementation code.
 
 \subsection{TensorRT}
 

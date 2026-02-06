@@ -15,7 +15,8 @@
 | **B: Within-Chapter Verbosity Cuts** | **DONE** | **~1,838** | **15 files** |
 | **A1: Consolidate Drift Sections** | **DONE** | **~619** | **8 files** |
 | **A2+A3+A4: Exclude Solutions from PDF** | **DONE** | **~10,809** (from PDF) | **35 files** |
-| A5–A7: Other Structural Consolidations | Not started | — | — |
+| **A6: Ch21/22/23 Triple Coverage** | **DONE** | **~30** | **3 files** |
+| A5, A7: Other Structural Consolidations | Not started | — | — |
 | C: Duplicate Section Removals | Not started | — | — |
 | D: Minor Cleanups | **DONE** (D1, D2 included in B) | included above | — |
 
@@ -157,7 +158,7 @@ Exercises 5–8 in Ch1 are increasingly specialized hardware/FLOP calculations t
 
 ### A6. Eliminate Triple Coverage of Optimization Topics Across Chapters 21, 22, 23
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
 **Problem:** Chapters 21 (PyTorch Implementation), 22 (Hardware Optimization), and 23 (Best Practices) all cover mixed precision training, gradient checkpointing, quantization, distillation, KV caching, inference optimization (ONNX, TensorRT), serving frameworks, and hardware selection with significant overlap. Ch23 is essentially an abbreviated retelling of Ch21 and Ch22.
 
@@ -176,6 +177,8 @@ Exercises 5–8 in Ch1 are increasingly specialized hardware/FLOP calculations t
 **Proposal:** Make Ch21 the canonical implementation reference (code-focused), Ch22 the canonical hardware/compression reference (theory-focused). Restructure Ch23 as a concise decision-making guide (~300–400 lines) with flowcharts, decision tables, and cross-references instead of restating technical details.
 
 **Estimated savings:** ~400 lines → **~8–10 pages**
+
+**Actual implementation:** B10, B11, and B12 already accomplished the bulk of A6 (removing Ch21's redundant second implementation, Ch22's "in practice" restatements, and restructuring Ch23 as a decision guide). The remaining A6 work converted Ch23's learning rate and batch size sections from prose explanations to decision tables, replaced the gradient analysis code block with a brief reference to Ch21, fixed an ONNX Runtime speedup discrepancy between Ch21 (was "20-40%") and Ch22 (1.5-2×) — now consistent at 1.5-2×, and added cross-references between all three chapters (Ch21↔Ch22 for quantization, ONNX, TensorRT, KV cache). Net: ~30 lines trimmed from Ch23 + quality improvements.
 
 ---
 

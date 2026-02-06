@@ -58,23 +58,37 @@ For generation tasks, the cost analysis shifts somewhat. Fine-tuning GPT-2 mediu
 
 Effective training of transformer models requires careful attention to hyperparameter selection, monitoring, and debugging. This section provides comprehensive guidance on the key decisions that impact training success.
 
-\subsection{Learning Rate Selection and Tuning}
+\subsection{Learning Rate Selection}
 
-The learning rate is the single most important hyperparameter for transformer training. The optimal learning rate depends on model size, batch size, and whether you are pre-training or fine-tuning. For fine-tuning pre-trained models, learning rates are typically much smaller than for training from scratch, as the pre-trained weights already occupy a good region of the loss landscape.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Scenario} & \textbf{Range} & \textbf{Notes} \\
+\midrule
+BERT fine-tuning & $1$--$5 \times 10^{-5}$ & Lower end for small datasets \\
+GPT fine-tuning & $2 \times 10^{-5}$--$10^{-4}$ & Autoregressive is more stable \\
+Pre-training from scratch & $10^{-4}$--$6 \times 10^{-4}$ & Requires longer warmup \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-For BERT fine-tuning, learning rates between $1 \times 10^{-5}$ and $5 \times 10^{-5}$ work well across most tasks. The smaller end of this range is appropriate for tasks with limited data or when fine-tuning for many epochs, while the larger end works better with abundant data and shorter training. GPT fine-tuning typically uses slightly higher learning rates, in the range of $2 \times 10^{-5}$ to $1 \times 10^{-4}$, as the autoregressive objective is somewhat more stable than BERT's masked language modeling.
-
-The learning rate should scale approximately linearly with batch size. If you double the batch size, you can typically increase the learning rate by a factor of 1.5 to 2 without harming convergence. This relationship holds because larger batches provide more accurate gradient estimates, allowing the optimizer to take larger steps safely. However, this scaling breaks down at very large batch sizes, where additional techniques like LAMB optimizer become necessary.
-
-A learning rate warmup is essential for stable training. During warmup, the learning rate increases linearly from zero to the target value over a specified number of steps. This prevents the large gradients that can occur early in training from pushing the model into a poor region of the loss landscape. For fine-tuning, a warmup period covering 5-10\% of total training steps is typical. For pre-training from scratch, longer warmup periods of 10,000 to 50,000 steps are common.
+\textbf{Rules of thumb:} Scale LR $\sim$linearly with batch size (use LAMB for very large batches). Warmup: 5--10\% of steps for fine-tuning, 10K--50K steps for pre-training.
 
 \subsection{Batch Size Selection}
 
-Batch size selection involves balancing computational efficiency, memory constraints, and optimization dynamics. Larger batches improve GPU utilization and training throughput but require more memory and can sometimes harm generalization. For fine-tuning on a single GPU, batch sizes between 16 and 32 are typical, as these fit comfortably in memory while providing reasonable gradient estimates.
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Scenario} & \textbf{Typical Range} & \textbf{Notes} \\
+\midrule
+Fine-tuning (single GPU) & 16--32 & Gradient accumulation for larger effective batch \\
+Fine-tuning (multi-GPU) & 32--256 & Scale LR accordingly \\
+Pre-training & 256--4096 & Requires LR warmup + LAMB \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-When memory constraints prevent using your desired batch size, gradient accumulation provides an effective solution. By accumulating gradients over multiple forward-backward passes before updating weights, you can simulate larger batch sizes without increasing memory requirements. For example, using a batch size of 8 with 4 accumulation steps is equivalent to a batch size of 32 in terms of optimization dynamics, though it takes four times as long to complete each update.
-
-The relationship between batch size and training dynamics is subtle. Very small batches (below 8) introduce significant noise into gradient estimates, which can slow convergence and lead to instability. Very large batches (above 512 for fine-tuning) can lead to sharp minima that generalize poorly, though this effect is less pronounced when using appropriate learning rate scaling and warmup. For most fine-tuning tasks, batch sizes between 16 and 64 provide a good balance.
+If memory-limited, use gradient accumulation: $B_{\text{eff}} = B_{\text{micro}} \times N_{\text{accum}}$ (see Chapter~\ref{chap:pytorchimplementation} for implementation).
 
 \subsection{Checkpointing and Monitoring Strategy}
 
@@ -160,20 +174,7 @@ Total training memory (GB) $\approx$ (Parameters $\times$ 16 bytes) + (Batch $\t
 
 \subsection{Gradient Analysis}
 
-\textbf{Monitor per-layer gradient norms:}
-\begin{verbatim}
-for name, param in model.named_parameters():
-    if param.grad is not None:
-        grad_norm = param.grad.norm().item()
-        print(f"{name}: {grad_norm:.6f}")
-\end{verbatim}
-
-\textbf{Healthy gradients:}
-\begin{itemize}
-    \item Norms between $10^{-4}$ and $10^{1}$
-    \item Similar across layers (no extreme differences)
-    \item Non-zero for all layers
-\end{itemize}
+Monitor per-layer gradient norms throughout training (see Chapter~\ref{chap:pytorchimplementation} for PyTorch profiling tools). Healthy gradients have norms between $10^{-4}$ and $10^{1}$, are similar across layers, and are non-zero for all layers. Sudden spikes precede divergence; vanishing gradients indicate dead layers.
 
 \subsection{Common Training Issues: Quick Reference}
 
