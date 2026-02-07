@@ -136,6 +136,47 @@
 
 <p>Modern digital infrastructure generates an overwhelming torrent of data. A typical enterprise with 10,000 servers produces 10 billion log messages daily, 100 million metric data points hourly, and millions of distributed traces. This machine-generated data—logs, metrics, traces, configurations—forms a rich language describing system behavior, health, and failures. However, the volume far exceeds human capacity to analyze. A single on-call engineer cannot manually review billions of events to diagnose why a service failed at 3am.</p>
 
+<div class="architecture-diagram">
+<h3>ML Observability and Monitoring Stack</h3>
+<pre class="mermaid">
+graph TD
+    A["ML Model<br/>in Production"] --> B["Metrics<br/>Collection"]
+
+    subgraph Metrics["Observability Pillars"]
+        direction LR
+        M1["Model Quality<br/>Accuracy, F1,<br/>Latency"]
+        M2["Data Quality<br/>Drift Detection,<br/>Schema Checks"]
+        M3["System Health<br/>GPU Util, Memory,<br/>Throughput"]
+    end
+
+    B --> Metrics
+
+    Metrics --> C["Alerting &<br/>Dashboards"]
+    C --> D{"Issue<br/>Detected?"}
+    D -->|Yes| E["Root Cause<br/>Analysis"]
+    D -->|No| F["Continue<br/>Monitoring"]
+    E --> G["Remediation<br/>Retrain / Rollback"]
+    G --> A
+
+    subgraph Tools["Observability Tools"]
+        direction LR
+        T1["Prometheus<br/>+ Grafana"]
+        T2["MLflow<br/>Tracking"]
+        T3["Evidently<br/>Data Drift"]
+    end
+
+    Tools -.-> B
+
+    style A fill:#e3f2fd,stroke:#2196f3,color:#000
+    style C fill:#fff3e0,stroke:#ff9800,color:#000
+    style E fill:#fce4ec,stroke:#e91e63,color:#000
+    style G fill:#e8f5e9,stroke:#4caf50,color:#000
+</pre>
+<p class="diagram-caption">Figure: ML observability monitors model quality, data quality, and system health to detect issues early and enable rapid remediation.</p>
+</div>
+
+
+
 <p>The business stakes are enormous. System downtime costs enterprises \$5,600 per minute on average, with major outages costing millions per hour. Amazon loses \$220,000 per minute of downtime. Facebook loses \$90,000 per minute. Beyond direct revenue loss, downtime damages customer trust, violates SLAs (triggering financial penalties), and consumes engineering time in firefighting rather than feature development. For SaaS companies, reliability is a competitive differentiator—99.9\% uptime (8.7 hours downtime annually) versus 99.99\% uptime (52 minutes annually) can determine market leadership.</p>
 
 <p>This chapter examines how transformers and deep learning are revolutionizing observability—the ability to understand system behavior from external outputs. Traditional monitoring relies on static thresholds and manual analysis, generating alert fatigue (hundreds of false alarms daily) while missing subtle failures. AI-powered observability enables: anomaly detection that adapts to changing baselines, root-cause analysis that diagnoses failures in minutes rather than hours, and automated remediation that fixes common problems without human intervention.</p>

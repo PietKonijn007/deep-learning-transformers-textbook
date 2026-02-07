@@ -136,6 +136,45 @@
 
 <p>The legal industry represents a \$1 trillion global market characterized by high costs, limited access, and labor-intensive processes. A single commercial contract review can cost \$5,000-50,000 in legal fees and take weeks to complete. Legal research for a complex case can consume hundreds of attorney hours at \$300-1,000 per hour. Due diligence for mergers and acquisitions requires reviewing thousands of documents, costing millions. These costs create barriers to justice—individuals and small businesses often cannot afford legal services, while large organizations spend enormous sums on routine legal work.</p>
 
+<div class="architecture-diagram">
+<h3>Legal NLP System Architecture</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Data["Legal Documents"]
+        direction LR
+        D1["Contracts"]
+        D2["Case Law"]
+        D3["Regulations"]
+    end
+
+    Data --> B["Legal NLP<br/>Pre-processing<br/>Section Parsing"]
+    B --> C["Legal Transformer<br/>(LegalBERT,<br/>Longformer)"]
+
+    subgraph Tasks["Legal Tasks"]
+        direction LR
+        T1["Contract<br/>Analysis"]
+        T2["Legal<br/>Research"]
+        T3["Compliance<br/>Checking"]
+        T4["Document<br/>Summarization"]
+    end
+
+    C --> Tasks
+
+    Tasks --> E["Legal<br/>Workflow"]
+    E --> F["Human Review<br/>& Oversight"]
+
+    G["Long Document<br/>Handling:<br/>Hierarchical Attn"] -.-> C
+
+    style D1 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style C fill:#fff3e0,stroke:#ff9800,color:#000
+    style E fill:#e3f2fd,stroke:#2196f3,color:#000
+    style F fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Legal NLP systems use Transformer models adapted for long documents to automate contract analysis, legal research, and compliance checking with human oversight.</p>
+</div>
+
+
+
 <p>This chapter examines how transformers and deep learning are transforming legal services through contract analysis, legal research automation, and compliance monitoring. The potential business impact is substantial. Automating routine contract review could save law firms 40-60\% of associate time, reducing costs by millions annually while improving consistency. AI-powered legal research could reduce research time by 50-70\%, saving clients hundreds of thousands per case. Compliance automation could prevent violations that cost companies millions in fines and remediation.</p>
 
 <p>However, the legal domain presents unique challenges that make AI deployment particularly difficult. Legal text is highly structured and formal—a single misread word can change liability by millions of dollars. Ambiguity is expensive and potentially catastrophic. Lawyers are professionally liable for their work product, creating extreme risk aversion toward AI tools. Bar associations impose strict ethical requirements on AI use. Hallucination—where AI systems generate plausible but false information—is completely unacceptable in legal contexts. A fabricated case citation constitutes malpractice and can result in sanctions, disbarment, and liability.</p>

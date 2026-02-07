@@ -151,6 +151,36 @@
     <li>Estimate training time and costs for transformer models
 </ol>
 
+<div class="architecture-diagram">
+<h3>Transformer Training Pipeline</h3>
+<pre class="mermaid">
+graph TD
+    A["Raw Text Data"] --> B["Tokenization<br/>BPE / WordPiece"]
+    B --> C["Batching &<br/>Padding/Masking"]
+    C --> D["Forward Pass<br/>Through Transformer"]
+    D --> E["Compute Loss<br/>Cross-Entropy"]
+    E --> F["Backward Pass<br/>Gradient Computation"]
+    F --> G["Optimizer Step<br/>AdamW"]
+
+    G --> H{"Learning Rate<br/>Schedule"}
+    H --> I["Warmup Phase<br/>Linear Increase"]
+    H --> J["Decay Phase<br/>Cosine / Linear"]
+
+    G --> K["Gradient Clipping<br/>‖g‖ ≤ max_norm"]
+    G --> L["Mixed Precision<br/>FP16 / BF16"]
+
+    J --> M["Trained<br/>Model"]
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style D fill:#e3f2fd,stroke:#2196f3,color:#000
+    style G fill:#fff3e0,stroke:#ff9800,color:#000
+    style M fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Training transformers involves tokenization, batched forward/backward passes, and careful learning rate scheduling with warmup.</p>
+</div>
+
+
+
 <h2>Training Objectives and Loss Functions</h2>
 
 <p>The training objective fundamentally shapes how a transformer learns and what capabilities it develops. Different transformer architectures employ distinct training objectives tailored to their intended use cases, from masked language modeling in BERT to causal language modeling in GPT to sequence-to-sequence learning in T5. Understanding these objectives in depth—including their mathematical formulations, computational requirements, and practical implications—is essential for training transformers effectively.</p>

@@ -149,6 +149,35 @@
     <li>Visualize and interpret attention distributions
 </ol>
 
+<div class="architecture-diagram">
+<h3>Attention Mechanism: Query-Key-Value Framework</h3>
+<pre class="mermaid">
+graph TD
+    Q["Query (Q)<br/>What am I looking for?"] --> S["Score Function<br/>score(Q, Kᵢ)"]
+    K["Keys (K)<br/>What do I contain?"] --> S
+    S --> SM["Softmax<br/>αᵢ = softmax(scores)"]
+    SM --> WS["Weighted Sum<br/>Σ αᵢ · Vᵢ"]
+    V["Values (V)<br/>What do I provide?"] --> WS
+    WS --> O["Attention Output<br/>Context Vector"]
+
+    subgraph Scoring["Score Functions"]
+        S1["Dot Product<br/>QᵀK"]
+        S2["Scaled Dot Product<br/>QᵀK / √dₖ"]
+        S3["Additive<br/>vᵀtanh(W₁Q + W₂K)"]
+    end
+
+    S -.-> Scoring
+
+    style Q fill:#e3f2fd,stroke:#2196f3,color:#000
+    style K fill:#e8f5e9,stroke:#4caf50,color:#000
+    style V fill:#fff3e0,stroke:#ff9800,color:#000
+    style O fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: The attention mechanism computes a weighted combination of values based on the compatibility between queries and keys.</p>
+</div>
+
+
+
 <h2>Motivation: The Seq2Seq Bottleneck</h2>
 
 <h3>RNN Encoder-Decoder Architecture</h3>

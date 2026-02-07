@@ -147,6 +147,40 @@
     <li>Implement masked autoencoding (MAE) for vision
 </ol>
 
+<div class="architecture-diagram">
+<h3>Vision Transformer (ViT) Architecture</h3>
+<pre class="mermaid">
+graph TD
+    A["Input Image<br/>H × W × C"] --> B["Split into Patches<br/>P × P patches"]
+    B --> C["Flatten Patches<br/>N patches × (P²·C)"]
+    C --> D["Linear Projection<br/>Patch Embeddings"]
+    D --> E["Prepend [CLS] Token<br/>+ Position Embeddings"]
+
+    E --> F["Transformer Encoder<br/>× L Layers"]
+
+    subgraph EncoderBlock["Each Encoder Layer"]
+        direction TB
+        SA["Multi-Head<br/>Self-Attention"]
+        LN1["Layer Norm"]
+        FF["MLP / FFN"]
+        LN2["Layer Norm"]
+        SA --> LN1 --> FF --> LN2
+    end
+
+    F --> G["[CLS] Token<br/>Output"]
+    G --> H["Classification<br/>Head (MLP)"]
+    H --> I["Class<br/>Prediction"]
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style B fill:#e3f2fd,stroke:#2196f3,color:#000
+    style F fill:#fff3e0,stroke:#ff9800,color:#000
+    style I fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Vision Transformers split images into fixed-size patches, embed them as tokens, and process them through standard Transformer encoder layers.</p>
+</div>
+
+
+
 <h2>From Images to Sequences</h2>
 
 <h3>The Patch Embedding Approach</h3>

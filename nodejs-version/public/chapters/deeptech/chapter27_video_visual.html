@@ -136,6 +136,45 @@
 
 <p>The visual content industry faces a fundamental challenge: demand for high-quality video and images far exceeds the supply of skilled creators. Professional video editing requires years of training, expensive software, and hours of manual work per minute of content. Meanwhile, platforms like YouTube, TikTok, and Instagram process billions of videos monthly, with creators ranging from professionals to casual users recording on smartphones.</p>
 
+<div class="architecture-diagram">
+<h3>Video and Visual Understanding Architecture</h3>
+<pre class="mermaid">
+graph TD
+    A["Video Input<br/>T frames × H × W"] --> B["Frame Sampling<br/>/ Patch Extraction"]
+    B --> C["Spatial Encoder<br/>ViT per frame"]
+    C --> D["Temporal Encoder<br/>Cross-frame Attention"]
+    D --> E["Video<br/>Representation"]
+
+    subgraph Approaches["Architecture Approaches"]
+        direction LR
+        A1["Joint<br/>Space-Time Attn"]
+        A2["Divided<br/>Space then Time"]
+        A3["Factorized<br/>Encoder"]
+    end
+
+    Approaches -.-> D
+
+    E --> F["Downstream Tasks"]
+
+    subgraph Tasks["Tasks"]
+        direction LR
+        T1["Action<br/>Recognition"]
+        T2["Video<br/>Captioning"]
+        T3["Video<br/>QA"]
+    end
+
+    F --> Tasks
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style C fill:#e3f2fd,stroke:#2196f3,color:#000
+    style D fill:#fff3e0,stroke:#ff9800,color:#000
+    style E fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Video Transformers process spatial and temporal dimensions through spatial encoders per frame and temporal attention across frames.</p>
+</div>
+
+
+
 <p>This chapter explores how multimodal transformers have revolutionized visual content creation and video understanding, addressing these business challenges head-on. Unlike text-only models, multimodal systems process and generate images, videos, and audio alongside text, enabling automated workflows that previously required human expertise. We examine vision transformers for understanding visual content, diffusion models for generating images and videos from text descriptions, and automated editing systems that can transform raw footage into polished content.</p>
 
 <p>The business impact is substantial. Content platforms using automated video editing see 15-20\% increases in creator retention and 10-15\% improvements in viewer engagement. E-commerce companies using AI-generated product images reduce photography costs by 60-80\% while increasing catalog size by 3-5x. Media companies using automated scene analysis can process video archives 100x faster than manual review, unlocking monetization opportunities for previously inaccessible content.</p>

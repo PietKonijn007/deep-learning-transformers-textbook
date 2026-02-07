@@ -147,6 +147,48 @@
     <li>Understand instruction tuning and RLHF
 </ol>
 
+<div class="architecture-diagram">
+<h3>GPT Architecture and Autoregressive Generation</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Architecture["GPT Decoder Stack"]
+        direction TB
+        IN["Input Tokens<br/>tok₁ tok₂ ... tokₜ"]
+        EMB["Token + Position<br/>Embeddings"]
+        DEC["Transformer Decoder<br/>× 12-96 Layers<br/>Masked Self-Attention + FFN"]
+        LM["Language Model Head<br/>Linear + Softmax"]
+        OUT["P(tokₜ₊₁ | tok₁...tokₜ)"]
+        IN --> EMB --> DEC --> LM --> OUT
+    end
+
+    subgraph Training["Training Objective"]
+        AR["Autoregressive LM<br/>Maximize P(xₜ|x&lt;t)"]
+        CAUSAL["Causal Mask<br/>▼ Triangular"]
+    end
+
+    subgraph Scale["GPT Scaling"]
+        direction LR
+        G1["GPT-1<br/>117M params"]
+        G2["GPT-2<br/>1.5B params"]
+        G3["GPT-3<br/>175B params"]
+        G4["GPT-4<br/>MoE / Multimodal"]
+    end
+
+    Training --> Architecture
+    Architecture --> Scale
+
+    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
+    style AR fill:#e3f2fd,stroke:#2196f3,color:#000
+    style G1 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style G2 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style G3 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style G4 fill:#e8f5e9,stroke:#4caf50,color:#000
+</pre>
+<p class="diagram-caption">Figure: GPT uses a unidirectional Transformer decoder with causal masking, trained autoregressively to predict the next token, scaling from millions to hundreds of billions of parameters.</p>
+</div>
+
+
+
 <h2>GPT Architecture</h2>
 
 <h3>Decoder-Only Transformers</h3>

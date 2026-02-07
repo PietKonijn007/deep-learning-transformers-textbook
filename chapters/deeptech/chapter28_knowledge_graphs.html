@@ -136,6 +136,47 @@
 
 <p>While most chapters focus on unstructured data (text, images, video) or simple structured data (tables, time series), this chapter explores a unique domain: knowledge representation and reasoning. Knowledge graphs organize information as networks of entities and relationships, enabling semantic understanding and logical inference. Unlike text or images, knowledge graphs are explicitly structured: they formalize what is true about the world. Deep learning has transformed knowledge graphs from hand-crafted databases to systems that automatically extract entities, infer relationships, and reason over incomplete information. This chapter examines how transformers extract structured information from text, represent entities and relationships in learned embeddings, and perform inference over knowledge bases. Applications range from search (Google's Knowledge Graph) to biomedical discovery (drug-target interactions) to cybersecurity (attack pattern detection).</p>
 
+<div class="architecture-diagram">
+<h3>Knowledge Graph-Enhanced Transformer</h3>
+<pre class="mermaid">
+graph TD
+    A["Input Text"] --> B["Text Encoder<br/>Transformer"]
+    C["Knowledge Graph<br/>Entities & Relations"] --> D["Graph Encoder<br/>GNN / TransE"]
+
+    B --> E["Knowledge Fusion<br/>Layer"]
+    D --> E
+
+    subgraph Fusion["Fusion Methods"]
+        direction LR
+        F1["Entity<br/>Embedding<br/>Injection"]
+        F2["Graph-Guided<br/>Attention"]
+        F3["Triple<br/>Integration"]
+    end
+
+    Fusion -.-> E
+
+    E --> F["Knowledge-Enhanced<br/>Representations"]
+    F --> G["Downstream Tasks"]
+
+    subgraph Tasks["Tasks"]
+        direction LR
+        T1["Entity<br/>Linking"]
+        T2["Relation<br/>Extraction"]
+        T3["QA with<br/>Reasoning"]
+    end
+
+    G --> Tasks
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style C fill:#e3f2fd,stroke:#2196f3,color:#000
+    style E fill:#fff3e0,stroke:#ff9800,color:#000
+    style F fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Knowledge graph-enhanced Transformers fuse structured knowledge with text representations to enable better reasoning and factual grounding.</p>
+</div>
+
+
+
 <h2>Learning Objectives</h2>
 
 <ol>

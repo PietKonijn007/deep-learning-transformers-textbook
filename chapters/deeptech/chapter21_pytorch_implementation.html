@@ -147,6 +147,47 @@
     <li>Debug common implementation issues
 </ol>
 
+<div class="architecture-diagram">
+<h3>PyTorch Transformer Implementation Structure</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Modules["Core nn.Module Classes"]
+        direction TB
+        EMB["TokenEmbedding<br/>+ PositionalEncoding"]
+        MHA["MultiHeadAttention<br/>Q, K, V projections"]
+        FFN["FeedForward<br/>Linear → ReLU → Linear"]
+        LN["LayerNorm"]
+        EL["EncoderLayer<br/>MHA + FFN + LN"]
+        DL["DecoderLayer<br/>Masked MHA + Cross MHA + FFN"]
+        ENC["TransformerEncoder<br/>N × EncoderLayer"]
+        DEC["TransformerDecoder<br/>N × DecoderLayer"]
+        FULL["Transformer<br/>Encoder + Decoder + LM Head"]
+    end
+
+    EMB --> EL
+    MHA --> EL
+    FFN --> EL
+    LN --> EL
+    EL --> ENC
+    MHA --> DL
+    FFN --> DL
+    LN --> DL
+    DL --> DEC
+    ENC --> FULL
+    DEC --> FULL
+
+    FULL --> TR["Training Loop<br/>loss.backward()<br/>optimizer.step()"]
+
+    style FULL fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
+    style TR fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: A modular PyTorch implementation of the Transformer, composing small nn.Module building blocks into the full encoder-decoder architecture.</p>
+</div>
+
+
+
 <h2>Multi-Head Attention Implementation</h2>
 
 <h3>Core Components</h3>

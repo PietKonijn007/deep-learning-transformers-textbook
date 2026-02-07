@@ -147,6 +147,45 @@
     <li>Apply masking for causal (autoregressive) attention
 </ol>
 
+<div class="architecture-diagram">
+<h3>Multi-Head Self-Attention Architecture</h3>
+<pre class="mermaid">
+graph TD
+    X["Input Sequence<br/>X ∈ ℝⁿˣᵈ"] --> WQ["W_Q Projection"]
+    X --> WK["W_K Projection"]
+    X --> WV["W_V Projection"]
+
+    WQ --> Q["Q = X·W_Q"]
+    WK --> K["K = X·W_K"]
+    WV --> V["V = X·W_V"]
+
+    subgraph MH["Multi-Head Attention (h heads)"]
+        direction LR
+        H1["Head 1<br/>Attn(Q₁,K₁,V₁)"]
+        H2["Head 2<br/>Attn(Q₂,K₂,V₂)"]
+        H3["..."]
+        Hh["Head h<br/>Attn(Qₕ,Kₕ,Vₕ)"]
+    end
+
+    Q --> MH
+    K --> MH
+    V --> MH
+
+    MH --> CONCAT["Concatenate<br/>All Heads"]
+    CONCAT --> WO["Output Projection<br/>W_O"]
+    WO --> OUT["Multi-Head<br/>Output ∈ ℝⁿˣᵈ"]
+
+    style X fill:#e8f5e9,stroke:#4caf50,color:#000
+    style H1 fill:#e3f2fd,stroke:#2196f3,color:#000
+    style H2 fill:#e3f2fd,stroke:#2196f3,color:#000
+    style Hh fill:#e3f2fd,stroke:#2196f3,color:#000
+    style OUT fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Figure: Multi-head self-attention projects inputs into multiple subspaces, applies parallel attention computations, and concatenates the results.</p>
+</div>
+
+
+
 <h2>Self-Attention Mechanism</h2>
 
 <div class="definition"><strong>Definition:</strong> 

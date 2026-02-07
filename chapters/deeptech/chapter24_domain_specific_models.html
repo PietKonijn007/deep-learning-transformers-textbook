@@ -136,6 +136,39 @@
 
 <p>This chapter sets the stage for the practical domain-specific applications to follow. It defines what constitutes a ``domain-specific model'' and introduces the key patterns and decision frameworks that apply across industries and use cases. Rather than immediately diving into specific domains, we establish the foundational concepts: when to use general-purpose models versus specialized architectures, how to evaluate trade-offs between transfer learning and domain adaptation, and how to systematically choose between competing approaches (fine-tuning, prompting, RAG, tool augmentation, full retraining). This chapter provides the conceptual framework that later domain-specific chapters build upon.</p>
 
+<div class="architecture-diagram">
+<h3>Domain-Specific Model Adaptation Pipeline</h3>
+<pre class="mermaid">
+graph TD
+    A["General Pre-trained<br/>Model (e.g., BERT)"] --> B["Domain-Adaptive<br/>Pre-training (DAPT)"]
+    B --> C["Task-Adaptive<br/>Pre-training (TAPT)"]
+    C --> D["Fine-tuning on<br/>Domain Task"]
+    D --> E["Domain-Specific<br/>Model"]
+
+    F["Domain Corpus<br/>(e.g., Biomedical,<br/>Legal, Scientific)"] --> B
+
+    subgraph Examples["Domain Models"]
+        direction LR
+        E1["BioBERT<br/>Biomedical"]
+        E2["SciBERT<br/>Scientific"]
+        E3["LegalBERT<br/>Legal"]
+        E4["FinBERT<br/>Financial"]
+    end
+
+    E --> Examples
+
+    G["Domain Vocabulary<br/>Custom Tokenizer"] -.-> B
+
+    style A fill:#e3f2fd,stroke:#2196f3,color:#000
+    style B fill:#fff3e0,stroke:#ff9800,color:#000
+    style E fill:#e8f5e9,stroke:#4caf50,color:#000
+    style F fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Domain-specific models are created by progressively adapting a general pre-trained model through domain and task-specific continued pre-training and fine-tuning.</p>
+</div>
+
+
+
 <h2>Learning Objectives</h2>
 
 <ol>

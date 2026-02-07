@@ -149,6 +149,50 @@
     <li>Understand the universal approximation theorem
 </ol>
 
+<div class="architecture-diagram">
+<h3>Feed-Forward Neural Network (MLP) Architecture</h3>
+<pre class="mermaid">
+graph LR
+    subgraph Input
+        I1["x₁"]
+        I2["x₂"]
+        I3["x₃"]
+        I4["xₙ"]
+    end
+
+    subgraph Hidden1["Hidden Layer 1"]
+        H1["σ(W₁x + b₁)"]
+    end
+
+    subgraph Hidden2["Hidden Layer 2"]
+        H2["σ(W₂h₁ + b₂)"]
+    end
+
+    subgraph Output
+        O1["ŷ = softmax(W₃h₂ + b₃)"]
+    end
+
+    I1 --> H1
+    I2 --> H1
+    I3 --> H1
+    I4 --> H1
+    H1 -->|"ReLU / Sigmoid<br/>Activation"| H2
+    H2 --> O1
+    O1 --> L["Loss: L(ŷ, y)"]
+    L -->|"Backpropagation"| H1
+
+    style I1 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style I2 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style I3 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style I4 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style O1 fill:#e3f2fd,stroke:#2196f3,color:#000
+    style L fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Figure: A multi-layer perceptron (MLP) transforms inputs through successive layers of linear transformations and nonlinear activations.</p>
+</div>
+
+
+
 <h2>From Linear Models to Neural Networks</h2>
 
 <h3>The Perceptron</h3>

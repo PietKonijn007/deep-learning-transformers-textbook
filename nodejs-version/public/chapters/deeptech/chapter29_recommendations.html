@@ -136,6 +136,40 @@
 
 <p>Recommendation systems are the economic engines of the modern internet. They drive 80\% of content consumed on Netflix, 70\% of watch time on YouTube, and 35\% of purchases on Amazon. For these platforms, recommendation quality directly translates to revenue: a 1\% improvement in recommendation accuracy can generate tens to hundreds of millions of dollars in additional revenue annually. Poor recommendations, conversely, lead to user churn, reduced engagement, and lost revenue opportunities.</p>
 
+<div class="architecture-diagram">
+<h3>Transformer-Based Recommendation System</h3>
+<pre class="mermaid">
+graph TD
+    A["User Interaction<br/>History"] --> B["Item Sequence<br/>Encoding"]
+    B --> C["Transformer<br/>Encoder"]
+
+    D["Item Features<br/>Embeddings"] --> C
+    E["User Profile<br/>Embedding"] --> C
+
+    C --> F["Candidate<br/>Scoring"]
+    F --> G["Top-K<br/>Recommendations"]
+
+    subgraph Models["Recommendation Models"]
+        direction LR
+        M1["SASRec<br/>Self-Attention<br/>Sequential"]
+        M2["BERT4Rec<br/>Bidirectional<br/>Sequential"]
+        M3["PinnerSage<br/>Graph +<br/>Transformer"]
+    end
+
+    C --> Models
+
+    H["Side Information<br/>Category, Price,<br/>Time"] -.-> C
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style C fill:#fff3e0,stroke:#ff9800,color:#000
+    style G fill:#e3f2fd,stroke:#2196f3,color:#000
+    style F fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Transformer-based recommendation systems encode user interaction sequences with self-attention to predict relevant items.</p>
+</div>
+
+
+
 <p>The business challenge is substantial. Platforms must serve personalized recommendations to billions of users in real-time (under 200ms latency), processing trillions of user-item interactions to learn preferences, while balancing competing objectives: immediate engagement (clicks, watch time) versus long-term retention, personalization versus diversity, and business goals (revenue, growth) versus societal concerns (fairness, filter bubbles).</p>
 
 <p>This chapter examines how transformers and sequence models have revolutionized recommendation systems by capturing temporal dynamics and complex user-item interactions that traditional methods miss. A user who watches action movies followed by documentaries has different preferences than one who watches in reverse order—sequence matters. Transformer-based recommenders capture these patterns, improving recommendation quality by 10-30\% over traditional collaborative filtering.</p>

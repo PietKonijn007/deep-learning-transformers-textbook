@@ -136,6 +136,41 @@
 
 <p>This chapter addresses the practical deployment of language models in enterprise environments, focusing on real-world applications that solve concrete business problems. We examine semantic search and retrieval systems, text classification for routing and triage, and conversational assistants that support customer interactions. Unlike the general-purpose language models of previous chapters, enterprise NLP applications balance accuracy, latency, cost, and regulatory constraints. This chapter emphasizes how the foundations of transformers, embeddings, and fine-tuning translate into production systems that generate measurable business value.</p>
 
+<div class="architecture-diagram">
+<h3>Enterprise NLP System Architecture</h3>
+<pre class="mermaid">
+graph TD
+    A["Documents<br/>& Text Data"] --> B["Ingestion<br/>Pipeline"]
+    B --> C["Pre-processing<br/>Tokenization, Cleaning"]
+    C --> D["NLP Models"]
+
+    subgraph Models["NLP Model Stack"]
+        direction LR
+        M1["Classification"]
+        M2["Named Entity<br/>Recognition"]
+        M3["Summarization"]
+        M4["Search /<br/>Retrieval"]
+    end
+
+    D --> Models
+
+    Models --> E["Post-processing<br/>& Aggregation"]
+    E --> F["API / Service<br/>Layer"]
+    F --> G["Business<br/>Applications"]
+
+    H["Model Registry<br/>& Versioning"] --> D
+    I["Feedback Loop<br/>Active Learning"] --> D
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style D fill:#fff3e0,stroke:#ff9800,color:#000
+    style F fill:#e3f2fd,stroke:#2196f3,color:#000
+    style G fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Enterprise NLP systems combine multiple models in a pipeline architecture with monitoring, versioning, and feedback loops.</p>
+</div>
+
+
+
 <h2>Learning Objectives</h2>
 
 <ol>

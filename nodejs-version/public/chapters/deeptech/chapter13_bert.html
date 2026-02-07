@@ -147,6 +147,47 @@
     <li>Understand limitations and failure modes
 </ol>
 
+<div class="architecture-diagram">
+<h3>BERT Architecture and Pre-training</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Pretrain["Pre-training Tasks"]
+        direction LR
+        MLM["Masked Language<br/>Modeling (MLM)<br/>Predict [MASK] tokens"]
+        NSP["Next Sentence<br/>Prediction (NSP)<br/>Classify [CLS]"]
+    end
+
+    subgraph Architecture["BERT Encoder Stack"]
+        direction TB
+        IN["[CLS] tok₁ tok₂ [MASK] tok₄ [SEP] tok₅ tok₆ [SEP]"]
+        EMB["Token + Segment +<br/>Position Embeddings"]
+        ENC["Transformer Encoder<br/>× 12/24 Layers<br/>Self-Attention + FFN"]
+        OUT["Contextual<br/>Representations"]
+        IN --> EMB --> ENC --> OUT
+    end
+
+    subgraph Finetune["Fine-tuning Tasks"]
+        direction LR
+        CLS["Classification<br/>[CLS] → Label"]
+        NER["Token Tagging<br/>Each token → Tag"]
+        QA["Question Answering<br/>Start/End spans"]
+    end
+
+    Pretrain --> Architecture
+    Architecture --> Finetune
+
+    style MLM fill:#e3f2fd,stroke:#2196f3,color:#000
+    style NSP fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style CLS fill:#e8f5e9,stroke:#4caf50,color:#000
+    style NER fill:#e8f5e9,stroke:#4caf50,color:#000
+    style QA fill:#e8f5e9,stroke:#4caf50,color:#000
+</pre>
+<p class="diagram-caption">Figure: BERT uses a bidirectional Transformer encoder pre-trained with masked language modeling and next sentence prediction, then fine-tuned for downstream tasks.</p>
+</div>
+
+
+
 <h2>BERT Architecture</h2>
 
 <h3>Model Specification</h3>

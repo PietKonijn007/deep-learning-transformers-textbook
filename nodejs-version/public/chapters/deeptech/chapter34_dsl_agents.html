@@ -136,6 +136,51 @@
 
 <p>This concluding chapter synthesizes the domain-specific applications explored throughout this book into a unified framework for building production AI systems. Across healthcare, finance, legal, recommendations, visual content, and observability, we observe recurring patterns: domains are formalized into structured representations, models learn to operate within these formalizations, and systems integrate models with tools to achieve business objectives. Understanding these patterns enables practitioners to systematically approach new domains rather than reinventing solutions.</p>
 
+<div class="architecture-diagram">
+<h3>LLM Agent System Architecture</h3>
+<pre class="mermaid">
+graph TD
+    A["User Query"] --> B["LLM Agent<br/>(Planning & Reasoning)"]
+
+    B --> C["Tool Selection"]
+
+    subgraph Tools["Available Tools"]
+        direction LR
+        T1["Code<br/>Executor"]
+        T2["Web<br/>Search"]
+        T3["Database<br/>Query"]
+        T4["API<br/>Calls"]
+    end
+
+    C --> Tools
+    Tools --> D["Observation<br/>/ Result"]
+    D --> B
+
+    B --> E{"Task<br/>Complete?"}
+    E -->|No| C
+    E -->|Yes| F["Final<br/>Response"]
+
+    subgraph Framework["Agent Framework"]
+        direction LR
+        F1["ReAct<br/>Reason + Act"]
+        F2["Chain-of-Thought<br/>Reasoning"]
+        F3["DSL / Function<br/>Calling"]
+    end
+
+    Framework -.-> B
+
+    G["Memory /<br/>Context Window"] -.-> B
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style B fill:#fff3e0,stroke:#ff9800,color:#000
+    style F fill:#e3f2fd,stroke:#2196f3,color:#000
+    style D fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: LLM agent systems use a reasoning-action loop where the LLM plans, selects tools, observes results, and iterates until the task is complete.</p>
+</div>
+
+
+
 <p>The business imperative is clear. Organizations that successfully deploy domain-specific AI systems achieve measurable competitive advantages: 50-70\% cost reductions (legal contract review, healthcare documentation), 10-30\% revenue increases (recommendations, fraud detection), and 40-60\% efficiency gains (observability, visual content creation). However, success requires more than technical capability—it demands understanding domain constraints, managing model drift, balancing accuracy with explainability, and navigating regulatory requirements. The patterns synthesized in this chapter provide a reusable playbook for these challenges.</p>
 
 <p>This chapter examines the world-to-language-to-tool pattern that underlies successful AI deployments, explores how to design domain-specific languages that enable reliable model-system integration, and investigates tool-augmented agents that orchestrate complex workflows. We synthesize drift management patterns across domains, compare accuracy-cost-latency trade-offs, and provide a practical framework for building domain-specific systems from requirements through deployment.</p>

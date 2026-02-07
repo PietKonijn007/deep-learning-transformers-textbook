@@ -149,6 +149,46 @@
     <li>Understand training objectives for different transformer variants
 </ol>
 
+<div class="architecture-diagram">
+<h3>Complete Transformer Encoder-Decoder Architecture</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Encoder["Encoder (N× layers)"]
+        direction TB
+        EI["Input Embeddings<br/>+ Positional Encoding"] --> ESA["Multi-Head<br/>Self-Attention"]
+        ESA --> EAN["Add & LayerNorm"]
+        EAN --> EFF["Feed-Forward<br/>Network (FFN)"]
+        EFF --> EAN2["Add & LayerNorm"]
+    end
+
+    subgraph Decoder["Decoder (N× layers)"]
+        direction TB
+        DI["Output Embeddings<br/>+ Positional Encoding"] --> DSA["Masked Multi-Head<br/>Self-Attention"]
+        DSA --> DAN1["Add & LayerNorm"]
+        DAN1 --> DCA["Multi-Head<br/>Cross-Attention"]
+        DCA --> DAN2["Add & LayerNorm"]
+        DAN2 --> DFF["Feed-Forward<br/>Network (FFN)"]
+        DFF --> DAN3["Add & LayerNorm"]
+    end
+
+    EAN2 --> DCA
+
+    DAN3 --> LIN["Linear Layer"]
+    LIN --> SM["Softmax"]
+    SM --> OUT["Output<br/>Probabilities"]
+
+    style EI fill:#e8f5e9,stroke:#4caf50,color:#000
+    style DI fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ESA fill:#fff3e0,stroke:#ff9800,color:#000
+    style DSA fill:#fff3e0,stroke:#ff9800,color:#000
+    style DCA fill:#f3e5f5,stroke:#9c27b0,color:#000
+    style OUT fill:#fce4ec,stroke:#e91e63,color:#000
+</pre>
+<p class="diagram-caption">Figure: The Transformer uses stacked encoder and decoder layers with self-attention, cross-attention, and feed-forward networks connected by residual connections and layer normalization.</p>
+</div>
+
+
+
 <h2>Transformer Architecture Overview</h2>
 
 <h3>High-Level Structure</h3>

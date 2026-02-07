@@ -146,6 +146,46 @@
     <li>Understand bidirectional and multi-layer RNNs
 </ol>
 
+<div class="architecture-diagram">
+<h3>Recurrent Neural Network Architectures</h3>
+<pre class="mermaid">
+graph TD
+    subgraph RNN["Simple RNN Cell"]
+        R1["hₜ = tanh(Wₕhₜ₋₁ + Wₓxₜ + b)"]
+    end
+
+    subgraph LSTM["LSTM Cell"]
+        direction LR
+        F["Forget Gate<br/>fₜ = σ(Wf·[hₜ₋₁,xₜ])"]
+        IG["Input Gate<br/>iₜ = σ(Wi·[hₜ₋₁,xₜ])"]
+        OG["Output Gate<br/>oₜ = σ(Wo·[hₜ₋₁,xₜ])"]
+        C1["Cell State<br/>cₜ = fₜ⊙cₜ₋₁ + iₜ⊙c̃ₜ"]
+        HO["Hidden State<br/>hₜ = oₜ⊙tanh(cₜ)"]
+        F --> C1
+        IG --> C1
+        C1 --> HO
+        OG --> HO
+    end
+
+    subgraph Unrolled["Unrolled Through Time"]
+        direction LR
+        T1["x₁ → h₁"] --> T2["x₂ → h₂"]
+        T2 --> T3["x₃ → h₃"]
+        T3 --> T4["... → hₜ"]
+    end
+
+    RNN --> LSTM
+    LSTM --> Unrolled
+
+    style R1 fill:#e3f2fd,stroke:#2196f3,color:#000
+    style C1 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style HO fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Figure: RNN architectures process sequential data by maintaining hidden states; LSTM cells add gating mechanisms to control information flow and mitigate vanishing gradients.</p>
+</div>
+
+
+
 <h2>Vanilla RNNs</h2>
 
 <div class="definition"><strong>Definition:</strong> 

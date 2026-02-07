@@ -136,6 +136,43 @@
 
 <p>Healthcare represents the highest-stakes application domain for artificial intelligence. Errors in healthcare AI don't just cost money—they can cost lives. A misdiagnosed cancer, a missed drug interaction, or an incorrect treatment recommendation can have fatal consequences. Yet the potential benefits are equally profound: AI systems that improve diagnostic accuracy, reduce medical errors, accelerate drug discovery, and enable personalized medicine could save millions of lives and trillions of dollars in healthcare costs.</p>
 
+<div class="architecture-diagram">
+<h3>Healthcare Transformer Pipeline</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Data["Clinical Data Sources"]
+        direction LR
+        D1["EHR Notes"]
+        D2["Medical Images"]
+        D3["Lab Results"]
+    end
+
+    Data --> B["Pre-processing<br/>De-identification<br/>Normalization"]
+    B --> C["Domain Pre-trained<br/>Model (e.g., BioBERT,<br/>ClinicalBERT, Med-PaLM)"]
+
+    subgraph Tasks["Clinical Tasks"]
+        direction LR
+        T1["Clinical NER<br/>Diseases, Drugs"]
+        T2["Diagnosis<br/>Prediction"]
+        T3["Medical QA"]
+        T4["Radiology<br/>Report Gen"]
+    end
+
+    C --> Tasks
+
+    Tasks --> E["Clinical Decision<br/>Support"]
+    E --> F["Regulatory<br/>Compliance<br/>(HIPAA, FDA)"]
+
+    style D1 fill:#e8f5e9,stroke:#4caf50,color:#000
+    style C fill:#fff3e0,stroke:#ff9800,color:#000
+    style E fill:#e3f2fd,stroke:#2196f3,color:#000
+    style F fill:#fce4ec,stroke:#e91e63,color:#000
+</pre>
+<p class="diagram-caption">Figure: Healthcare Transformer pipelines process clinical data through domain-specific models with strict regulatory compliance requirements.</p>
+</div>
+
+
+
 <p>The business and societal challenges are immense. Healthcare spending in the United States alone exceeds \$4 trillion annually, with 30\% attributed to waste, inefficiency, and preventable errors. Diagnostic errors affect 12 million Americans annually, causing 40,000-80,000 deaths. Radiologists face overwhelming workloads, analyzing hundreds of images daily with limited time per case. Drug development costs average \$2.6 billion per approved drug and takes 10-15 years. Rare diseases affect 400 million people globally but receive limited research attention due to small patient populations.</p>
 
 <p>This chapter explores how transformers and deep learning are addressing these challenges across three critical areas: electronic health records (EHRs) for clinical decision support and risk prediction, medical imaging for diagnostic assistance, and genomic sequence modeling for precision medicine and drug discovery. We examine domain-specific architectures, training strategies, and validation requirements that differ fundamentally from other AI applications.</p>

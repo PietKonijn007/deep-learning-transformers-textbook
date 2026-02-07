@@ -136,6 +136,52 @@
 
 <p>Programming languages represent a rich and highly structured domain for deep learning. Unlike natural language, code has formal syntax, executable semantics, and built-in evaluation mechanisms. This chapter explores how transformers trained on code repositories have revolutionized developer productivity through code completion, generation, and analysis. We examine code-specific pre-training, from tokenization to context window design, and cover practical applications: IDE copilots, automated testing, refactoring, and repository-wide code understanding. Unlike natural language applications where ``hallucination'' produces grammatically correct but false text, code hallucinations produce syntactically correct but incorrect implementations---a property that enables testing and automated quality control.</p>
 
+<div class="architecture-diagram">
+<h3>Code Language Model Architecture</h3>
+<pre class="mermaid">
+graph TD
+    A["Source Code<br/>Repository"] --> B["Code Tokenizer<br/>BPE on code"]
+    B --> C["Code LM<br/>Transformer Decoder"]
+
+    subgraph Tasks["Code Tasks"]
+        direction LR
+        T1["Code<br/>Completion"]
+        T2["Code<br/>Generation"]
+        T3["Code<br/>Translation"]
+        T4["Bug<br/>Detection"]
+    end
+
+    C --> Tasks
+
+    subgraph Architecture["Model Design"]
+        direction TB
+        AST["AST-Aware<br/>Encoding"]
+        FIM["Fill-in-the-Middle<br/>Training"]
+        INST["Instruction<br/>Tuning"]
+    end
+
+    Architecture --> C
+
+    subgraph Models["Code Models"]
+        direction LR
+        CM1["Codex"]
+        CM2["CodeLlama"]
+        CM3["StarCoder"]
+        CM4["DeepSeek<br/>Coder"]
+    end
+
+    Tasks --> Models
+
+    style A fill:#e8f5e9,stroke:#4caf50,color:#000
+    style C fill:#fff3e0,stroke:#ff9800,color:#000
+    style T1 fill:#e3f2fd,stroke:#2196f3,color:#000
+    style T2 fill:#e3f2fd,stroke:#2196f3,color:#000
+</pre>
+<p class="diagram-caption">Figure: Code language models use Transformer architectures adapted for source code with specialized tokenization and training objectives like fill-in-the-middle.</p>
+</div>
+
+
+
 <h2>Learning Objectives</h2>
 
 <ol>

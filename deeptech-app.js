@@ -345,8 +345,21 @@ async function loadChapter(chapterId, index) {
         // Generate chapter TOC
         generateChapterToc();
         
-        // Wait a bit for DOM to settle, then render math
-        setTimeout(() => {
+        // Wait a bit for DOM to settle, then render math and diagrams
+        setTimeout(async () => {
+            // Render Mermaid diagrams
+            if (window.mermaidAPI) {
+                try {
+                    const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+                    window.mermaidAPI.initialize({ theme: theme, startOnLoad: false });
+                    await window.mermaidAPI.run({ nodes: elements.chapterContent.querySelectorAll('.mermaid') });
+                    console.log('Mermaid rendering complete');
+                } catch (err) {
+                    console.error('Mermaid error:', err);
+                }
+            }
+
+            // Render MathJax
             if (window.MathJax && window.MathJax.typesetPromise) {
                 window.MathJax.typesetPromise([elements.chapterContent]).then(() => {
                     console.log('MathJax rendering complete');

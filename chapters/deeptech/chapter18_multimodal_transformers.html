@@ -147,6 +147,47 @@
     <li>Build unified multimodal models
 </ol>
 
+<div class="architecture-diagram">
+<h3>Multimodal Transformer Architecture</h3>
+<pre class="mermaid">
+graph TD
+    subgraph Inputs["Multi-Modal Inputs"]
+        direction LR
+        TXT["Text<br/>Tokenizer"]
+        IMG["Image<br/>Patch/CNN Encoder"]
+        AUD["Audio<br/>Spectrogram"]
+    end
+
+    TXT --> TE["Text<br/>Embeddings"]
+    IMG --> IE["Visual<br/>Embeddings"]
+    AUD --> AE["Audio<br/>Embeddings"]
+
+    TE --> FUSE["Fusion Layer"]
+    IE --> FUSE
+    AE --> FUSE
+
+    subgraph Fusion["Fusion Strategies"]
+        direction LR
+        EARLY["Early Fusion<br/>Concatenate &<br/>Joint Attention"]
+        CROSS["Cross-Modal<br/>Attention"]
+        LATE["Late Fusion<br/>Separate Encoders<br/>→ Merge"]
+    end
+
+    FUSE --> TRANS["Shared Transformer<br/>Encoder Layers"]
+    TRANS --> OUT["Multi-Modal<br/>Output"]
+
+    Fusion -.-> FUSE
+
+    style TXT fill:#e3f2fd,stroke:#2196f3,color:#000
+    style IMG fill:#e8f5e9,stroke:#4caf50,color:#000
+    style AUD fill:#fff3e0,stroke:#ff9800,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Figure: Multimodal Transformers combine text, vision, and audio inputs through various fusion strategies before joint processing in shared Transformer layers.</p>
+</div>
+
+
+
 <h2>Multimodal Learning Fundamentals</h2>
 
 <h3>Fusion Strategies</h3>
