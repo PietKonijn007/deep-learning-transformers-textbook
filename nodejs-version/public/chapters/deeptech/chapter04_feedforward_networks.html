@@ -196,9 +196,9 @@ where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and 
 
 <figure>
 \begin{tikzpicture}[
-    neuron/.style={circle, draw, minimum size=0.7cm, font=\footnotesize},
+    neuron/.style={circle, draw, minimum size=0.7cm, font=},
     arrow/.style={->, >=stealth},
-    layer/.style={font=\small}
+    layer/.style={font=}
 ]
 
 <p>\foreach \i in {1,2,3} {
@@ -206,37 +206,37 @@ where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and 
 }</p>
 
 <p>\node[layer] at (0, 0.3) {Input};
-\node[font=\footnotesize] at (0, -4.2) {$\R^3$};</p>
+\node[font=] at (0, -4.2) {$\R^3$};</p>
 
 <p>\foreach \i in {1,2,3,4} {
     \node[neuron, fill=blue!10] (h\i) at (3, -\i*1) {$h_{\i}$};
 }
 \node[layer] at (3, 0.3) {Hidden};
-\node[font=\footnotesize] at (3, -4.5) {$\R^4$};</p>
+\node[font=] at (3, -4.5) {$\R^4$};</p>
 
 <p>\foreach \i in {1,2} {
     \node[neuron, fill=green!10] (y\i) at (6, -\i*1.5-0.5) {$y_{\i}$};
 }
 \node[layer] at (6, 0.3) {Output};
-\node[font=\footnotesize] at (6, -4.2) {$\R^2$};</p>
+\node[font=] at (6, -4.2) {$\R^2$};</p>
 
 <p>\foreach \i in {1,2,3} {
     \foreach \j in {1,2,3,4} {
-        \draw[arrow, gray!50] (x\i) -- (h\j);
+        \draw[arrow, gray!50] (x\i) – (h\j);
     }
 }</p>
 
 <p>\foreach \i in {1,2,3,4} {
     \foreach \j in {1,2} {
-        \draw[arrow, gray!50] (h\i) -- (y\j);
+        \draw[arrow, gray!50] (h\i) – (y\j);
     }
 }</p>
 
-<p>\draw[arrow, red, very thick] (x1) -- (h2);
-\draw[arrow, red, very thick] (h2) -- (y1);</p>
+<p>\draw[arrow, red, very thick] (x1) – (h2);
+\draw[arrow, red, very thick] (h2) – (y1);</p>
 
-<p>\node[font=\tiny] at (1.5, -1.5) {$\mW^{(1)}$};
-\node[font=\tiny] at (4.5, -1.5) {$\mW^{(2)}$};</p>
+<p>\node[font=] at (1.5, -1.5) {$\mW^{(1)}$};
+\node[font=] at (4.5, -1.5) {$\mW^{(2)}$};</p>
 
 <p>\end{tikzpicture}
 <figcaption>Multi-layer perceptron (MLP) computational graph showing fully-connected layers. Each neuron in the hidden layer receives input from <strong>all</strong> neurons in the input layer (12 connections total), and each output neuron receives input from all hidden neurons (8 connections). The red path highlights one example: $x_1 \to h_2 \to y_1$. This dense connectivity enables MLPs to learn complex non-linear functions.</figcaption>
@@ -260,11 +260,11 @@ Architecture for MNIST digit classification:
 
 <h2>Memory and Computation Analysis</h2>
 
-<p>For a single fully-connected layer computing $\vy = \mW\vx + \vb$ where $\mW \in \R^{m \times n}$, the forward pass requires approximately $2mn$ FLOPs and the backward pass requires approximately $4mn$ FLOPs (computing gradients with respect to inputs, weights, and biases). This gives a useful rule of thumb: one training step requires approximately $6\times$ as many FLOPs as the model has parameters---$2\times$ for the forward pass and $4\times$ for the backward pass. This ratio holds for fully-connected layers but varies with architecture; convolutional layers have much higher FLOPs per parameter due to weight sharing, while embedding layers have zero FLOPs (table lookups only).</p>
+<p>For a single fully-connected layer computing $\vy = \mW\vx + \vb$ where $\mW \in \R^{m \times n}$, the forward pass requires approximately $2mn$ FLOPs and the backward pass requires approximately $4mn$ FLOPs (computing gradients with respect to inputs, weights, and biases). This gives a useful rule of thumb: one training step requires approximately $6\times$ as many FLOPs as the model has parameters—$2\times$ for the forward pass and $4\times$ for the backward pass. This ratio holds for fully-connected layers but varies with architecture; convolutional layers have much higher FLOPs per parameter due to weight sharing, while embedding layers have zero FLOPs (table lookups only).</p>
 
 <p>During training, intermediate activations must be stored for the backward pass, and these often consume more memory than the model parameters. Activation memory scales linearly with batch size while parameter memory remains constant, so large batch sizes eventually become memory-limited. For transformer models, attention score matrices of size $B \times h \times n \times n$ dominate activation memory due to their $O(n^2)$ scaling with sequence length, dwarfing the $O(n)$ scaling of feed-forward activations.</p>
 
-<p>Transformer feed-forward networks use a standard two-layer architecture with $4\times$ expansion: projecting from model dimension $d$ to $4d$ with a GELU activation, then back to $d$. For BERT-base ($d = 768$, $d_{ff} = 3072$), the FFN contributes 4.7M parameters per layer---roughly twice the attention mechanism's 2.4M---and accounts for $\sim$60\% of per-layer FLOPs (see Section~[ref] for the complete breakdown).</p>
+<p>Transformer feed-forward networks use a standard two-layer architecture with $4\times$ expansion: projecting from model dimension $d$ to $4d$ with a GELU activation, then back to $d$. For BERT-base ($d = 768$, $d_{ff} = 3072$), the FFN contributes 4.7M parameters per layer—roughly twice the attention mechanism's 2.4M—and accounts for $\sim$60\% of per-layer FLOPs (see Section~[ref] for the complete breakdown).</p>
 
 <h2>Activation Functions</h2>
 
@@ -298,7 +298,7 @@ Transformer models use GELU (BERT, GPT) or variants like Swish for feed-forward 
 
 <h3>Computational Cost of Activation Functions</h3>
 
-<p>GELU is 4$\times$ more expensive than ReLU in arithmetic operations, but in practice adds only 1--2\% to total training time because both operations are memory-bandwidth-bound on modern GPUs. Modern frameworks provide fused linear-activation kernels that eliminate intermediate memory traffic, providing 1.3--1.5$\times$ speedup for combined operations.</p>
+<p>GELU is 4$\times$ more expensive than ReLU in arithmetic operations, but in practice adds only 1–2\% to total training time because both operations are memory-bandwidth-bound on modern GPUs. Modern frameworks provide fused linear-activation kernels that eliminate intermediate memory traffic, providing 1.3–1.5$\times$ speedup for combined operations.</p>
 
 <h3>Why GELU is Preferred in Transformers</h3>
 
@@ -382,7 +382,7 @@ During training, randomly set activations to zero with probability p. During inf
 
 <h3>Dropout in Practice</h3>
 
-<p>Dropout adds approximately 4--5\% overhead to training time for BERT-base, primarily from random number generation and memory traffic for the binary mask. Transformer models apply dropout at multiple points: after attention weights (attention dropout), after sublayer outputs (residual dropout), and on input embeddings. BERT uses $p=0.1$ at all locations; GPT-3 uses only residual dropout.</p>
+<p>Dropout adds approximately 4–5\% overhead to training time for BERT-base, primarily from random number generation and memory traffic for the binary mask. Transformer models apply dropout at multiple points: after attention weights (attention dropout), after sublayer outputs (residual dropout), and on input embeddings. BERT uses $p=0.1$ at all locations; GPT-3 uses only residual dropout.</p>
 
 <h2>Exercises</h2>
 
@@ -400,7 +400,7 @@ During training, randomly set activations to zero with probability p. During inf
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>3-layer MLP design for binary classification:</strong>
 

@@ -164,7 +164,7 @@ where $\mW^Q, \mW^K \in \R^{d \times d_k}$ and $\mW^V \in \R^{d \times d_v}$.
 
 <figure>
 \begin{tikzpicture}[
-    node/.style={circle, draw, minimum size=0.8cm, font=\small},
+    node/.style={circle, draw, minimum size=0.8cm, font=},
     arrow/.style={->, >=stealth, thick},
     attention/.style={->, >=stealth, blue!60, thick}
 ]
@@ -177,17 +177,17 @@ where $\mW^Q, \mW^K \in \R^{d \times d_k}$ and $\mW^V \in \R^{d \times d_v}$.
 \node[node] (o2) at (6,-2) {$\vo_2$};
 \node[node] (o3) at (6,-4) {$\vo_3$};</p>
 
-<p>\draw[attention] (x1) -- (o1);
-\draw[attention] (x1) -- (o2);
-\draw[attention] (x1) -- (o3);</p>
+<p>\draw[attention] (x1) – (o1);
+\draw[attention] (x1) – (o2);
+\draw[attention] (x1) – (o3);</p>
 
-<p>\draw[attention] (x2) -- (o1);
-\draw[attention] (x2) -- (o2);
-\draw[attention] (x2) -- (o3);</p>
+<p>\draw[attention] (x2) – (o1);
+\draw[attention] (x2) – (o2);
+\draw[attention] (x2) – (o3);</p>
 
-<p>\draw[attention] (x3) -- (o1);
-\draw[attention] (x3) -- (o2);
-\draw[attention] (x3) -- (o3);</p>
+<p>\draw[attention] (x3) – (o1);
+\draw[attention] (x3) – (o2);
+\draw[attention] (x3) – (o3);</p>
 
 <p>\begin{scope}[shift={(10,-2)}]
     \node[node, scale=0.7] (h0) at (0,0) {$\vh_0$};
@@ -195,9 +195,9 @@ where $\mW^Q, \mW^K \in \R^{d \times d_k}$ and $\mW^V \in \R^{d \times d_v}$.
     \node[node, scale=0.7] (h2) at (3,0) {$\vh_2$};
     \node[node, scale=0.7] (h3) at (4.5,0) {$\vh_3$};
     
-    \draw[arrow, red!60] (h0) -- (h1);
-    \draw[arrow, red!60] (h1) -- (h2);
-    \draw[arrow, red!60] (h2) -- (h3);
+    \draw[arrow, red!60] (h0) – (h1);
+    \draw[arrow, red!60] (h1) – (h2);
+    \draw[arrow, red!60] (h2) – (h3);
     
 \end{scope}</p>
 
@@ -300,8 +300,8 @@ $$
 
 <figure>
 \begin{tikzpicture}[
-    box/.style={rectangle, draw, minimum width=2cm, minimum height=0.8cm, font=\small},
-    operation/.style={rectangle, draw, fill=blue!10, minimum width=2cm, minimum height=0.6cm, font=\footnotesize},
+    box/.style={rectangle, draw, minimum width=2cm, minimum height=0.8cm, font=},
+    operation/.style={rectangle, draw, fill=blue!10, minimum width=2cm, minimum height=0.6cm, font=},
     arrow/.style={->, >=stealth, thick}
 ]
 
@@ -322,27 +322,27 @@ $$
 
 <p>\node[box] (output) at (0,-8) {Output};</p>
 
-<p>\draw[arrow] (input) -- (-2,-1.5);
-\draw[arrow] (input) -- (0,-1.5);
-\draw[arrow] (input) -- (2,-1.5);</p>
+<p>\draw[arrow] (input) – (-2,-1.5);
+\draw[arrow] (input) – (0,-1.5);
+\draw[arrow] (input) – (2,-1.5);</p>
 
-<p>\draw[arrow] (proj1) -- (head1);
-\draw[arrow] (proj2) -- (head2);
-\draw[arrow] (proj3) -- (head3);</p>
+<p>\draw[arrow] (proj1) – (head1);
+\draw[arrow] (proj2) – (head2);
+\draw[arrow] (proj3) – (head3);</p>
 
-<p>\draw[arrow] (head1) -- (-2,-4.5);
-\draw[arrow] (head2) -- (0,-4.5);
-\draw[arrow] (head3) -- (2,-4.5);</p>
+<p>\draw[arrow] (head1) – (-2,-4.5);
+\draw[arrow] (head2) – (0,-4.5);
+\draw[arrow] (head3) – (2,-4.5);</p>
 
-<p>\draw[arrow] (concat) -- (output_proj);
-\draw[arrow] (output_proj) -- (output);</p>
+<p>\draw[arrow] (concat) – (output_proj);
+\draw[arrow] (output_proj) – (output);</p>
 
 <p>\end{tikzpicture}
 <figcaption>Multi-head attention architecture. The input is projected into $h$ parallel attention heads, each with dimension $d_k = d_{\text{model}}/h$. Each head independently computes attention with its own learned projections $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)}$. The head outputs are concatenated and projected through $\mW^O$ to produce the final output. This parallel structure allows the model to attend to different representation subspaces simultaneously.</figcaption>
 </figure>
 
 <div class="example"><strong>Example:</strong> 
-BERT-base uses $d_{\text{model}} = 768$, $h = 12$ heads, $d_k = d_v = 64$ per head. For a single head, the projection $\mW^{Q(i)} \in \R^{768 \times 64}$ maps input $\mX \in \R^{512 \times 768}$ to queries $\mQ^{(i)} \in \R^{512 \times 64}$, and similarly for keys and values. Each head produces an attention matrix $\mA^{(i)} \in \R^{512 \times 512}$---a quadratic cost in sequence length.
+BERT-base uses $d_{\text{model}} = 768$, $h = 12$ heads, $d_k = d_v = 64$ per head. For a single head, the projection $\mW^{Q(i)} \in \R^{768 \times 64}$ maps input $\mX \in \R^{512 \times 768}$ to queries $\mQ^{(i)} \in \R^{512 \times 64}$, and similarly for keys and values. Each head produces an attention matrix $\mA^{(i)} \in \R^{512 \times 512}$—a quadratic cost in sequence length.
 
 <p>Concatenating all 12 heads yields $\R^{512 \times 768}$, which the output projection $\mW^O \in \R^{768 \times 768}$ maps back to $\R^{512 \times 768}$. The total is $4 \times 768^2 = 2{,}359{,}296$ attention parameters per layer (see Section~[ref] for the full model analysis).
 </div>
@@ -590,7 +590,7 @@ Position 3 attends to all positions 0, 1, 2, 3.</p>
 
 <ul>
     <li><strong>Sparse attention</strong> restricts each query to a subset of keys (e.g., local window $\pm w$, strided, or random positions), reducing complexity from $O(n^2)$ to $O(ns)$ where $s \ll n$. Accuracy loss is typically $<$1\% for local-context tasks with $w = 512$.
-    <li><strong>Linear attention</strong> replaces the softmax kernel with a decomposable kernel $\phi(\vq) \cdot \phi(\vk)$, enabling $O(nd^2)$ computation by reordering the matrix multiplications. Accuracy loss is 1--3\% due to imperfect kernel approximation.
+    <li><strong>Linear attention</strong> replaces the softmax kernel with a decomposable kernel $\phi(\vq) \cdot \phi(\vk)$, enabling $O(nd^2)$ computation by reordering the matrix multiplications. Accuracy loss is 1–3\% due to imperfect kernel approximation.
     <li><strong>Low-rank attention</strong> (e.g., Linformer) projects keys and values to dimension $r \ll n$, giving an attention matrix of shape $n \times r$ instead of $n \times n$. Memory and computation reduce by a factor of $n/r$.
 </ul>
 
@@ -612,7 +612,7 @@ Position 3 attends to all positions 0, 1, 2, 3.</p>
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> For GPT-2 ($d_{\text{model}} = 1024$, $h = 16$, $n = 1024$):
 

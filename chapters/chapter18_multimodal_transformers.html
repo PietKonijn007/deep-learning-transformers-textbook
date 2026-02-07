@@ -155,29 +155,29 @@
 
 <figure>
 \begin{tikzpicture}[
-  node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
-  encoder/.style={rectangle, draw, minimum width=2cm, minimum height=1.2cm, font=\small},
+  node/.style={circle, draw, minimum size=0.6cm, font=},
+  encoder/.style={rectangle, draw, minimum width=2cm, minimum height=1.2cm, font=},
   arrow/.style={->, thick},
   bidir/.style={<->, thick, blue},
   cross/.style={->, thick, green!60!black, dashed}
 ]
 
-<p>\node[font=\small\bfseries] at (0,4) {Early Fusion};
+<p>\node[font=\bfseries] at (0,4) {Early Fusion};
 \node[node, fill=blue!20] (v1) at (-0.5,2.5) {$v_1$};
 \node[node, fill=blue!20] (v2) at (0.5,2.5) {$v_2$};
 \node[node, fill=red!20] (t1) at (-0.5,1.5) {$t_1$};
 \node[node, fill=red!20] (t2) at (0.5,1.5) {$t_2$};</p>
 
 <p>\node[encoder, fill=purple!10] (enc1) at (0,0) {Unified \\ Encoder};
-\draw[arrow] (v1) -- (enc1);
-\draw[arrow] (v2) -- (enc1);
-\draw[arrow] (t1) -- (enc1);
-\draw[arrow] (t2) -- (enc1);</p>
+\draw[arrow] (v1) – (enc1);
+\draw[arrow] (v2) – (enc1);
+\draw[arrow] (t1) – (enc1);
+\draw[arrow] (t2) – (enc1);</p>
 
 <p>\draw[bidir] (v1) to[bend left=10] (t1);
 \draw[bidir] (v2) to[bend right=10] (t2);</p>
 
-<p>\node[font=\small\bfseries] at (6,4) {Late Fusion};
+<p>\node[font=\bfseries] at (6,4) {Late Fusion};
 \node[node, fill=blue!20] (v3) at (5,2.5) {$v_1$};
 \node[node, fill=blue!20] (v4) at (6,2.5) {$v_2$};
 \node[node, fill=red!20] (t3) at (5,1.5) {$t_1$};
@@ -186,16 +186,16 @@
 <p>\node[encoder, fill=blue!10] (venc) at (5.5,0.8) {Vision \\ Encoder};
 \node[encoder, fill=red!10] (tenc) at (5.5,-0.5) {Text \\ Encoder};</p>
 
-<p>\draw[arrow] (v3) -- (venc);
-\draw[arrow] (v4) -- (venc);
-\draw[arrow] (t3) -- (tenc);
-\draw[arrow] (t4) -- (tenc);</p>
+<p>\draw[arrow] (v3) – (venc);
+\draw[arrow] (v4) – (venc);
+\draw[arrow] (t3) – (tenc);
+\draw[arrow] (t4) – (tenc);</p>
 
 <p>\node[encoder, fill=yellow!10] (fuse) at (5.5,-2) {Fusion};
-\draw[arrow] (venc) -- (fuse);
-\draw[arrow] (tenc) -- (fuse);</p>
+\draw[arrow] (venc) – (fuse);
+\draw[arrow] (tenc) – (fuse);</p>
 
-<p>\node[font=\small\bfseries] at (12,4) {Cross-Modal};
+<p>\node[font=\bfseries] at (12,4) {Cross-Modal};
 \node[node, fill=blue!20] (v5) at (11,2.5) {$v_1$};
 \node[node, fill=blue!20] (v6) at (12,2.5) {$v_2$};
 \node[node, fill=red!20] (t5) at (11,1.5) {$t_1$};
@@ -204,10 +204,10 @@
 <p>\node[encoder, fill=blue!10] (venc2) at (11.5,0.8) {Vision \\ Encoder};
 \node[encoder, fill=red!10] (tenc2) at (11.5,-0.5) {Text \\ Encoder};</p>
 
-<p>\draw[arrow] (v5) -- (venc2);
-\draw[arrow] (v6) -- (venc2);
-\draw[arrow] (t5) -- (tenc2);
-\draw[arrow] (t6) -- (tenc2);</p>
+<p>\draw[arrow] (v5) – (venc2);
+\draw[arrow] (v6) – (venc2);
+\draw[arrow] (t5) – (tenc2);
+\draw[arrow] (t6) – (tenc2);</p>
 
 <p>\draw[cross] (venc2) to[bend left=20] (tenc2);
 \draw[cross] (tenc2) to[bend left=20] (venc2);</p>
@@ -227,7 +227,7 @@
 
 <p></div>
 
-<p>Cross-modal attention offers the best trade-off for most applications: for 196 image patches and 128 text tokens, cross-attention requires $196 \times 128 = 25{,}088$ computations per head versus $324^2 = 104{,}976$ for early fusion---a 4$\times$ reduction while preserving fine-grained alignment between modalities.</p>
+<p>Cross-modal attention offers the best trade-off for most applications: for 196 image patches and 128 text tokens, cross-attention requires $196 \times 128 = 25{,}088$ computations per head versus $324^2 = 104{,}976$ for early fusion—a 4$\times$ reduction while preserving fine-grained alignment between modalities.</p>
 
 <h3>Alignment Objectives</h3>
 
@@ -439,7 +439,7 @@ $$
 
 <h2>Computational Analysis of Multimodal Transformers</h2>
 
-<p>Multimodal transformers follow the same FLOPs formulas derived in Chapter~12 for their individual encoders: each transformer layer costs $24Bnd_{\text{model}}^2 + 4Bn^2d_{\text{model}}$ FLOPs (attention plus feed-forward). The multimodal-specific addition is cross-modal attention, which costs $4mnd$ FLOPs per layer (where $m$ and $n$ are the sequence lengths of the two modalities). In practice, cross-modal attention is a small fraction of total cost---for BLIP with 128 text tokens and 196 image patches, cross-attention adds only 462~MFLOPs across 6 layers, negligible compared to the self-attention costs in each encoder.</p>
+<p>Multimodal transformers follow the same FLOPs formulas derived in Chapter~12 for their individual encoders: each transformer layer costs $24Bnd_{\text{model}}^2 + 4Bn^2d_{\text{model}}$ FLOPs (attention plus feed-forward). The multimodal-specific addition is cross-modal attention, which costs $4mnd$ FLOPs per layer (where $m$ and $n$ are the sequence lengths of the two modalities). In practice, cross-modal attention is a small fraction of total cost—for BLIP with 128 text tokens and 196 image patches, cross-attention adds only 462~MFLOPs across 6 layers, negligible compared to the self-attention costs in each encoder.</p>
 
 <p>The key computational asymmetry in multimodal models is between modalities: image encoding typically dominates. CLIP's ViT-L/14 requires $\sim$55~GFLOPs per image versus $\sim$5.5~GFLOPs per text, a 10$\times$ ratio. When a large language model serves as the text backbone (as in Flamingo with Chinchilla-70B), text processing dominates instead, requiring $\sim$110~TFLOPs per sequence.</p>
 
@@ -453,7 +453,7 @@ $$
 
 <h3>Distributed Training and Memory Optimization</h3>
 
-<p>Multimodal transformers use the same distributed training techniques as unimodal models (see Chapter~11 for detailed coverage): data parallelism for CLIP-scale models that fit on a single GPU, tensor and pipeline parallelism for larger models like Flamingo-80B where the 70B parameter language model must be partitioned across multiple GPUs. Memory optimization techniques---gradient checkpointing, mixed precision training, and ZeRO optimizer state partitioning---are essential and apply identically to the multimodal setting.</p>
+<p>Multimodal transformers use the same distributed training techniques as unimodal models (see Chapter~11 for detailed coverage): data parallelism for CLIP-scale models that fit on a single GPU, tensor and pipeline parallelism for larger models like Flamingo-80B where the 70B parameter language model must be partitioned across multiple GPUs. Memory optimization techniques—gradient checkpointing, mixed precision training, and ZeRO optimizer state partitioning—are essential and apply identically to the multimodal setting.</p>
 
 <p>The multimodal-specific challenge is the asymmetric memory profile: image activations ($\sim$75~MB per image for ViT-L) far exceed text activations ($\sim$1.4~MB per text for CLIP's encoder), so image encoding dominates the memory budget during training. For Flamingo-80B, the frozen 70B language model requires 140~GB in FP16, necessitating model parallelism across at least 2 A100 GPUs before accounting for activations or trainable parameters.</p>
 
@@ -619,7 +619,7 @@ $$
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: CLIP Contrastive Loss Implementation</strong>
 

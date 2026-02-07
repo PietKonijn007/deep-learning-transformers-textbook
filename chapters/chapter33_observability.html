@@ -196,7 +196,7 @@ $$\begin{align}
 
 <p><strong>Baseline:</strong> Normal operating level (e.g., CPU averages 40\%)</p>
 
-<p><strong>Seasonality:</strong> Predictable patterns (e.g., higher traffic 9am--5pm)</p>
+<p><strong>Seasonality:</strong> Predictable patterns (e.g., higher traffic 9am–5pm)</p>
 
 <p><strong>Trend:</strong> Long-term changes (e.g., growing traffic week-over-week)</p>
 
@@ -299,7 +299,7 @@ $$\begin{align}
 
 <ol>
 <li><strong>Tokenization:</strong> Split log into tokens
-<li><strong>Classification:</strong> Each token is a constant or variable (e.g., ``timeout'' is constant; ``5000'' is variable)
+<li><strong>Classification:</strong> Each token is a constant or variable (e.g., “timeout” is constant; “5000” is variable)
 <li><strong>Template extraction:</strong> Infer template from multiple logs
 <li><strong>Clustering:</strong> Group logs by template; identify new template types
 </ol>
@@ -442,8 +442,8 @@ $$\begin{align}
 <ol>
 <li>System detects anomaly in real-time
 <li>RCA engine analyzes metrics and logs
-<li>System generates incident summary: ``API latency spike in payment service. Database CPU also elevated. Similar to 3 prior incidents.''
-<li>Suggested actions: ``Restart payment service or check database slow query log''
+<li>System generates incident summary: “API latency spike in payment service. Database CPU also elevated. Similar to 3 prior incidents.”
+<li>Suggested actions: “Restart payment service or check database slow query log”
 <li>On-call engineer reviews suggestion; approves auto-restart
 <li>Incident resolved in 2 minutes (vs. 30 minutes manual detective work)
 </ol>
@@ -496,8 +496,8 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 <ul>
 <li><strong>Online learning with conservative updates:</strong> Use exponential moving averages (e.g.\ decay factor 0.95) for baselines, allowing gradual adaptation to traffic growth while resisting sudden anomalous spikes.
 <li><strong>Deployment-aware anomaly detection:</strong> Integrate CI/CD deployment events to temporarily relax thresholds during expected change windows, reducing false positives from legitimate deployments.
-<li><strong>Multi-signal correlation:</strong> Correlate metrics, logs, traces, and deployment events rather than analyzing signals in isolation---multi-signal anomalies are far more likely to be real issues, reducing false positives by 50--70\%.
-<li><strong>Synthetic incident injection:</strong> Inject synthetic failures in test environments to verify detection systems catch them---analogous to fire drills for monitoring infrastructure.
+<li><strong>Multi-signal correlation:</strong> Correlate metrics, logs, traces, and deployment events rather than analyzing signals in isolation—multi-signal anomalies are far more likely to be real issues, reducing false positives by 50–70\%.
+<li><strong>Synthetic incident injection:</strong> Inject synthetic failures in test environments to verify detection systems catch them—analogous to fire drills for monitoring infrastructure.
 <li><strong>Adaptive percentile-based thresholds:</strong> Use percentile thresholds (e.g.\ alert if metric exceeds 99th percentile of recent values) rather than absolute thresholds, automatically adjusting to growth and seasonal patterns.
 </ul>
 
@@ -514,18 +514,18 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Anomaly Detection</strong>
 
-<p>\itshape Data:
+<p><em>Data:</em>
 <ul>
 <li>Metric: CPU usage over 1 month (1 sample per minute; 44,640 samples)
 <li>Anomalies: 10 known incidents (planned maintenance excluded)
 <li>Train/test: 3 weeks train, 1 week test with anomalies
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ul>
 <li>Input: 60 samples (1 hour history)
 <li>Transformer encoder with positional encoding
@@ -533,7 +533,7 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 <li>Loss: MSE on predictions
 </ul>
 
-<p>\itshape Results:
+<p><em>Results:</em>
 <ul>
 <li>Prediction RMSE: 3\% (accurate forecasting)
 <li>Anomaly detection (threshold on prediction error):
@@ -545,34 +545,34 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 <li>Advantage: Transformer captures complex patterns (daily seasonality, trends)
 </ul>
 
-<p>\itshape Practical deployment:
+<p><em>Practical deployment:</em>
 Use threshold = 10\% error (catch 90\% of anomalies). Alert human; 5\% FPR requires tuning or feedback loop to reduce over time.
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Log Parsing</strong>
 
-<p>\itshape Data:
+<p><em>Data:</em>
 <ul>
 <li>100K logs from 5 services
 <li>Each log has template (constant structure) + variables
 <li>Test set: 1K logs with unseen templates
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ul>
 <li>Token classifier: BPE tokenization, BERT classification (constant vs. variable per token)
 <li>Template extraction: Logs with identical constant tokens grouped
 <li>Clustering: New templates identified via similarity to known templates
 </ul>
 
-<p>\itshape Results:
+<p><em>Results:</em>
 <ul>
 <li>Template recovery: 95\% of logs assigned to correct template
 <li>Unseen templates: 80\% detection (identify new templates not in training)
 <li>False positives: 2\% (misassign variable token as constant; rare)
 </ul>
 
-<p>\itshape Improvements:
+<p><em>Improvements:</em>
 <ul>
 <li>Use domain knowledge (common log patterns) to improve accuracy
 <li>Online learning: Continuously update templates as new logs arrive
@@ -582,7 +582,7 @@ Use threshold = 10\% error (catch 90\% of anomalies). Alert human; 5\% FPR requi
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Root-Cause Analysis</strong>
 
-<p>\itshape Dataset:
+<p><em>Dataset:</em>
 <ul>
 <li>500 historical incidents with:
   <ul>
@@ -593,7 +593,7 @@ Use threshold = 10\% error (catch 90\% of anomalies). Alert human; 5\% FPR requi
 <li>Test set: 50 held-out incidents
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ol>
 <li><strong>Metric correlation:</strong> Given anomaly metrics, find correlated metrics
 <li><strong>Similar incident retrieval:</strong> Embed current incident; find similar past incidents
@@ -601,14 +601,14 @@ Use threshold = 10\% error (catch 90\% of anomalies). Alert human; 5\% FPR requi
 <li><strong>Confidence scoring:</strong> How confident is this diagnosis?
 </ol>
 
-<p>\itshape Evaluation:
+<p><em>Evaluation:</em>
 <ul>
 <li>Exact match: Predicted root cause matches labeled root cause. 65\% accuracy.
 <li>Top-3 accuracy: Predicted root cause in top 3 suggestions. 88\% accuracy.
 <li>Confidence calibration: When model says 80\% confident, is accuracy actually ≈ 80\%?
 </ul>
 
-<p>\itshape Practical use:
+<p><em>Practical use:</em>
 <ul>
 <li>Display top-3 suggestions to engineer (not top-1, to avoid over-reliance)
 <li>Engineer picks most relevant suggestion

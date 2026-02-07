@@ -193,14 +193,14 @@
 
 <table>
 <tr><th><strong>Scenario</strong></th><th><strong>Range</strong></th><th><strong>Notes</strong></th></tr>
-<tr><td>BERT fine-tuning</td><td>$1$--$5 \times 10^{-5}$</td><td>Lower end for small datasets</td></tr>
-<tr><td>GPT fine-tuning</td><td>$2 \times 10^{-5}$--$10^{-4}$</td><td>Autoregressive is more stable</td></tr>
-<tr><td>Pre-training from scratch</td><td>$10^{-4}$--$6 \times 10^{-4}$</td><td>Requires longer warmup</td></tr>
+<tr><td>BERT fine-tuning</td><td>$1$–$5 \times 10^{-5}$</td><td>Lower end for small datasets</td></tr>
+<tr><td>GPT fine-tuning</td><td>$2 \times 10^{-5}$–$10^{-4}$</td><td>Autoregressive is more stable</td></tr>
+<tr><td>Pre-training from scratch</td><td>$10^{-4}$–$6 \times 10^{-4}$</td><td>Requires longer warmup</td></tr>
 </table>
 
 <p></div>
 
-<p><strong>Rules of thumb:</strong> Scale LR $\sim$linearly with batch size (use LAMB for very large batches). Warmup: 5--10\% of steps for fine-tuning, 10K--50K steps for pre-training.</p>
+<p><strong>Rules of thumb:</strong> Scale LR $\sim$linearly with batch size (use LAMB for very large batches). Warmup: 5–10\% of steps for fine-tuning, 10K–50K steps for pre-training.</p>
 
 <h3>Batch Size Selection</h3>
 
@@ -208,9 +208,9 @@
 
 <table>
 <tr><th><strong>Scenario</strong></th><th><strong>Typical Range</strong></th><th><strong>Notes</strong></th></tr>
-<tr><td>Fine-tuning (single GPU)</td><td>16--32</td><td>Gradient accumulation for larger effective batch</td></tr>
-<tr><td>Fine-tuning (multi-GPU)</td><td>32--256</td><td>Scale LR accordingly</td></tr>
-<tr><td>Pre-training</td><td>256--4096</td><td>Requires LR warmup + LAMB</td></tr>
+<tr><td>Fine-tuning (single GPU)</td><td>16–32</td><td>Gradient accumulation for larger effective batch</td></tr>
+<tr><td>Fine-tuning (multi-GPU)</td><td>32–256</td><td>Scale LR accordingly</td></tr>
+<tr><td>Pre-training</td><td>256–4096</td><td>Requires LR warmup + LAMB</td></tr>
 </table>
 
 <p></div>
@@ -234,9 +234,9 @@
 <p>When encountering memory errors, apply these steps in order:</p>
 
 <ol>
-    <li><strong>Reduce sequence length</strong> (if task permits). Attention memory scales quadratically with sequence length---truncating from 512 to 256 tokens saves $\sim$4× attention memory. Many classification tasks work well at 128 tokens.
-    <li><strong>Enable mixed precision</strong> (<code>torch.cuda.amp</code>). Halves activation and gradient memory with 2--3× speedup on tensor-core GPUs. Minimal code changes required. See Chapter~21 for implementation.
-    <li><strong>Enable gradient checkpointing.</strong> Trades 20--30\% additional compute time for 40--50\% activation memory reduction. Apply via <code>torch.utils.checkpoint</code>.
+    <li><strong>Reduce sequence length</strong> (if task permits). Attention memory scales quadratically with sequence length—truncating from 512 to 256 tokens saves $\sim$4× attention memory. Many classification tasks work well at 128 tokens.
+    <li><strong>Enable mixed precision</strong> (<code>torch.cuda.amp</code>). Halves activation and gradient memory with 2–3× speedup on tensor-core GPUs. Minimal code changes required. See Chapter~21 for implementation.
+    <li><strong>Enable gradient checkpointing.</strong> Trades 20–30\% additional compute time for 40–50\% activation memory reduction. Apply via <code>torch.utils.checkpoint</code>.
     <li><strong>Reduce batch size and use gradient accumulation.</strong> Maintain effective batch size $B_{\text{eff}} = B_{\text{micro}} \times N_{\text{accum}}$ while fitting in memory. Linear memory savings.
     <li><strong>Consider model parallelism.</strong> When the model itself exceeds single-GPU memory, use pipeline parallelism (split by layers) or tensor parallelism (split within layers). Frameworks: DeepSpeed, Megatron-LM. See Chapter~22 for multi-GPU strategies.
 </ol>
@@ -307,7 +307,7 @@
 <table>
 <tr><th><strong>Symptom</strong></th><th><strong>Likely Cause</strong></th><th><strong>Fix</strong></th></tr>
 <tr><td>Out of memory</td><td>Batch/sequence too large</td><td>See memory checklist (Section~[ref])</td></tr>
-<tr><td>Loss not decreasing</td><td>Learning rate too low</td><td>Increase LR 3--10$\times$; verify overfit on 1 batch</td></tr>
+<tr><td>Loss not decreasing</td><td>Learning rate too low</td><td>Increase LR 3–10$\times$; verify overfit on 1 batch</td></tr>
 <tr><td>Loss diverges / NaN</td><td>LR too high or no clipping</td><td>Reduce LR; clip gradients to norm 1.0</td></tr>
 <tr><td>Slow training</td><td>Low GPU utilization</td><td>Increase batch size; add DataLoader workers</td></tr>
 <tr><td>Train/val gap growing</td><td>Overfitting</td><td>More dropout; data augmentation; smaller model</td></tr>
@@ -325,12 +325,12 @@
 
 <table>
 <tr><th><strong>Technique</strong></th><th><strong>Speedup</strong></th><th><strong>Accuracy Cost</strong></th><th><strong>Effort</strong></th></tr>
-<tr><td>FP16 inference</td><td>1.5--2$\times$</td><td>$<$0.1\%</td><td>Minimal</td></tr>
-<tr><td>INT8 quantization (PTQ)</td><td>2--4$\times$</td><td>0.5--2\%</td><td>Low (calibration)</td></tr>
-<tr><td>INT8 quantization (QAT)</td><td>2--4$\times$</td><td>$<$0.5\%</td><td>Medium (retraining)</td></tr>
-<tr><td>KV caching (autoregressive)</td><td>5--10$\times$</td><td>None</td><td>Low</td></tr>
-<tr><td>TorchScript / torch.compile</td><td>1.2--1.5$\times$</td><td>None</td><td>Low</td></tr>
-<tr><td>TensorRT compilation</td><td>2--5$\times$</td><td>$<$0.5\%</td><td>Medium</td></tr>
+<tr><td>FP16 inference</td><td>1.5–2$\times$</td><td>$<$0.1\%</td><td>Minimal</td></tr>
+<tr><td>INT8 quantization (PTQ)</td><td>2–4$\times$</td><td>0.5–2\%</td><td>Low (calibration)</td></tr>
+<tr><td>INT8 quantization (QAT)</td><td>2–4$\times$</td><td>$<$0.5\%</td><td>Medium (retraining)</td></tr>
+<tr><td>KV caching (autoregressive)</td><td>5–10$\times$</td><td>None</td><td>Low</td></tr>
+<tr><td>TorchScript / torch.compile</td><td>1.2–1.5$\times$</td><td>None</td><td>Low</td></tr>
+<tr><td>TensorRT compilation</td><td>2–5$\times$</td><td>$<$0.5\%</td><td>Medium</td></tr>
 </table>
 
 <p></div>
@@ -338,9 +338,9 @@
 <h3>Optimizing for Throughput</h3>
 
 <ul>
-    <li><strong>Dynamic batching:</strong> Accumulate requests for 10--50\,ms, process together. Improves GPU utilization from 20--30\% to 70--90\%.
-    <li><strong>ONNX Runtime / TensorRT:</strong> Graph-level optimizations provide 1.5--5$\times$ throughput gains via operator fusion and kernel selection.
-    <li><strong>Model distillation:</strong> Train a smaller student (e.g., 6-layer DistilBERT retains 97\% of BERT-base accuracy at 1.6$\times$ speed). Combine with quantization for 5--10$\times$ cumulative speedup.
+    <li><strong>Dynamic batching:</strong> Accumulate requests for 10–50\,ms, process together. Improves GPU utilization from 20–30\% to 70–90\%.
+    <li><strong>ONNX Runtime / TensorRT:</strong> Graph-level optimizations provide 1.5–5$\times$ throughput gains via operator fusion and kernel selection.
+    <li><strong>Model distillation:</strong> Train a smaller student (e.g., 6-layer DistilBERT retains 97\% of BERT-base accuracy at 1.6$\times$ speed). Combine with quantization for 5–10$\times$ cumulative speedup.
     <li><strong>Continuous batching (vLLM):</strong> For autoregressive generation, allow new requests to join in-flight batches as others complete. See Chapter~22.
 </ul>
 
@@ -351,7 +351,7 @@
 <table>
 <tr><th><strong>Scenario</strong></th><th><strong>Recommended Hardware</strong></th><th><strong>Rationale</strong></th></tr>
 <tr><td>$<$10 req/s, small model</td><td>CPU</td><td>Lower cost, sufficient throughput</td></tr>
-<tr><td>10--100 req/s</td><td>T4 GPU + TensorRT</td><td>Good latency/cost balance</td></tr>
+<tr><td>10–100 req/s</td><td>T4 GPU + TensorRT</td><td>Good latency/cost balance</td></tr>
 <tr><td>$>$100 req/s</td><td>A10/A100 GPU</td><td>Maximum throughput</td></tr>
 <tr><td>Edge / mobile</td><td>INT8/INT4 on device</td><td>Memory and power constrained</td></tr>
 </table>
@@ -414,7 +414,7 @@
     <li>Plan scaling: autoscaling rules, load balancing, maximum replica count.
 </ol>
 
-<p><strong>Safe rollout:</strong> Use canary deployment (1--5\% traffic) or shadow mode (run new model alongside production without serving results) before full rollout. Monitor key metrics for several hours before increasing traffic. Maintain instant rollback capability.</p>
+<p><strong>Safe rollout:</strong> Use canary deployment (1–5\% traffic) or shadow mode (run new model alongside production without serving results) before full rollout. Monitor key metrics for several hours before increasing traffic. Maintain instant rollback capability.</p>
 
 <h2>Practical Checklists</h2>
 
@@ -829,7 +829,7 @@ def reverse_string(s):
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Reproduce DistilBERT</strong>
 

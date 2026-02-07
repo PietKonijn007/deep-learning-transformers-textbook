@@ -207,8 +207,8 @@ with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \tim
 
 <figure>
 \begin{tikzpicture}[
-    block/.style={rectangle, draw, fill=blue!15, minimum width=3cm, minimum height=0.8cm, font=\small},
-    operation/.style={rectangle, draw, fill=green!15, minimum width=2.5cm, minimum height=0.6cm, font=\small},
+    block/.style={rectangle, draw, fill=blue!15, minimum width=3cm, minimum height=0.8cm, font=},
+    operation/.style={rectangle, draw, fill=green!15, minimum width=2.5cm, minimum height=0.6cm, font=},
     arrow/.style={->, >=stealth, thick},
     residual/.style={->, >=stealth, thick, red!70, dashed}
 ]
@@ -225,14 +225,14 @@ with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \tim
 
 <p>\node[block] (output) at (0,-6.5) {Output};</p>
 
-<p>\draw[arrow] (input) -- (mha);
-\draw[arrow] (mha) -- (add1);
-\draw[arrow] (add1) -- (ffn);
-\draw[arrow] (ffn) -- (add2);
-\draw[arrow] (add2) -- (output);</p>
+<p>\draw[arrow] (input) – (mha);
+\draw[arrow] (mha) – (add1);
+\draw[arrow] (add1) – (ffn);
+\draw[arrow] (ffn) – (add2);
+\draw[arrow] (add2) – (output);</p>
 
-<p>\draw[residual] (input.east) -- ++(1,0) |- (add1.east);
-\draw[residual] (add1.east) -- ++(1,0) |- (add2.east);</p>
+<p>\draw[residual] (input.east) – ++(1,0) |- (add1.east);
+\draw[residual] (add1.east) – ++(1,0) |- (add2.east);</p>
 
 <p>\end{tikzpicture}
 <figcaption>Transformer encoder layer architecture showing the two sub-layers with residual connections. The input flows through multi-head self-attention, then through a feed-forward network, with residual connections (red dashed arrows) bypassing each sub-layer. Layer normalization is applied after adding the residual. This structure maintains constant dimensions ($n \times d_{\text{model}}$) throughout, enabling easy stacking of multiple layers. The residual connections provide direct gradient pathways, crucial for training deep transformers.</figcaption>
@@ -245,7 +245,7 @@ with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \tim
 <div class="example"><strong>Example:</strong> 
 BERT-base uses $d_{\text{model}} = 768$, $h = 12$ ($d_k = 64$), $d_{ff} = 3072$, with $B = 32$ and $n = 512$.
 
-<p>The attention scores matrix $\R^{32 \times 12 \times 512 \times 512}$ requires 402~MB in FP32---the quadratic scaling means doubling sequence length to 1024 would require 1.6~GB per layer for attention scores alone.</p>
+<p>The attention scores matrix $\R^{32 \times 12 \times 512 \times 512}$ requires 402~MB in FP32—the quadratic scaling means doubling sequence length to 1024 would require 1.6~GB per layer for attention scores alone.</p>
 
 <p>Each encoder layer contains 7,084,800 parameters, with the feed-forward network ($4.7$M) contributing roughly twice the attention mechanism ($2.4$M). The per-layer activation memory totals $\approx$704~MB, dominated by attention scores. For all 12 layers, activations alone consume $\approx$8.4~GB. See Section~[ref] for the complete parameter, FLOPs, and memory analysis.
 </div>
@@ -726,12 +726,12 @@ $$
 <ul>
     <li><strong>Encoder-only (BERT, Chapter~13):</strong> Bidirectional self-attention processes the full input in a single parallel forward pass. Pre-trained with masked language modeling. Excels at understanding tasks: classification, NER, extractive QA, and semantic similarity.
 
-<p><li><strong>Decoder-only (GPT, Chapter~14):</strong> Causal self-attention enables autoregressive generation where each token attends only to previous tokens. Pre-trained with next-token prediction. Excels at generation, few-shot learning, and dialogue. Modern LLMs (GPT-3/4, LLaMA) use this pattern due to its flexibility---understanding tasks can be handled through prompting.</p>
+<p><li><strong>Decoder-only (GPT, Chapter~14):</strong> Causal self-attention enables autoregressive generation where each token attends only to previous tokens. Pre-trained with next-token prediction. Excels at generation, few-shot learning, and dialogue. Modern LLMs (GPT-3/4, LLaMA) use this pattern due to its flexibility—understanding tasks can be handled through prompting.</p>
 
 <p><li><strong>Encoder-decoder (T5, BART, Chapter~15):</strong> Combines a bidirectional encoder with a causal decoder connected via cross-attention. Pre-trained with span corruption or denoising objectives. Excels at sequence-to-sequence tasks: translation, summarization, and generative QA. Requires roughly twice the parameters of single-stack models but provides explicit separation of understanding and generation.
 </ul>
 
-<p>Recent trends favor decoder-only architectures for their versatility and scaling properties, though encoder-only models remain more parameter-efficient for understanding tasks and encoder-decoder models remain strongest for sequence-to-sequence tasks. Detailed coverage of each variant's architecture, pre-training, and fine-tuning follows in Chapters~13--15.</p>
+<p>Recent trends favor decoder-only architectures for their versatility and scaling properties, though encoder-only models remain more parameter-efficient for understanding tasks and encoder-decoder models remain strongest for sequence-to-sequence tasks. Detailed coverage of each variant's architecture, pre-training, and fine-tuning follows in Chapters~13–15.</p>
 
 <h2>Exercises</h2>
 
@@ -760,7 +760,7 @@ Why is decoding slower? How many forward passes required?
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Parameter Calculation for Transformer</strong>
 

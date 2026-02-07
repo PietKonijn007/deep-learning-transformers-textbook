@@ -210,7 +210,7 @@ A time series is non-stationary if its statistical properties (mean, variance, a
 
 <p>Information extraction from financial text involves several key tasks. Named entity recognition identifies companies, executives, and financial instruments mentioned in text, enabling tracking of which entities are discussed and in what context. Event extraction detects significant occurrences like merger and acquisition announcements, earnings surprises, and executive changes—events that typically trigger immediate market reactions. Sentiment analysis classifies text tone as positive, negative, or neutral, capturing market psychology and expectations. Relationship extraction identifies connections between entities, such as which company acquired whom or which companies compete in the same market, building knowledge graphs of corporate relationships.</p>
 
-<p>Consider a news headline: ``Apple Announces Record Q4 Revenue; Beats Analyst Expectations.'' Information extraction would identify the company as Apple, classify the event as an earnings announcement, extract the metric as Q4 revenue, and determine the sentiment as positive based on the words ``record'' and ``beats expectations.'' The predicted market impact would be a likely stock price increase, as positive earnings surprises typically drive immediate buying. This structured information can then feed into trading algorithms that act on news before human traders can react.</p>
+<p>Consider a news headline: “Apple Announces Record Q4 Revenue; Beats Analyst Expectations.” Information extraction would identify the company as Apple, classify the event as an earnings announcement, extract the metric as Q4 revenue, and determine the sentiment as positive based on the words “record” and “beats expectations.” The predicted market impact would be a likely stock price increase, as positive earnings surprises typically drive immediate buying. This structured information can then feed into trading algorithms that act on news before human traders can react.</p>
 
 <h3>Sentiment Analysis for Trading</h3>
 
@@ -223,7 +223,7 @@ A time series is non-stationary if its statistical properties (mean, variance, a
 <li>Backtest: Does this strategy beat a buy-and-hold baseline?
 </ol>
 
-<p>Practical results: Simple sentiment strategies achieve 50--55\% win rate (barely above random), but with low transaction costs and diversification, can be profitable.</p>
+<p>Practical results: Simple sentiment strategies achieve 50–55\% win rate (barely above random), but with low transaction costs and diversification, can be profitable.</p>
 
 <h2>Credit Modeling and Risk Management</h2>
 
@@ -240,7 +240,7 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 
 <p>Model: \(P(\text{default} = 1 \mid \text{features})\) = logistic(neural network)</p>
 
-<p>Loss: Cross-entropy on default labels (highly imbalanced: 2--5\% default rate)
+<p>Loss: Cross-entropy on default labels (highly imbalanced: 2–5\% default rate)
 </div>
 
 <p>Deep learning credit models employ several architectural components. Feature embedding encodes categorical variables like employment status and zip code as learned dense vectors, capturing semantic similarities (e.g., neighboring zip codes have similar embeddings). Temporal modules use LSTMs or transformers to process payment history sequences, learning patterns like improving or deteriorating payment behavior over time. Attention mechanisms identify which factors most influenced each decision, providing interpretability required for regulatory compliance. Regularization through L1/L2 penalties and dropout prevents overfitting, critical when default examples are scarce (typically 2-5</p>
@@ -255,9 +255,9 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 
 <h3>Explainability for Credit Decisions</h3>
 
-<p>When a loan is denied, applicants have the right to explanation. ``The AI said no'' is insufficient.</p>
+<p>When a loan is denied, applicants have the right to explanation. “The AI said no” is insufficient.</p>
 
-<p>Several interpretability methods provide explanations for credit decisions. SHAP values decompose each prediction into contributions from individual features, showing exactly how much each factor (income, credit score, payment history) influenced the decision. Attention analysis reveals which factors the model weighted most heavily, providing insight into the decision process. Counterfactual explanations answer ``what if'' questions: ``If your income were \$10,000 higher, you would be approved''—giving applicants actionable guidance. Prototype examples show similar applicants who were approved, helping applicants understand what successful profiles look like and how their application compares.</p>
+<p>Several interpretability methods provide explanations for credit decisions. SHAP values decompose each prediction into contributions from individual features, showing exactly how much each factor (income, credit score, payment history) influenced the decision. Attention analysis reveals which factors the model weighted most heavily, providing insight into the decision process. Counterfactual explanations answer “what if” questions: “If your income were \$10,000 higher, you would be approved”—giving applicants actionable guidance. Prototype examples show similar applicants who were approved, helping applicants understand what successful profiles look like and how their application compares.</p>
 
 <h2>Risk Management and Regulatory Requirements</h2>
 
@@ -297,15 +297,15 @@ Given borrower features (income, credit history, collateral, payment patterns), 
 
 <h3>Finance-Specific Drift Patterns</h3>
 
-<p><strong>Market regime shifts</strong> cause sudden, fundamental changes in the relationships that models have learned. A model trained during a bull market may fail catastrophically during a bear market or financial crisis because the statistical relationships between features change qualitatively, not just quantitatively. The 2008 financial crisis, COVID-19 crash, and 2022 inflation shock all broke quantitative models that had not been exposed to comparable regimes. For example, a volatility model trained on 2015--2019 data predicted VIX below 20; in March 2020, VIX spiked to 80.</p>
+<p><strong>Market regime shifts</strong> cause sudden, fundamental changes in the relationships that models have learned. A model trained during a bull market may fail catastrophically during a bear market or financial crisis because the statistical relationships between features change qualitatively, not just quantitatively. The 2008 financial crisis, COVID-19 crash, and 2022 inflation shock all broke quantitative models that had not been exposed to comparable regimes. For example, a volatility model trained on 2015–2019 data predicted VIX below 20; in March 2020, VIX spiked to 80.</p>
 
-<p><strong>Alpha decay</strong> is unique to trading models: as more market participants discover and exploit a predictive signal, the signal weakens through market efficiency. A trading strategy that generates 5\% annual returns may see returns decay to 1--2\% within 12--18 months as competitors adopt similar approaches. The industry average alpha half-life is estimated at 2--3 years, with high-frequency strategies decaying within months.</p>
+<p><strong>Alpha decay</strong> is unique to trading models: as more market participants discover and exploit a predictive signal, the signal weakens through market efficiency. A trading strategy that generates 5\% annual returns may see returns decay to 1–2\% within 12–18 months as competitors adopt similar approaches. The industry average alpha half-life is estimated at 2–3 years, with high-frequency strategies decaying within months.</p>
 
-<p><strong>Adversarial fraud evolution</strong> occurs because fraudsters actively adapt to detection models. Unlike natural drift where the data distribution shifts gradually, fraud patterns change deliberately and rapidly in response to detection. New fraud schemes---geographic shifts, velocity changes, amount manipulation, synthetic identities---can emerge within weeks of a model deployment, requiring continuous model updates.</p>
+<p><strong>Adversarial fraud evolution</strong> occurs because fraudsters actively adapt to detection models. Unlike natural drift where the data distribution shifts gradually, fraud patterns change deliberately and rapidly in response to detection. New fraud schemes—geographic shifts, velocity changes, amount manipulation, synthetic identities—can emerge within weeks of a model deployment, requiring continuous model updates.</p>
 
-<p><strong>Regulatory drift</strong> arises from changing compliance requirements (e.g., Basel III to Basel IV, new stress testing mandates, interest rate regime changes) that alter the features, constraints, or objectives of financial models. When the Federal Reserve raised rates from 0\% to 5\% in 2022--2023, models trained in the zero-rate environment required complete recalibration.</p>
+<p><strong>Regulatory drift</strong> arises from changing compliance requirements (e.g., Basel III to Basel IV, new stress testing mandates, interest rate regime changes) that alter the features, constraints, or objectives of financial models. When the Federal Reserve raised rates from 0\% to 5\% in 2022–2023, models trained in the zero-rate environment required complete recalibration.</p>
 
-<p><strong>Economic cycle drift</strong> affects credit models as borrower behavior differs between expansion and recession. A mortgage model trained on 2010--2019 expansion data predicted 2\% defaults; during the 2020 recession, actual defaults reached 5\%, causing hundreds of millions in unexpected losses.</p>
+<p><strong>Economic cycle drift</strong> affects credit models as borrower behavior differs between expansion and recession. A mortgage model trained on 2010–2019 expansion data predicted 2\% defaults; during the 2020 recession, actual defaults reached 5\%, causing hundreds of millions in unexpected losses.</p>
 
 <h3>Monitoring and Adaptation</h3>
 
@@ -328,18 +328,18 @@ Financial drift patterns are distinguished by their adversarial nature (fraud), 
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Stock Price Prediction</strong>
 
-<p>\itshape Data:
+<p><em>Data:</em>
 <ul>
-<li>S\&P 500 daily OHLCV data, 2018--2023
+<li>S\&P 500 daily OHLCV data, 2018–2023
 <li>1260 trading days per year; 6300 days total
-<li>Train on 2018--2021 (4 years), test on 2022--2023 (2 years)
+<li>Train on 2018–2021 (4 years), test on 2022–2023 (2 years)
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ul>
 <li>Input: 60-day rolling window of returns
 <li>Transformer: 2 layers, 4 heads
@@ -347,7 +347,7 @@ Financial drift patterns are distinguished by their adversarial nature (fraud), 
 <li>Loss: MSE on returns (not prices)
 </ul>
 
-<p>\itshape Evaluation:
+<p><em>Evaluation:</em>
 <ul>
 <li>RMSE: 0.015 (1.5\% prediction error)
 <li>But is this useful for trading?
@@ -357,7 +357,7 @@ Financial drift patterns are distinguished by their adversarial nature (fraud), 
 <li>Conclusion: Model slightly outperforms but not statistically significant; overfitting likely
 </ul>
 
-<p>\itshape Improvements:
+<p><em>Improvements:</em>
 <ul>
 <li>More features: Volume, sector rotation, VIX (volatility index)
 <li>Regime detection: Different models for bull vs. bear markets
@@ -370,14 +370,14 @@ Financial drift patterns are distinguished by their adversarial nature (fraud), 
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Event Extraction from Earnings Calls</strong>
 
-<p>\itshape Data collection:
+<p><em>Data collection:</em>
 <ul>
 <li>Source: Seeking Alpha, company investor relations websites
 <li>Dataset: 200 earnings call transcripts with stock price movements next day
 <li>Annotation: For each call, label event type and price movement direction
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ul>
 <li>Pre-processing: Split transcript into speaker turns (management vs. analyst)
 <li>NER + relation extraction: Identify company names, executives, products
@@ -385,7 +385,7 @@ Financial drift patterns are distinguished by their adversarial nature (fraud), 
 <li>Sentiment: Overall call sentiment (positive/negative/neutral)
 </ul>
 
-<p>\itshape Evaluation:
+<p><em>Evaluation:</em>
 <ul>
 <li>Event extraction F1: 0.75 (reasonable; humans also disagree on event interpretation)
 <li>Sentiment classification: 0.82 accuracy
@@ -394,13 +394,13 @@ Financial drift patterns are distinguished by their adversarial nature (fraud), 
 <li>Reason: Stock movements driven by many factors; earnings data alone insufficient
 </ul>
 
-<p>\itshape Practical use:
+<p><em>Practical use:</em>
 Despite low accuracy, events provide valuable context for traders. Supplemented with other signals, earnings event extraction improves trading decisions.
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Fair Credit Scoring</strong>
 
-<p>\itshape Baseline model:
+<p><em>Baseline model:</em>
 <ul>
 <li>Data: 50K applicants, 5\% default rate
 <li>Features: Income, credit score, debt-to-income ratio, employment status, zip code
@@ -408,13 +408,13 @@ Despite low accuracy, events provide valuable context for traders. Supplemented 
 <li>Approval rate: 80\% overall; 85\% white applicants, 70\% black applicants (disparate impact)
 </ul>
 
-<p>\itshape Fairness metrics:
+<p><em>Fairness metrics:</em>
 <ul>
 <li>Disparate impact ratio: 70\% / 85\% = 0.82 (rule of 4/5 threshold is 0.80)
 <li>Just barely legal, but problematic
 </ul>
 
-<p>\itshape Debiasing approach 1: Adversarial debiasing
+<p><em>Debiasing approach 1: Adversarial debiasing</em>
 <ul>
 <li>Main model: Predict default
 <li>Adversary: Predict race from model's prediction
@@ -422,7 +422,7 @@ Despite low accuracy, events provide valuable context for traders. Supplemented 
 <li>Result: Disparate impact improved to 0.92; default prediction accuracy maintained at 0.72 AUC
 </ul>
 
-<p>\itshape Debiasing approach 2: Threshold tuning
+<p><em>Debiasing approach 2: Threshold tuning</em>
 <ul>
 <li>Use different acceptance thresholds for different demographics
 <li>Adjust to ensure equal approval rates: 80\% for all groups
@@ -430,7 +430,7 @@ Despite low accuracy, events provide valuable context for traders. Supplemented 
 <li>Acceptable if default prediction accuracy reasonably maintained
 </ul>
 
-<p>\itshape Conclusion:
+<p><em>Conclusion:</em>
 Fairness improvements are possible but often involve accuracy trade-offs or legal complexity. Regulatory guidance evolving; best practice is to measure disparate impact and document decisions transparently.
 </div>
         

@@ -97,11 +97,11 @@
 
 <p>Rather than a single dominant paradigm, the field is converging on hybrid approaches combining strengths of multiple architectures. A model might use SSMs for long-context processing combined with transformer layers for reasoning-heavy operations. Diffusion components might handle generation while transformers handle understanding.</p>
 
-<p>The implication for organizations is that architectural pluralism is becoming mainstream. The question ``which architecture is best?'' no longer has a universal answer. The answer depends on the problem's characteristics, constraints, and requirements. Organizations need frameworks for evaluating trade-offs across different architectures.</p>
+<p>The implication for organizations is that architectural pluralism is becoming mainstream. The question “which architecture is best?” no longer has a universal answer. The answer depends on the problem's characteristics, constraints, and requirements. Organizations need frameworks for evaluating trade-offs across different architectures.</p>
 
 <h2>Mixture of Experts and Efficient Scaling</h2>
 
-<p>Mixture of Experts (MoE) architectures, explored experimentally for years, are becoming mainstream in 2026. Rather than all parameters activating for every input, MoE systems activate different subsets of parameters for different inputs. A ``gating network'' routes each input to relevant experts, enabling large total capacity with constant computational cost.</p>
+<p>Mixture of Experts (MoE) architectures, explored experimentally for years, are becoming mainstream in 2026. Rather than all parameters activating for every input, MoE systems activate different subsets of parameters for different inputs. A “gating network” routes each input to relevant experts, enabling large total capacity with constant computational cost.</p>
 
 <p>Consider practical examples with concrete cost implications. GLM-4.5V has 106 billion total parameters but only 12 billion active parameters per token—87\% parameter efficiency improvement with no computational cost increase. At typical cloud pricing of \$2.50 per GPU-hour, this efficiency improvement reduces inference costs from approximately \$7,500 monthly for a dense 106B model to \$2,500 monthly for the MoE equivalent serving 1 million requests daily. Mixtral 8x7B achieves performance comparable to 40-billion-parameter dense models while using 13 billion active parameters per token, reducing infrastructure requirements from 4 A100 GPUs to 1-2 GPUs for typical production workloads. These represent 3\times compute efficiency improvements, directly translating to 3\times cost reduction at equivalent performance.</p>
 
@@ -117,13 +117,13 @@
 
 <p>Multimodal AI has shifted from buzzword to baseline. The latest generation of models (Qwen3-VL, GLM-4.5V, Gemini-2.5-Pro) process not just text but images, videos, documents, 3D spatial information, and UI screens. They perform joint reasoning across modalities—understanding images and videos in context of textual descriptions and vice versa.</p>
 
-<p>The architectural innovation is significant. 3D Rotated Positional Encoding (3D-RoPE) enables models to reason about 3D spatial relationships, revolutionary for robotics and CAD applications. ``Thinking mode'' switches enable users to control reasoning depth explicitly. Native tool use allows models to interact with visual environments—reading a screen, executing commands, analyzing results.</p>
+<p>The architectural innovation is significant. 3D Rotated Positional Encoding (3D-RoPE) enables models to reason about 3D spatial relationships, revolutionary for robotics and CAD applications. “Thinking mode” switches enable users to control reasoning depth explicitly. Native tool use allows models to interact with visual environments—reading a screen, executing commands, analyzing results.</p>
 
 <p>The applications are now concrete across all domains. Healthcare systems analyze X-rays alongside clinical notes simultaneously. Legal systems process contract images and structured text. Financial systems analyze charts, tables, and text simultaneously. Robotics systems perceive environments visually while reasoning about state. This multimodal capability is no longer optional; it's becoming expected.</p>
 
 <p>The cost implications are important. Multimodal models require specialized vision encoders that consume compute. Processing images is not free. A model that accepts both images and text costs more than a text-only model because the vision encoding pipeline adds computational overhead. However, this is often acceptable because vision encoders are highly efficient—processing a 4K image might cost equivalent to 1000 text tokens.</p>
 
-<p>For technical leaders, the implication is that cost models must now include modality handling. When evaluating proposals, include vision encoder costs. When deploying, account for image processing pipeline efficiency. The fundamental trade-off is no longer ``use vision or not''—modern systems use multiple modalities because the capability gains exceed the compute costs.</p>
+<p>For technical leaders, the implication is that cost models must now include modality handling. When evaluating proposals, include vision encoder costs. When deploying, account for image processing pipeline efficiency. The fundamental trade-off is no longer “use vision or not”—modern systems use multiple modalities because the capability gains exceed the compute costs.</p>
 
 <h2>Edge Deployment and Distributed Intelligence</h2>
 
@@ -131,7 +131,7 @@
 
 <p>The enabling technologies are quantization advances and hardware specialization. 4-bit quantization enables billion-parameter models to run on devices with 4-8GB memory with less than 2\% accuracy loss, reducing memory requirements from 16GB to 4GB for a 2-billion-parameter model. This memory reduction enables deployment on mid-range smartphones costing \$300-500 rather than requiring high-end devices or cloud infrastructure. 2-bit quantization is emerging for even more extreme efficiency, potentially enabling 4-billion-parameter models on similar hardware. Recent examples demonstrate the practical impact: Liquid AI's reasoning model fits on a smartphone with 6GB RAM; mobile phones can now perform deep reasoning locally that previously required cloud GPUs costing \$2.50 per hour.</p>
 
-<p>Arm's 2026 predictions indicate edge AI accelerating from ``basic analytics to real-time inference and adaptation.'' This is not just inference; it's learning. Edge devices will not merely run models but adapt them based on local data, incorporating new information without network transmission.</p>
+<p>Arm's 2026 predictions indicate edge AI accelerating from “basic analytics to real-time inference and adaptation.” This is not just inference; it's learning. Edge devices will not merely run models but adapt them based on local data, incorporating new information without network transmission.</p>
 
 <p>Infrastructure implications are substantial. NVIDIA's Rubin platform, released in January 2026, targets 1/10th the inference cost of the previous generation through extreme codesign—optimizing chips, storage, networking, and software together. This cost reduction enables cloud-based inference at new scales. Concurrently, edge hardware advances (specialized chips, quantization support) enable edge-based inference that was prohibitively expensive.</p>
 
@@ -141,9 +141,9 @@
 
 <h2>Silicon Innovation and Specialized Hardware</h2>
 
-<p>The silicon industry is shifting from ``bigger transistors'' to ``smarter systems.'' Monolithic chips are giving way to modular chiplet designs, separating compute, memory, and I/O into reusable blocks that can be optimized independently. Three-dimensional stacking and advanced materials enable higher density without shrinking transistor sizes.</p>
+<p>The silicon industry is shifting from “bigger transistors” to “smarter systems.” Monolithic chips are giving way to modular chiplet designs, separating compute, memory, and I/O into reusable blocks that can be optimized independently. Three-dimensional stacking and advanced materials enable higher density without shrinking transistor sizes.</p>
 
-<p>The philosophical shift is from ``More Moore's Law'' (smaller transistors) to ``More-than-Moore'' (smarter systems with advanced materials and integration). This enables sustainable progress in performance and efficiency without confronting the laws of physics limiting transistor miniaturization.</p>
+<p>The philosophical shift is from “More Moore's Law” (smaller transistors) to “More-than-Moore” (smarter systems with advanced materials and integration). This enables sustainable progress in performance and efficiency without confronting the laws of physics limiting transistor miniaturization.</p>
 
 <p>The direct implication for AI systems is that specialized hardware is proliferating. GPUs remain important, but TPUs (tensor processors), ASICs (application-specific integrated circuits), FPGAs (field-programmable gate arrays), and emerging specialized AI chips each optimize for different workloads. The heterogeneous compute pattern—CPUs, GPUs, FPGAs, and specialized chips working together—is becoming standard.</p>
 
@@ -153,21 +153,21 @@
 
 <h2>Democratization Through Open Models</h2>
 
-<p>Open-source models are reaching parity with proprietary systems across many benchmarks. NVIDIA is building and releasing reasoning models (Alpamayo family) in open form, enabling ``every company, every industry, every country'' to participate in AI advancement rather than relying on closed proprietary systems.</p>
+<p>Open-source models are reaching parity with proprietary systems across many benchmarks. NVIDIA is building and releasing reasoning models (Alpamayo family) in open form, enabling “every company, every industry, every country” to participate in AI advancement rather than relying on closed proprietary systems.</p>
 
 <p>The models achieving this parity are sophisticated. GLM models (Chinese origin) match proprietary model performance. Qwen models compete with closed alternatives. Open models are becoming the default for many organizations rather than a secondary option.</p>
 
 <p>The economic implications are substantial. Organizations can now build on high-quality foundational models without vendor lock-in. The economics of fine-tuning improve when base models are high-quality. Organizations reduce dependence on proprietary APIs with their associated cost structures and terms changes.</p>
 
-<p>The strategic implication from earlier chapters: the ``build vs. buy'' analysis in Chapter 7 shifts substantially when high-quality open models are available. Building internal capabilities becomes more attractive when you're starting from a strong foundation rather than building from scratch. The risk of vendor lock-in decreases.</p>
+<p>The strategic implication from earlier chapters: the “build vs. buy” analysis in Chapter 7 shifts substantially when high-quality open models are available. Building internal capabilities becomes more attractive when you're starting from a strong foundation rather than building from scratch. The risk of vendor lock-in decreases.</p>
 
 <p>The competitive dynamic: organizations with strong engineering capability can now compete on equal technical footing with organizations relying on closed proprietary models. The differentiator shifts from model capability to domain-specific customization and application integration.</p>
 
 <h2>Reasoning Models and Explicit Compute Control</h2>
 
-<p>Earlier, we discussed inference-time compute. The practical manifestation is models with explicit ``thinking mode'' that users or applications can control. Rather than fixed reasoning depth, systems enable fine-grained control: answer this question quickly (minimal reasoning), answer this question well (moderate reasoning), or reason deeply (maximum reasoning).</p>
+<p>Earlier, we discussed inference-time compute. The practical manifestation is models with explicit “thinking mode” that users or applications can control. Rather than fixed reasoning depth, systems enable fine-grained control: answer this question quickly (minimal reasoning), answer this question well (moderate reasoning), or reason deeply (maximum reasoning).</p>
 
-<p>DeepSeek's Pure RL approach (Group Relative Policy Optimization) demonstrates that sophisticated reasoning can be learned through reinforcement learning alone, without requiring human-labeled reasoning chains. Zhipu AI's GLM models implement ``thinking paradigm'' where reasoning steps are explicit and measurable. This enables new system designs where reasoning depth is a controllable parameter.</p>
+<p>DeepSeek's Pure RL approach (Group Relative Policy Optimization) demonstrates that sophisticated reasoning can be learned through reinforcement learning alone, without requiring human-labeled reasoning chains. Zhipu AI's GLM models implement “thinking paradigm” where reasoning steps are explicit and measurable. This enables new system designs where reasoning depth is a controllable parameter.</p>
 
 <p>The implication is that reasoning cost is no longer an emergent property—a side effect of scale—but an explicit design variable. System designers can trade reasoning depth for latency. Users or applications can request reasoning depth matching their requirements.</p>
 
@@ -205,7 +205,7 @@
 
 <p>The historic pattern was that scale and efficiency were in tension: larger models required more compute. MoE and alternative architectures decouple these. Large-parameter models can be computationally efficient. Efficient architectures enable strong performance at smaller parameter scales.</p>
 
-<p>The practical implication: ``bigger is better'' is no longer axiomatic. Organizations evaluate scale and efficiency as independent dimensions, selecting points in the design space matching their requirements. This requires more sophisticated analysis but enables better cost-quality-latency matching.</p>
+<p>The practical implication: “bigger is better” is no longer axiomatic. Organizations evaluate scale and efficiency as independent dimensions, selecting points in the design space matching their requirements. This requires more sophisticated analysis but enables better cost-quality-latency matching.</p>
 
 <h3>Cloud versus Edge Trade-off</h3>
 

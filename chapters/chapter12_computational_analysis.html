@@ -261,7 +261,7 @@ $$
 
 <figure>
 \begin{tikzpicture}[
-  node/.style={rectangle, draw, minimum width=2.5cm, minimum height=1cm, font=\small},
+  node/.style={rectangle, draw, minimum width=2.5cm, minimum height=1cm, font=},
   arrow/.style={->, thick}
 ]
 
@@ -271,10 +271,10 @@ $$
 \node[node, fill=green!10] (AV) at (9,0) {$\mA\mV$ \\ $O(n^2d)$};
 \node[node, fill=blue!10] (Out) at (12,0) {Output \\ $n \times d$};</p>
 
-<p>\draw[arrow] (X) -- (QKV);
-\draw[arrow] (QKV) -- (Attn);
-\draw[arrow] (Attn) -- (AV);
-\draw[arrow] (AV) -- (Out);</p>
+<p>\draw[arrow] (X) – (QKV);
+\draw[arrow] (QKV) – (Attn);
+\draw[arrow] (Attn) – (AV);
+\draw[arrow] (AV) – (Out);</p>
 
 <p>\node[node, fill=blue!10] (X2) at (0,-3) {$\mX$ \\ $n \times d$};
 \node[node, fill=green!10] (W1) at (4,-3) {$\mW_1$ \\ $O(nd_{ff}d)$};
@@ -282,10 +282,10 @@ $$
 \node[node, fill=green!10] (W2) at (12,-3) {$\mW_2$ \\ $O(nd_{ff}d)$};
 \node[node, fill=blue!10] (Out2) at (16,-3) {Output \\ $n \times d$};</p>
 
-<p>\draw[arrow] (X2) -- (W1);
-\draw[arrow] (W1) -- (Act);
-\draw[arrow] (Act) -- (W2);
-\draw[arrow] (W2) -- (Out2);</p>
+<p>\draw[arrow] (X2) – (W1);
+\draw[arrow] (W1) – (Act);
+\draw[arrow] (Act) – (W2);
+\draw[arrow] (W2) – (Out2);</p>
 
 <p>Short sequences ($n < 2d$): FFN dominates \\
 Long sequences ($n > 2d$): Attention dominates
@@ -403,7 +403,7 @@ $$
 <div class="example"><strong>Example:</strong> 
 BERT-base ($n = 512$, $d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$) illustrates the component-level FLOPs breakdown. Self-attention totals 3.21~GFLOPs per layer (QKV projections: 1.81~G, attention scores: 0.40~G each for $\mQ\mK\transpose$ and $\mA\mV$, output projection: 0.60~G). The feed-forward network totals 4.84~GFLOPs (two projections of 2.42~G each). The complete layer costs 8.05~GFLOPs, giving 96.6~GFLOPs for the 12-layer forward pass and $\approx$290~GFLOPs for a full training step.
 
-<p>On an NVIDIA A100 (312~TFLOPS FP16, 70\% utilization), this yields a batch-of-32 forward pass in $\approx$14~ms and throughput of $\approx$390,000~tokens/sec. At 1.6~TB/s memory bandwidth, loading 440~MB of parameters takes 0.28~ms---comparable to compute time, making small-batch inference memory-bandwidth bound.</p>
+<p>On an NVIDIA A100 (312~TFLOPS FP16, 70\% utilization), this yields a batch-of-32 forward pass in $\approx$14~ms and throughput of $\approx$390,000~tokens/sec. At 1.6~TB/s memory bandwidth, loading 440~MB of parameters takes 0.28~ms—comparable to compute time, making small-batch inference memory-bandwidth bound.</p>
 
 <p>See Section~[ref] for the step-by-step derivation.
 </div>
@@ -879,7 +879,7 @@ T=4096: \quad &36{,}864 \times 4096 = 150{,}994{,}944\text{ bytes} \approx 151\t
 \end{align}$$
 </div>
 
-<p>For GPT-3, the cache reaches 9.7~GB per sequence (see Chapter~[ref] for the derivation), nearly filling an A100 for batch size 8 ($77.6$~GB). Practitioners manage this through smaller batch sizes for long contexts, dynamic batching, and INT8 quantization to reduce cache size by 2--4$\times$.</p>
+<p>For GPT-3, the cache reaches 9.7~GB per sequence (see Chapter~[ref] for the derivation), nearly filling an A100 for batch size 8 ($77.6$~GB). Practitioners manage this through smaller batch sizes for long contexts, dynamic batching, and INT8 quantization to reduce cache size by 2–4$\times$.</p>
 
 <h3>Batched Inference</h3>
 
@@ -1014,7 +1014,7 @@ $$\begin{align}
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: GPT-3 FLOPs Calculation</strong>
 

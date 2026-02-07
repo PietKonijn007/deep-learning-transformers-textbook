@@ -401,8 +401,8 @@ $$
 
 <figure>
 \begin{tikzpicture}[
-    matrix/.style={rectangle, draw, fill=blue!15, minimum width=1.5cm, minimum height=1cm, font=\small},
-    operation/.style={rectangle, draw, fill=green!15, minimum width=1.8cm, minimum height=0.7cm, font=\small},
+    matrix/.style={rectangle, draw, fill=blue!15, minimum width=1.5cm, minimum height=1cm, font=},
+    operation/.style={rectangle, draw, fill=green!15, minimum width=1.8cm, minimum height=0.7cm, font=},
     arrow/.style={->, >=stealth, thick}
 ]
 
@@ -420,13 +420,13 @@ $$
 
 <p>\node[matrix] (output) at (3.5,-8.5) {Output};</p>
 
-<p>\draw[arrow] (Q) -- (QKT);
-\draw[arrow] (K) -- (QKT);
-\draw[arrow] (QKT) -- (scale);
-\draw[arrow] (scale) -- (softmax);
-\draw[arrow] (softmax) -- (AV);
-\draw[arrow] (V) -- (AV);
-\draw[arrow] (AV) -- (output);</p>
+<p>\draw[arrow] (Q) – (QKT);
+\draw[arrow] (K) – (QKT);
+\draw[arrow] (QKT) – (scale);
+\draw[arrow] (scale) – (softmax);
+\draw[arrow] (softmax) – (AV);
+\draw[arrow] (V) – (AV);
+\draw[arrow] (AV) – (output);</p>
 
 <p>\end{tikzpicture}
 <figcaption>Scaled dot-product attention computational flow. Queries $\mQ$ and keys $\mK$ are combined via matrix multiplication to produce attention scores ($m \times n$ matrix). After scaling and softmax, the attention weights $\mA$ form a probability distribution over keys for each query. These weights are applied to values $\mV$ to produce the final output. Each of the $m$ queries attends to all $n$ keys, creating $m \times n$ attention connections.</figcaption>
@@ -641,10 +641,10 @@ $$\begin{align}
 
 <table>
 <tr><th><strong>Method</strong></th><th><strong>Computation</strong></th><th><strong>Parameters</strong></th><th><strong>GPU Util.</strong></th><th><strong>Used In</strong></th></tr>
-<tr><td>Additive (Bahdanau)</td><td>$\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$</td><td>$O(d_a(d_q + d_k))$</td><td>15--25\%</td><td>Early seq2seq</td></tr>
-<tr><td>Dot-product</td><td>$\vq\transpose\vk$</td><td>0</td><td>80--90\%</td><td>Not used (unstable)</td></tr>
-<tr><td>Scaled dot-product</td><td>$\vq\transpose\vk/\sqrt{d_k}$</td><td>0</td><td>80--90\%</td><td>All transformers</td></tr>
-<tr><td>General (Luong)</td><td>$\vq\transpose\mW\vk$</td><td>$O(d_q d_k)$</td><td>50--70\%</td><td>Some seq2seq</td></tr>
+<tr><td>Additive (Bahdanau)</td><td>$\mathbf{v}\transpose\tanh(\mW_1\vq + \mW_2\vk)$</td><td>$O(d_a(d_q + d_k))$</td><td>15–25\%</td><td>Early seq2seq</td></tr>
+<tr><td>Dot-product</td><td>$\vq\transpose\vk$</td><td>0</td><td>80–90\%</td><td>Not used (unstable)</td></tr>
+<tr><td>Scaled dot-product</td><td>$\vq\transpose\vk/\sqrt{d_k}$</td><td>0</td><td>80–90\%</td><td>All transformers</td></tr>
+<tr><td>General (Luong)</td><td>$\vq\transpose\mW\vk$</td><td>$O(d_q d_k)$</td><td>50–70\%</td><td>Some seq2seq</td></tr>
 </table>
 
 <p></div>
@@ -818,7 +818,7 @@ where mask $\mM_{ij} = -\infty$ if $j > i$, else $\mM_{ij} = 0$.</p>
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> For Bahdanau attention with sequence length 4, decoder state dim 3, attention dim 2:
 

@@ -170,7 +170,7 @@ Legal documents follow distinct structural patterns depending on their type. Sta
 
 <p>Legal language has precise meanings often divorced from common usage:</p>
 
-<p>Legal language employs precise meanings that often diverge from common usage. Defined terms establish specific meanings—for example, ``Customer'' is defined with a specific definition, and all subsequent uses refer exclusively to that definition. Conditions create obligations through if-then structures: ``If X occurs, then Y is obligated to Z.'' Exceptions modify obligations by carving out specific circumstances: ``X is liable for damages except where caused by force majeure.'' Temporal language has precise legal effects—``Effective as of [date]'' differs legally from ``Retroactive to [date].'' Negations are critical to parse correctly, as ``Party A shall not be liable for indirect damages'' negates liability entirely.</p>
+<p>Legal language employs precise meanings that often diverge from common usage. Defined terms establish specific meanings—for example, “Customer” is defined with a specific definition, and all subsequent uses refer exclusively to that definition. Conditions create obligations through if-then structures: “If X occurs, then Y is obligated to Z.” Exceptions modify obligations by carving out specific circumstances: “X is liable for damages except where caused by force majeure.” Temporal language has precise legal effects—“Effective as of [date]” differs legally from “Retroactive to [date].” Negations are critical to parse correctly, as “Party A shall not be liable for indirect damages” negates liability entirely.</p>
 
 <h3>Domain-Specific Ontology</h3>
 
@@ -224,7 +224,7 @@ Legal documents follow distinct structural patterns depending on their type. Sta
 <p>A lawyer searching for relevant cases uses semantic search:</p>
 
 <ol>
-<li>Encode query: ``Can a company limit liability for product defects?''
+<li>Encode query: “Can a company limit liability for product defects?”
 <li>Retrieve similar cases/statutes from vector database
 <li>Rank by relevance (semantic similarity) and recency
 <li>Lawyer reviews top cases to find binding precedent
@@ -241,7 +241,7 @@ Legal documents follow distinct structural patterns depending on their type. Sta
 <p>Companies maintain internal policies (employee handbook, data security, procurement). Deep learning can check if documents or practices comply:</p>
 
 <ol>
-<li>Extract policy rules from documents (e.g., ``All contracts over \$100K require CFO approval'')
+<li>Extract policy rules from documents (e.g., “All contracts over \$100K require CFO approval”)
 <li>Formalize rules as logical constraints
 <li>Monitor transactions/documents: Does this purchase order comply?
 <li>Alert if violation detected; escalate to compliance team
@@ -275,8 +275,8 @@ Effective legal AI copilots follow several critical design principles. Transpare
 <ol>
 <li>Lawyer uploads contract
 <li>System extracts key terms, identifies parties, effective dates
-<li>System compares to template: ``Deviation: Liability cap is \$1M vs. template \$10M''
-<li>System flags risks: ``Unlimited indemnification; consider capping''
+<li>System compares to template: “Deviation: Liability cap is \$1M vs. template \$10M”
+<li>System flags risks: “Unlimited indemnification; consider capping”
 <li>Lawyer reviews system output; accepts, modifies, or rejects suggestions
 <li>System learns from feedback (important clause lawyer accepted but system flagged)
 <li>Lawyer completes review manually; system documents summary
@@ -292,9 +292,9 @@ Effective legal AI copilots follow several critical design principles. Transpare
 
 <h3>Hallucination and Fabrication</h3>
 
-<p>LLMs can hallucinate case citations. A lawyer using an AI tool that cites ``Smith v. Jones, 500 F.2d 123'' must verify the citation exists. Hallucinated citations are malpractice.</p>
+<p>LLMs can hallucinate case citations. A lawyer using an AI tool that cites “Smith v. Jones, 500 F.2d 123” must verify the citation exists. Hallucinated citations are malpractice.</p>
 
-<p>Several mitigation strategies address the hallucination problem. Retrieval-based systems only cite cases actually in the database rather than generating citations, eliminating fabrication risk. Confidence scores allow models to express uncertainty, signaling to lawyers when verification is needed. Explicit non-recommendations acknowledge limitations: ``I did not find direct precedent; here are related cases'' rather than fabricating citations.</p>
+<p>Several mitigation strategies address the hallucination problem. Retrieval-based systems only cite cases actually in the database rather than generating citations, eliminating fabrication risk. Confidence scores allow models to express uncertainty, signaling to lawyers when verification is needed. Explicit non-recommendations acknowledge limitations: “I did not find direct precedent; here are related cases” rather than fabricating citations.</p>
 
 <h3>Access to Justice</h3>
 
@@ -322,7 +322,7 @@ Effective legal AI copilots follow several critical design principles. Transpare
 <li>System extracts text (OCR if needed)
 <li>System identifies parties, dates, payment terms, termination clauses, liability limitations
 <li>System compares to firm's templates; flags deviations
-<li>System scores risk (0--10 scale); flags high-risk clauses for attorney review
+<li>System scores risk (0–10 scale); flags high-risk clauses for attorney review
 <li>System generates summary report; attorney reviews and refines
 <li>System stores annotations; retrains monthly on attorney feedback
 </ol>
@@ -409,24 +409,24 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Key Term Extraction</strong>
 
-<p>\itshape Data:
+<p><em>Data:</em>
 <ul>
 <li>200 contracts with human-annotated key terms
 <li>Train/test split: 80/20
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ul>
 <li>Task: Named entity recognition for legal entities (Parties, Dates, Dollar amounts, Obligations, Risk clauses)
 <li>Architecture: LegalBERT + CRF (conditional random field) for token-level sequence tagging
 <li>Loss: Token-level cross-entropy with class imbalance weighting
 </ul>
 
-<p>\itshape Results:
+<p><em>Results:</em>
 <ul>
 <li>Parties (extraction): 0.95 F1 (straightforward; usually in header)
 <li>Effective dates: 0.88 F1 (variable phrasing; some contracts ambiguous about effective date)
@@ -434,43 +434,43 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 <li>Termination conditions: 0.75 F1 (complex, multi-clause; model struggles with understanding conditions)
 </ul>
 
-<p>\itshape Practical use:
+<p><em>Practical use:</em>
 Results sufficient for automated extraction; attorney review required for complex terms. System reduces manual labor 80
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Clause Classification</strong>
 
-<p>\itshape Classes:
+<p><em>Classes:</em>
 Payment, termination, indemnification, limitation of liability, confidentiality, intellectual property, dispute resolution, other</p>
 
-<p>\itshape Data preparation:
+<p><em>Data preparation:</em>
 <ul>
 <li>Segment contracts into clauses (sentences or paragraphs)
 <li>Annotate each clause with type (multi-label: some clauses have multiple types)
 <li>Dataset: 3,000 clauses across 200 contracts
 </ul>
 
-<p>\itshape Model:
+<p><em>Model:</em>
 <ul>
 <li>Multi-class classification: Each clause assigned primary type
 <li>LegalBERT + dense layer + softmax
 <li>Training: Cross-entropy loss on multi-label targets
 </ul>
 
-<p>\itshape Results:
+<p><em>Results:</em>
 <ul>
 <li>Macro F1: 0.81 (average across classes)
 <li>Per-class: Payment 0.88, Termination 0.85, Indemnification 0.76, Limitation of liability 0.78, Confidentiality 0.82
 <li>Error analysis: Misclassification often between related classes (e.g., indemnification vs. limitation of liability)
 </ul>
 
-<p>\itshape Improvement:
+<p><em>Improvement:</em>
 Use multi-label classification (each clause can have multiple types); improves F1 to 0.85. More accurate representation of contracts.
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Legal Research System</strong>
 
-<p>\itshape System architecture:
+<p><em>System architecture:</em>
 <ol>
 <li><strong>Database:</strong> 100K statutes + regulations, 500K case law summaries (US federal + state)
 <li><strong>Embeddings:</strong> LegalBERT embeddings of all documents
@@ -478,26 +478,26 @@ Use multi-label classification (each clause can have multiple types); improves F
 <li><strong>Ranking:</strong> Re-rank by relevance and recency
 </ol>
 
-<p>\itshape Example query:
-``Can an employer mandate vaccination as a condition of employment?''</p>
+<p><em>Example query:</em>
+“Can an employer mandate vaccination as a condition of employment?”</p>
 
-<p>\itshape Retrieved results:
+<p><em>Retrieved results:</em>
 <ul>
 <li>Top 1: Recent appellate case on employer vaccine mandate; binding precedent
-<li>Top 2--5: Related cases on employment conditions, medical requirements
+<li>Top 2–5: Related cases on employment conditions, medical requirements
 <li>Additional: Relevant statutes on workplace safety, medical privacy
 </ul>
 
-<p>\itshape Evaluation:
+<p><em>Evaluation:</em>
 Compare system to LexisNexis/Westlaw on 50 legal queries (quality measured by lawyer rating):
 <ul>
 <li>System retrieves relevant results: 78\% recall@10 (finds most relevant cases in top 10)
 <li>Ranking quality: 0.65 NDCG@10 (top results are most relevant)
-<li>Comparison to Westlaw: Slightly lower recall but faster (sub-second vs. 2--3 seconds)
+<li>Comparison to Westlaw: Slightly lower recall but faster (sub-second vs. 2–3 seconds)
 </ul>
 
-<p>\itshape Practical use:
-System useful for initial research and identifying key cases. Lawyer still reviews for applicability to specific situation. Reduces research time 30--40
+<p><em>Practical use:</em>
+System useful for initial research and identifying key cases. Lawyer still reviews for applicability to specific situation. Reduces research time 30–40
 </div>
         
         <div class="chapter-nav">

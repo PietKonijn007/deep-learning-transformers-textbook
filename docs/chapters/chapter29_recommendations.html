@@ -242,7 +242,7 @@ where $\mathbf{h}_t$ is the output of the transformer at step $t$.
 
 <h3>DSL for Behavior Data</h3>
 
-<p>Recommendation systems process event streams: each user interaction is an event with timestamp, user ID, item ID, and contextual features. The ``language'' of recommendation is this event schema:</p>
+<p>Recommendation systems process event streams: each user interaction is an event with timestamp, user ID, item ID, and contextual features. The “language” of recommendation is this event schema:</p>
 
 <div class="definition"><strong>Definition:</strong> Each event in a user session is:
 <div class="equation">
@@ -253,7 +253,7 @@ $$\begin{align}
 where several components define the structure of each interaction event. The <code>event\_type</code> field categorizes the interaction, taking values from the set \{view, click, purchase, add-to-cart, share, rate\}, with each type carrying different signals about user intent and engagement level. The <code>context</code> field captures situational information including device type, geographic location, search query if applicable, and other environmental factors that influence user behavior and preferences.
 </div>
 
-The sequence of events becomes the user's ``behavior language.'' A user's history might be:
+The sequence of events becomes the user's “behavior language.” A user's history might be:
 <pre><code>
 [{item: 42, type: view, time: 10:00},
  {item: 42, type: click, time: 10:05},
@@ -283,7 +283,7 @@ The sequence of events becomes the user's ``behavior language.'' A user's histor
 
 <p>Context features describe the interaction environment including device type (mobile, tablet, desktop), platform (app vs. web), and time zone. These contextual factors significantly influence user behavior and should be incorporated into recommendations.</p>
 
-<p>Embedding these sparse features increases model capacity substantially. A categorical feature with 10,000 categories, such as user's home country, is embedded into a 16--32 dimensional vector. While this increases model parameters significantly, it enables the model to learn complex feature interactions and capture nuanced patterns that would be impossible with one-hot encoding.</p>
+<p>Embedding these sparse features increases model capacity substantially. A categorical feature with 10,000 categories, such as user's home country, is embedded into a 16–32 dimensional vector. While this increases model parameters significantly, it enables the model to learn complex feature interactions and capture nuanced patterns that would be impossible with one-hot encoding.</p>
 
 <h3>Multi-Task Learning for Recommendations</h3>
 
@@ -315,7 +315,7 @@ $$\begin{align}
 <p>Most recommendation systems use a two-stage pipeline:</p>
 
 <ol>
-<li><strong>Candidate generation (retrieval):</strong> From millions of items, retrieve a small set of candidates (100--1,000) that are relevant to the user. This stage is fast and approximate; exact ranking over all items is infeasible.
+<li><strong>Candidate generation (retrieval):</strong> From millions of items, retrieve a small set of candidates (100–1,000) that are relevant to the user. This stage is fast and approximate; exact ranking over all items is infeasible.
 <li><strong>Ranking:</strong> Score the candidate set with a more complex model. Return the top-k items to the user.
 </ol>
 
@@ -335,7 +335,7 @@ $$\begin{align}
 
 <h3>Ranking Model and Latency Budget</h3>
 
-<p>The ranking model scores candidates. With a 200 ms latency budget for the entire recommendation request and 50 ms allocated to candidate generation, the ranker has 150 ms. This is enough for a small neural network (2--3 layers) but not a 24-layer transformer.</p>
+<p>The ranking model scores candidates. With a 200 ms latency budget for the entire recommendation request and 50 ms allocated to candidate generation, the ranker has 150 ms. This is enough for a small neural network (2–3 layers) but not a 24-layer transformer.</p>
 
 <p>Practical rankers are often gradient-boosted trees (e.g., XGBoost, LightGBM) or shallow neural networks. They consume hundreds of features (user features, item features, candidate-specific features like co-occurrence with items the user has rated) and output a score. The top-k candidates by score are returned.</p>
 
@@ -355,7 +355,7 @@ $$\begin{align}
 
 <h2>Fairness, Diversity, and Filter Bubbles</h2>
 
-<p>Recommendation systems can amplify biases and trap users in filter bubbles---showing only content that aligns with past preferences, limiting exposure to diverse views.</p>
+<p>Recommendation systems can amplify biases and trap users in filter bubbles—showing only content that aligns with past preferences, limiting exposure to diverse views.</p>
 
 <h3>Filter Bubble Problem</h3>
 
@@ -391,7 +391,7 @@ $$\begin{align}
 
 <p>The treatment group receives recommendations from the new model, enabling direct measurement of the model's impact. The random assignment ensures that differences between groups are attributable to the model change rather than pre-existing user differences.</p>
 
-<p>Measure metrics over 2--4 weeks to account for short-term novelty effects and capture longer-term impacts on user behavior.</p>
+<p>Measure metrics over 2–4 weeks to account for short-term novelty effects and capture longer-term impacts on user behavior.</p>
 
 <p>Engagement metrics including watch time, clicks, and session length measure immediate user response to recommendations. These metrics are sensitive and provide quick feedback on whether the new model improves user experience. However, they can be gamed by clickbait or sensational content that attracts clicks but doesn't satisfy users.</p>
 
@@ -507,8 +507,8 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 
 <p>Key recommendation-specific strategies beyond the generic framework include:
 <ul>
-<li><strong>Separate short-term and long-term models:</strong> Use a transformer on recent interactions for ``what the user wants right now'' and a collaborative filter on full history for ``what the user generally likes,'' combining with learned weights.
-<li><strong>Contextual bandits for exploration:</strong> Allocate 5--10\% of recommendations to exploration via Thompson sampling or UCB, enabling continuous learning about new items and shifting preferences.
+<li><strong>Separate short-term and long-term models:</strong> Use a transformer on recent interactions for “what the user wants right now” and a collaborative filter on full history for “what the user generally likes,” combining with learned weights.
+<li><strong>Contextual bandits for exploration:</strong> Allocate 5–10\% of recommendations to exploration via Thompson sampling or UCB, enabling continuous learning about new items and shifting preferences.
 <li><strong>Seasonal and event-aware modeling:</strong> Explicitly include temporal features (day-of-week, holiday indicators, event flags) and train separate model components for predictable seasonal shifts.
 <li><strong>Online user embedding updates:</strong> Update user embeddings hourly based on recent interactions while keeping item embeddings on a daily cycle, balancing freshness with stability.
 </ul>
@@ -526,7 +526,7 @@ For the generic drift detection and continuous learning framework, see Chapter~[
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Sequence-Based Recommender</strong>
 
@@ -583,7 +583,7 @@ $$\begin{align}
 <p><em>Alternative: CTR as auxiliary task:</em>
 Some systems use CTR as an auxiliary task to regularize the CVR model, since more training signal is available for CTR. This improves CVR generalization.</p>
 
-<p>\itshape Results (on dataset with 10\% CTR, 2\% CVR):
+<p><em>Results (on dataset with 10\% CTR, 2\% CVR):</em>
 <ul>
 <li>Standalone CVR model: AUC = 0.72
 <li>Multi-task (CTR + CVR): AUC = 0.78 (8\% improvement)
@@ -610,7 +610,7 @@ where $p_c$ is the fraction of recommendations in category $c$.</p>
 <li>Engagement impact: Watch time on exploration recommendations is 30\% lower but leads to user growth (10\% increase in diversity preference)
 </ul>
 
-<p>\itshape Implementation:
+<p><em>Implementation:</em>
 Re-rank top-20 candidates to ensure diversity:
 <ol>
 <li>Sort by engagement score

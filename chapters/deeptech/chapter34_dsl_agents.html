@@ -258,10 +258,10 @@ The most successful applications of deep learning to real domains follow this pa
 <p>Workflow:</p>
 
 <ol>
-<li>User query: ``What is the refund status of order 12345?''
+<li>User query: “What is the refund status of order 12345?”
 <li>Model generates: Tool call: lookup\_order(order\_id=12345)
 <li>System executes tool: Returns \{status: refunded, amount: \$50, timestamp: 2024-01-15\}
-<li>Model generates response: ``Your refund of \$50 was processed on January 15, 2024.''
+<li>Model generates response: “Your refund of \$50 was processed on January 15, 2024.”
 </ol>
 
 <h3>Function Calling in Modern LLMs</h3>
@@ -298,16 +298,16 @@ Tool call: lookup_order(order_id="12345")
 <p>With multiple tools available, the model must select appropriate tools and chain them:</p>
 
 <ol>
-<li>``What is the weather in Berlin tomorrow?''
+<li>“What is the weather in Berlin tomorrow?”
 <li>Model calls: get\_weather(location=Berlin, days\_ahead=1)
 <li>System returns: \{temperature: 5C, condition: rainy\}
-<li>Model generates: ``It will be rainy and 5 degrees Celsius tomorrow in Berlin.''
+<li>Model generates: “It will be rainy and 5 degrees Celsius tomorrow in Berlin.”
 </ol>
 
 <p>More complex example:</p>
 
 <ol>
-<li>``Show me orders from customers in California last month.''
+<li>“Show me orders from customers in California last month.”
 <li>Model calls: search\_customers(state=California) → [customer\_id1, customer\_id2, ...]
 <li>For each customer, calls: get\_orders(customer\_id=..., month=last\_month) → [order1, order2, ...]
 <li>Aggregates results and generates summary
@@ -331,7 +331,7 @@ Tool call: lookup_order(order_id="12345")
 <div class="algorithm-line"><li><strong>Loop:</strong></div>
 <div class="algorithm-line"><ol></div>
 <div class="algorithm-line"><li>Model reads current state (user goal, previous actions, results)</div>
-<div class="algorithm-line"><li>Model thinks: ``What is the next action I should take?''</div>
+<div class="algorithm-line"><li>Model thinks: “What is the next action I should take?”</div>
 <div class="algorithm-line"><li>Model decides: Calls a tool or generates response to user</div>
 <div class="algorithm-line"><li>If tool call:</div>
 <div class="algorithm-line"><ol></div>
@@ -401,7 +401,7 @@ Model output:
 
 <ul>
 <li><strong>Type validation:</strong> Age is an integer in range [0, 150]
-<li><strong>Consistency:</strong> If order status is ``cancelled,'' refund amount should be nonzero
+<li><strong>Consistency:</strong> If order status is “cancelled,” refund amount should be nonzero
 <li><strong>Logic validation:</strong> If customer is VIP, discount should be $\geq$ 10\%
 </ul>
 
@@ -476,18 +476,18 @@ Model output:
 
 <h2>Solutions</h2>
 
-<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Restaurant Reservation DSL</strong>
 
-<p>\itshape Core Entities:
+<p><em>Core Entities:</em>
 <ul>
 <li>Restaurant: ID, name, cuisine, location, hours, capacity
 <li>Customer: ID, name, email, phone, preferences
 <li>Reservation: ID, customer\_id, restaurant\_id, datetime, party\_size, status, notes
 </ul>
 
-\itshape JSON Schema (partial):
+<em>JSON Schema (partial):</em>
 <pre><code>
 {
   "reservation": {
@@ -508,7 +508,7 @@ Model output:
 }
 </code></pre>
 
-<p>\itshape Critical Operations:
+<p><em>Critical Operations:</em>
 <ul>
 <li>Search available tables: search\_availability(restaurant, datetime, party\_size)
 <li>Make reservation: create\_reservation(customer, restaurant, datetime, party\_size)
@@ -516,12 +516,12 @@ Model output:
 <li>Cancel: cancel\_reservation(reservation\_id)
 </ul>
 
-<p>\itshape Design notes: Status field captures reservation lifecycle. Special requests allow customization without schema explosion. All timestamps in ISO 8601 for consistency.
+<p><em>Design notes: Status field captures reservation lifecycle. Special requests allow customization without schema explosion. All timestamps in ISO 8601 for consistency.</em>
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Tool-Augmented Weather Chatbot</strong>
 
-\itshape Tool schemas:
+<em>Tool schemas:</em>
 <pre><code>
 {
   "name": "get_weather",
@@ -556,7 +556,7 @@ Model output:
 }
 </code></pre>
 
-\itshape Chatbot interaction:
+<em>Chatbot interaction:</em>
 <pre><code>
 User: "What's the weather in Berlin?"
 Model: Tool call: get_weather(location="Berlin", days_ahead=1)
@@ -570,15 +570,15 @@ System: Returns hourly data
 Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
 </code></pre>
 
-<p>\itshape Error handling:
-- Invalid location: ``I couldn't find that location. Did you mean Berlin, Germany?''
-- API timeout: ``Weather service is slow. Showing cached forecast...''
-- Out of range date: ``I can forecast up to 14 days ahead. Showing 14-day forecast.''
+<p><em>Error handling:</em>
+- Invalid location: “I couldn't find that location. Did you mean Berlin, Germany?”
+- API timeout: “Weather service is slow. Showing cached forecast...”
+- Out of range date: “I can forecast up to 14 days ahead. Showing 14-day forecast.”
 </div>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 3: Personal Expense Tracker Agent</strong>
 
-<p>\itshape Tools:
+<p><em>Tools:</em>
 <ul>
 <li>add\_expense(amount, category, date, description)
 <li>get\_expenses(category=None, date\_range=None)
@@ -588,30 +588,30 @@ Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
 <li>get\_budget\_status()
 </ul>
 
-<p>\itshape Agent workflow:</p>
+<p><em>Agent workflow:</em></p>
 
 <ol>
-<li>User: ``I spent \$25 on lunch today''
-<li>Agent: Tool call: categorize\_expense(``lunch'') → ``Food \& Dining''
-<li>Agent: Tool call: add\_expense(amount=25, category=``Food \& Dining'', date=today, description=``Lunch'')
-<li>Agent response: ``Logged \$25 spending in Food \& Dining category for today.''
+<li>User: “I spent \$25 on lunch today”
+<li>Agent: Tool call: categorize\_expense(“lunch”) → “Food \& Dining”
+<li>Agent: Tool call: add\_expense(amount=25, category=“Food \& Dining”, date=today, description=“Lunch”)
+<li>Agent response: “Logged \$25 spending in Food \& Dining category for today.”
 </ol>
 
-<p>\itshape Clarification questions:
+<p><em>Clarification questions:</em>
 <ol>
-<li>User: ``I spent \$100 today but forgot what on''
-<li>Agent: ``I can help categorize it. Was it for food, transport, entertainment, or something else?''
-<li>User: ``Entertainment''
-<li>Agent: Tool call: add\_expense(...category=``Entertainment'')
-<li>Agent: ``Got it. Added \$100 to Entertainment for today.''
+<li>User: “I spent \$100 today but forgot what on”
+<li>Agent: “I can help categorize it. Was it for food, transport, entertainment, or something else?”
+<li>User: “Entertainment”
+<li>Agent: Tool call: add\_expense(...category=“Entertainment”)
+<li>Agent: “Got it. Added \$100 to Entertainment for today.”
 </ol>
 
-<p>\itshape Summarization:
+<p><em>Summarization:</em>
 <ol>
-<li>User: ``How much have I spent on food this month?''
-<li>Agent: Tool call: get\_expenses(category=``Food \& Dining'', date\_range=``current month'')
-<li>Agent: Tool call: summarize\_spending(period=``current month'')
-<li>Agent response: ``You've spent \$320 on Food \& Dining this month (15\% of your monthly budget of \$2000).''
+<li>User: “How much have I spent on food this month?”
+<li>Agent: Tool call: get\_expenses(category=“Food \& Dining”, date\_range=“current month”)
+<li>Agent: Tool call: summarize\_spending(period=“current month”)
+<li>Agent response: “You've spent \$320 on Food \& Dining this month (15\% of your monthly budget of \$2000).”
 </ol>
 
 <p>Key agent features: explicit categorization, budget awareness, historical tracking, proactive questions for clarity.
@@ -619,7 +619,7 @@ Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
 
 <h2>Conclusion and Future Directions</h2>
 
-<p>This chapter presented a general design pattern for applying deep learning to domain-specific problems. The pattern---world-formalization-language-tools---is not new to AI; it mirrors how humans solve problems by creating abstractions and tools. What is new is that deep learning models can now learn to operate effectively within these formal systems, bridging the gap between unstructured human communication and structured computational systems.</p>
+<p>This chapter presented a general design pattern for applying deep learning to domain-specific problems. The pattern—world-formalization-language-tools—is not new to AI; it mirrors how humans solve problems by creating abstractions and tools. What is new is that deep learning models can now learn to operate effectively within these formal systems, bridging the gap between unstructured human communication and structured computational systems.</p>
 
 <p>The landscape of deep learning applications will continue to expand as models grow more capable and tools become more integrated. Future directions include:</p>
 
@@ -631,19 +631,19 @@ Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
 <li><strong>Energy efficiency:</strong> Reducing computational requirements for model training and inference
 </ul>
 
-<p>We hope this book has provided both the theoretical foundations and practical insights needed to build the next generation of deep learning systems. The principles and techniques covered---transformers, attention, scaling, training, and deployment---are tools. The true skill lies in recognizing your domain, formalizing it into a language, and building systems that leverage models and tools to solve real problems.</p>
+<p>We hope this book has provided both the theoretical foundations and practical insights needed to build the next generation of deep learning systems. The principles and techniques covered—transformers, attention, scaling, training, and deployment—are tools. The true skill lies in recognizing your domain, formalizing it into a language, and building systems that leverage models and tools to solve real problems.</p>
 
 <h2>Synthesis: Patterns Across Domains</h2>
 
-<p>Having explored domain-specific AI systems across healthcare, finance, legal, recommendations, visual content, and observability, we can now synthesize the key patterns. The universal themes---drift inevitability, the accuracy-cost-latency trade-off, human-in-the-loop necessity, and explainability requirements---manifest differently in each domain. Table~[ref] summarizes these variations.</p>
+<p>Having explored domain-specific AI systems across healthcare, finance, legal, recommendations, visual content, and observability, we can now synthesize the key patterns. The universal themes—drift inevitability, the accuracy-cost-latency trade-off, human-in-the-loop necessity, and explainability requirements—manifest differently in each domain. Table~[ref] summarizes these variations.</p>
 
 <table>
 <tr><th><strong>Domain</strong></th><th><strong>Drift Pace</strong></th><th><strong>Retrain Cadence</strong></th><th><strong>Validation Rigor</strong></th><th><strong>Key Constraint</strong></th></tr>
-<tr><td>Healthcare</td><td>Quarterly</td><td>Quarterly--annual</td><td>Extreme (FDA)</td><td>Patient safety</td></tr>
-<tr><td>Finance</td><td>Daily</td><td>Daily--weekly</td><td>High (regulatory)</td><td>Latency + adversarial</td></tr>
-<tr><td>Legal</td><td>Episodic</td><td>Quarterly--semi-annual</td><td>Very high (liability)</td><td>Professional responsibility</td></tr>
-<tr><td>Recommendations</td><td>Weekly</td><td>Daily--weekly</td><td>Moderate (A/B tests)</td><td>Scale + freshness</td></tr>
-<tr><td>Visual Content</td><td>Monthly</td><td>Monthly--weekly</td><td>Moderate</td><td>Trend velocity</td></tr>
+<tr><td>Healthcare</td><td>Quarterly</td><td>Quarterly–annual</td><td>Extreme (FDA)</td><td>Patient safety</td></tr>
+<tr><td>Finance</td><td>Daily</td><td>Daily–weekly</td><td>High (regulatory)</td><td>Latency + adversarial</td></tr>
+<tr><td>Legal</td><td>Episodic</td><td>Quarterly–semi-annual</td><td>Very high (liability)</td><td>Professional responsibility</td></tr>
+<tr><td>Recommendations</td><td>Weekly</td><td>Daily–weekly</td><td>Moderate (A/B tests)</td><td>Scale + freshness</td></tr>
+<tr><td>Visual Content</td><td>Monthly</td><td>Monthly–weekly</td><td>Moderate</td><td>Trend velocity</td></tr>
 <tr><td>Observability</td><td>Continuous</td><td>Online + monthly</td><td>High (reliability)</td><td>24/7 uptime</td></tr>
 </table>
 
@@ -652,7 +652,7 @@ Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
 <ol>
 <li><strong>Drift is inevitable, not exceptional.</strong> Every production AI system degrades over time. Successful deployments plan for drift from deployment day, budgeting for detection, retraining pipelines, and continuous maintenance. The retraining frequency must match the domain's drift pace while respecting its validation requirements.
 
-<p><li><strong>Human oversight remains essential.</strong> The form varies---physician review of diagnoses, lawyer review of contract analysis, trader oversight of algorithmic decisions, product manager oversight of recommendation changes---but no high-stakes domain deploys AI without human judgment in the loop.</p>
+<p><li><strong>Human oversight remains essential.</strong> The form varies—physician review of diagnoses, lawyer review of contract analysis, trader oversight of algorithmic decisions, product manager oversight of recommendation changes—but no high-stakes domain deploys AI without human judgment in the loop.</p>
 
 <p><li><strong>Explainability is a business requirement, not a technical luxury.</strong> Stakeholders across all domains demand explanations for AI decisions. Attention mechanisms, retrieval-augmented generation, ensemble confidence estimates, and rule-based components all serve this need. Black-box models fail to achieve adoption regardless of accuracy.
 </ol>
