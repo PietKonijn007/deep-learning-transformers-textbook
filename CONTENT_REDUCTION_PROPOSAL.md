@@ -17,11 +17,11 @@
 | **A2+A3+A4: Exclude Solutions from PDF** | **DONE** | **~10,809** (from PDF) | **35 files** |
 | **A6: Ch21/22/23 Triple Coverage** | **DONE** | **~30** | **3 files** |
 | **A7: BERT-base Consolidation** | **DONE** | **~105 net** | **9 files** |
+| **C: Duplicate Section Removals (C1–C8)** | **DONE** | **~248** | **6 files** |
+| **D: Minor Cleanups (D1–D4)** | **DONE** | **~14** | **3 files** |
 | A5: Hardware Analysis Consolidation | Not started | — | — |
-| C: Duplicate Section Removals | Not started | — | — |
-| D: Minor Cleanups | **DONE** (D1, D2 included in B) | included above | — |
 
-**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **After A2 (PDF):** ~20,691 | **After A6+A7:** ~20,556 | **Net PDF reduction:** ~13,348 lines (~267 pages)
+**Total lines before Category B:** 33,904 | **After B:** 32,119 | **After A1:** ~31,500 | **After A2 (PDF):** ~20,691 | **After A6+A7:** ~20,556 | **After C+D:** ~20,294 | **Net PDF reduction:** ~13,610 lines (~272 pages)
 
 ---
 
@@ -420,108 +420,81 @@ These target specific sections that are near-identical copies of content in anot
 
 ### C1. Remove Longformer/BigBird Duplication Between Ch16 and Ch19
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** This is the most egregious duplication in the book. The descriptions are near-identical, including the same definitions, complexity formulas, memory calculations, and benchmark numbers:
-- Ch16 Efficient Transformers: Longformer (lines 78–143, ~65 lines) + BigBird (lines 145–216, ~70 lines)
-- Ch19 Long Context: Longformer (lines 156–183, ~28 lines) + BigBird (lines 185–209, ~25 lines)
+**Implementation:** Replaced Ch19's separate Longformer (28 lines) and BigBird (25 lines) subsections with a single combined "Longformer and BigBird" subsection (5 lines) summarizing key properties + cross-reference to Ch16. Kept a brief long-context-specific trade-off paragraph.
 
-**Proposal:** Keep Ch16 as the canonical home for the mechanism descriptions (with TikZ diagrams). In Ch19, replace with a 5-line summary + "see Chapter 16 for details" reference, then focus only on how these mechanisms are applied in long-context scenarios.
-
-**Estimated savings:** ~50 lines → **~1 page**
+**Lines saved:** ~49 lines
 
 ---
 
 ### C2. Remove Efficient Attention Preview from Ch8 (Covered in Ch9/Ch16)
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Ch8 "Memory-Efficient Attention Variants" (lines 487–526, 39 lines) previews sparse, linear, and low-rank attention that are covered in full detail in Ch9 (lines 359–494, 135 lines) and Ch16 (entire chapter).
+**Implementation:** Replaced Ch8's 39-line section with 3 subsections (sparse, linear, low-rank attention) with a concise bullet-list summary (8 lines) + reference to Ch9/Ch16 for details.
 
-**Proposal:** Replace the Ch8 preview with a single paragraph: "Several approaches exist to reduce the quadratic complexity of attention, including sparse, linear, and low-rank variants. These are covered in detail in Chapters 9 and 16."
-
-**Estimated savings:** ~35 lines → **~1 page**
+**Lines saved:** ~31 lines
 
 ---
 
 ### C3. Remove Scoring Function Re-Listing from Ch9
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Ch9 "Alternative Attention Scoring Functions" (lines 117–147, 30 lines) re-lists all four scoring functions (Bahdanau, Luong, scaled dot-product, general) that were already defined and compared in Ch7 (lines 444–516). The comparison at lines 142–147 is a simplified version of Ch7's table.
+**Implementation:** Replaced Ch9's 30-line section re-listing 4 scoring functions with a 3-line summary referencing Ch7's comparison.
 
-**Proposal:** Replace with a 3-line reference to Ch7's comparison table.
-
-**Estimated savings:** ~25 lines → **~0.5 pages**
+**Lines saved:** ~27 lines
 
 ---
 
 ### C4. Consolidate GPT-3 Training Cost Analysis into Ch11
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** The same GPT-3 training cost breakdown appears in 5 chapters:
-- Ch10 (within lines 495–655)
-- Ch11 (lines 1087–1251, ~165 lines — the most detailed)
-- Ch12 (referenced in scaling context)
-- Ch14 (lines 250–283, ~35 lines)
-- Ch20 (lines 383–420, ~40 lines)
+**Implementation:** Ch10 already handled by B9. Condensed Ch14's 13-line narrative prose to 3 sentences + cross-reference to Ch11, keeping the bullet-point specs. Ch20's cost content retained in context (specific to the scaling discussion).
 
-**Proposal:** Keep Ch11 as the canonical location. In Ch10, Ch14, and Ch20, replace with a 1–2 sentence reference to Ch11.
-
-**Estimated savings:** ~100 lines → **~2 pages**
+**Lines saved:** ~11 lines
 
 ---
 
-### C5. Consolidate Scaling Laws into One Chapter
+### C5. Consolidate Scaling Laws into Ch14
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Kaplan et al. and Chinchilla scaling laws are presented in three chapters:
-- Ch12 (lines 883–908, ~25 lines)
-- Ch14 (lines 406–469, ~65 lines — most detailed)
-- Ch20 (lines 283–304, ~20 lines)
+**Implementation:** Replaced Ch12's 25-line scaling laws section with 3-line summary + reference to Ch14 Section 14.4. Replaced Ch20's 22-line scaling laws subsection with 5-line summary + reference to Ch14.
 
-**Proposal:** Keep the full treatment in Ch14 (GPT chapter, where scaling laws are most relevant historically). Replace Ch12 and Ch20 occurrences with brief references.
-
-**Estimated savings:** ~45 lines → **~1 page**
+**Lines saved:** ~39 lines
 
 ---
 
 ### C6. Consolidate KV Caching into Ch14
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** KV caching is derived and explained in three chapters:
-- Ch10 (within computational section)
-- Ch12 (lines 678–767, ~90 lines)
-- Ch14 (lines 288–339, ~50 lines)
+**Implementation:** Condensed Ch12's KV cache derivation (GPT-3 formula + batch inference + solutions) into 2-line summary + reference to Ch14. Kept Ch12's memory scaling table (GPT-2 specific, pedagogically distinct).
 
-**Proposal:** Keep the full treatment in Ch14 (the GPT/autoregressive chapter where KV caching is most relevant). Ch12 can have a brief summary with forward reference.
-
-**Estimated savings:** ~80 lines → **~2 pages**
+**Lines saved:** ~15 lines
 
 ---
 
 ### C7. Remove Pretraining Objective Re-Explanations from Ch20
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Ch20 Pretraining Strategies (lines 22–95, ~75 lines) re-explains CLM, MLM, span corruption, and denoising objectives — including formulas and derivations — that were already covered in their dedicated chapters: MLM in Ch13, CLM in Ch14, span corruption and denoising in Ch15.
+**Implementation:** Replaced Ch20's 74-line section (verbose CLM/MLM/prefix LM explanations + denoising + computational cost comparison + example) with condensed bullet-list format (20 lines) retaining formulas and key references to Ch13/14/15.
 
-**Proposal:** Replace with concise 1-line summaries referencing Ch13/14/15.
-
-**Estimated savings:** ~50 lines → **~1 page**
+**Lines saved:** ~54 lines
 
 ---
 
 ### C8. Remove Mixed Precision / Gradient Checkpointing / ZeRO Re-Explanation from Ch20
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Ch20 (lines 422–455, ~35 lines) re-explains mixed precision, gradient checkpointing, and ZeRO that are already covered in full detail in Ch11.
+**Implementation:** Replaced Ch20's 34-line section (4 subsections with multi-paragraph explanations) with concise bullet-list summary (12 lines) + cross-reference to Ch11.
 
-**Proposal:** Replace with a 3-line reference to Ch11.
+**Lines saved:** ~22 lines
 
 **Estimated savings:** ~30 lines → **~1 page**
 
@@ -557,25 +530,21 @@ These target specific sections that are near-identical copies of content in anot
 
 ### D3. Remove Speculative Model Claims from Ch19
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Ch19 (lines 399–409) contains specific claims about proprietary model context lengths ("GPT-4 supports 128k tokens, Claude supports 200k tokens") and speculation about their implementation. These are already outdated and will continue to date.
+**Implementation:** Removed the "GPT-4 and Claude: Production Long Context Systems" subsection (11 lines) containing speculative claims about proprietary model architectures and outdated context length figures.
 
-**Proposal:** Either remove or convert to a footnote noting these were current as of a specific date.
-
-**Estimated savings:** ~10 lines → negligible pages, but improves longevity.
+**Lines saved:** ~11 lines
 
 ---
 
 ### D4. Remove LoRA Mention from Ch1
 
-**Status:** [ ] APPROVE / [ ] REJECT
+**Status:** [x] IMPLEMENTED
 
-**Problem:** Ch1 Linear Algebra (lines 466–469) mentions LoRA as an application of low-rank approximation. While mathematically relevant, LoRA is a fine-tuning technique that is more naturally placed in Ch20 (Pretraining Strategies) where it is properly contextualized.
+**Implementation:** Replaced the 4-line keypoint box with a 1-line forward-reference sentence mentioning LoRA's connection to low-rank decomposition and pointing to Chapter 20.
 
-**Proposal:** Remove or reduce to a single forward-reference sentence.
-
-**Estimated savings:** ~3 lines — negligible, but reduces out-of-context references.
+**Lines saved:** ~3 lines
 
 ---
 

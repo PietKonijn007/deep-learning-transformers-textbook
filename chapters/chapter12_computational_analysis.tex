@@ -666,24 +666,7 @@ T=2048: \quad &36{,}864 \times 2048 = 75{,}497{,}472\text{ bytes} \approx 75\tex
 T=4096: \quad &36{,}864 \times 4096 = 150{,}994{,}944\text{ bytes} \approx 151\text{ MB}
 \end{align}
 
-For GPT-3 ($L=96$, $h=96$, $d_k=128$, $T=2048$, FP16):
-\begin{equation}
-2 \times 96 \times 96 \times 2048 \times 128 \times 2 = 9{,}663{,}676{,}416\text{ bytes} \approx 9.7\text{ GB per sequence}
-\end{equation}
-
-\textbf{Batch inference with KV cache:} For batch size $B$:
-\begin{equation}
-\text{Total KV cache} = B \times 2 \times L \times h \times T \times d_k \times \text{sizeof(float)}
-\end{equation}
-
-For GPT-3 with $B=8$: $8 \times 9.7\text{ GB} = 77.6\text{ GB}$—nearly filling an A100 (80 GB)!
-
-This is why large-scale inference services:
-\begin{itemize}
-    \item Use smaller batch sizes for long contexts
-    \item Implement dynamic batching (group requests of similar lengths)
-    \item Use quantization (INT8) to reduce cache size by 2-4×
-\end{itemize}
+For GPT-3, the cache reaches 9.7~GB per sequence (see Chapter~\ref{chap:gpt} for the derivation), nearly filling an A100 for batch size 8 ($77.6$~GB). Practitioners manage this through smaller batch sizes for long contexts, dynamic batching, and INT8 quantization to reduce cache size by 2--4$\times$.
 
 \subsection{Batched Inference}
 
@@ -802,28 +785,7 @@ Distillation & 2-7× & 2-8× & Small (3-4\%) \\
 \section{Scaling Laws}
 \label{sec:scaling_laws}
 
-\subsection{Kaplan et al. Scaling Laws}
-
-Performance scales as power law with model size $N$, dataset size $D$, and compute $C$:
-\begin{equation}
-L(N, D, C) \approx \left(\frac{N_c}{N}\right)^{\alpha_N} + \left(\frac{D_c}{D}\right)^{\alpha_D} + \left(\frac{C_c}{C}\right)^{\alpha_C}
-\end{equation}
-
-\textbf{Key findings:}
-\begin{itemize}
-    \item Larger models are more sample-efficient
-    \item Compute-optimal: Balance model size and data
-    \item Doubling compute $\to$ consistent loss reduction
-\end{itemize}
-
-\subsection{Chinchilla Scaling Laws}
-
-For fixed compute budget, optimal allocation:
-\begin{equation}
-N_{\text{optimal}} \propto C^{0.5}, \quad D_{\text{optimal}} \propto C^{0.5}
-\end{equation}
-
-\textbf{Implication:} Many large models (GPT-3) are over-parameterized and under-trained! Chinchilla (70B params, more data) outperforms Gopher (280B params, less data).
+Performance scales as power laws with model size $N$, dataset size $D$, and compute budget $C$. The Kaplan scaling laws established that larger models are more sample-efficient, while the Chinchilla scaling laws (Hoffmann et al., 2022) refined the optimal allocation: $N_{\text{opt}} \propto C^{0.5}$ and $D_{\text{opt}} \propto C^{0.5}$, implying that many large models are over-parameterized and under-trained. See Section~\ref{sec:gpt_scaling_laws} for the full treatment including GPT-3 vs Chinchilla analysis and practical implications for training strategy.
 
 \section{Exercises}
 

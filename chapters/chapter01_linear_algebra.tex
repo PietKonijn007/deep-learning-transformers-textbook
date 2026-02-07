@@ -464,9 +464,7 @@ Sweet spot: 50-75\% compression with minimal accuracy loss.
 
 \subsubsection{SVD in Modern Architectures}
 
-\begin{keypoint}
-\textbf{LoRA (Low-Rank Adaptation):} Instead of fine-tuning all parameters in a pre-trained model, LoRA adds low-rank updates through the decomposition $\mW' = \mW + \Delta \mW = \mW + \mB\mA$, where the original weights $\mW \in \R^{d \times k}$ remain frozen, and only the low-rank factors $\mB \in \R^{d \times r}$ and $\mA \in \R^{r \times k}$ with $r \ll \min(d, k)$ are trained. For a layer with $d = 4096$ and $k = 4096$, full fine-tuning requires updating $16{,}777{,}216$ parameters, while LoRA with rank $r = 8$ requires only $8 \times (4096 + 4096) = 65{,}536$ trainable parameters, achieving a 99.6\% parameter reduction while maintaining comparable performance.
-\end{keypoint}
+Low-rank matrix decompositions are also central to modern parameter-efficient fine-tuning methods such as LoRA, which adds low-rank updates $\Delta \mW = \mB\mA$ (with $\mB \in \R^{d \times r}$, $\mA \in \R^{r \times k}$, $r \ll \min(d,k)$) to frozen pre-trained weights, achieving $>$99\% parameter reduction. See Chapter~20 for details.
 
 \begin{implementation}
 Computing SVD and low-rank approximation in PyTorch:
