@@ -149,19 +149,19 @@
 
 <h2>Enterprise Search and Semantic Retrieval</h2>
 
-<p>Enterprise search is one of the most impactful yet underappreciated applications of NLP. Consider the daily frustration of employees unable to find critical information buried in company wikis, documentation systems, and shared drives. A study by IDC found that knowledge workers spend 2.5 hours per day searching for information, costing large organizations millions in lost productivity annually. Traditional keyword-based search systems, built on TF-IDF or BM25, struggle with semantic similarity. A user searching for ``vehicle transmission problems'' may not retrieve documents discussing ``automotive gearbox failures,'' despite semantic equivalence.</p>
+<p>Enterprise search is one of the most impactful yet underappreciated applications of NLP. Consider the daily frustration of employees unable to find critical information buried in company wikis, documentation systems, and shared drives. A study by IDC found that knowledge workers spend 2.5 hours per day searching for information, costing large organizations millions in lost productivity annually. Traditional keyword-based search systems, built on TF-IDF or BM25, struggle with semantic similarity. A user searching for “vehicle transmission problems” may not retrieve documents discussing “automotive gearbox failures,” despite semantic equivalence.</p>
 
-<p>The business case for semantic search is straightforward: if you can reduce search time by 50\%, you recover 1.25 hours per employee per day. For a 1,000-person organization with an average salary of \$100,000, that's approximately \$15 million in recovered productivity annually. The investment in semantic search infrastructure---typically \$50,000--\$200,000 for development and deployment---pays for itself within weeks.</p>
+<p>The business case for semantic search is straightforward: if you can reduce search time by 50\%, you recover 1.25 hours per employee per day. For a 1,000-person organization with an average salary of \$100,000, that's approximately \$15 million in recovered productivity annually. The investment in semantic search infrastructure—typically \$50,000–\$200,000 for development and deployment—pays for itself within weeks.</p>
 
-<p>Semantic search addresses the limitations of keyword matching by encoding both queries and documents into high-dimensional vector spaces where similar meanings are close together, enabling retrieval based on semantic understanding rather than lexical overlap. This means ``car transmission issues'' and ``automobile gearbox problems'' are recognized as semantically similar even though they share no common words.</p>
+<p>Semantic search addresses the limitations of keyword matching by encoding both queries and documents into high-dimensional vector spaces where similar meanings are close together, enabling retrieval based on semantic understanding rather than lexical overlap. This means “car transmission issues” and “automobile gearbox problems” are recognized as semantically similar even though they share no common words.</p>
 
 <h3>Architecture and Workflow</h3>
 
 <p>A semantic search system has several components working in concert, each serving a specific purpose in the retrieval pipeline. Understanding this architecture helps you make informed decisions about where to invest engineering effort and computational resources.</p>
 
-<p>First, a dense embedding model encodes documents and queries into vectors. This is the heart of semantic search---the model that learned to represent meaning as geometry. Pre-trained models like BERT-base, all-MiniLM-L6-v2, or specialized dense retrievers (e.g., DPR, ColBERT) map text to fixed-size embeddings. The choice of model involves trade-offs: larger models like BERT-base (768 dimensions) capture more nuance but require more compute; smaller models like MiniLM (384 dimensions) are faster but may miss subtle semantic distinctions.</p>
+<p>First, a dense embedding model encodes documents and queries into vectors. This is the heart of semantic search—the model that learned to represent meaning as geometry. Pre-trained models like BERT-base, all-MiniLM-L6-v2, or specialized dense retrievers (e.g., DPR, ColBERT) map text to fixed-size embeddings. The choice of model involves trade-offs: larger models like BERT-base (768 dimensions) capture more nuance but require more compute; smaller models like MiniLM (384 dimensions) are faster but may miss subtle semantic distinctions.</p>
 
-<p>Second, a vector database (Pinecone, Weaviate, Milvus, Qdrant) indexes these embeddings for fast nearest-neighbor retrieval. This is where engineering meets mathematics: the database must efficiently search through millions or billions of vectors to find the most similar ones. The data structure choices here---HNSW graphs, IVF indexes, or LSH hashing---determine whether your search takes milliseconds or seconds.</p>
+<p>Second, a vector database (Pinecone, Weaviate, Milvus, Qdrant) indexes these embeddings for fast nearest-neighbor retrieval. This is where engineering meets mathematics: the database must efficiently search through millions or billions of vectors to find the most similar ones. The data structure choices here—HNSW graphs, IVF indexes, or LSH hashing—determine whether your search takes milliseconds or seconds.</p>
 
 <p>Third, a ranking model optionally re-scores the top-k candidates for finer-grained relevance. The initial retrieval casts a wide net; the ranker applies more sophisticated (and expensive) scoring to the candidates. This two-stage approach balances speed and accuracy: fast retrieval narrows the search space, then careful ranking orders the results.</p>
 
@@ -188,7 +188,7 @@ $$\begin{align}
 </div>
 This happens offline, typically during nightly batch jobs. For a corpus of 1 million documents, this might take hours, but it only needs to be done once per document (or when documents are updated).</p>
 
-<p><li><strong>Index vectors:</strong> Store $\{\mathbf{d}_i\}$ in vector database with fast retrieval structures. The indexing process builds data structures (like HNSW graphs) that enable sub-linear search time. Without indexing, finding nearest neighbors would require comparing the query to every document---infeasible at scale.</p>
+<p><li><strong>Index vectors:</strong> Store $\{\mathbf{d}_i\}$ in vector database with fast retrieval structures. The indexing process builds data structures (like HNSW graphs) that enable sub-linear search time. Without indexing, finding nearest neighbors would require comparing the query to every document—infeasible at scale.</p>
 
 <p><li><strong>Retrieve top-k:</strong> Find the k documents whose embeddings are closest to the query embedding:
 <div class="equation">
@@ -196,7 +196,7 @@ $$\begin{align}
 \text{topk} = \text{retrieve}(\mathbf{q}, \mathbf{D}, k)
 \end{align}$$
 </div>
-Typically k=100--1000 for the initial retrieval. This step is optimized for speed, using approximate nearest neighbor algorithms that trade perfect accuracy for 10--100x speedup.</p>
+Typically k=100–1000 for the initial retrieval. This step is optimized for speed, using approximate nearest neighbor algorithms that trade perfect accuracy for 10–100x speedup.</p>
 
 <p><li><strong>Rank (optional):</strong> Apply a more sophisticated scoring function to re-order the top-k candidates:
 <div class="equation">
@@ -214,13 +214,13 @@ The ranker might use cross-attention between query and document, consider user c
 
 <p>Choosing an embedding model is one of the most consequential decisions in building a semantic search system. The model determines your accuracy ceiling, computational costs, and operational complexity. Let's examine the trade-offs systematically.</p>
 
-<p>BERT-base produces 768-dimensional embeddings with strong performance but requires GPU inference. For a query, BERT-base takes approximately 50--100ms on CPU or 5--10ms on GPU. At 1,000 queries per second, CPU-only deployment would require 50--100 CPU cores---expensive and operationally complex. GPU deployment is more cost-effective but requires GPU infrastructure and expertise.</p>
+<p>BERT-base produces 768-dimensional embeddings with strong performance but requires GPU inference. For a query, BERT-base takes approximately 50–100ms on CPU or 5–10ms on GPU. At 1,000 queries per second, CPU-only deployment would require 50–100 CPU cores—expensive and operationally complex. GPU deployment is more cost-effective but requires GPU infrastructure and expertise.</p>
 
-<p>Lighter models like all-MiniLM-L6-v2 (384-dim) offer 10--20$\times$ faster inference with minimal accuracy loss on semantic similarity tasks. This model runs comfortably on CPU, taking 5--10ms per query. For most enterprise applications, the accuracy difference (typically 2--5 percentage points on retrieval metrics) is worth the operational simplicity and cost savings.</p>
+<p>Lighter models like all-MiniLM-L6-v2 (384-dim) offer 10–20$\times$ faster inference with minimal accuracy loss on semantic similarity tasks. This model runs comfortably on CPU, taking 5–10ms per query. For most enterprise applications, the accuracy difference (typically 2–5 percentage points on retrieval metrics) is worth the operational simplicity and cost savings.</p>
 
-<p>For domain-specific applications (e.g., legal, medical), domain-adaptive pre-training or fine-tuning the embedding model on labeled pairs improves performance significantly. A legal search system using a general-purpose embedding model might achieve 70\% recall@10; fine-tuning on legal document pairs can push this to 85--90\%. The investment in fine-tuning (collecting labeled pairs, training for a few days) pays off in dramatically better user experience.</p>
+<p>For domain-specific applications (e.g., legal, medical), domain-adaptive pre-training or fine-tuning the embedding model on labeled pairs improves performance significantly. A legal search system using a general-purpose embedding model might achieve 70\% recall@10; fine-tuning on legal document pairs can push this to 85–90\%. The investment in fine-tuning (collecting labeled pairs, training for a few days) pays off in dramatically better user experience.</p>
 
-<p>Embedding quality directly impacts retrieval accuracy, and the quality depends heavily on training data. Hard negative mining---training on documents that are contextually similar but semantically different---significantly improves ranking. For example, when searching for instructions on ``how to reset a router,'' a document about network protocols is harder to distinguish from the correct answer than a document about cooking recipes. The model must learn fine-grained distinctions, not just broad topic similarity.</p>
+<p>Embedding quality directly impacts retrieval accuracy, and the quality depends heavily on training data. Hard negative mining—training on documents that are contextually similar but semantically different—significantly improves ranking. For example, when searching for instructions on “how to reset a router,” a document about network protocols is harder to distinguish from the correct answer than a document about cooking recipes. The model must learn fine-grained distinctions, not just broad topic similarity.</p>
 
 <p>Collecting and training on such hard negatives through user feedback or synthetic generation improves model robustness. In practice, this means logging queries where users didn't click the top results (indicating poor retrieval), then using those as training data. This creates a feedback loop: the system learns from its mistakes, continuously improving.</p>
 
@@ -228,11 +228,11 @@ The ranker might use cross-attention between query and document, consider user c
 
 <p>Vector databases are specialized systems optimized for the specific workload of semantic search: storing millions of high-dimensional vectors and finding nearest neighbors in milliseconds. Understanding their internals helps you make informed deployment decisions.</p>
 
-<p>Vector databases enable billion-scale retrieval in milliseconds through approximate nearest neighbor (ANN) algorithms like HNSW, IVF, and LSH. These algorithms trade exact nearest neighbors for speed---they might miss the true nearest neighbor but find one that's very close, which is usually good enough for search applications.</p>
+<p>Vector databases enable billion-scale retrieval in milliseconds through approximate nearest neighbor (ANN) algorithms like HNSW, IVF, and LSH. These algorithms trade exact nearest neighbors for speed—they might miss the true nearest neighbor but find one that's very close, which is usually good enough for search applications.</p>
 
-<p>The memory requirements are substantial but manageable. For a 768-dimensional BERT-base embedding, storing one million documents requires approximately 3 GB of memory (1M $\times$ 768 $\times$ 4 bytes for float32). This fits comfortably in RAM on modern servers. For 100 million documents, you need 300 GB---requiring a large server or distributed deployment, but still feasible.</p>
+<p>The memory requirements are substantial but manageable. For a 768-dimensional BERT-base embedding, storing one million documents requires approximately 3 GB of memory (1M $\times$ 768 $\times$ 4 bytes for float32). This fits comfortably in RAM on modern servers. For 100 million documents, you need 300 GB—requiring a large server or distributed deployment, but still feasible.</p>
 
-<p>Querying is typically sub-millisecond for index lookups once the query embedding is computed. The total latency includes embedding generation (50--100 ms for BERT on CPU, 5--10 ms on GPU) and ranking post-processing (10--50 ms depending on complexity). End-to-end latency of 100--200ms is typical and acceptable for most applications.</p>
+<p>Querying is typically sub-millisecond for index lookups once the query embedding is computed. The total latency includes embedding generation (50–100 ms for BERT on CPU, 5–10 ms on GPU) and ranking post-processing (10–50 ms depending on complexity). End-to-end latency of 100–200ms is typical and acceptable for most applications.</p>
 
 <p>The choice of ANN algorithm involves trade-offs. HNSW (Hierarchical Navigable Small World) graphs offer excellent recall and speed but require more memory. IVF (Inverted File Index) is more memory-efficient but slightly slower. LSH (Locality-Sensitive Hashing) is fastest but has lower recall. For most enterprise applications, HNSW is the best default choice.</p>
 
@@ -244,7 +244,7 @@ The ranker might use cross-attention between query and document, consider user c
 
 <p><strong>Implementation:</strong>
 <ul>
-<li>Embed all documents with all-MiniLM-L6-v2 (384-dim) offline. This choice prioritizes operational simplicity (CPU-only deployment) over marginal accuracy gains from larger models. The embedding process takes 8 hours on a standard server---acceptable for a one-time operation.</p>
+<li>Embed all documents with all-MiniLM-L6-v2 (384-dim) offline. This choice prioritizes operational simplicity (CPU-only deployment) over marginal accuracy gains from larger models. The embedding process takes 8 hours on a standard server—acceptable for a one-time operation.</p>
 
 <p><li>Store in Weaviate with HNSW indexing. Weaviate was chosen for its ease of deployment and good performance at this scale. The HNSW index provides 95\% recall@100 with sub-millisecond query time.</p>
 
@@ -266,11 +266,11 @@ The ranker might use cross-attention between query and document, consider user c
 <p><li>Maintenance: Re-index new documents nightly; model weights updated quarterly. The nightly re-indexing ensures new documents are searchable within 24 hours. Quarterly model updates incorporate user feedback and improve accuracy over time.
 </ul>
 
-<p>The system has been in production for 18 months. User satisfaction surveys show 85\% of employees rate the new search as ``much better'' than the old system. Search query volume increased 3x---not because employees search more, but because they're willing to use search now that it works. The system has become a critical piece of infrastructure, with employees reporting they ``couldn't work without it.''</p>
+<p>The system has been in production for 18 months. User satisfaction surveys show 85\% of employees rate the new search as “much better” than the old system. Search query volume increased 3x—not because employees search more, but because they're willing to use search now that it works. The system has become a critical piece of infrastructure, with employees reporting they “couldn't work without it.”</p>
 
 <h2>Text Classification and Tagging in Production</h2>
 
-<p>Text classification is among the most successful enterprise NLP applications, powering intent recognition, routing, spam detection, and triage. The business value is immediate and measurable: automated classification reduces manual labor, speeds up processes, and improves consistency. A support team that manually routes 50,000 tickets monthly spends approximately 2,500 hours on triage alone---time that could be spent actually solving customer problems.</p>
+<p>Text classification is among the most successful enterprise NLP applications, powering intent recognition, routing, spam detection, and triage. The business value is immediate and measurable: automated classification reduces manual labor, speeds up processes, and improves consistency. A support team that manually routes 50,000 tickets monthly spends approximately 2,500 hours on triage alone—time that could be spent actually solving customer problems.</p>
 
 <p>The technical approach is well-established: fine-tune a pre-trained encoder (BERT) with a lightweight classification head on labeled data, then deploy for inference. The challenge lies not in the algorithm but in the operational details: handling class imbalance, dealing with label scarcity, adapting to domain shift, and maintaining performance over time. These practical concerns determine whether a classification system succeeds or fails in production.</p>
 
@@ -278,9 +278,9 @@ The ranker might use cross-attention between query and document, consider user c
 
 <p>Fine-tuning BERT-base on a classification task is straightforward in principle but requires attention to detail in practice. The process leverages transfer learning: BERT has already learned general language understanding from massive pre-training; we adapt it to our specific classification task with relatively little labeled data.</p>
 
-<p>The input sequence is fed to BERT, producing a contextualized representation for each token and a pooled representation (typically the [CLS] token). This pooled representation captures the overall meaning of the input text. A classification head---a single linear layer mapping the 768-dimensional representation to class logits---is trained on labeled examples. The simplicity of the classification head is intentional: BERT does the heavy lifting of understanding language; the head just maps that understanding to class labels.</p>
+<p>The input sequence is fed to BERT, producing a contextualized representation for each token and a pooled representation (typically the [CLS] token). This pooled representation captures the overall meaning of the input text. A classification head—a single linear layer mapping the 768-dimensional representation to class logits—is trained on labeled examples. The simplicity of the classification head is intentional: BERT does the heavy lifting of understanding language; the head just maps that understanding to class labels.</p>
 
-<p>Standard hyperparameters are learning rate $2$--$5 \times 10^{-5}$, batch size 16--32, and 2--5 epochs of training on a single GPU. These hyperparameters are well-established through empirical research and work well across most classification tasks. The low learning rate prevents catastrophic forgetting---we want to adapt BERT, not overwrite its pre-trained knowledge.</p>
+<p>Standard hyperparameters are learning rate $2$–$5 \times 10^{-5}$, batch size 16–32, and 2–5 epochs of training on a single GPU. These hyperparameters are well-established through empirical research and work well across most classification tasks. The low learning rate prevents catastrophic forgetting—we want to adapt BERT, not overwrite its pre-trained knowledge.</p>
 
 <div class="definition"><strong>Definition:</strong>
 
@@ -318,7 +318,7 @@ $$\begin{align}
 
 <h3>Handling Common Challenges</h3>
 
-<p><strong>Class Imbalance:</strong> Real-world datasets often exhibit severe class imbalance. For customer support ticket routing, perhaps 80\% of tickets are ``billing'' and 5\% are ``technical.'' Training naively yields high accuracy but poor performance on rare classes. Solutions include:
+<p><strong>Class Imbalance:</strong> Real-world datasets often exhibit severe class imbalance. For customer support ticket routing, perhaps 80\% of tickets are “billing” and 5\% are “technical.” Training naively yields high accuracy but poor performance on rare classes. Solutions include:
 <ul>
 <li>Weighted loss: Assign higher weights to underrepresented classes
 <li>Oversampling: Duplicate rare class examples during training
@@ -326,7 +326,7 @@ $$\begin{align}
 <li>Threshold tuning: Adjust class-specific decision thresholds at inference
 </ul>
 
-<p><strong>Label Scarcity:</strong> Labeling 10,000 examples costs thousands of dollars. Active learning selects the most informative unlabeled examples for human annotation, reducing labeling costs by 50--70\%. Data augmentation (paraphrasing, synonym replacement, back-translation) creates synthetic training data, though quality must be validated.</p>
+<p><strong>Label Scarcity:</strong> Labeling 10,000 examples costs thousands of dollars. Active learning selects the most informative unlabeled examples for human annotation, reducing labeling costs by 50–70\%. Data augmentation (paraphrasing, synonym replacement, back-translation) creates synthetic training data, though quality must be validated.</p>
 
 <p><strong>Long-Tail Classes:</strong> Even with 100,000 labeled examples, certain classes appear only dozens of times. Few-shot learning or transfer learning from related tasks (e.g., sentiment classification to domain classification) helps. Pre-training on a large corpus in the same domain before task-specific fine-tuning improves performance on tail classes.</p>
 
@@ -347,7 +347,7 @@ $$\begin{align}
 
 <h3>Case Study: Support Ticket Triage</h3>
 
-<p>A support team receives 50,000 tickets monthly across 12 categories (Billing, Technical, Account Access, etc.). Manual triage takes 2--3 minutes per ticket, costing $\approx\$30,000/month in labor.</p>
+<p>A support team receives 50,000 tickets monthly across 12 categories (Billing, Technical, Account Access, etc.). Manual triage takes 2–3 minutes per ticket, costing $\approx\$30,000/month in labor.</p>
 
 <p><strong>Solution:</strong>
 <ul>
@@ -377,7 +377,7 @@ $$\begin{align}
 <ol>
 <li>Encodes the user query into an embedding
 <li>Retrieves relevant documents from a knowledge base (e.g., FAQs, policies)
-<li>Constructs a prompt: ``Answer the question based on the following context:''
+<li>Constructs a prompt: “Answer the question based on the following context:”
 <li>Feeds the prompt to a generative model (GPT-3.5, LLaMA, or smaller fine-tuned model)
 <li>Returns the generated response to the user
 </ol>
@@ -424,11 +424,11 @@ Do not make up product features or pricing.
 <ul>
 <li>Low retrieval relevance (no good documents found)
 <li>Model confidence below threshold
-<li>Explicit user request: ``I want to talk to a human''
+<li>Explicit user request: “I want to talk to a human”
 <li>Repeated unresolved queries in the conversation
 </ul>
 
-<p>After escalation, the conversation history is logged for training data. Human feedback (``this response was not helpful'') provides signals for model improvement. A feedback loop where user interactions improve model quality is essential for long-term deployment.</p>
+<p>After escalation, the conversation history is logged for training data. Human feedback (“this response was not helpful”) provides signals for model improvement. A feedback loop where user interactions improve model quality is essential for long-term deployment.</p>
 
 <h3>Case Study: Customer Support Bot</h3>
 
@@ -480,7 +480,7 @@ Do not make up product features or pricing.
 <li>Influence functions: Identify training examples most similar to a query
 </ul>
 
-<p>Red-teaming---testing the system for failure modes and adversarial inputs---should precede production deployment. Can the model be tricked into producing harmful content? Does it hallucinate credentials or confidential information? How does it handle non-English text, typos, or adversarial prompts?</p>
+<p>Red-teaming—testing the system for failure modes and adversarial inputs—should precede production deployment. Can the model be tricked into producing harmful content? Does it hallucinate credentials or confidential information? How does it handle non-English text, typos, or adversarial prompts?</p>
 
 <h2>Continuous Learning and Model Drift in Enterprise NLP</h2>
 
@@ -488,99 +488,28 @@ Do not make up product features or pricing.
 
 <h3>Language Evolution and Concept Drift</h3>
 
-<p>Language is not static. New terms emerge (``ChatGPT,'' ``NFT,'' ``metaverse''), meanings shift (``cloud'' once meant weather, now means computing), and communication styles evolve (emoji usage, abbreviations, formality levels). Enterprise NLP systems must adapt to these changes or risk becoming obsolete.</p>
+<p>Language is not static. New terms emerge (“ChatGPT,” “NFT,” “metaverse”), meanings shift (“cloud” once meant weather, now means computing), and communication styles evolve (emoji usage, abbreviations, formality levels). Enterprise NLP systems must adapt to these changes or risk becoming obsolete.</p>
 
-<p><strong>Vocabulary drift:</strong> New products, features, and services introduce new terminology. A support ticket classifier trained before a product launch won't recognize the new product name. This manifests as increased ``other'' or ``unknown'' classifications and decreased confidence scores.</p>
+<p><strong>Vocabulary drift:</strong> New products, features, and services introduce new terminology. A support ticket classifier trained before a product launch won't recognize the new product name. This manifests as increased “other” or “unknown” classifications and decreased confidence scores.</p>
 
-<p><strong>Semantic drift:</strong> The meaning of existing terms changes. ``Premium support'' might have meant one thing in 2023 and something different after a service tier restructuring in 2024. The model's learned associations become outdated.</p>
+<p><strong>Semantic drift:</strong> The meaning of existing terms changes. “Premium support” might have meant one thing in 2023 and something different after a service tier restructuring in 2024. The model's learned associations become outdated.</p>
 
 <p><strong>Style drift:</strong> Communication norms evolve. Customers might shift from formal emails to casual chat messages, or from text to voice transcriptions. The model trained on one style may struggle with another.</p>
 
-<h3>Detecting Drift in NLP Systems</h3>
+<div class="keypoint">
+The generic framework for drift detection (performance monitoring, distribution monitoring, confidence tracking), continuous learning strategies (periodic retraining, triggered retraining, online learning, ensemble approaches, human-in-the-loop), and practical implementation infrastructure (data versioning, model versioning, automated pipelines, monitoring dashboards) is covered in Chapter~[ref], Section~[ref]. Here we highlight NLP-specific considerations.
+</div>
 
-<p>Drift detection for NLP requires monitoring both model performance and input distributions. Unlike vision systems where pixel distributions are relatively stable, text distributions shift constantly.</p>
-
-<p><strong>Performance monitoring:</strong> Track accuracy, precision, recall, and F1 scores on recent data. For classification systems, monitor per-class performance---drift often affects specific classes first. A sudden drop in accuracy for the ``billing'' category might indicate a billing system change that introduced new terminology.</p>
-
-<p><strong>Confidence distribution monitoring:</strong> Plot the distribution of model confidence scores over time. If the model becomes less confident (more predictions near 0.5 for binary classification), it's encountering unfamiliar inputs. If confidence remains high but accuracy drops, the model is overconfident on out-of-distribution data.</p>
-
-<p><strong>Vocabulary monitoring:</strong> Track the frequency of unknown tokens (words not in the model's vocabulary). A spike in unknown tokens indicates new terminology entering the domain. For subword tokenizers like BERT's WordPiece, monitor the average number of subword tokens per word---increasing fragmentation suggests vocabulary drift.</p>
-
-<p><strong>Prediction distribution monitoring:</strong> Monitor the distribution of predicted classes. If a classifier suddenly predicts ``technical support'' for 40\% of tickets when it historically predicted 20\%, something has changed---either the input distribution or the model's behavior.</p>
-
-<p><strong>User feedback monitoring:</strong> Track explicit feedback (thumbs up/down, corrections) and implicit feedback (escalations, re-classifications by humans). These signals indicate when the model is making mistakes that matter to users.</p>
-
-<h3>Adaptation Strategies for Enterprise NLP</h3>
-
-<p>Once drift is detected, you need strategies to adapt. The right approach depends on the type of drift, available resources, and business constraints.</p>
-
-<p><strong>Vocabulary updates:</strong> For vocabulary drift, update the tokenizer and model vocabulary. This requires retraining but is less expensive than full model retraining. Add new tokens for new products, features, or terminology. This is particularly important for domain-specific terms that would otherwise be split into meaningless subwords.</p>
-
-<p><strong>Incremental fine-tuning:</strong> Collect recent labeled examples and fine-tune the model on a mixture of old and new data. This adapts the model to new patterns while preserving performance on historical patterns. The mixing ratio matters: too much new data causes catastrophic forgetting; too little fails to adapt.</p>
-
-<p><strong>Active learning for efficient labeling:</strong> Drift often manifests in specific areas (new product categories, emerging issues). Use active learning to identify the most informative examples to label. Query the model on recent unlabeled data, select examples where the model is uncertain or where predictions seem wrong, and prioritize those for human labeling.</p>
-
-<p><strong>Ensemble with temporal models:</strong> Maintain multiple models trained on different time periods (last month, last quarter, last year). Combine their predictions with weights based on recent performance. This provides robustness: if one model becomes outdated, others compensate. The ensemble naturally adapts as you add new models and retire old ones.</p>
-
-<p><strong>Human-in-the-loop correction:</strong> For high-stakes applications, route low-confidence predictions to humans for review. Collect these human corrections as training data. This creates a feedback loop: the model learns from its mistakes, improving over time.</p>
-
-<h3>Practical Implementation: Continuous Learning Pipeline</h3>
-
-<p>Implementing continuous learning for enterprise NLP requires infrastructure and processes beyond the model itself.</p>
-
-<p><strong>Data collection pipeline:</strong> Automatically collect recent examples with ground truth labels. For classification, this might mean logging all predictions and their eventual outcomes (was the ticket correctly routed?). For search, log queries and which results users clicked. This data becomes your retraining corpus.</p>
-
-<p><strong>Drift detection dashboard:</strong> Build dashboards that visualize key metrics over time: accuracy by class, confidence distributions, vocabulary statistics, prediction distributions. Set up alerts that notify the team when metrics exceed thresholds. Make drift visible so teams can respond quickly.</p>
-
-<p><strong>Automated retraining pipeline:</strong> Build infrastructure that automates the retraining process: data collection, preprocessing, training, evaluation, and deployment. This reduces the cost of frequent retraining. Tools like Kubeflow, MLflow, or custom pipelines orchestrate these steps.</p>
-
-<p><strong>A/B testing framework:</strong> Before deploying a retrained model to all users, test it on a subset. Compare the new model's performance to the current model on real traffic. If the new model performs better, gradually roll it out. If it performs worse, investigate why and iterate.</p>
-
-<p><strong>Model versioning and rollback:</strong> Maintain multiple model versions in production. If a new model performs worse than expected, roll back to the previous version quickly. Track which model version made each prediction for debugging and auditing.</p>
-
-<h3>Case Study: Continuous Learning for Support Ticket Classification</h3>
-
-<p>A SaaS company's support ticket classifier was deployed in January 2024 with 88\% accuracy. By June 2024, accuracy had dropped to 78\%---a 10-point degradation that translated to 5,000 additional misrouted tickets per month, costing approximately \$15,000 in wasted agent time.</p>
-
-<p><strong>Root cause analysis:</strong> The company launched three new products in Q1 2024. Tickets about these products were classified as ``other'' or misrouted to existing product categories. The model had never seen these product names during training.</p>
-
-<p><strong>Solution implemented:</strong>
+<p>Key NLP-specific adaptation strategies include:
 <ul>
-<li><strong>Immediate fix:</strong> Added new product categories to the classifier. Collected 500 labeled examples for each new product (1,500 total). Fine-tuned the model on a mixture of 80\% historical data and 20\% new product data. Accuracy recovered to 85\% within one week.</p>
-
-<p><li><strong>Long-term solution:</strong> Implemented continuous learning pipeline. Every month, collect tickets from the previous month, sample 1,000 for human labeling (prioritizing low-confidence predictions), fine-tune the model on a rolling 6-month window of data. This ensures the model stays current with product changes.</p>
-
-<p><li><strong>Monitoring:</strong> Set up dashboard tracking accuracy by product category. Alert if any category drops below 80\% accuracy. This provides early warning of drift.
+<li><strong>Vocabulary updates:</strong> New products and terminology require updating the tokenizer and model vocabulary. Add tokens for new domain terms that would otherwise fragment into meaningless subwords.
+<li><strong>Active learning for efficient labeling:</strong> Use model uncertainty to prioritize which recent examples to label, focusing annotation budget on drifting areas (e.g.\ new product categories).
+<li><strong>Vocabulary monitoring:</strong> Track unknown-token frequency and subword fragmentation rates—spikes indicate terminology drift before performance degrades.
 </ul>
 
-<p><strong>Results after 6 months:</strong>
-<ul>
-<li>Accuracy stabilized at 86--88\% despite ongoing product changes
-<li>Monthly retraining cost: \$2,000 (labeling) + \$500 (compute) = \$2,500
-<li>Savings from maintained accuracy: \$15,000/month in prevented misrouting
-</ul>
+<h3>Case Study: Support Ticket Classification Drift</h3>
 
-<p>The key lesson: drift is inevitable in enterprise NLP. The question is not whether to invest in continuous learning, but how much to invest.</p>
-
-<h3>Cross-Domain Patterns and Connections</h3>
-
-<p>The continuous learning challenges in enterprise NLP connect to patterns across other domains:</p>
-
-<ul>
-<li><strong>Chapter 24 (Domain-Specific Models):</strong> The general framework for continuous learning applies here. Enterprise NLP exemplifies the challenges: language evolution, concept drift, and the need for ongoing adaptation.
-
-<p><li><strong>Chapter 26 (Code):</strong> Code models face similar vocabulary drift as programming languages evolve and new libraries emerge. The adaptation strategies (vocabulary updates, incremental fine-tuning) apply to both domains.</p>
-
-<p><li><strong>Chapter 28 (Knowledge Graphs):</strong> Entity extraction and relation extraction (covered in this chapter) populate knowledge graphs. Drift in NLP extraction models propagates to knowledge graphs, requiring coordinated updates.</p>
-
-<p><li><strong>Chapter 30 (Healthcare):</strong> Clinical NLP faces similar challenges as medical terminology evolves and treatment guidelines change. The human-in-the-loop approach is particularly important in healthcare where errors have serious consequences.</p>
-
-<p><li><strong>Chapter 32 (Legal):</strong> Legal NLP systems must adapt as laws change and new precedents are set. The continuous learning patterns here apply directly to legal document analysis and contract review systems.</p>
-
-<p><li><strong>Chapter 33 (Observability):</strong> Log parsing and anomaly detection (Chapter 33) use NLP techniques. Drift in log formats and system behavior requires similar adaptation strategies.
-</ul>
-
-<p>Understanding these cross-domain patterns helps you apply lessons from one domain to another. The specific manifestations of drift vary, but the fundamental challenges and solutions are remarkably similar.</p>
+<p>A SaaS company's support ticket classifier degraded from 88\% to 78\% accuracy over six months when three new products were launched. Tickets about these products were misclassified because the model had never seen the new product names. The immediate fix—collecting 500 labeled examples per product and fine-tuning on an 80/20 historical/new data mix—recovered accuracy to 85\% within one week. The long-term solution implemented monthly retraining on a rolling 6-month window with 1,000 actively sampled examples, stabilizing accuracy at 86–88\% at a cost of \$2,500/month against \$15,000/month in prevented misrouting.</p>
 
 <h2>Exercises</h2>
 
@@ -594,6 +523,8 @@ Do not make up product features or pricing.
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Legal Document Semantic Search</strong>
 
@@ -627,11 +558,11 @@ With 95\% negatives, standard cross-entropy biases toward the negative class. So
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 3: FAQ Conversational Assistant</strong>
 
 <p><em>Knowledge Base:</em>
-Curate 100--200 high-quality QA pairs addressing the 80\% of common questions. Structure as: question, answer, related questions, prerequisites (e.g., account must be created).</p>
+Curate 100–200 high-quality QA pairs addressing the 80\% of common questions. Structure as: question, answer, related questions, prerequisites (e.g., account must be created).</p>
 
 <p><em>Success Metrics:</em>
 - Containment: \% of conversations resolved without escalation (target: $\geq 50\%$)
-- CSAT: user satisfaction on 1--5 scale (target: $\geq 3.5$)
+- CSAT: user satisfaction on 1–5 scale (target: $\geq 3.5$)
 - First-contact resolution: issue fully resolved without follow-up (target: $\geq 60\%$)</p>
 
 <p><em>Guardrails:</em>
@@ -641,7 +572,7 @@ Curate 100--200 high-quality QA pairs addressing the 80\% of common questions. S
 - Rate limiting: prevent abuse (e.g., > 10 messages/minute)</p>
 
 <p><em>Continuous Improvement:</em>
-Collect feedback from users (``was this helpful?'') and escalated conversations. Retrain model quarterly on new QA pairs derived from unresolved queries.
+Collect feedback from users (“was this helpful?”) and escalated conversations. Retrain model quarterly on new QA pairs derived from unresolved queries.
 </div>
         
         <div class="chapter-nav">

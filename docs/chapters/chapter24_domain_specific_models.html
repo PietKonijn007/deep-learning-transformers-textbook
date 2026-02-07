@@ -134,7 +134,7 @@
 
 <h2>Chapter Overview</h2>
 
-<p>This chapter sets the stage for the practical domain-specific applications to follow. It defines what constitutes a ``domain-specific model'' and introduces the key patterns and decision frameworks that apply across industries and use cases. Rather than immediately diving into specific domains, we establish the foundational concepts: when to use general-purpose models versus specialized architectures, how to evaluate trade-offs between transfer learning and domain adaptation, and how to systematically choose between competing approaches (fine-tuning, prompting, RAG, tool augmentation, full retraining). This chapter provides the conceptual framework that later domain-specific chapters build upon.</p>
+<p>This chapter sets the stage for the practical domain-specific applications to follow. It defines what constitutes a “domain-specific model” and introduces the key patterns and decision frameworks that apply across industries and use cases. Rather than immediately diving into specific domains, we establish the foundational concepts: when to use general-purpose models versus specialized architectures, how to evaluate trade-offs between transfer learning and domain adaptation, and how to systematically choose between competing approaches (fine-tuning, prompting, RAG, tool augmentation, full retraining). This chapter provides the conceptual framework that later domain-specific chapters build upon.</p>
 
 <h2>Learning Objectives</h2>
 
@@ -151,7 +151,7 @@
 
 <p>General-purpose language models like GPT-3 and GPT-4 are remarkably capable. They can perform many tasks without task-specific training, relying on in-context learning and instruction following. Yet specialized domains present challenges that generic models struggle with.</p>
 
-<p>The decision to build a domain-specific model is fundamentally a business decision, not just a technical one. Organizations must weigh the costs of specialization---data collection, model training, infrastructure, and ongoing maintenance---against the benefits: improved accuracy, reduced operational costs, regulatory compliance, and competitive advantage. A general-purpose model might achieve 75\% accuracy on a task, which sounds reasonable until you realize that the 25\% error rate translates to thousands of customer complaints, regulatory violations, or lost revenue. In high-stakes domains like healthcare, finance, and law, even small accuracy improvements can justify significant investment.</p>
+<p>The decision to build a domain-specific model is fundamentally a business decision, not just a technical one. Organizations must weigh the costs of specialization—data collection, model training, infrastructure, and ongoing maintenance—against the benefits: improved accuracy, reduced operational costs, regulatory compliance, and competitive advantage. A general-purpose model might achieve 75\% accuracy on a task, which sounds reasonable until you realize that the 25\% error rate translates to thousands of customer complaints, regulatory violations, or lost revenue. In high-stakes domains like healthcare, finance, and law, even small accuracy improvements can justify significant investment.</p>
 
 <p>Consider a financial institution processing loan applications. A general-purpose model might correctly assess creditworthiness 80\% of the time. But that 20\% error rate means approving risky loans (leading to defaults) or rejecting qualified applicants (losing business). A domain-specific model trained on historical loan data, incorporating domain knowledge about credit scoring, and fine-tuned for the institution's risk tolerance might achieve 95\% accuracy. The 15-point improvement could save millions in prevented defaults and captured revenue, easily justifying the development cost.</p>
 
@@ -162,13 +162,13 @@
 <div class="definition"><strong>Definition:</strong> 
 General models struggle with:
 <ul>
-<li><strong>Jargon and terminology:</strong> Medical diagnoses, legal citations, financial instruments---specialized vocabulary requires domain familiarity. When a model encounters ``myocardial infarction'' or ``force majeure,'' it needs more than dictionary definitions; it needs contextual understanding of how these terms function within their domains.
+<li><strong>Jargon and terminology:</strong> Medical diagnoses, legal citations, financial instruments—specialized vocabulary requires domain familiarity. When a model encounters “myocardial infarction” or “force majeure,” it needs more than dictionary definitions; it needs contextual understanding of how these terms function within their domains.
 
 <p><li><strong>Accuracy requirements:</strong> A 90\% accurate chatbot is acceptable for entertainment; unacceptable for medical diagnosis or financial advice. The business cost of errors varies dramatically by domain. A wrong movie recommendation is an annoyance; a wrong drug dosage recommendation is potentially fatal.</p>
 
-<p><li><strong>Hallucination sensitivity:</strong> Fabricated case law or drug interactions have serious consequences. General models are trained to be helpful and generate plausible-sounding text, but ``plausible'' is not the same as ``true.'' In domains where factual accuracy is critical, hallucination is not just an inconvenience---it's a liability.</p>
+<p><li><strong>Hallucination sensitivity:</strong> Fabricated case law or drug interactions have serious consequences. General models are trained to be helpful and generate plausible-sounding text, but “plausible” is not the same as “true.” In domains where factual accuracy is critical, hallucination is not just an inconvenience—it's a liability.</p>
 
-<p><li><strong>Latency constraints:</strong> Real-time clinical decision support needs sub-second response; API calls to large models are too slow. When a physician is making a treatment decision with a patient in front of them, waiting 3--5 seconds for an API response is unacceptable. Domain-specific models can be optimized for speed, often running locally on edge devices.</p>
+<p><li><strong>Latency constraints:</strong> Real-time clinical decision support needs sub-second response; API calls to large models are too slow. When a physician is making a treatment decision with a patient in front of them, waiting 3–5 seconds for an API response is unacceptable. Domain-specific models can be optimized for speed, often running locally on edge devices.</p>
 
 <p><li><strong>Cost at scale:</strong> Medical institutions processing millions of documents cannot afford \$0.01 per API call; on-prem or open models become cost-effective. At scale, API costs compound quickly. Processing 10 million documents at \$0.01 each costs \$100,000. A domain-specific model might cost \$50,000 to develop but \$0.0001 per inference, reducing ongoing costs by 99\%.</p>
 
@@ -182,11 +182,11 @@ General models struggle with:
 
 <h3>Example: Legal Document Analysis</h3>
 
-<p>Let's examine a concrete example that illustrates why domain specialization matters. A general GPT-3 model can summarize legal documents---it understands language structure, can identify key points, and generates coherent summaries. However, several critical issues emerge in professional legal practice:</p>
+<p>Let's examine a concrete example that illustrates why domain specialization matters. A general GPT-3 model can summarize legal documents—it understands language structure, can identify key points, and generates coherent summaries. However, several critical issues emerge in professional legal practice:</p>
 
-<p>First, the model may misinterpret binding clauses or liability limitations. Legal language is precise; a single word can change the meaning of a contract. ``Shall'' versus ``may'' has legal significance that a general model might not capture. A clause stating ``Party A shall indemnify Party B'' creates a binding obligation; ``Party A may indemnify Party B'' creates an option. Misinterpreting this distinction could lead to incorrect legal advice.</p>
+<p>First, the model may misinterpret binding clauses or liability limitations. Legal language is precise; a single word can change the meaning of a contract. “Shall” versus “may” has legal significance that a general model might not capture. A clause stating “Party A shall indemnify Party B” creates a binding obligation; “Party A may indemnify Party B” creates an option. Misinterpreting this distinction could lead to incorrect legal advice.</p>
 
-<p>Second, general models hallucinate case citations. When asked to support a legal argument, GPT-3 might generate plausible-sounding citations like ``Smith v. Jones, 500 F.2d 123 (9th Cir. 1985)'' that don't actually exist. For a lawyer, citing non-existent cases is malpractice. The model's tendency to generate helpful-sounding but false information is unacceptable in legal practice.</p>
+<p>Second, general models hallucinate case citations. When asked to support a legal argument, GPT-3 might generate plausible-sounding citations like “Smith v. Jones, 500 F.2d 123 (9th Cir. 1985)” that don't actually exist. For a lawyer, citing non-existent cases is malpractice. The model's tendency to generate helpful-sounding but false information is unacceptable in legal practice.</p>
 
 <p>Third, lawyers cannot rely on a system that sometimes makes things up. Legal work requires certainty. A lawyer needs to know whether a citation is real, whether a precedent applies, and whether a contract clause is enforceable. Probabilistic accuracy is insufficient; the system must be trustworthy or it cannot be used.</p>
 
@@ -196,7 +196,7 @@ General models struggle with:
 
 <h2>Patterns of Specialization</h2>
 
-<p>There is no single ``right'' approach to building domain-specific systems. Instead, there is a spectrum of approaches, each with trade-offs. The key is matching the approach to your specific constraints: available data, budget, timeline, accuracy requirements, and operational environment. Understanding these patterns helps you make informed decisions about where to invest your resources.</p>
+<p>There is no single “right” approach to building domain-specific systems. Instead, there is a spectrum of approaches, each with trade-offs. The key is matching the approach to your specific constraints: available data, budget, timeline, accuracy requirements, and operational environment. Understanding these patterns helps you make informed decisions about where to invest your resources.</p>
 
 <p>The patterns we'll explore represent increasing levels of specialization and investment. Prompting requires no training but offers limited accuracy. RAG adds domain knowledge without retraining. Fine-tuning adapts a model to your domain. Domain-adaptive pre-training builds deep domain expertise. Custom architectures optimize for domain-specific structure. Each step up this ladder increases cost and complexity but also increases performance and control.</p>
 
@@ -204,11 +204,11 @@ General models struggle with:
 
 <p><strong>Approach:</strong> Use a large general-purpose model (GPT-3.5, GPT-4) with carefully engineered prompts. Include domain context and examples in the prompt.</p>
 
-<p>This is the fastest path to a working system. You write a prompt that includes domain context, examples of desired behavior, and specific instructions. The model uses its general knowledge plus your prompt to generate responses. No training, no infrastructure, no data collection---just prompt engineering.</p>
+<p>This is the fastest path to a working system. You write a prompt that includes domain context, examples of desired behavior, and specific instructions. The model uses its general knowledge plus your prompt to generate responses. No training, no infrastructure, no data collection—just prompt engineering.</p>
 
 <p>The business appeal is obvious: you can have a prototype running in hours. A product manager can experiment with different prompts, test with real users, and iterate quickly. For many applications, especially those with moderate accuracy requirements and low volume, prompting is sufficient. A customer service chatbot that handles common questions, a content generation tool for marketing copy, or a data extraction tool for simple documents can all work well with prompting alone.</p>
 
-<p>However, prompting has fundamental limitations that become apparent at scale or in high-stakes applications. The model hasn't learned your domain; it's improvising based on general knowledge and your prompt. Accuracy plateaus around 70--80\% for most tasks. The model hallucinates facts, especially when asked about specialized topics outside its training data. And at high volume, API costs become prohibitive.</p>
+<p>However, prompting has fundamental limitations that become apparent at scale or in high-stakes applications. The model hasn't learned your domain; it's improvising based on general knowledge and your prompt. Accuracy plateaus around 70–80\% for most tasks. The model hallucinates facts, especially when asked about specialized topics outside its training data. And at high volume, API costs become prohibitive.</p>
 
 <p><strong>Advantages:</strong>
 <ul>
@@ -236,11 +236,11 @@ General models struggle with:
 
 <p>RAG represents a significant step up from pure prompting. Instead of relying solely on the model's training data, you provide it with relevant information retrieved from your own knowledge base. This grounds the model's responses in actual documents, dramatically reducing hallucination while keeping the flexibility of a general-purpose model.</p>
 
-<p>The business value of RAG is compelling: you get much better accuracy without the cost and complexity of retraining. You can update your knowledge base continuously---adding new documents, removing outdated information---without touching the model. For knowledge-intensive applications like customer support, technical documentation, or research assistance, RAG often provides the best balance of accuracy, cost, and maintainability.</p>
+<p>The business value of RAG is compelling: you get much better accuracy without the cost and complexity of retraining. You can update your knowledge base continuously—adding new documents, removing outdated information—without touching the model. For knowledge-intensive applications like customer support, technical documentation, or research assistance, RAG often provides the best balance of accuracy, cost, and maintainability.</p>
 
 <p>Consider a technical support system for a software company. The company has thousands of support articles, bug reports, and solution documents. A pure prompting approach would fail because the model doesn't know about the company's specific products and issues. But with RAG, each support query retrieves the most relevant articles, and the model generates an answer based on those articles. The system can cite its sources, users can verify the information, and the knowledge base stays current as new articles are added.</p>
 
-<p><strong>Example:</strong> A medical question answering system retrieves relevant clinical guidelines and research papers, then asks the model to answer based on those sources. When a physician asks ``What is the recommended treatment for stage 2 hypertension in diabetic patients?'' the system retrieves current clinical guidelines, recent research papers, and treatment protocols, then synthesizes an answer grounded in those sources.</p>
+<p><strong>Example:</strong> A medical question answering system retrieves relevant clinical guidelines and research papers, then asks the model to answer based on those sources. When a physician asks “What is the recommended treatment for stage 2 hypertension in diabetic patients?” the system retrieves current clinical guidelines, recent research papers, and treatment protocols, then synthesizes an answer grounded in those sources.</p>
 
 <p><strong>Advantages:</strong>
 <ul>
@@ -254,7 +254,7 @@ General models struggle with:
 <ul>
 <li>Retrieval quality critical: Bad retrieval → bad answers. If the system retrieves irrelevant documents, the model can't generate good responses
 <li>Limited reasoning: Model can only work with retrieved context. Complex multi-step reasoning across many documents is challenging
-<li>Latency: Retrieval + generation takes time (200--500ms), which may be too slow for real-time applications
+<li>Latency: Retrieval + generation takes time (200–500ms), which may be too slow for real-time applications
 <li>Complexity: Requires maintaining document databases, embeddings, etc.
 </ul>
 
@@ -342,13 +342,13 @@ General models struggle with:
 
 <table>
 <tr><th><strong>Factor</strong></th><th><strong>Prompting</strong></th><th><strong>RAG</strong></th><th><strong>PEFT</strong></th><th><strong>Fine-Tune</strong></th><th><strong>Domain PT</strong></th><th><strong>Custom</strong></th></tr>
-<tr><td><strong>Time to deploy</strong></td><td>Days</td><td>Weeks</td><td>Weeks</td><td>Weeks--Months</td><td>Months--Years</td><td>Months--Years</td></tr>
-<tr><td><strong>Accuracy</strong></td><td>70--80\%</td><td>75--85\%</td><td>82--92\%</td><td>85--95\%</td><td>90--98\%</td><td>95--99\%</td></tr>
-<tr><td><strong>Cost (training)</strong></td><td>\$0</td><td>\$1K--10K</td><td>\$500--5K</td><td>\$10K--100K</td><td>\$100K--1M</td><td>\$1M+</td></tr>
+<tr><td><strong>Time to deploy</strong></td><td>Days</td><td>Weeks</td><td>Weeks</td><td>Weeks–Months</td><td>Months–Years</td><td>Months–Years</td></tr>
+<tr><td><strong>Accuracy</strong></td><td>70–80\%</td><td>75–85\%</td><td>82–92\%</td><td>85–95\%</td><td>90–98\%</td><td>95–99\%</td></tr>
+<tr><td><strong>Cost (training)</strong></td><td>\$0</td><td>\$1K–10K</td><td>\$500–5K</td><td>\$10K–100K</td><td>\$100K–1M</td><td>\$1M+</td></tr>
 <tr><td><strong>Cost (inference)</strong></td><td>High (\$0.01/req)</td><td>Medium (\$0.001/req)</td><td>Low (\$0.0001/req)</td><td>Low (\$0.00001/req)</td><td>Low</td><td>Low</td></tr>
-<tr><td><strong>Data required</strong></td><td>None</td><td>1K--10K docs</td><td>500--5K labels</td><td>1K--10K labels</td><td>10M tokens + labels</td><td>100K--1M labels</td></tr>
+<tr><td><strong>Data required</strong></td><td>None</td><td>1K–10K docs</td><td>500–5K labels</td><td>1K–10K labels</td><td>10M tokens + labels</td><td>100K–1M labels</td></tr>
 <tr><td><strong>Privacy</strong></td><td>Poor</td><td>Medium</td><td>Good</td><td>Good</td><td>Good</td><td>Good</td></tr>
-<tr><td><strong>Latency</strong></td><td>High (1--5s)</td><td>Medium (200ms--1s)</td><td>Low (50--200ms)</td><td>Low (10--100ms)</td><td>Low</td><td>Low</td></tr>
+<tr><td><strong>Latency</strong></td><td>High (1–5s)</td><td>Medium (200ms–1s)</td><td>Low (50–200ms)</td><td>Low (10–100ms)</td><td>Low</td><td>Low</td></tr>
 <tr><td><strong>Flexibility</strong></td><td>High</td><td>High</td><td>High</td><td>Medium</td><td>Low</td><td>Low</td></tr>
 </table>
 
@@ -359,7 +359,7 @@ General models struggle with:
 <p>A pragmatic approach is to start with the simplest solution and upgrade as needed:</p>
 
 <ol>
-<li><strong>Phase 1: Prompting (Week 1--2)</strong>
+<li><strong>Phase 1: Prompting (Week 1–2)</strong>
   <ul>
   <li>Build a prototype with API-based model
   <li>Measure performance on a small test set
@@ -367,7 +367,7 @@ General models struggle with:
   <li>Otherwise, move to Phase 2
   </ul>
 
-<p><li><strong>Phase 2: RAG (Week 2--4)</strong>
+<p><li><strong>Phase 2: RAG (Week 2–4)</strong>
   <ul>
   <li>Collect domain documents
   <li>Build vector database with embeddings
@@ -376,7 +376,7 @@ General models struggle with:
   <li>Otherwise, move to Phase 3
   </ul>
 
-<p><li><strong>Phase 3: Fine-Tuning (Month 1--2)</strong>
+<p><li><strong>Phase 3: Fine-Tuning (Month 1–2)</strong>
   <ul>
   <li>Collect and annotate labeled data
   <li>Fine-tune a smaller model (BERT, DistilBERT, GPT-2)
@@ -501,7 +501,7 @@ General models struggle with:
 
 <p><strong>Concept drift:</strong> The relationship between inputs and outputs changes. In fraud detection, fraudsters constantly evolve their tactics. A pattern that indicated fraud last year might be normal behavior this year, and vice versa. The model's learned concepts become outdated.</p>
 
-<p><strong>Label drift:</strong> The definition of the target variable changes. In content moderation, what counts as ``inappropriate content'' evolves with social norms and platform policies. A model trained on last year's guidelines will misclassify content under new guidelines.</p>
+<p><strong>Label drift:</strong> The definition of the target variable changes. In content moderation, what counts as “inappropriate content” evolves with social norms and platform policies. A model trained on last year's guidelines will misclassify content under new guidelines.</p>
 
 <h3>Detecting Drift in Production</h3>
 
@@ -509,7 +509,7 @@ General models struggle with:
 
 <p><strong>Performance-based detection:</strong> The most direct approach is monitoring actual model performance metrics (accuracy, precision, recall, F1) on recent data. This requires collecting ground truth labels, which may be delayed. For example, in loan default prediction, you won't know if a prediction was correct until months or years later. However, for applications where labels arrive quickly (customer support ticket resolution, click-through rate prediction), performance monitoring is straightforward and highly effective.</p>
 
-<p><strong>Distribution-based detection:</strong> Monitor the distribution of input features and model predictions. Significant changes suggest drift even without ground truth labels. Statistical tests like the Kolmogorov-Smirnov test or Population Stability Index (PSI) can detect distribution shifts. For example, if your model suddenly predicts ``high risk'' for 30\% of applicants when it historically predicted 10\%, something has changed---either the input distribution or the model's behavior.</p>
+<p><strong>Distribution-based detection:</strong> Monitor the distribution of input features and model predictions. Significant changes suggest drift even without ground truth labels. Statistical tests like the Kolmogorov-Smirnov test or Population Stability Index (PSI) can detect distribution shifts. For example, if your model suddenly predicts “high risk” for 30\% of applicants when it historically predicted 10\%, something has changed—either the input distribution or the model's behavior.</p>
 
 <p><strong>Prediction confidence monitoring:</strong> Track the distribution of model confidence scores. If the model becomes less confident over time (more predictions near 0.5 for binary classification), it suggests the model is encountering data it wasn't trained on. Conversely, if confidence increases but accuracy decreases, the model is becoming overconfident on out-of-distribution data.</p>
 
@@ -556,7 +556,7 @@ General models struggle with:
 
 <p><li><strong>Chapter 30 (Healthcare):</strong> Medical knowledge evolves as new treatments are discovered and guidelines are updated. Clinical decision support systems need continuous updates to reflect current best practices.</p>
 
-<p><li><strong>Chapter 31 (Finance):</strong> Financial markets are non-stationary by nature. Trading strategies that worked last year may fail this year. Continuous adaptation is not optional---it's survival.</p>
+<p><li><strong>Chapter 31 (Finance):</strong> Financial markets are non-stationary by nature. Trading strategies that worked last year may fail this year. Continuous adaptation is not optional—it's survival.</p>
 
 <p><li><strong>Chapter 32 (Legal):</strong> Laws change, new precedents are set, and legal interpretations evolve. Legal AI systems must stay current with the latest case law and regulations.</p>
 
@@ -578,11 +578,13 @@ General models struggle with:
 
 <h2>Solutions</h2>
 
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
+
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Domain Challenges</strong>
 
 <p>Example: Real estate property valuation</p>
 
-<p>\itshape Challenges:
+<p><em>Challenges:</em>
 <ul>
 <li>Domain terminology: square footage, lot size, zoning, comps, assessed value
 <li>Numeric reasoning: Accurately estimate price from 50+ features
@@ -591,7 +593,7 @@ General models struggle with:
 <li>Data non-stationarity: Market conditions change; model trained on 2020 data invalid in 2024
 </ul>
 
-<p>\itshape Recommended approach: Fine-tuning or gradient-boosted trees
+<p><em>Recommended approach: Fine-tuning or gradient-boosted trees</em>
 <ul>
 <li>Prompting fails: Too much numeric reasoning, hallucination in prices
 <li>RAG helps: Retrieve comparable sales (comps); improves estimate
@@ -602,7 +604,7 @@ General models struggle with:
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 2: Evaluation Plan</strong>
 
-<p>\itshape Metrics beyond accuracy:
+<p><em>Metrics beyond accuracy:</em>
 <ul>
 <li>Timeliness: Prediction available before human decision point
 <li>Fairness: Performance consistent across demographic groups/geographic regions
@@ -612,7 +614,7 @@ General models struggle with:
 <li>Human-AI collaboration: Does system support or undermine human decision-making?
 </ul>
 
-<p>\itshape A/B testing design:
+<p><em>A/B testing design:</em>
 <ul>
 <li>Control: Current human process (or rule-based baseline)
 <li>Treatment: New ML system
@@ -627,7 +629,7 @@ General models struggle with:
 
 <p>Example: Customer support ticket routing</p>
 
-<p>\itshape Cost breakdown:
+<p><em>Cost breakdown:</em>
 <ul>
 <li>Prompting: \$0.01/ticket (API cost) + \$100/month (engineering)
 <li>RAG: \$0.001/ticket + \$5K setup + \$500/month maintenance
@@ -635,7 +637,7 @@ General models struggle with:
 <li>Domain-adaptive PT: \$0.00001/ticket + \$500K training + \$2K/month hosting
 </ul>
 
-<p>\itshape Break-even analysis (for 100K tickets/month):
+<p><em>Break-even analysis (for 100K tickets/month):</em>
 <ul>
 <li>Prompting: \$1,200/month cost
 <li>RAG: \$600/month cost (payoff after 6 months)
@@ -643,7 +645,7 @@ General models struggle with:
 <li>Domain-adaptive: \$3,300/month cost (payoff after 15+ years; not recommended)
 </ul>
 
-<p>\itshape Recommendation:
+<p><em>Recommendation:</em>
 Start with RAG (good accuracy, moderate cost). If accuracy insufficient after 3 months, invest in fine-tuning. Domain-adaptive pre-training only justified if you have 10M+ tickets/month or extremely high accuracy requirements.
 </div>
         

@@ -254,47 +254,72 @@ where $B_{ij}$ depends only on $|i-j|$ (bucketed by distance).</p>
 
 <h2>Alternative Attention Scoring Functions</h2>
 
-<p>Beyond scaled dot-product, various scoring functions exist:</p>
-
-<h3>Additive (Bahdanau)</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
-$$
-</div>
-
-<h3>Multiplicative (Luong)</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-$$
-</div>
-
-<h3>Scaled Dot-Product (Transformers)</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
-$$
-</div>
-
-<h3>General</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-$$
-</div>
-
-<p><strong>Comparison:</strong>
-<ul>
-    <li><strong>Additive:</strong> More parameters, handles different dimensions
-    <li><strong>Dot-product:</strong> Efficient, used in transformers
-    <li><strong>General:</strong> Flexible but more parameters
-</ul>
+<p>Beyond the scaled dot-product used in transformers, several alternative scoring functions exist—additive (Bahdanau), multiplicative (Luong), and general bilinear forms—each with different trade-offs between expressiveness and computational efficiency. These are defined and compared in Chapter~[ref] (Section~7.3). In practice, scaled dot-product attention dominates in transformer architectures due to its hardware-efficient batched matrix multiplication and strong empirical performance.</p>
 
 <h2>Attention Masking</h2>
 
 <figure>
-<div class="tikz-diagram"><img src="../diagrams/chapter09_attention_variants_26a85fed392e.svg" alt="TikZ Diagram" /></div>
+\begin{tikzpicture}[
+    node/.style={circle, draw, minimum size=0.7cm, font=},
+    arrow/.style={->, >=stealth, thick},
+    blocked/.style={->, >=stealth, thick, red, dashed}
+]
+
+<p>\node[node] (e1) at (0,0) {$x_1$};
+\node[node] (e2) at (2,0) {$x_2$};
+\node[node] (e3) at (4,0) {$x_3$};</p>
+
+<p>\draw[arrow, blue!60] (e1) to[bend left=20] (e2);
+\draw[arrow, blue!60] (e2) to[bend left=20] (e1);
+\draw[arrow, blue!60] (e2) to[bend left=20] (e3);
+\draw[arrow, blue!60] (e3) to[bend left=20] (e2);
+\draw[arrow, blue!60] (e1) to[bend left=30] (e3);
+\draw[arrow, blue!60] (e3) to[bend left=30] (e1);
+\draw[arrow, blue!60] (e1) to[loop left] (e1);
+\draw[arrow, blue!60] (e2) to[loop above] (e2);
+\draw[arrow, blue!60] (e3) to[loop right] (e3);</p>
+
+<p>\begin{scope}[shift={(7,0)}]
+\node[node] (d1) at (0,0) {$x_1$};
+\node[node] (d2) at (2,0) {$x_2$};
+\node[node] (d3) at (4,0) {$x_3$};</p>
+
+<p>\draw[arrow, green!60] (d1) to[loop left] (d1);
+\draw[arrow, green!60] (d1) to[bend left=20] (d2);
+\draw[arrow, green!60] (d2) to[loop above] (d2);
+\draw[arrow, green!60] (d1) to[bend left=30] (d3);
+\draw[arrow, green!60] (d2) to[bend left=20] (d3);
+\draw[arrow, green!60] (d3) to[loop right] (d3);</p>
+
+<p>\draw[blocked] (d2) to[bend right=20] (d1);
+\draw[blocked] (d3) to[bend right=20] (d2);
+\draw[blocked] (d3) to[bend right=30] (d1);</p>
+
+<p>\end{scope}</p>
+
+<p>\begin{scope}[shift={(0,-3)}]
+\foreach \i in {1,2,3} {
+    \foreach \j in {1,2,3} {
+        \fill[blue!30] (\j*0.8-0.8, -\i*0.8+0.8) rectangle (\j*0.8-0.4, -\i*0.8+0.4);
+    }
+}
+\end{scope}</p>
+
+<p>\begin{scope}[shift={(7,-4)}]
+\foreach \i in {1,2,3} {
+    \foreach \j in {1,2,3} {
+        \pgfmathtruncatemacro{\valid}{\j <= \i ? 1 : 0}
+        \ifnum\valid=1
+            \fill[green!30] (\j*0.8-0.8, -\i*0.8+0.8) rectangle (\j*0.8-0.4, -\i*0.8+0.4);
+        \else
+            \fill[red!30] (\j*0.8-0.8, -\i*0.8+0.8) rectangle (\j*0.8-0.4, -\i*0.8+0.4);
+            \node at (\j*0.8-0.6, -\i*0.8+0.6) {$-\infty$};
+        \fi
+    }
+}
+\end{scope}</p>
+
+<p>\end{tikzpicture}
 <figcaption>Bidirectional vs causal attention masking. <strong>Left:</strong> Bidirectional attention (encoder) allows each position to attend to all positions, creating a fully-connected graph and full attention matrix. <strong>Right:</strong> Causal attention (decoder) masks future positions by setting them to $-\infty$ before softmax, creating a triangular connectivity pattern. Position 1 can only see itself, position 2 can see positions 1-2, and position 3 can see all positions 1-3. This prevents the model from "cheating" by looking at future tokens during training.</figcaption>
 </figure>
 
@@ -597,6 +622,8 @@ $$
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Cross-attention PyTorch implementation:</strong>
 

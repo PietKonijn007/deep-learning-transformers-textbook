@@ -134,7 +134,7 @@
 
 <h2>Chapter Overview</h2>
 
-<p>Programming languages represent a rich and highly structured domain for deep learning. Unlike natural language, code has formal syntax, executable semantics, and built-in evaluation mechanisms. This chapter explores how transformers trained on code repositories have revolutionized developer productivity through code completion, generation, and analysis. We examine code-specific pre-training, from tokenization to context window design, and cover practical applications: IDE copilots, automated testing, refactoring, and repository-wide code understanding. Unlike natural language applications where ``hallucination'' produces grammatically correct but false text, code hallucinations produce syntactically correct but incorrect implementations---a property that enables testing and automated quality control.</p>
+<p>Programming languages represent a rich and highly structured domain for deep learning. Unlike natural language, code has formal syntax, executable semantics, and built-in evaluation mechanisms. This chapter explores how transformers trained on code repositories have revolutionized developer productivity through code completion, generation, and analysis. We examine code-specific pre-training, from tokenization to context window design, and cover practical applications: IDE copilots, automated testing, refactoring, and repository-wide code understanding. Unlike natural language applications where “hallucination” produces grammatically correct but false text, code hallucinations produce syntactically correct but incorrect implementations—a property that enables testing and automated quality control.</p>
 
 <h2>Learning Objectives</h2>
 
@@ -150,7 +150,7 @@
 
 <h2>Code-Specific Pre-Training</h2>
 
-<p>Code as a training signal differs fundamentally from natural language, and understanding these differences is crucial for building effective code models. While natural language exhibits ambiguity---the same sentence can have multiple valid interpretations---code must be unambiguous to execute. A Python function either runs correctly or throws an error; there's no middle ground. This property---the ability to test code for correctness---provides a powerful training signal unavailable for general language models.</p>
+<p>Code as a training signal differs fundamentally from natural language, and understanding these differences is crucial for building effective code models. While natural language exhibits ambiguity—the same sentence can have multiple valid interpretations—code must be unambiguous to execute. A Python function either runs correctly or throws an error; there's no middle ground. This property—the ability to test code for correctness—provides a powerful training signal unavailable for general language models.</p>
 
 <p>The business implications are significant. When a language model hallucinates a fact about history, it's embarrassing but not immediately verifiable. When a code model generates incorrect code, you can run it and see that it fails. This executability means code models can be evaluated objectively, their outputs can be automatically tested, and developers can quickly determine if a suggestion is useful. This makes code generation one of the most practical applications of large language models, with measurable productivity gains.</p>
 
@@ -166,7 +166,7 @@
 
 <p>A BPE tokenizer trained on a diverse corpus of programming languages learns to preserve the semantic structure of code by treating meaningful units as single tokens. This approach differs fundamentally from natural language tokenization in several important ways.</p>
 
-<p>Keywords such as <code>def</code>, <code>class</code>, <code>if</code>, and <code>for</code> remain unmerged as single tokens. These are the fundamental building blocks of the language; splitting them would be analogous to splitting the word ``the'' in English, destroying their semantic meaning. The tokenizer learns through frequency analysis that these keywords appear so often and in such consistent contexts that they should never be decomposed.</p>
+<p>Keywords such as <code>def</code>, <code>class</code>, <code>if</code>, and <code>for</code> remain unmerged as single tokens. These are the fundamental building blocks of the language; splitting them would be analogous to splitting the word “the” in English, destroying their semantic meaning. The tokenizer learns through frequency analysis that these keywords appear so often and in such consistent contexts that they should never be decomposed.</p>
 
 <p>Multi-character operators like <code>==</code>, <code>-></code>, and <code>**</code> are treated as atomic operations. This is crucial because the operator <code>==</code> (equality test) has a completely different meaning than two separate <code>=</code> tokens (assignment). Preserving these as single tokens helps the model understand operator semantics directly, rather than having to learn that certain character sequences form operators. The tokenizer identifies these patterns during training by observing that these character combinations always appear together and function as single syntactic units.</p>
 
@@ -177,13 +177,13 @@
 <p>The key insight is that code tokenization should respect the syntactic and semantic structure of programming languages, not just optimize for compression. A good code tokenizer makes the model's job easier by presenting code in meaningful chunks that align with how programmers think about code structure. This alignment between tokenization and semantic units allows the model to learn more efficiently and generate more coherent code.
 </div>
 
-<p>The vocabulary size for code tokenizers is typically 32,000--50,000 tokens, comparable to natural language models. However, the token distribution differs significantly: code has higher entropy (more unique tokens appear frequently), reducing compression compared to natural language. A natural language model might compress English text to 0.7 tokens per word on average; a code model might only achieve 1.2 tokens per word due to the diversity of identifiers and the precision required for operators.</p>
+<p>The vocabulary size for code tokenizers is typically 32,000–50,000 tokens, comparable to natural language models. However, the token distribution differs significantly: code has higher entropy (more unique tokens appear frequently), reducing compression compared to natural language. A natural language model might compress English text to 0.7 tokens per word on average; a code model might only achieve 1.2 tokens per word due to the diversity of identifiers and the precision required for operators.</p>
 
 <h3>Context Window and Code Understanding</h3>
 
 <p>Code understanding benefits from longer context windows, and the reasons are both technical and practical. A function definition might span 50 lines; understanding its behavior requires reading the entire function plus imported modules and class definitions. A class might span hundreds of lines; understanding a method requires knowing the class's state and other methods. A module might import dozens of dependencies; understanding a function call requires knowing what those dependencies provide.</p>
 
-<p>Modern code models use context windows of 2,048--8,192 tokens, allowing models to see entire functions or small files. This is a significant advantage over earlier models with 512-token windows, which could barely fit a single function. The business impact is tangible: with longer context, models can generate more accurate completions, understand cross-function dependencies, and provide better suggestions for refactoring.</p>
+<p>Modern code models use context windows of 2,048–8,192 tokens, allowing models to see entire functions or small files. This is a significant advantage over earlier models with 512-token windows, which could barely fit a single function. The business impact is tangible: with longer context, models can generate more accurate completions, understand cross-function dependencies, and provide better suggestions for refactoring.</p>
 
 <p>For example, consider a developer writing a new method in a class. With a 512-token context, the model might only see the method signature and a few lines of surrounding code. With a 4,096-token context, the model can see the entire class, understand the class's purpose and state, and generate a method implementation that correctly uses the class's attributes and other methods. The difference in suggestion quality is dramatic.</p>
 
@@ -191,7 +191,7 @@
 
 <h3>Pre-Training Data and Curation</h3>
 
-<p>High-quality code datasets are essential, and data quality matters more for code than for natural language. Bad code in the training set teaches the model bad patterns; the model will suggest buggy, inefficient, or insecure code. Data curation is not just about quantity---it's about ensuring the model learns from good examples.</p>
+<p>High-quality code datasets are essential, and data quality matters more for code than for natural language. Bad code in the training set teaches the model bad patterns; the model will suggest buggy, inefficient, or insecure code. Data curation is not just about quantity—it's about ensuring the model learns from good examples.</p>
 
 <p>Models are trained on public GitHub repositories, academic code, and project-specific codebases. The challenge is that GitHub contains code of wildly varying quality: production-grade libraries, student homework, abandoned experiments, and auto-generated boilerplate. Indiscriminately training on all of it produces mediocre models.</p>
 
@@ -201,7 +201,7 @@
 
 <p>Language balancing ensures that diverse programming languages including Python, Java, C++, and JavaScript are represented proportionally in the training data. Without balancing, the model might become Python-heavy since Python is disproportionately popular on GitHub, and perform poorly on other languages. Balancing can be achieved by sampling from each language according to its real-world usage or by ensuring each language has a minimum representation threshold.</p>
 
-<p>Sensitive data removal filters out code containing credentials, API keys, or proprietary algorithms. Developers sometimes accidentally commit secrets to public repositories, and training on this data risks the model suggesting those secrets in completions---a serious security issue. Automated scanning tools identify patterns like API key formats, database connection strings, and private keys, removing any code containing these patterns.</p>
+<p>Sensitive data removal filters out code containing credentials, API keys, or proprietary algorithms. Developers sometimes accidentally commit secrets to public repositories, and training on this data risks the model suggesting those secrets in completions—a serious security issue. Automated scanning tools identify patterns like API key formats, database connection strings, and private keys, removing any code containing these patterns.</p>
 
 <p>License filtering respects code licenses and their legal implications. Some licenses like GPL require derivative works to be open-sourced, creating legal ambiguity when training commercial models on GPL code. Conservative approaches exclude GPL code entirely or clearly document its inclusion and the potential licensing implications. Other permissive licenses like MIT and Apache are generally safe for training, but attribution requirements should still be respected.</p>
 
@@ -225,7 +225,7 @@
 
 <p>The landscape of code models has evolved rapidly, with several families offering different trade-offs between size, performance, and accessibility. Understanding these options helps you choose the right model for your specific use case and deployment constraints.</p>
 
-<p>Codex and GPT-Codex, with 12 billion parameters, were trained on GitHub code and power GitHub Copilot. These models excel at few-shot code generation and understanding, often producing high-quality code from minimal context. However, they are proprietary and accessed only via API, which means best-in-class performance comes with ongoing costs and requires sending code to OpenAI's servers---a potential concern for organizations with strict data privacy requirements.</p>
+<p>Codex and GPT-Codex, with 12 billion parameters, were trained on GitHub code and power GitHub Copilot. These models excel at few-shot code generation and understanding, often producing high-quality code from minimal context. However, they are proprietary and accessed only via API, which means best-in-class performance comes with ongoing costs and requires sending code to OpenAI's servers—a potential concern for organizations with strict data privacy requirements.</p>
 
 <p>Code Llama offers models ranging from 7 billion to 34 billion parameters, fine-tuned from the LLaMA foundation model specifically on code. These models support remarkably long context windows of up to 100,000 tokens, enabling them to understand entire files or even small codebases. Performance is competitive with Codex on code generation tasks, and the models are open-source, allowing on-premises deployment. The 7B model runs efficiently on consumer GPUs, making it accessible for individual developers, while the 34B model requires high-end hardware but offers substantially better performance for complex tasks.</p>
 
@@ -233,7 +233,7 @@
 
 <p>DeepSeek-Coder offers models ranging from 1.3 billion to 33 billion parameters, specialized for mathematical reasoning and multi-language support. These models are particularly strong on algorithmic problems and competitive programming tasks, often outperforming larger general-purpose models on problems requiring complex reasoning or mathematical insight.</p>
 
-<p>Smaller models like PolyCoder (2.7B parameters) and CodeGPT (125M--355M parameters) provide efficient alternatives for edge deployment or resource-constrained environments. While their performance is lower than larger models, they can run on CPU or even mobile devices, making them suitable for scenarios where latency, privacy, or resource constraints preclude using larger models. These smaller models are acceptable for basic completion tasks like suggesting common patterns or completing simple functions.</p>
+<p>Smaller models like PolyCoder (2.7B parameters) and CodeGPT (125M–355M parameters) provide efficient alternatives for edge deployment or resource-constrained environments. While their performance is lower than larger models, they can run on CPU or even mobile devices, making them suitable for scenarios where latency, privacy, or resource constraints preclude using larger models. These smaller models are acceptable for basic completion tasks like suggesting common patterns or completing simple functions.</p>
 
 <p>Model scaling for code follows similar power laws as natural language, though code models often achieve higher performance at smaller scales due to the structured nature of the domain. A 7B code model often outperforms a 13B natural language model on code tasks, suggesting that code's structure makes it a more learnable domain. The formal syntax and executable semantics provide strong constraints that help smaller models learn effectively.</p>
 
@@ -260,18 +260,18 @@ def analyze_dataset(data: np.ndarray) -> dict:
     """Analyze statistical properties of the dataset."""
     # User cursor is here <CURSOR>
 </code></pre>
-<li><strong>Generation:</strong> Run model with temperature $\approx 0.2$ (low randomness for deterministic completions). Generate 1--3 candidate completions.
+<li><strong>Generation:</strong> Run model with temperature $\approx 0.2$ (low randomness for deterministic completions). Generate 1–3 candidate completions.
 <li><strong>Ranking:</strong> Score candidates by multiple criteria to select the best suggestion. Language model probability provides the base score, with higher probabilities indicating the model is more confident in the suggestion. Syntactic validity is checked by parsing the suggestion; code that doesn't parse is immediately rejected. Semantic relevance is assessed by checking whether the suggestion matches the function signature, uses appropriate types, and aligns with any docstring or comments. Popularity is estimated by checking whether similar patterns appeared frequently in the training data, as common patterns are more likely to be correct and idiomatic.
 <li><strong>Display:</strong> Show top candidate as a gray suggestion; allow user to accept (Tab), reject (Esc), or view alternatives.
 </ol>
 
 <h3>Practical Challenges and Solutions</h3>
 
-<p><strong>Latency:</strong> Users expect suggestions within 100--200 milliseconds, but full model inference through all layers takes approximately 500 milliseconds on CPU. This latency gap creates a poor user experience where suggestions feel sluggish rather than responsive. Several solutions address this challenge. On-device inference deploys a smaller quantized model (typically 3B parameters) locally on the developer's machine, eliminating network latency and enabling sub-200ms response times. Speculative decoding generates multiple tokens in parallel rather than sequentially, reducing per-token latency by predicting several likely continuations simultaneously. Caching and KV caching store embeddings of common code patterns and reuse them for similar contexts, avoiding redundant computation. Batching combines multiple simultaneous requests to the same model server, amortizing the fixed overhead of model loading and improving throughput.</p>
+<p><strong>Latency:</strong> Users expect suggestions within 100–200 milliseconds, but full model inference through all layers takes approximately 500 milliseconds on CPU. This latency gap creates a poor user experience where suggestions feel sluggish rather than responsive. Several solutions address this challenge. On-device inference deploys a smaller quantized model (typically 3B parameters) locally on the developer's machine, eliminating network latency and enabling sub-200ms response times. Speculative decoding generates multiple tokens in parallel rather than sequentially, reducing per-token latency by predicting several likely continuations simultaneously. Caching and KV caching store embeddings of common code patterns and reuse them for similar contexts, avoiding redundant computation. Batching combines multiple simultaneous requests to the same model server, amortizing the fixed overhead of model loading and improving throughput.</p>
 
 <p><strong>Hallucination and Correctness:</strong> Code completions must be syntactically valid at minimum; completely broken code that won't parse is worse than no suggestion. Ranking by syntax validity filters out many bad suggestions before they reach the user. However, syntactically correct code can still be semantically wrong, implementing an incorrect algorithm or using inefficient approaches. Displaying suggestions with lower confidence scores (perhaps in a lighter gray or with a warning icon) helps users recognize uncertain completions and apply appropriate scrutiny. Some systems also run basic static analysis on suggestions, flagging potential issues like type mismatches or undefined variables.</p>
 
-<p><strong>Multi-file Context:</strong> A function may depend on definitions in other files---imported modules, base classes, or utility functions. Retrieving all necessary context is non-trivial because the dependency graph can be large and complex. Hybrid approaches combine static analysis (parsing the AST to find import statements and follow dependencies) with semantic retrieval (embedding code snippets and retrieving those similar to the current context). This allows the system to include both explicit dependencies (imports) and implicit ones (similar code patterns that might be relevant).</p>
+<p><strong>Multi-file Context:</strong> A function may depend on definitions in other files—imported modules, base classes, or utility functions. Retrieving all necessary context is non-trivial because the dependency graph can be large and complex. Hybrid approaches combine static analysis (parsing the AST to find import statements and follow dependencies) with semantic retrieval (embedding code snippets and retrieving those similar to the current context). This allows the system to include both explicit dependencies (imports) and implicit ones (similar code patterns that might be relevant).</p>
 
 <p><strong>Privacy:</strong> Copilots deployed on proprietary codebases risk leaking sensitive code to external servers if they send code to cloud-based models. Several solutions address this concern. On-device models run inference locally, ensuring no code leaves the developer's machine. Custom models can be fine-tuned on proprietary code and deployed internally, keeping both the model and the code within the organization's infrastructure. Federated learning trains models on distributed code without centralizing the data, allowing multiple organizations to collaboratively improve a model while keeping their code private.</p>
 
@@ -281,7 +281,7 @@ def analyze_dataset(data: np.ndarray) -> dict:
 
 <h3>Static Analysis and Bug Detection</h3>
 
-<p>Models fine-tuned on bug-fix datasets can identify likely bugs by learning patterns of common mistakes. Training on GitHub ``closed issue'' to ``fix commit'' pairs teaches the model to recognize problematic code patterns and their corrections. The model learns to identify several categories of common bugs through this training process.</p>
+<p>Models fine-tuned on bug-fix datasets can identify likely bugs by learning patterns of common mistakes. Training on GitHub “closed issue” to “fix commit” pairs teaches the model to recognize problematic code patterns and their corrections. The model learns to identify several categories of common bugs through this training process.</p>
 
 <p>Off-by-one errors in loops represent a classic category where the model learns to spot incorrect loop bounds, such as iterating to <code>len(array)</code> instead of <code>len(array)-1</code> when using indices. The model recognizes these patterns by seeing thousands of examples where such errors were fixed.</p>
 
@@ -335,7 +335,7 @@ result = [x * 2 for x in data if x > threshold]
 
 <h2>Repository-Scale Code Understanding</h2>
 
-<p>Large language models trained on entire repositories can answer questions like: ``What does this configuration file control?'' or ``Find all places where this function is called.''</p>
+<p>Large language models trained on entire repositories can answer questions like: “What does this configuration file control?” or “Find all places where this function is called.”</p>
 
 <h3>Graph-Based Retrieval and Reasoning</h3>
 
@@ -381,7 +381,7 @@ def solve_quadratic(a, b, c):
 
 <h3>Data Contamination and Test Leakage</h3>
 
-<p>If benchmarks like HumanEval or CodeNet are included in training data, reported performance is inflated. Filtering and deduplication are essential. Libraries like ``exact-substring matching'' identify potential duplicates between training data and benchmarks.</p>
+<p>If benchmarks like HumanEval or CodeNet are included in training data, reported performance is inflated. Filtering and deduplication are essential. Libraries like “exact-substring matching” identify potential duplicates between training data and benchmarks.</p>
 
 <h3>Responsible Deployment</h3>
 
@@ -399,7 +399,7 @@ def solve_quadratic(a, b, c):
 
 <p>Code models face unique drift challenges because programming languages evolve, libraries update, best practices change, and development patterns shift. A model trained on Python 3.8 code in 2020 will struggle with Python 3.12 features in 2024. Understanding and addressing this drift is essential for maintaining long-term value from code AI investments.</p>
 
-<p>The business impact of code model drift is direct and measurable. When a copilot suggests outdated APIs or deprecated patterns, developers waste time correcting the suggestions. When it fails to understand new language features, it provides no value for modern code. Studies show that code model effectiveness degrades approximately 15--25\% per year without updates, translating to millions in lost productivity for large development teams.</p>
+<p>The business impact of code model drift is direct and measurable. When a copilot suggests outdated APIs or deprecated patterns, developers waste time correcting the suggestions. When it fails to understand new language features, it provides no value for modern code. Studies show that code model effectiveness degrades approximately 15–25\% per year without updates, translating to millions in lost productivity for large development teams.</p>
 
 <h3>Language Evolution and API Changes</h3>
 
@@ -413,89 +413,21 @@ def solve_quadratic(a, b, c):
 
 <p><strong>Security pattern updates:</strong> Security best practices evolve as new vulnerabilities are discovered. A model trained before a major security issue might suggest vulnerable patterns. For example, models trained before widespread awareness of SQL injection might suggest string concatenation for SQL queries rather than parameterized queries.</p>
 
-<h3>Detecting Drift in Code Models</h3>
+<div class="keypoint">
+For the generic drift detection and continuous learning framework (detection strategies, retraining approaches, implementation infrastructure), see Chapter~[ref], Section~[ref]. Here we highlight code-specific considerations.
+</div>
 
-<p>Drift detection for code models requires monitoring both model performance and the code ecosystem. Unlike natural language where drift is gradual, code drift can be sudden (a major library release) or gradual (slow adoption of new patterns).</p>
-
-<p><strong>Acceptance rate monitoring:</strong> Track what percentage of suggestions developers accept. A declining acceptance rate indicates the model's suggestions are becoming less useful. For a well-performing copilot, acceptance rates are typically 25--35\%. If this drops to 15--20\%, investigate why.</p>
-
-<p><strong>Language version distribution:</strong> Monitor which language versions developers are using. If 80\% of your team has upgraded to Python 3.12 but your model was trained on Python 3.8 code, there's a mismatch. Track language version adoption and retrain when significant portions of your team upgrade.</p>
-
-<p><strong>Library version tracking:</strong> Monitor which library versions are in use. If your team has upgraded to TensorFlow 2.15 but your model was trained on TensorFlow 2.5 code, suggestions will be outdated. Track major library upgrades and retrain accordingly.</p>
-
-<p><strong>Syntax error rate:</strong> Track how often model suggestions contain syntax errors. An increasing syntax error rate indicates the model is encountering code patterns it doesn't understand. This is a strong signal of drift.</p>
-
-<p><strong>Deprecation warnings:</strong> Monitor how often model suggestions trigger deprecation warnings when executed. This indicates the model is suggesting outdated APIs. Collect these warnings as training signals for what not to suggest.</p>
-
-<p><strong>Developer feedback:</strong> Track explicit feedback (thumbs down, corrections) and implicit feedback (how quickly developers modify or delete suggestions). Rapid modification suggests the suggestion was close but not quite right; immediate deletion suggests it was completely wrong.</p>
-
-<h3>Adaptation Strategies for Code Models</h3>
-
-<p>Once drift is detected, you need strategies to adapt the model to current code practices. The right approach depends on the type of drift, available resources, and deployment constraints.</p>
-
-<p><strong>Incremental fine-tuning on recent code:</strong> Collect code written in the last 6--12 months and fine-tune the model on it. This adapts the model to current patterns while preserving knowledge of older code (which still exists in your codebase). Mix 70\% recent code with 30\% historical code to balance adaptation and retention.</p>
-
-<p><strong>Targeted fine-tuning on new features:</strong> When a new language version or library is released, collect examples using the new features and fine-tune specifically on those. This is more efficient than full retraining and quickly adds support for new patterns. For example, when Python 3.10 added pattern matching, fine-tune on a curated dataset of pattern matching examples.</p>
-
-<p><strong>Negative example training:</strong> Collect deprecated patterns and train the model to avoid them. This is particularly important for security: train on examples of vulnerable code paired with secure alternatives. The model learns to recognize and avoid dangerous patterns.</p>
-
-<p><strong>Continuous pre-training:</strong> For organizations with large codebases, continuously pre-train the model on internal code. This keeps the model aligned with your team's evolving practices and coding style. Schedule monthly or quarterly pre-training runs on recent commits.</p>
-
-<p><strong>Ensemble with version-specific models:</strong> Maintain separate models for different language versions or library versions. Route requests to the appropriate model based on the project's dependencies. This provides optimal suggestions for each context without requiring a single model to handle all versions.</p>
-
-<p><strong>Retrieval-augmented generation:</strong> Augment the model with retrieval from recent code examples. When generating a suggestion, retrieve similar recent code and use it as additional context. This allows the model to leverage current patterns without retraining.</p>
-
-<h3>Practical Implementation: Continuous Learning Pipeline</h3>
-
-<p>Implementing continuous learning for code models requires infrastructure that integrates with your development workflow.</p>
-
-<p><strong>Code collection pipeline:</strong> Automatically collect code from recent commits. Filter for quality (exclude generated code, test fixtures, configuration files). Respect privacy (exclude proprietary algorithms, credentials). This creates your retraining corpus.</p>
-
-<p><strong>Language and library version tracking:</strong> Integrate with dependency management systems (pip, npm, Maven) to track which versions are in use. This informs retraining priorities: focus on the versions your team actually uses.</p>
-
-<p><strong>Acceptance rate analytics:</strong> Instrument your IDE plugin to track which suggestions are accepted, modified, or rejected. Aggregate this data to measure model effectiveness and identify drift. Build dashboards showing acceptance rates over time, by language, by developer, and by code context.</p>
-
-<p><strong>Automated retraining pipeline:</strong> Build infrastructure that automates data collection, filtering, training, evaluation, and deployment. For code models, this might run monthly or quarterly. Include automated tests: does the model still perform well on historical benchmarks? Does it handle new language features? Does it avoid deprecated patterns?</p>
-
-<p><strong>A/B testing framework:</strong> Before deploying a retrained model to all developers, test it with a subset. Compare acceptance rates, developer satisfaction, and productivity metrics. If the new model performs better, roll it out gradually. If it performs worse, investigate and iterate.</p>
-
-<p><strong>Model versioning and rollback:</strong> Maintain multiple model versions. If a new model introduces regressions (suggesting broken code, performance issues), roll back quickly. Track which model version generated each suggestion for debugging.</p>
+<p>Key code-specific adaptation strategies include:
+<ul>
+<li><strong>Acceptance rate monitoring:</strong> Track what percentage of suggestions developers accept (typically 25–35\% for a healthy copilot). Declining rates signal drift.
+<li><strong>Negative example training:</strong> Collect deprecated or insecure patterns and train the model to avoid them—especially important as security best practices evolve.
+<li><strong>Continuous pre-training on recent commits:</strong> Schedule monthly or quarterly pre-training on internal code to keep the model aligned with evolving team practices.
+<li><strong>Language and library version tracking:</strong> Integrate with dependency management (pip, npm, Maven) to prioritize retraining for the versions your team actually uses.
+</ul>
 
 <h3>Case Study: Adapting to Python 3.11 and 3.12</h3>
 
-<p>A software company with 200 Python developers deployed a code copilot in early 2023, trained on Python 3.8--3.10 code. The model achieved a 32\% acceptance rate initially. By late 2024, after the team upgraded to Python 3.12, acceptance rate had dropped to 22\%---a 10-point degradation.</p>
-
-<p><strong>Root cause analysis:</strong> Python 3.11 and 3.12 introduced several new features: exception groups, type parameter syntax, improved error messages, and performance optimizations. The model didn't recognize these features and suggested older patterns. Developers were manually rewriting suggestions to use new features, reducing perceived value.</p>
-
-<p><strong>Solution implemented:</strong> The team developed a multi-faceted approach to address the drift. As an immediate fix, they collected 5,000 examples of Python 3.11 and 3.12 code from open-source projects and internal repositories, then fine-tuned the model on a carefully balanced mixture of 60\% new code and 40\% historical code. This balance ensured the model learned new features while retaining knowledge of older patterns still present in the codebase. The acceptance rate recovered to 29\% within two weeks of deploying the updated model.</p>
-
-<p>For a long-term solution, the team implemented quarterly retraining on recent code. Each quarter, they collect code from the last 6 months, filter it for quality using automated metrics and manual review, and fine-tune the model on this fresh data. This ensures the model stays current with language evolution and team practices without requiring constant manual intervention.</p>
-
-<p>To prevent future drift, they set up comprehensive monitoring with a dashboard tracking acceptance rate by Python version. The system alerts the team if acceptance rate drops below 25\% for any version, providing early warning of drift before it significantly impacts developer productivity. This proactive monitoring allows the team to investigate and address issues quickly.</p>
-
-<p>Finally, they adopted a targeted training approach for new language releases. When Python 3.13 is released, they plan to collect examples of new features immediately and fine-tune within one month of team adoption. This proactive approach prevents drift rather than reacting to it, maintaining high model performance through language transitions.</p>
-
-<p><strong>Results after 6 months:</strong> The continuous learning investment delivered substantial returns across multiple dimensions. The acceptance rate stabilized at 30--33\% despite ongoing language evolution, demonstrating that the quarterly retraining successfully kept pace with Python's development. Developer satisfaction, measured through quarterly surveys, increased significantly: 78\% of developers now rate the copilot as ``very helpful,'' up from 62\% before implementing continuous learning.</p>
-
-<p>The quarterly retraining cost proved remarkably affordable at \$5,000 per cycle, covering both data collection infrastructure and compute resources for fine-tuning. This translates to an annual investment of \$20,000 for the continuous learning program. Meanwhile, the system maintained productivity gains of 55\% faster task completion, preserving the value that initially justified the copilot investment.</p>
-
-<p>The return on investment is compelling: the continuous learning investment of \$20,000 per year maintains \$4 million per year in productivity gains from the copilot. Without continuous learning, these gains would have eroded as the model became increasingly outdated, potentially declining to near zero within 2-3 years.</p>
-
-<p>The key lesson: code models require continuous adaptation to remain valuable. The cost of adaptation (\$20K/year) is negligible compared to the value maintained (\$4M/year). Organizations that treat code models as static assets will see value decay; those that invest in continuous learning maintain and grow value over time.</p>
-
-<h3>Cross-Domain Patterns and Connections</h3>
-
-<p>The continuous learning challenges in code models connect to patterns across other domains covered in this textbook. Chapter 24 on Domain-Specific Models presents the general framework for continuous learning that applies directly to code models. Code exemplifies rapid domain evolution requiring frequent adaptation, making it an ideal case study for the continuous learning principles discussed there.</p>
-
-<p>Chapter 25 on Enterprise NLP faces similar vocabulary drift challenges. Both domains encounter new terminology---new APIs and libraries in code, new products and services in enterprise contexts---requiring vocabulary updates and periodic retraining. The techniques for detecting and addressing vocabulary drift transfer between these domains.</p>
-
-<p>Chapter 28 on Knowledge Graphs shows how code understanding benefits from knowledge graphs of APIs, libraries, and dependencies. Drift in code models parallels drift in software knowledge graphs: as libraries evolve and APIs change, both the code model and the knowledge graph must be updated to reflect current reality. Integrating code models with knowledge graphs can improve both systems.</p>
-
-<p>Chapter 33 on Observability demonstrates how code models can analyze logs and system behavior. Drift in system behavior---new services, infrastructure changes, evolving deployment patterns---requires code model adaptation to understand and generate code for current systems. The observability patterns help detect when code models need updating.</p>
-
-<p>Chapter 34 on DSL and Agents treats code as a formal domain-specific language. The patterns for building agents that understand and generate code apply to other DSLs, from configuration languages to query languages. Code's executability provides unique feedback signals for agent learning that can inspire approaches for other domains where verification is possible.</p>
-
-<p>Understanding these cross-domain patterns helps you apply lessons from code models to other domains and vice versa. The specific manifestations differ, but the fundamental challenges---domain evolution, drift detection, and continuous adaptation---are universal.</p>
+<p>A 200-developer team's code copilot dropped from 32\% to 22\% acceptance rate after upgrading to Python 3.12, because the model (trained on 3.8–3.10) didn't recognize new features like exception groups and type parameter syntax. Fine-tuning on a 60/40 mix of new and historical code recovered acceptance to 29\% within two weeks. Quarterly retraining at \$5,000/cycle then stabilized acceptance at 30–33\%, maintaining \$4M/year in productivity gains for a \$20K/year continuous learning investment.</p>
 
 <h2>Case Study: IDE Copilot for Python Development</h2>
 
@@ -542,6 +474,8 @@ def fibonacci(n: int) -> int:
 
 <h2>Solutions</h2>
 
+<p>Full solutions for all exercises are available at <a href="https://deeplearning.hofkensvermeulen.be">https://deeplearning.hofkensvermeulen.be</a>.</p>
+
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Code Tokenization</strong>
 
 Using a natural language BPE tokenizer (e.g., GPT-2), the code snippet might tokenize as:
@@ -558,7 +492,7 @@ Using a code-specific tokenizer:
 
 <p>The key differences reveal how code-specific tokenization improves efficiency and semantic preservation. Keywords like <code>def</code>, <code>if</code>, and <code>int</code> are always single tokens in code tokenizers because they are fundamental language constructs that should never be split. The operator <code><=</code> merges into a single token in code tokenizers since it's a common comparison operator that appears frequently in conditional statements.</p>
 
-<p>Indentation handling differs significantly: code tokenizers may explicitly preserve whitespace structure as special tokens, recognizing that indentation carries semantic meaning in Python. The function name <code>fibonacci</code> (lowercase) may be split differently based on training corpus frequency---if the tokenizer has seen many functions with similar names, it might keep it as one token or split it into meaningful subwords like <code>[fib, onacci]</code>.</p>
+<p>Indentation handling differs significantly: code tokenizers may explicitly preserve whitespace structure as special tokens, recognizing that indentation carries semantic meaning in Python. The function name <code>fibonacci</code> (lowercase) may be split differently based on training corpus frequency—if the tokenizer has seen many functions with similar names, it might keep it as one token or split it into meaningful subwords like <code>[fib, onacci]</code>.</p>
 
 <p>The overall token count reduction from 60+ to 45 tokens demonstrates the compression advantage of code-specific tokenization. This 25\% reduction means the model can fit more code in its context window and process it more efficiently, directly translating to better performance on code understanding and generation tasks.
 </div>
@@ -617,9 +551,9 @@ Output: [one-sentence summary or docstring]
 
 <p>BLEU score measures the precision of n-grams (sequences of n words) in generated summaries compared to references, producing a score from 0 to 100. BLEU is particularly sensitive to exact word matches and is commonly used in machine translation evaluation. For code summarization, BLEU helps identify whether the model uses appropriate technical terminology.</p>
 
-<p>Human evaluation remains essential because automated metrics can't fully capture semantic accuracy and clarity. Domain experts---in this case, experienced developers---rate summaries on a 1--5 scale for both accuracy (does the summary correctly describe what the code does?) and clarity (is the summary easy to understand?). This subjective evaluation catches issues like technically correct but confusing summaries, or summaries that miss the code's primary purpose.</p>
+<p>Human evaluation remains essential because automated metrics can't fully capture semantic accuracy and clarity. Domain experts—in this case, experienced developers—rate summaries on a 1–5 scale for both accuracy (does the summary correctly describe what the code does?) and clarity (is the summary easy to understand?). This subjective evaluation catches issues like technically correct but confusing summaries, or summaries that miss the code's primary purpose.</p>
 
-<p>Length constraints ensure summaries are concise and useful. The average summary length should be 1--2 sentences, long enough to convey the function's purpose but short enough to read quickly. Summaries that are too long defeat the purpose of summarization, while those that are too short may omit important details.</p>
+<p>Length constraints ensure summaries are concise and useful. The average summary length should be 1–2 sentences, long enough to convey the function's purpose but short enough to read quickly. Summaries that are too long defeat the purpose of summarization, while those that are too short may omit important details.</p>
 
 <p><em>Results (example):</em> A well-trained model might achieve a ROUGE-L score of 0.42, indicating moderate overlap with reference summaries. This is reasonable because there are many valid ways to describe the same code, so perfect overlap isn't expected. Human ratings of 4.1 out of 5 suggest developers find the summaries helpful and accurate in practice, which is ultimately more important than automated metrics.</p>
 

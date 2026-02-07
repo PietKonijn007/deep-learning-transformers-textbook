@@ -662,7 +662,29 @@ def convert_latex_to_html(latex_content):
     html = find_and_replace_command(html, 'textbf', lambda c: f'<strong>{c}</strong>')
     html = find_and_replace_command(html, 'textit', lambda c: f'<em>{c}</em>')
     html = find_and_replace_command(html, 'texttt', lambda c: f'<code>{c}</code>')
-    
+    html = find_and_replace_command(html, 'emph', lambda c: f'<em>{c}</em>')
+    html = find_and_replace_command(html, 'underline', lambda c: f'<u>{c}</u>')
+    html = find_and_replace_command(html, 'textsc', lambda c: f'<span style="font-variant: small-caps;">{c}</span>')
+
+    # Convert \url{...} to hyperlinks
+    html = find_and_replace_command(html, 'url', lambda c: f'<a href="{c}">{c}</a>')
+
+    # Convert \href{url}{text} to hyperlinks (two arguments)
+    html = re.sub(r'\\href\{([^}]+)\}\{([^}]+)\}', r'<a href="\1">\2</a>', html)
+
+    # Convert \footnote{...} to inline parenthetical
+    html = find_and_replace_command(html, 'footnote', lambda c: f' <span class="footnote">({c})</span>')
+
+    # Convert font style declarations
+    # {\itshape text} → <em>text</em>
+    html = re.sub(r'\{\\itshape\s+((?:[^{}]|\{[^{}]*\})*)\}', r'<em>\1</em>', html)
+    # Standalone \itshape followed by text to end of line/block
+    html = re.sub(r'\\itshape\s+([^\n<]+)', r'<em>\1</em>', html)
+
+    # {\bfseries text} → <strong>text</strong>
+    html = re.sub(r'\{\\bfseries\s+((?:[^{}]|\{[^{}]*\})*)\}', r'<strong>\1</strong>', html)
+    html = re.sub(r'\\bfseries\s+([^\n<]+)', r'<strong>\1</strong>', html)
+
     # Convert equations (preserve LaTeX for MathJax)
     # Display equations - use $$ delimiters which MathJax handles better
     html = re.sub(r'\\begin\{equation\}(.*?)\\end\{equation\}', r'<div class="equation">\n$$\1$$\n</div>', html, flags=re.DOTALL)
@@ -684,7 +706,27 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'\\ref\{[^}]+\}', '[ref]', html)
     html = re.sub(r'\\cite\{[^}]+\}', '[citation]', html)
     html = re.sub(r'\\addcontentsline\{[^}]+\}\{[^}]+\}\{[^}]+\}', '', html)
-    
+
+    # Remove spacing commands
+    html = re.sub(r'\\vspace\*?\{[^}]*\}', '', html)
+    html = re.sub(r'\\hspace\*?\{[^}]*\}', ' ', html)
+    html = re.sub(r'\\noindent\b\s*', '', html)
+    html = re.sub(r'\\centering\b\s*', '', html)
+
+    # Remove size commands (outside math mode - these are text-mode declarations)
+    html = re.sub(r'\\(?:large|Large|LARGE|huge|Huge)\b\s*', '', html)
+    html = re.sub(r'\\(?:normalsize|footnotesize|small|tiny|scriptsize)\b\s*', '', html)
+
+    # Remove page/line break commands
+    html = re.sub(r'\\(?:medskip|bigskip|smallskip)\b\s*', '', html)
+    html = re.sub(r'\\(?:newpage|clearpage|pagebreak)\b\s*', '', html)
+    html = re.sub(r'\\(?:newline|linebreak)\b', '<br>', html)
+
+    # Remove other stray formatting commands
+    html = re.sub(r'\\(?:par)\b\s*', '\n\n', html)
+    html = re.sub(r'\\(?:hfill)\b\s*', '', html)
+    html = re.sub(r'\\(?:xspace)\b', '', html)
+
     # Protect pre/code blocks from paragraph processing by replacing newlines with placeholders
     pre_blocks = []
     def save_pre_block(match):
@@ -692,7 +734,13 @@ def convert_latex_to_html(latex_content):
         return f'___PRE_BLOCK_{len(pre_blocks)-1}___'
     
     html = re.sub(r'<pre><code>.*?</code></pre>', save_pre_block, html, flags=re.DOTALL)
-    
+
+    # Convert LaTeX typography (after pre-block protection so code is safe)
+    html = html.replace('---', '\u2014')  # em dash (must come before en dash)
+    html = html.replace('--', '\u2013')   # en dash
+    html = html.replace('``', '\u201c')   # left double quote
+    html = html.replace("''", '\u201d')   # right double quote
+
     # Clean up paragraphs - but don't wrap block elements
     # Split by double newlines
     parts = re.split(r'\n\n+', html)

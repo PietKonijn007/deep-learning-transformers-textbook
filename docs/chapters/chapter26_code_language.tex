@@ -289,89 +289,21 @@ Programming languages evolve continuously, introducing new features, deprecating
 
 \textbf{Security pattern updates:} Security best practices evolve as new vulnerabilities are discovered. A model trained before a major security issue might suggest vulnerable patterns. For example, models trained before widespread awareness of SQL injection might suggest string concatenation for SQL queries rather than parameterized queries.
 
-\subsection{Detecting Drift in Code Models}
+\begin{keypoint}
+For the generic drift detection and continuous learning framework (detection strategies, retraining approaches, implementation infrastructure), see Chapter~\ref{chap:domainspecificmodels}, Section~\ref{sec:continuouslearning}. Here we highlight code-specific considerations.
+\end{keypoint}
 
-Drift detection for code models requires monitoring both model performance and the code ecosystem. Unlike natural language where drift is gradual, code drift can be sudden (a major library release) or gradual (slow adoption of new patterns).
-
-\textbf{Acceptance rate monitoring:} Track what percentage of suggestions developers accept. A declining acceptance rate indicates the model's suggestions are becoming less useful. For a well-performing copilot, acceptance rates are typically 25--35\%. If this drops to 15--20\%, investigate why.
-
-\textbf{Language version distribution:} Monitor which language versions developers are using. If 80\% of your team has upgraded to Python 3.12 but your model was trained on Python 3.8 code, there's a mismatch. Track language version adoption and retrain when significant portions of your team upgrade.
-
-\textbf{Library version tracking:} Monitor which library versions are in use. If your team has upgraded to TensorFlow 2.15 but your model was trained on TensorFlow 2.5 code, suggestions will be outdated. Track major library upgrades and retrain accordingly.
-
-\textbf{Syntax error rate:} Track how often model suggestions contain syntax errors. An increasing syntax error rate indicates the model is encountering code patterns it doesn't understand. This is a strong signal of drift.
-
-\textbf{Deprecation warnings:} Monitor how often model suggestions trigger deprecation warnings when executed. This indicates the model is suggesting outdated APIs. Collect these warnings as training signals for what not to suggest.
-
-\textbf{Developer feedback:} Track explicit feedback (thumbs down, corrections) and implicit feedback (how quickly developers modify or delete suggestions). Rapid modification suggests the suggestion was close but not quite right; immediate deletion suggests it was completely wrong.
-
-\subsection{Adaptation Strategies for Code Models}
-
-Once drift is detected, you need strategies to adapt the model to current code practices. The right approach depends on the type of drift, available resources, and deployment constraints.
-
-\textbf{Incremental fine-tuning on recent code:} Collect code written in the last 6--12 months and fine-tune the model on it. This adapts the model to current patterns while preserving knowledge of older code (which still exists in your codebase). Mix 70\% recent code with 30\% historical code to balance adaptation and retention.
-
-\textbf{Targeted fine-tuning on new features:} When a new language version or library is released, collect examples using the new features and fine-tune specifically on those. This is more efficient than full retraining and quickly adds support for new patterns. For example, when Python 3.10 added pattern matching, fine-tune on a curated dataset of pattern matching examples.
-
-\textbf{Negative example training:} Collect deprecated patterns and train the model to avoid them. This is particularly important for security: train on examples of vulnerable code paired with secure alternatives. The model learns to recognize and avoid dangerous patterns.
-
-\textbf{Continuous pre-training:} For organizations with large codebases, continuously pre-train the model on internal code. This keeps the model aligned with your team's evolving practices and coding style. Schedule monthly or quarterly pre-training runs on recent commits.
-
-\textbf{Ensemble with version-specific models:} Maintain separate models for different language versions or library versions. Route requests to the appropriate model based on the project's dependencies. This provides optimal suggestions for each context without requiring a single model to handle all versions.
-
-\textbf{Retrieval-augmented generation:} Augment the model with retrieval from recent code examples. When generating a suggestion, retrieve similar recent code and use it as additional context. This allows the model to leverage current patterns without retraining.
-
-\subsection{Practical Implementation: Continuous Learning Pipeline}
-
-Implementing continuous learning for code models requires infrastructure that integrates with your development workflow.
-
-\textbf{Code collection pipeline:} Automatically collect code from recent commits. Filter for quality (exclude generated code, test fixtures, configuration files). Respect privacy (exclude proprietary algorithms, credentials). This creates your retraining corpus.
-
-\textbf{Language and library version tracking:} Integrate with dependency management systems (pip, npm, Maven) to track which versions are in use. This informs retraining priorities: focus on the versions your team actually uses.
-
-\textbf{Acceptance rate analytics:} Instrument your IDE plugin to track which suggestions are accepted, modified, or rejected. Aggregate this data to measure model effectiveness and identify drift. Build dashboards showing acceptance rates over time, by language, by developer, and by code context.
-
-\textbf{Automated retraining pipeline:} Build infrastructure that automates data collection, filtering, training, evaluation, and deployment. For code models, this might run monthly or quarterly. Include automated tests: does the model still perform well on historical benchmarks? Does it handle new language features? Does it avoid deprecated patterns?
-
-\textbf{A/B testing framework:} Before deploying a retrained model to all developers, test it with a subset. Compare acceptance rates, developer satisfaction, and productivity metrics. If the new model performs better, roll it out gradually. If it performs worse, investigate and iterate.
-
-\textbf{Model versioning and rollback:} Maintain multiple model versions. If a new model introduces regressions (suggesting broken code, performance issues), roll back quickly. Track which model version generated each suggestion for debugging.
+Key code-specific adaptation strategies include:
+\begin{itemize}
+\item \textbf{Acceptance rate monitoring:} Track what percentage of suggestions developers accept (typically 25--35\% for a healthy copilot). Declining rates signal drift.
+\item \textbf{Negative example training:} Collect deprecated or insecure patterns and train the model to avoid them---especially important as security best practices evolve.
+\item \textbf{Continuous pre-training on recent commits:} Schedule monthly or quarterly pre-training on internal code to keep the model aligned with evolving team practices.
+\item \textbf{Language and library version tracking:} Integrate with dependency management (pip, npm, Maven) to prioritize retraining for the versions your team actually uses.
+\end{itemize}
 
 \subsection{Case Study: Adapting to Python 3.11 and 3.12}
 
-A software company with 200 Python developers deployed a code copilot in early 2023, trained on Python 3.8--3.10 code. The model achieved a 32\% acceptance rate initially. By late 2024, after the team upgraded to Python 3.12, acceptance rate had dropped to 22\%---a 10-point degradation.
-
-\textbf{Root cause analysis:} Python 3.11 and 3.12 introduced several new features: exception groups, type parameter syntax, improved error messages, and performance optimizations. The model didn't recognize these features and suggested older patterns. Developers were manually rewriting suggestions to use new features, reducing perceived value.
-
-\textbf{Solution implemented:} The team developed a multi-faceted approach to address the drift. As an immediate fix, they collected 5,000 examples of Python 3.11 and 3.12 code from open-source projects and internal repositories, then fine-tuned the model on a carefully balanced mixture of 60\% new code and 40\% historical code. This balance ensured the model learned new features while retaining knowledge of older patterns still present in the codebase. The acceptance rate recovered to 29\% within two weeks of deploying the updated model.
-
-For a long-term solution, the team implemented quarterly retraining on recent code. Each quarter, they collect code from the last 6 months, filter it for quality using automated metrics and manual review, and fine-tune the model on this fresh data. This ensures the model stays current with language evolution and team practices without requiring constant manual intervention.
-
-To prevent future drift, they set up comprehensive monitoring with a dashboard tracking acceptance rate by Python version. The system alerts the team if acceptance rate drops below 25\% for any version, providing early warning of drift before it significantly impacts developer productivity. This proactive monitoring allows the team to investigate and address issues quickly.
-
-Finally, they adopted a targeted training approach for new language releases. When Python 3.13 is released, they plan to collect examples of new features immediately and fine-tune within one month of team adoption. This proactive approach prevents drift rather than reacting to it, maintaining high model performance through language transitions.
-
-\textbf{Results after 6 months:} The continuous learning investment delivered substantial returns across multiple dimensions. The acceptance rate stabilized at 30--33\% despite ongoing language evolution, demonstrating that the quarterly retraining successfully kept pace with Python's development. Developer satisfaction, measured through quarterly surveys, increased significantly: 78\% of developers now rate the copilot as ``very helpful,'' up from 62\% before implementing continuous learning.
-
-The quarterly retraining cost proved remarkably affordable at \$5,000 per cycle, covering both data collection infrastructure and compute resources for fine-tuning. This translates to an annual investment of \$20,000 for the continuous learning program. Meanwhile, the system maintained productivity gains of 55\% faster task completion, preserving the value that initially justified the copilot investment.
-
-The return on investment is compelling: the continuous learning investment of \$20,000 per year maintains \$4 million per year in productivity gains from the copilot. Without continuous learning, these gains would have eroded as the model became increasingly outdated, potentially declining to near zero within 2-3 years.
-
-The key lesson: code models require continuous adaptation to remain valuable. The cost of adaptation (\$20K/year) is negligible compared to the value maintained (\$4M/year). Organizations that treat code models as static assets will see value decay; those that invest in continuous learning maintain and grow value over time.
-
-\subsection{Cross-Domain Patterns and Connections}
-
-The continuous learning challenges in code models connect to patterns across other domains covered in this textbook. Chapter 24 on Domain-Specific Models presents the general framework for continuous learning that applies directly to code models. Code exemplifies rapid domain evolution requiring frequent adaptation, making it an ideal case study for the continuous learning principles discussed there.
-
-Chapter 25 on Enterprise NLP faces similar vocabulary drift challenges. Both domains encounter new terminology---new APIs and libraries in code, new products and services in enterprise contexts---requiring vocabulary updates and periodic retraining. The techniques for detecting and addressing vocabulary drift transfer between these domains.
-
-Chapter 28 on Knowledge Graphs shows how code understanding benefits from knowledge graphs of APIs, libraries, and dependencies. Drift in code models parallels drift in software knowledge graphs: as libraries evolve and APIs change, both the code model and the knowledge graph must be updated to reflect current reality. Integrating code models with knowledge graphs can improve both systems.
-
-Chapter 33 on Observability demonstrates how code models can analyze logs and system behavior. Drift in system behavior---new services, infrastructure changes, evolving deployment patterns---requires code model adaptation to understand and generate code for current systems. The observability patterns help detect when code models need updating.
-
-Chapter 34 on DSL and Agents treats code as a formal domain-specific language. The patterns for building agents that understand and generate code apply to other DSLs, from configuration languages to query languages. Code's executability provides unique feedback signals for agent learning that can inspire approaches for other domains where verification is possible.
-
-Understanding these cross-domain patterns helps you apply lessons from code models to other domains and vice versa. The specific manifestations differ, but the fundamental challenges---domain evolution, drift detection, and continuous adaptation---are universal.
+A 200-developer team's code copilot dropped from 32\% to 22\% acceptance rate after upgrading to Python 3.12, because the model (trained on 3.8--3.10) didn't recognize new features like exception groups and type parameter syntax. Fine-tuning on a 60/40 mix of new and historical code recovered acceptance to 29\% within two weeks. Quarterly retraining at \$5,000/cycle then stabilized acceptance at 30--33\%, maintaining \$4M/year in productivity gains for a \$20K/year continuous learning investment.
 
 \section{Case Study: IDE Copilot for Python Development}
 \label{sec:casecopilot}
@@ -421,6 +353,8 @@ Train a code summarization model on code-docstring pairs. Given a complex functi
 \end{exercise}
 
 \section{Solutions}
+
+Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.
 
 \begin{solution}
 \textbf{Exercise 1: Code Tokenization}
