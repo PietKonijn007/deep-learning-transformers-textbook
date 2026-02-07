@@ -186,7 +186,47 @@ Image: $224 \times 224 \times 3$ (ImageNet standard)
 <p>Patch size: $P = 16$</p>
 
 <figure>
-<div class="tikz-diagram"><img src="../diagrams/chapter17_vision_transformers_515c6cbf259c.svg" alt="TikZ Diagram" /></div>
+\begin{tikzpicture}[
+  patch/.style={rectangle, draw, minimum size=0.8cm, font=\tiny},
+  node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
+  layer/.style={rectangle, draw, minimum width=3cm, minimum height=0.8cm, font=\small},
+  arrow/.style={->, thick}
+]
+
+<p>\node[font=\small] at (-1,2) {Image};
+\foreach \i in {0,1,2,3} {
+  \foreach \j in {0,1,2,3} {
+    \node[patch, fill=blue!20] (p\i\j) at (\i*0.9, -\j*0.9) {};
+  }
+}</p>
+
+<p>\node[layer, fill=green!10] (proj) at (5,0) {Linear \\ Projection};</p>
+
+<p>\node[font=\small] at (9,2) {Sequence};
+\node[node, fill=yellow!30] (cls) at (9,0.5) {CLS};
+\node[node] (e1) at (9,-0.5) {$e_1$};
+\node[node] (e2) at (9,-1.5) {$e_2$};
+\node[font=\footnotesize] at (9,-2.3) {$\vdots$};
+\node[node] (en) at (9,-3) {$e_N$};</p>
+
+<p>\draw[arrow] (p00) to[bend left=10] (proj);
+\draw[arrow] (p11) -- (proj);
+\draw[arrow] (p22) to[bend right=10] (proj);
+\draw[arrow] (proj) -- (cls);
+\draw[arrow] (proj) -- (e1);
+\draw[arrow] (proj) -- (e2);
+\draw[arrow] (proj) -- (en);</p>
+
+<p>\node[layer, fill=orange!10] (pos) at (12,-1.5) {+ Position \\ Embeddings};
+\draw[arrow] (cls) to[bend left=10] (pos);
+\draw[arrow] (e1) -- (pos);
+\draw[arrow] (e2) -- (pos);
+\draw[arrow] (en) to[bend right=10] (pos);</p>
+
+<p>\node[layer, fill=purple!10] (trans) at (15,-1.5) {Transformer \\ Encoder};
+\draw[arrow] (pos) -- (trans);</p>
+
+<p>\end{tikzpicture}
 <figcaption>Vision Transformer patch embedding process. A $224 \times 224$ image is divided into $16 \times 16$ patches (196 total), each patch is flattened and linearly projected to embedding dimension $d$, a CLS token is prepended, position embeddings are added, and the sequence is processed by a standard transformer encoder.</figcaption>
 </figure>
 
@@ -694,6 +734,8 @@ Compare FLOPs for ResNet-50 and ViT-Base across resolutions:
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Patch Embedding Implementation</strong>
 

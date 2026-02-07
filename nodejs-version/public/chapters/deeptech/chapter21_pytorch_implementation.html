@@ -693,7 +693,7 @@ with torch.no_grad():
 
 <h3>KV Cache for Autoregressive Generation</h3>
 
-<p>Autoregressive generation in models like GPT requires computing attention over all previous tokens at each step. Without optimization, this results in redundant computation as the keys and values for previous tokens are recomputed at every step. Implementing a KV cache stores these values and reuses them, dramatically reducing computation.</p>
+<p>Autoregressive generation in models like GPT requires computing attention over all previous tokens at each step. Without optimization, this results in redundant computation as the keys and values for previous tokens are recomputed at every step. Implementing a KV cache stores these values and reuses them, dramatically reducing computation. For systems-level KV cache management at scale (PagedAttention, memory fragmentation, batch scheduling), see Chapter~[ref].</p>
 
 <pre><code>
 class GPTWithKVCache(nn.Module):
@@ -840,7 +840,7 @@ outputs = session.run(
 )
 </code></pre>
 
-<p>ONNX Runtime typically provides 20-40\% speedup over PyTorch for transformer inference, with the exact speedup depending on the model architecture and hardware. The optimization includes operator fusion, memory layout optimization, and hardware-specific kernel selection.</p>
+<p>ONNX Runtime typically delivers 1.5--2$\times$ speedup over PyTorch for transformer inference through operator fusion, memory layout optimization, and hardware-specific kernel selection. Combined with INT8 quantization, 3--4$\times$ speedup is achievable (see Chapter~[ref] for quantization fundamentals).</p>
 
 <h3>TensorRT Optimization</h3>
 
@@ -911,7 +911,7 @@ def infer_with_tensorrt(engine_path, input_ids):
 
 <h3>Quantization</h3>
 
-<p>Quantization reduces model size and inference latency by using lower precision representations for weights and activations. PyTorch supports several quantization approaches, from simple dynamic quantization to full quantization-aware training.</p>
+<p>Quantization reduces model size and inference latency by using lower precision representations for weights and activations. PyTorch supports several quantization approaches, from simple dynamic quantization to full quantization-aware training. For the theoretical foundations of quantization (precision formats, scale factors, zero-points) and pruning/distillation techniques, see Chapter~[ref].</p>
 
 <pre><code>
 import torch.quantization as quant
@@ -1102,358 +1102,20 @@ scheduler = get_linear_schedule_with_warmup(
     <li>Logging
 </ul>
 
-<h2>Complete Implementation Examples</h2>
+<h2>Production Optimizations</h2>
 
-<h3>Full Transformer from Scratch</h3>
+<p>The implementations shown above can be enhanced with several production optimizations:</p>
 
-<p>This section provides a complete, production-ready transformer implementation incorporating all the optimization techniques discussed in this chapter. The implementation is modular, efficient, and includes comprehensive error checking and documentation.</p>
+<ul>
+    <li><strong>Combined QKV projection:</strong> Concatenating $\mW_Q$, $\mW_K$, $\mW_V$ into a single $d_{\text{model}} \times 3d_{\text{model}}$ matrix reduces kernel launch overhead and improves memory coalescing.
+    <li><strong>Fused layer normalization:</strong> Libraries like NVIDIA Apex provide <code>FusedLayerNorm</code> that combines the normalization computation into a single GPU kernel, reducing memory traffic by $\sim$30\%.
+    <li><strong>Pre-norm architecture:</strong> Placing layer normalization before (rather than after) attention and feed-forward sublayers improves training stability for deep models and is standard in GPT-2 and later architectures.
+    <li><strong>FlashAttention:</strong> Using memory-efficient attention implementations (see Chapter~16) dramatically reduces memory consumption for long sequences.
+</ul>
 
-<pre><code>
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.cuda.amp import autocast, GradScaler
-from torch.utils.checkpoint import checkpoint
-import math
+<h3>Putting It Together</h3>
 
-class MultiHeadAttention(nn.Module):
-    """Optimized multi-head attention with optional Flash Attention."""
-    
-    def __init__(self, d_model, num_heads, dropout=0.1, use_flash=True):
-        super().__init__()
-        assert d_model 
-        
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.head_dim = d_model // num_heads
-        self.use_flash = use_flash
-        
-        # Combined QKV projection for efficiency
-        self.qkv_proj = nn.Linear(d_model, 3 * d_model)
-        self.out_proj = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(dropout)
-        
-        self.scale = 1.0 / math.sqrt(self.head_dim)
-    
-    def forward(self, x, mask=None, past_kv=None, use_cache=False):
-        batch_size, seq_len, _ = x.shape
-        
-        # Project and split into Q, K, V
-        qkv = self.qkv_proj(x)
-        qkv = qkv.reshape(batch_size, seq_len, 3, self.num_heads, 
-                         self.head_dim)
-        qkv = qkv.permute(2, 0, 3, 1, 4)  # (3, B, h, n, d)
-        Q, K, V = qkv[0], qkv[1], qkv[2]
-        
-        # Use cached K, V if available
-        if past_kv is not None:
-            past_K, past_V = past_kv
-            K = torch.cat([past_K, K], dim=2)
-            V = torch.cat([past_V, V], dim=2)
-        
-        # Compute attention
-        if self.use_flash and hasattr(F, 'scaled_dot_product_attention'):
-            # Use PyTorch's optimized implementation
-            attn_output = F.scaled_dot_product_attention(
-                Q, K, V,
-                attn_mask=mask,
-                dropout_p=self.dropout.p if self.training else 0.0
-            )
-        else:
-            # Standard attention implementation
-            scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale
-            
-            if mask is not None:
-                scores = scores.masked_fill(mask == 0, -1e9)
-            
-            attn_weights = F.softmax(scores, dim=-1)
-            attn_weights = self.dropout(attn_weights)
-            attn_output = torch.matmul(attn_weights, V)
-        
-        # Reshape and project output
-        attn_output = attn_output.transpose(1, 2).contiguous()
-        attn_output = attn_output.reshape(batch_size, seq_len, self.d_model)
-        output = self.out_proj(attn_output)
-        
-        # Return cache if requested
-        new_kv = (K, V) if use_cache else None
-        return output, new_kv
-
-class FeedForward(nn.Module):
-    """Feed-forward network with GELU activation."""
-    
-    def __init__(self, d_model, d_ff, dropout=0.1):
-        super().__init__()
-        self.linear1 = nn.Linear(d_model, d_ff)
-        self.linear2 = nn.Linear(d_ff, d_model)
-        self.dropout = nn.Dropout(dropout)
-    
-    def forward(self, x):
-        x = self.linear1(x)
-        x = F.gelu(x)
-        x = self.dropout(x)
-        x = self.linear2(x)
-        return x
-
-class TransformerLayer(nn.Module):
-    """Single transformer layer with pre-norm architecture."""
-    
-    def __init__(self, d_model, num_heads, d_ff, dropout=0.1, 
-                 use_checkpoint=False):
-        super().__init__()
-        self.use_checkpoint = use_checkpoint
-        
-        self.attention = MultiHeadAttention(d_model, num_heads, dropout)
-        self.ffn = FeedForward(d_model, d_ff, dropout)
-        
-        # Use fused layer norm if available
-        try:
-            from apex.normalization import FusedLayerNorm
-            self.norm1 = FusedLayerNorm(d_model)
-            self.norm2 = FusedLayerNorm(d_model)
-        except ImportError:
-            self.norm1 = nn.LayerNorm(d_model)
-            self.norm2 = nn.LayerNorm(d_model)
-        
-        self.dropout = nn.Dropout(dropout)
-    
-    def forward(self, x, mask=None, past_kv=None, use_cache=False):
-        if self.use_checkpoint and self.training:
-            return checkpoint(self._forward, x, mask, past_kv, use_cache)
-        return self._forward(x, mask, past_kv, use_cache)
-    
-    def _forward(self, x, mask, past_kv, use_cache):
-        # Pre-norm attention
-        normed = self.norm1(x)
-        attn_out, new_kv = self.attention(normed, mask, past_kv, use_cache)
-        x = x + self.dropout(attn_out)
-        
-        # Pre-norm feed-forward
-        normed = self.norm2(x)
-        ffn_out = self.ffn(normed)
-        x = x + self.dropout(ffn_out)
-        
-        return x, new_kv
-
-class TransformerModel(nn.Module):
-    """Complete transformer model with all optimizations."""
-    
-    def __init__(self, vocab_size, d_model=768, num_heads=12, 
-                 num_layers=12, d_ff=3072, max_seq_len=512, 
-                 dropout=0.1, use_checkpoint=False):
-        super().__init__()
-        
-        self.d_model = d_model
-        self.num_layers = num_layers
-        
-        # Embeddings
-        self.token_embed = nn.Embedding(vocab_size, d_model)
-        self.pos_embed = nn.Embedding(max_seq_len, d_model)
-        self.dropout = nn.Dropout(dropout)
-        
-        # Transformer layers
-        self.layers = nn.ModuleList([
-            TransformerLayer(d_model, num_heads, d_ff, dropout, 
-                           use_checkpoint)
-            for _ in range(num_layers)
-        ])
-        
-        # Output layer norm
-        try:
-            from apex.normalization import FusedLayerNorm
-            self.final_norm = FusedLayerNorm(d_model)
-        except ImportError:
-            self.final_norm = nn.LayerNorm(d_model)
-        
-        # Language modeling head (tied with embeddings)
-        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
-        self.lm_head.weight = self.token_embed.weight
-        
-        self._init_weights()
-    
-    def _init_weights(self):
-        """Initialize weights following best practices."""
-        for module in self.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.normal_(module.weight, mean=0.0, std=0.02)
-                if module.bias is not None:
-                    nn.init.zeros_(module.bias)
-            elif isinstance(module, nn.Embedding):
-                nn.init.normal_(module.weight, mean=0.0, std=0.02)
-            elif isinstance(module, nn.LayerNorm):
-                nn.init.ones_(module.weight)
-                nn.init.zeros_(module.bias)
-    
-    def forward(self, input_ids, mask=None, past_key_values=None, 
-                use_cache=False):
-        batch_size, seq_len = input_ids.shape
-        
-        # Create position IDs
-        if past_key_values is None:
-            past_length = 0
-            position_ids = torch.arange(seq_len, device=input_ids.device)
-        else:
-            past_length = past_key_values[0][0].size(2)
-            position_ids = torch.arange(
-                past_length, past_length + seq_len, 
-                device=input_ids.device
-            )
-        
-        position_ids = position_ids.unsqueeze(0).expand(batch_size, -1)
-        
-        # Embeddings
-        token_embeds = self.token_embed(input_ids)
-        pos_embeds = self.pos_embed(position_ids)
-        hidden_states = self.dropout(token_embeds + pos_embeds)
-        
-        # Initialize cache
-        if past_key_values is None:
-            past_key_values = [None] * self.num_layers
-        
-        present_key_values = [] if use_cache else None
-        
-        # Process through layers
-        for i, (layer, past_kv) in enumerate(
-            zip(self.layers, past_key_values)):
-            hidden_states, new_kv = layer(
-                hidden_states, mask, past_kv, use_cache
-            )
-            if use_cache:
-                present_key_values.append(new_kv)
-        
-        # Final norm and projection
-        hidden_states = self.final_norm(hidden_states)
-        logits = self.lm_head(hidden_states)
-        
-        return logits, present_key_values
-</code></pre>
-
-<h3>Optimized Training Loop</h3>
-
-<p>The following training loop incorporates all optimization techniques including mixed precision, gradient accumulation, gradient clipping, and comprehensive logging.</p>
-
-<pre><code>
-def train_transformer(model, train_dataloader, val_dataloader, config):
-    """Complete training loop with all optimizations."""
-    
-    # Setup
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = model.to(device)
-    
-    # Optimizer
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=config['learning_rate'],
-        betas=(0.9, 0.999),
-        eps=1e-6,
-        weight_decay=0.01
-    )
-    
-    # Learning rate scheduler
-    total_steps = config['num_epochs'] * len(train_dataloader)
-    warmup_steps = int(0.1 * total_steps)
-    
-    def lr_lambda(step):
-        if step < warmup_steps:
-            return step / warmup_steps
-        return max(0.0, (total_steps - step) / (total_steps - warmup_steps))
-    
-    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-    
-    # Mixed precision scaler
-    scaler = GradScaler()
-    
-    # Training state
-    global_step = 0
-    best_val_loss = float('inf')
-    accumulation_steps = config.get('accumulation_steps', 1)
-    
-    # Training loop
-    for epoch in range(config['num_epochs']):
-        model.train()
-        epoch_loss = 0.0
-        optimizer.zero_grad()
-        
-        for step, batch in enumerate(train_dataloader):
-            # Move to device
-            input_ids = batch['input_ids'].to(device, non_blocking=True)
-            labels = batch['labels'].to(device, non_blocking=True)
-            
-            # Forward pass with mixed precision
-            with autocast():
-                logits, _ = model(input_ids)
-                loss = F.cross_entropy(
-                    logits.view(-1, logits.size(-1)),
-                    labels.view(-1)
-                )
-                loss = loss / accumulation_steps
-            
-            # Backward pass
-            scaler.scale(loss).backward()
-            
-            # Update weights
-            if (step + 1) 
-                # Unscale and clip gradients
-                scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(
-                    model.parameters(), 
-                    max_norm=1.0
-                )
-                
-                # Optimizer step
-                scaler.step(optimizer)
-                scaler.update()
-                scheduler.step()
-                optimizer.zero_grad()
-                
-                global_step += 1
-                
-                # Logging
-                if global_step 
-                    current_lr = scheduler.get_last_lr()[0]
-                    print(f"Step {global_step}: "
-                          f"loss={loss.item() * accumulation_steps:.4f}, "
-                          f"lr={current_lr:.2e}")
-            
-            epoch_loss += loss.item() * accumulation_steps
-        
-        # Validation
-        val_loss = evaluate(model, val_dataloader, device)
-        print(f"Epoch {epoch + 1}: "
-              f"train_loss={epoch_loss / len(train_dataloader):.4f}, "
-              f"val_loss={val_loss:.4f}")
-        
-        # Save best model
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'val_loss': val_loss,
-            }, 'best_model.pt')
-
-def evaluate(model, dataloader, device):
-    """Evaluation loop."""
-    model.eval()
-    total_loss = 0.0
-    
-    with torch.no_grad():
-        for batch in dataloader:
-            input_ids = batch['input_ids'].to(device)
-            labels = batch['labels'].to(device)
-            
-            with autocast():
-                logits, _ = model(input_ids)
-                loss = F.cross_entropy(
-                    logits.view(-1, logits.size(-1)),
-                    labels.view(-1)
-                )
-            
-            total_loss += loss.item()
-    
-    return total_loss / len(dataloader)
-</code></pre>
+<p>A complete training loop combines the components from this chapter: the model architecture with mixed precision via <code>torch.cuda.amp</code>, gradient accumulation for large effective batch sizes, gradient checkpointing for memory savings, and learning rate scheduling with warmup. The training pipeline from Section~[ref] demonstrates this integration. For production deployments, add gradient clipping, periodic checkpointing, and distributed training via <code>torch.nn.parallel.DistributedDataParallel</code>.</p>
 
 <h3>Comprehensive Benchmarks</h3>
 
@@ -1890,6 +1552,8 @@ def measure_scaling_efficiency(model, batch_size, seq_len):
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Memory-Efficient Attention</strong>
 
