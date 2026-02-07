@@ -21,78 +21,22 @@ Pre-training on large unlabeled corpora followed by task-specific fine-tuning ha
 
 \subsection{Language Modeling Objectives}
 
-The choice of pre-training objective fundamentally shapes what a model learns and how effectively it transfers to downstream tasks. Different objectives make different trade-offs between computational efficiency, representation quality, and suitability for specific task types. Understanding these trade-offs is essential for practitioners designing pre-training pipelines.
+The choice of pre-training objective fundamentally shapes a model's capabilities. The main objectives are:
 
-\textbf{Causal Language Modeling (CLM)} predicts each token given only previous context, formalizing the objective as:
-\begin{equation}
-\mathcal{L}_{\text{CLM}} = -\sum_{t=1}^{T} \log P(x_t | x_{<t}; \theta)
-\end{equation}
-
-This objective is computationally efficient because it requires only a single forward pass through the model to compute the loss for all positions simultaneously. The unidirectional attention pattern means that for a sequence of length $n$, each position $i$ attends only to positions $1$ through $i-1$, resulting in a triangular attention mask. This makes CLM particularly natural for text generation tasks where the model must produce tokens sequentially without access to future context. However, the unidirectional constraint limits the model's ability to build rich bidirectional representations, which can hurt performance on understanding tasks like question answering or natural language inference. All GPT models, including GPT-2 and GPT-3, use this objective exclusively, optimizing for generation quality at the expense of bidirectional understanding.
-
-\textbf{Masked Language Modeling (MLM)} addresses the unidirectional limitation by randomly masking tokens and predicting them using bidirectional context:
-\begin{equation}
-\mathcal{L}_{\text{MLM}} = -\sum_{t \in \mathcal{M}} \log P(x_t | x_{\backslash \mathcal{M}}; \theta)
-\end{equation}
-where $\mathcal{M}$ denotes the set of masked positions. BERT masks approximately 15\% of tokens during pre-training, allowing each masked position to attend to all unmasked positions in both directions. This bidirectional context enables the model to build richer representations that capture relationships between words regardless of their relative positions. The computational cost is similar to CLM since a single forward pass computes predictions for all masked positions. However, MLM introduces a pre-training/fine-tuning mismatch: the special [MASK] token appears during pre-training but not during fine-tuning or inference. To mitigate this, BERT uses a mixed strategy where 80\% of masked tokens are replaced with [MASK], 10\% with random tokens, and 10\% remain unchanged. Despite this mismatch, MLM has proven highly effective for understanding tasks, with BERT, RoBERTa, and ALBERT all achieving strong performance on GLUE and SQuAD benchmarks.
-
-\textbf{Prefix Language Modeling} attempts to combine the benefits of both approaches by using bidirectional attention on a prefix and causal attention on the suffix:
-\begin{equation}
-\mathcal{L}_{\text{prefix}} = -\sum_{t=|p|+1}^{T} \log P(x_t | x_{<t}; \theta)
-\end{equation}
-where $p$ is the prefix with bidirectional attention. This allows the model to build rich representations of the prefix while maintaining the ability to generate continuations autoregressively. UniLM and GLM use variants of this objective, achieving strong performance on both understanding and generation tasks. The computational cost is slightly higher than pure CLM or MLM because the attention pattern is more complex, requiring careful implementation to avoid recomputing prefix representations for each suffix position.
+\begin{itemize}
+    \item \textbf{Causal Language Modeling (CLM):} Predict each token given only previous context: $\mathcal{L}_{\text{CLM}} = -\sum_{t} \log P(x_t | x_{<t}; \theta)$. Used by GPT models (Chapter~\ref{chap:gpt}). Efficient single-pass training, natural for generation, but unidirectional.
+    \item \textbf{Masked Language Modeling (MLM):} Mask $\sim$15\% of tokens and predict from bidirectional context: $\mathcal{L}_{\text{MLM}} = -\sum_{t \in \mathcal{M}} \log P(x_t | x_{\backslash \mathcal{M}}; \theta)$. Used by BERT (Chapter~\ref{chap:bert}). Rich representations for understanding tasks.
+    \item \textbf{Prefix Language Modeling:} Bidirectional attention on a prefix, causal on the suffix. Combines benefits of CLM and MLM. Used by UniLM and GLM.
+\end{itemize}
 
 \subsection{Denoising Objectives}
 
-Denoising objectives extend beyond simple token masking to more complex corruption patterns that require the model to understand document structure and long-range dependencies. These objectives are particularly effective for sequence-to-sequence models where both the encoder and decoder must learn rich representations.
+\begin{itemize}
+    \item \textbf{Span Corruption} (T5): Replace random spans with sentinel tokens; decoder predicts original spans. See Chapter~\ref{chap:t5_bart}.
+    \item \textbf{Multi-task Denoising} (BART): Combines token masking, deletion, text infilling, sentence permutation, and document rotation. See Chapter~\ref{chap:t5_bart}.
+\end{itemize}
 
-\textbf{Span Corruption}, used by T5, masks contiguous spans of tokens rather than individual tokens. A typical configuration corrupts 15\% of tokens by replacing random spans (average length 3 tokens) with sentinel tokens. For example, the input "The quick brown fox jumps over the lazy dog" might become "The <X> fox <Y> the lazy dog" with the target "<X> quick brown <Y> jumps over <Z>". This objective is more challenging than single-token masking because the model must predict multiple tokens for each sentinel, requiring it to understand the semantic coherence of spans. The computational cost is similar to MLM, but the increased difficulty leads to better representations for tasks requiring understanding of multi-token phrases and entities. T5 experiments showed that span corruption with mean span length 3 outperformed both single-token masking and longer spans, suggesting an optimal balance between difficulty and learnability.
-
-\textbf{Sentence Shuffling and Text Infilling}, used by BART, apply more aggressive corruption strategies. Sentence shuffling permutes the order of sentences in a document, requiring the model to learn document-level structure and discourse coherence. Text infilling deletes spans of varying length (including zero-length spans), and the model must predict both the span length and content. BART combines multiple corruption strategies including token masking, token deletion, text infilling, sentence permutation, and document rotation. This multi-task denoising approach forces the model to handle diverse corruption patterns, leading to more robust representations. The computational cost is higher than simpler objectives because the encoder and decoder must both process variable-length sequences, but the improved representation quality justifies this cost for sequence-to-sequence tasks. BART achieves state-of-the-art results on summarization and translation benchmarks, demonstrating the effectiveness of aggressive denoising.
-
-\subsection{Computational Cost Comparison}
-
-The computational cost of different pre-training objectives varies significantly, impacting both training time and resource requirements. Understanding these costs is essential for practitioners choosing objectives and estimating training budgets.
-
-For a model with $d$ dimensions, $L$ layers, $h$ attention heads, and sequences of length $n$, the dominant computational cost comes from matrix multiplications in attention and feed-forward layers. The attention mechanism requires computing queries, keys, and values ($3d^2$ parameters per layer), followed by attention scores ($O(n^2d)$ operations), and output projections ($d^2$ parameters). The feed-forward network typically uses an intermediate dimension of $4d$, requiring $8d^2$ parameters per layer. Summing across all layers, the total forward pass requires approximately $L(12d^2 + n^2d)$ FLOPs per token.
-
-\textbf{Causal Language Modeling} is the most efficient objective because it computes loss for all $n$ positions in a single forward pass. For a batch of $b$ sequences, the total cost is $b \cdot L(12d^2n + n^3d)$ FLOPs. The $n^3d$ term comes from computing attention scores for all positions, where position $i$ attends to $i$ previous positions, summing to $\frac{n(n+1)}{2} \approx \frac{n^2}{2}$ attention operations across all positions.
-
-\textbf{Masked Language Modeling} has similar computational cost to CLM for the forward pass, but only computes loss for the 15\% of masked positions. However, the backward pass still propagates gradients through all positions since masked positions depend on unmasked context. In practice, MLM and CLM have nearly identical training times for the same model size and sequence length. BERT-base training on 16 TPU v3 chips for 1 million steps with batch size 256 and sequence length 512 takes approximately 4 days, consuming roughly $10^{21}$ FLOPs total.
-
-\textbf{Span Corruption} (T5) has slightly higher cost than MLM because the decoder must generate multiple tokens per corrupted span. If the average span length is $s$ and the corruption rate is $r$, the decoder processes approximately $r \cdot s \cdot n$ tokens, compared to $r \cdot n$ for MLM. For T5's typical configuration with $s=3$ and $r=0.15$, this increases decoder cost by 3×, though the encoder cost remains unchanged. T5-base training on 1 trillion tokens takes approximately 7 days on 256 TPU v3 chips, consuming roughly $10^{21}$ FLOPs.
-
-\textbf{BART's multi-task denoising} has the highest computational cost due to variable-length sequences and multiple corruption strategies. The encoder and decoder must both handle sequences of varying lengths, reducing batching efficiency. Additionally, applying multiple corruption strategies requires more data preprocessing. In practice, BART training takes approximately 20\% longer than comparable BERT training for the same number of tokens, but the improved performance on generation tasks often justifies this additional cost.
-
-\begin{example}[Objective Comparison on Same Data]
-\label{ex:objective_comparison}
-Text: "The quick brown fox jumps over the lazy dog"
-
-CLM: Predict each token given previous
-
-\begin{lstlisting}[language={}]
-The -> quick
-The quick -> brown
-The quick brown -> fox
-...
-\end{lstlisting}
-
-MLM (15\% masking):
-
-\begin{lstlisting}[language={}]
-Input:  "The [MASK] brown fox [MASK] over the lazy dog"
-Target: "quick" at position 2, "jumps" at position 5
-\end{lstlisting}
-
-Span Corruption:
-
-\begin{lstlisting}[language={}]
-Input:  "The <X> fox <Y> the lazy dog"
-Target: "<X> quick brown <Y> jumps over <Z>"
-\end{lstlisting}
-
-Different objectives lead to different learned representations!
-\end{example}
+Computational costs are similar across objectives for the same model size and sequence length: a single forward pass dominates, with differences arising mainly in the decoder target length for seq2seq objectives (span corruption costs $\sim$3$\times$ more in decoder computation than single-token MLM).
 
 \subsection{Contrastive Objectives}
 
@@ -282,26 +226,7 @@ Translating FLOPs into GPU-hours and cost estimates provides a more practical un
 
 \subsection{Scaling Laws}
 
-Empirical scaling laws, first systematically studied by Kaplan et al. (2020) and refined by Hoffmann et al. (2022), provide predictive relationships between compute budget, model size, dataset size, and performance. These laws are essential for planning pre-training projects and allocating resources optimally.
-
-The Kaplan scaling laws suggest that test loss scales as a power law with compute budget $C$, model parameters $N$, and dataset size $D$:
-\begin{equation}
-L(C) \propto C^{-\alpha}, \quad L(N) \propto N^{-\beta}, \quad L(D) \propto D^{-\gamma}
-\end{equation}
-with empirically measured exponents $\alpha \approx 0.05$, $\beta \approx 0.076$, and $\gamma \approx 0.095$. These laws imply that doubling the compute budget reduces loss by approximately 3.4\%, while doubling model size reduces loss by approximately 5.2\%, and doubling dataset size reduces loss by approximately 6.5\%.
-
-The Chinchilla scaling laws (Hoffmann et al., 2022) refined these relationships and found that most large language models are significantly undertrained—they use too many parameters for their compute budget and too few training tokens. The optimal allocation suggests that model size and dataset size should scale approximately equally with compute budget. For a compute budget of $C$ FLOPs, the optimal model size is approximately:
-\begin{equation}
-N_{\text{opt}} \approx 0.5 \times C^{0.5} \text{ parameters}
-\end{equation}
-and the optimal dataset size is approximately:
-\begin{equation}
-D_{\text{opt}} \approx 0.5 \times C^{0.5} \text{ tokens}
-\end{equation}
-
-This implies that GPT-3 175B, trained on 300B tokens with compute budget $2.4 \times 10^{23}$ FLOPs, should optimally have been approximately 70B parameters trained on 1.4T tokens. This prediction closely matches LLaMA-65B's configuration, which indeed achieves better performance than GPT-3 despite having fewer parameters. The Chinchilla paper demonstrated this by training Chinchilla (70B parameters, 1.4T tokens) to outperform Gopher (280B parameters, 300B tokens) using the same compute budget.
-
-These scaling laws have profound implications for pre-training strategy. Rather than maximizing model size for a given compute budget, practitioners should balance model size and dataset size according to the scaling laws. For a fixed compute budget, training a smaller model on more data typically yields better performance than training a larger model on less data. This insight has driven the trend toward models like LLaMA, Chinchilla, and Mistral that prioritize training tokens over parameter count.
+Empirical scaling laws govern the relationship between compute budget, model size, dataset size, and performance (see Section~\ref{sec:gpt_scaling_laws} for the full treatment). The key insight from the Chinchilla scaling laws (Hoffmann et al., 2022) is that model size and dataset size should scale equally with compute budget: $N_{\text{opt}} \propto C^{0.5}$ and $D_{\text{opt}} \propto C^{0.5}$. This implies GPT-3 175B (trained on 300B tokens) was over-parameterized---a 70B model trained on 1.4T tokens (matching LLaMA-65B) achieves better performance for the same compute. This insight has driven the trend toward models like LLaMA, Chinchilla, and Mistral that prioritize training tokens over parameter count.
 
 \section{Curriculum Learning}
 \label{sec:curriculum_learning}
@@ -422,37 +347,16 @@ The infrastructure requirements include high-bandwidth networking (NVIDIA Infini
 \section{Efficient Pre-training Techniques}
 \label{sec:efficient_pretraining}
 
-\subsection{Mixed Precision Training}
+Large-scale pre-training relies on several key optimizations, covered in detail in Chapter~\ref{chap:training_transformers}:
 
-Mixed precision training represents one of the most impactful optimizations for transformer pre-training, leveraging the FP16 (16-bit floating point) format for most computations while maintaining FP32 (32-bit) master weights for numerical stability. This approach reduces activation memory consumption by approximately 50\% since activations, which often dominate memory usage during training, are stored in the lower-precision format. The memory savings enable larger batch sizes or longer sequences, directly improving training efficiency.
+\begin{itemize}
+    \item \textbf{Mixed precision training} (FP16/BF16 with FP32 master weights): 1.5--2$\times$ speedup, $\sim$42\% memory reduction. Requires loss scaling to prevent gradient underflow.
+    \item \textbf{Gradient checkpointing:} Stores only $O(\sqrt{L})$ activations, recomputing the rest during backward pass. 5--10$\times$ memory reduction at $\sim$33\% slowdown.
+    \item \textbf{ZeRO optimizer:} Partitions optimizer states (Stage 1, 4$\times$ savings), gradients (Stage 2, 8$\times$), and parameters (Stage 3, up to 64$\times$) across data-parallel GPUs.
+    \item \textbf{Pipeline parallelism:} Divides model across GPUs by layers, pipelining micro-batches. With $m = 4p$ micro-batches for $p$ stages, bubble overhead is $\sim$25\%.
+\end{itemize}
 
-Modern GPUs like the NVIDIA A100 provide dedicated Tensor Cores that execute FP16 matrix multiplications at twice the throughput of FP32 operations, yielding training speedups of 1.5-2× in practice. The speedup is less than the theoretical 2× due to memory bandwidth limitations and non-matrix operations that don't benefit from reduced precision. For BERT-base, mixed precision training reduces memory from 13.8 GB to 8.0 GB (42\% reduction) and decreases training time from 4 days to approximately 2.5 days on the same hardware.
-
-However, the reduced precision of FP16 can cause gradient underflow for very small values. To address this, loss scaling is employed: the loss is multiplied by a large factor (typically 1024 or dynamically adjusted) before backpropagation, then gradients are scaled back down before the optimizer step. This effectively shifts the representable range to prevent underflow while maintaining the benefits of reduced precision. Dynamic loss scaling automatically adjusts the scale factor during training, increasing it when no overflow occurs and decreasing it when overflow is detected.
-
-\subsection{Gradient Checkpointing}
-
-Gradient checkpointing trades computation for memory by selectively storing only a subset of activations during the forward pass and recomputing the others during the backward pass. This technique is particularly valuable for training very large models or using very long sequences where activation memory dominates.
-
-For a transformer with $L$ layers, storing all activations requires $O(Lnbd)$ memory where $n$ is sequence length, $b$ is batch size, and $d$ is model dimension. With gradient checkpointing, only activations at checkpoint boundaries are stored (typically every $\sqrt{L}$ layers), reducing memory to $O(\sqrt{L}nbd)$. The recomputation adds approximately 33\% to training time but can reduce activation memory by 5-10×, enabling much larger batch sizes or longer sequences that more than compensate for the slowdown.
-
-For GPT-3 training, gradient checkpointing enabled fitting the model on V100 GPUs with 32 GB memory. Without checkpointing, the activation memory for a single sequence of length 2048 would exceed 60 GB, making training impossible. With checkpointing every 8 layers, activation memory drops to approximately 15 GB per sequence, allowing batch size 2 per GPU. The 33\% slowdown from recomputation is offset by the ability to use 2× larger batch size, resulting in net training speedup.
-
-\subsection{ZeRO Optimizer}
-
-The ZeRO (Zero Redundancy Optimizer) technique, developed by Microsoft, eliminates memory redundancy in data-parallel training by partitioning optimizer states, gradients, and parameters across data-parallel processes. Traditional data parallelism replicates the entire model and optimizer state on each GPU, wasting memory. ZeRO partitions these states while maintaining the computational efficiency of data parallelism.
-
-ZeRO has three stages with increasing memory savings and communication overhead. ZeRO Stage 1 partitions only optimizer states, reducing memory by approximately 4× for Adam optimizer (which stores first and second moments). ZeRO Stage 2 additionally partitions gradients, reducing memory by approximately 8×. ZeRO Stage 3 partitions parameters as well, reducing memory by the data parallelism degree (e.g., 64× for 64 GPUs). The memory savings enable training much larger models on the same hardware.
-
-For training a 175B parameter model like GPT-3, ZeRO Stage 3 across 64 GPUs reduces per-GPU memory from approximately 700 GB (impossible) to approximately 11 GB (feasible). The communication overhead is manageable because parameter partitions are gathered just before use and discarded after, with careful overlapping of communication and computation. DeepSpeed, Microsoft's training framework, implements ZeRO and has been used to train models exceeding 1 trillion parameters.
-
-\subsection{Pipeline Parallelism}
-
-Pipeline parallelism divides the model vertically across layers, with different GPUs processing different layers. This enables training models too large to fit on a single GPU while maintaining high hardware utilization through pipelining. The key challenge is keeping all GPUs busy despite the sequential dependency between layers.
-
-The GPipe approach divides each batch into micro-batches and pipelines their execution across stages. While stage 1 processes micro-batch 2, stage 2 processes micro-batch 1, and so on. This achieves high utilization once the pipeline is full, though there are bubble periods at the start and end of each batch. With $m$ micro-batches and $p$ pipeline stages, the bubble overhead is approximately $\frac{p-1}{m}$. Using $m = 4p$ micro-batches reduces bubble overhead to approximately 25\%.
-
-For GPT-3 training, pipeline parallelism across 8 stages (12 layers per stage) combined with model parallelism within each stage and data parallelism across pipeline replicas achieved approximately 75\% hardware utilization. The pipeline approach enabled training the 175B parameter model on V100 GPUs with 32 GB memory, which would otherwise be impossible. The combination of pipeline parallelism, model parallelism, data parallelism, and ZeRO represents the state-of-the-art for training extremely large models.
+For GPT-3 training, the combination of ZeRO Stage 3, gradient checkpointing, pipeline parallelism (8 stages), and data parallelism achieved $\sim$75\% hardware utilization on V100 GPUs.
 
 \section{Parameter-Efficient Fine-tuning}
 \label{sec:parameter_efficient}
@@ -710,6 +614,8 @@ Analyze transfer learning:
 
 
 \section{Solutions}
+
+Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.
 
 \begin{solution}
 \textbf{Exercise 1: Compare Pre-training Objectives}

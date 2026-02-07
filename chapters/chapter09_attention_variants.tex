@@ -117,34 +117,7 @@ where $B_{ij}$ depends only on $|i-j|$ (bucketed by distance).
 \section{Alternative Attention Scoring Functions}
 \label{sec:scoring_functions}
 
-Beyond scaled dot-product, various scoring functions exist:
-
-\subsection{Additive (Bahdanau)}
-\begin{equation}
-\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
-\end{equation}
-
-\subsection{Multiplicative (Luong)}
-\begin{equation}
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-\end{equation}
-
-\subsection{Scaled Dot-Product (Transformers)}
-\begin{equation}
-\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
-\end{equation}
-
-\subsection{General}
-\begin{equation}
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-\end{equation}
-
-\textbf{Comparison:}
-\begin{itemize}
-    \item \textbf{Additive:} More parameters, handles different dimensions
-    \item \textbf{Dot-product:} Efficient, used in transformers
-    \item \textbf{General:} Flexible but more parameters
-\end{itemize}
+Beyond the scaled dot-product used in transformers, several alternative scoring functions exist---additive (Bahdanau), multiplicative (Luong), and general bilinear forms---each with different trade-offs between expressiveness and computational efficiency. These are defined and compared in Chapter~\ref{chap:attention_fundamentals} (Section~7.3). In practice, scaled dot-product attention dominates in transformer architectures due to its hardware-efficient batched matrix multiplication and strong empirical performance.
 
 \section{Attention Masking}
 \label{sec:attention_masking}
@@ -538,6 +511,8 @@ Compare computational cost of: (1) Additive (Bahdanau) attention, (2) Multiplica
 
 
 \section{Solutions}
+
+Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.
 
 \begin{solution}[Exercise 1]
 \textbf{Cross-attention PyTorch implementation:}

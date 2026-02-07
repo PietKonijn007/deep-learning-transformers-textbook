@@ -216,40 +216,9 @@ where $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)} \in \R^{d_{\text{model}} \times d_k}$ 
 
 \begin{example}[BERT-base Multi-Head Attention]
 \label{ex:bert_mha}
-BERT-base parameters:
-\begin{itemize}
-    \item Model dimension: $d_{\text{model}} = 768$
-    \item Number of heads: $h = 12$
-    \item Dimension per head: $d_k = d_v = 768/12 = 64$
-    \item Sequence length: $n = 512$ (maximum)
-\end{itemize}
+BERT-base uses $d_{\text{model}} = 768$, $h = 12$ heads, $d_k = d_v = 64$ per head. For a single head, the projection $\mW^{Q(i)} \in \R^{768 \times 64}$ maps input $\mX \in \R^{512 \times 768}$ to queries $\mQ^{(i)} \in \R^{512 \times 64}$, and similarly for keys and values. Each head produces an attention matrix $\mA^{(i)} \in \R^{512 \times 512}$---a quadratic cost in sequence length.
 
-\textbf{For single head:}
-\begin{align}
-\mQ^{(i)} &= \mX \mW^{Q(i)} \in \R^{512 \times 64} \quad (\mW^{Q(i)} \in \R^{768 \times 64}) \\
-\mK^{(i)} &= \mX \mW^{K(i)} \in \R^{512 \times 64} \\
-\mV^{(i)} &= \mX \mW^{V(i)} \in \R^{512 \times 64}
-\end{align}
-
-Attention matrix: $\mA^{(i)} \in \R^{512 \times 512}$ (huge!)
-
-\textbf{Concatenate all 12 heads:}
-\begin{equation}
-[\text{head}_1; \ldots; \text{head}_{12}] \in \R^{512 \times 768}
-\end{equation}
-
-\textbf{Output projection:}
-\begin{equation}
-\text{Output} = [\text{head}_1; \ldots; \text{head}_{12}] \mW^O \in \R^{512 \times 768}
-\end{equation}
-where $\mW^O \in \R^{768 \times 768}$.
-
-\textbf{Parameter count:}
-\begin{align}
-\text{QKV projections:} \quad &3h \cdot d_{\text{model}} \cdot d_k = 3 \times 12 \times 768 \times 64 = 1{,}769{,}472 \\
-\text{Output projection:} \quad &d_{\text{model}}^2 = 768^2 = 589{,}824 \\
-\text{Total:} \quad &2{,}359{,}296 \text{ parameters per attention layer}
-\end{align}
+Concatenating all 12 heads yields $\R^{512 \times 768}$, which the output projection $\mW^O \in \R^{768 \times 768}$ maps back to $\R^{512 \times 768}$. The total is $4 \times 768^2 = 2{,}359{,}296$ attention parameters per layer (see Section~\ref{sec:bert_base_analysis} for the full model analysis).
 \end{example}
 
 \subsection{Parallel Computation and Memory Layout}
@@ -487,43 +456,15 @@ In practice, modern deep learning frameworks handle Tensor Core optimization aut
 \section{Memory-Efficient Attention Variants}
 \label{sec:efficient_attention}
 
-The quadratic memory and time complexity of standard attention motivates the development of approximate attention mechanisms that reduce complexity while maintaining most of the modeling power. These variants make different trade-offs between accuracy, efficiency, and implementation complexity.
+The quadratic memory and time complexity of standard attention motivates approximate mechanisms that reduce complexity while maintaining most modeling power. Three main approaches exist:
 
-\subsection{Sparse Attention}
+\begin{itemize}
+    \item \textbf{Sparse attention} restricts each query to a subset of keys (e.g., local window $\pm w$, strided, or random positions), reducing complexity from $O(n^2)$ to $O(ns)$ where $s \ll n$. Accuracy loss is typically $<$1\% for local-context tasks with $w = 512$.
+    \item \textbf{Linear attention} replaces the softmax kernel with a decomposable kernel $\phi(\vq) \cdot \phi(\vk)$, enabling $O(nd^2)$ computation by reordering the matrix multiplications. Accuracy loss is 1--3\% due to imperfect kernel approximation.
+    \item \textbf{Low-rank attention} (e.g., Linformer) projects keys and values to dimension $r \ll n$, giving an attention matrix of shape $n \times r$ instead of $n \times n$. Memory and computation reduce by a factor of $n/r$.
+\end{itemize}
 
-Sparse attention restricts each query to attend to only a subset of keys, reducing the attention matrix from dense $O(n^2)$ to sparse $O(ns)$ where $s \ll n$ is the sparsity pattern size. The challenge is choosing which positions to attend to. Local attention restricts each position to attend only to a window of nearby positions, typically $\pm w$ positions for window size $w$. This captures local context efficiently with $O(nw)$ complexity, but loses long-range dependencies. Strided attention attends to every $k$-th position, allowing long-range connections with $O(n^2/k)$ complexity. Random attention attends to a random subset of positions, providing a probabilistic approximation with $O(ns)$ complexity where $s$ is the number of random positions sampled.
-
-The Sparse Transformer combines local and strided attention in different heads, allowing some heads to capture local patterns while others capture long-range patterns. For sequence length $n$, using $\sqrt{n}$ local positions and $\sqrt{n}$ strided positions gives $O(n\sqrt{n})$ complexity—a significant improvement over $O(n^2)$ for long sequences. Longformer extends this with a combination of local attention (for all positions), global attention (for special tokens like [CLS]), and dilated attention (strided with increasing stride in deeper layers). These patterns are task-specific: document classification might use global attention on the [CLS] token, while question answering might use global attention on question tokens.
-
-The accuracy trade-off depends on the task and sparsity pattern. For tasks requiring primarily local context (e.g., language modeling with local coherence), sparse attention with window size 512 typically loses less than 1\% accuracy compared to full attention. For tasks requiring long-range reasoning (e.g., document-level question answering), the accuracy loss can be 2-5\% unless the sparsity pattern is carefully designed to preserve critical long-range connections. The memory savings are substantial: for sequence length 4096 with window size 512, sparse attention uses $4096 \times 512 = 2{,}097{,}152$ elements instead of $4096^2 = 16{,}777{,}216$ elements, an 8× reduction.
-
-\subsection{Linear Attention}
-
-Linear attention approximates the softmax attention mechanism using kernel methods to achieve $O(nd^2)$ complexity instead of $O(n^2d)$. The key insight is that the attention output can be rewritten using the associative property of matrix multiplication:
-\begin{equation}
-\text{Attention}(\mQ, \mK, \mV) = \text{softmax}(\mQ \mK\transpose) \mV = \frac{\exp(\mQ) (\exp(\mK)\transpose \mV)}{\exp(\mQ) (\exp(\mK)\transpose \mathbf{1})}
-\end{equation}
-where $\exp$ is applied element-wise. By computing $\exp(\mK)\transpose \mV$ first (complexity $O(nd^2)$) and then multiplying by $\exp(\mQ)$ (complexity $O(nd^2)$), we avoid the $O(n^2)$ attention matrix.
-
-The approximation lies in replacing the softmax kernel $\exp(\vq \cdot \vk)$ with a more efficient kernel $\phi(\vq) \cdot \phi(\vk)$ where $\phi$ is a feature map. Common choices include $\phi(\vx) = \text{elu}(\vx) + 1$ (ensuring non-negativity) or random Fourier features. The attention becomes:
-\begin{equation}
-\text{LinearAttn}(\mQ, \mK, \mV) = \frac{\phi(\mQ) (\phi(\mK)\transpose \mV)}{\phi(\mQ) (\phi(\mK)\transpose \mathbf{1})}
-\end{equation}
-This can be computed in $O(nd^2)$ time by first computing $\mS = \phi(\mK)\transpose \mV \in \R^{d \times d}$ (cost $O(nd^2)$), then $\phi(\mQ) \mS$ (cost $O(nd^2)$). The memory requirement is $O(nd)$ for the QKV matrices and $O(d^2)$ for $\mS$, avoiding the $O(n^2)$ attention matrix.
-
-The accuracy trade-off is more significant than for sparse attention. Linear attention typically loses 1-3\% accuracy on language modeling tasks compared to softmax attention, as the kernel approximation does not perfectly capture the softmax distribution. The approximation is particularly poor for distributions with sharp peaks (high attention to a single position), which are common in tasks like copying or attending to specific keywords. However, for tasks where attention is more diffuse, linear attention can be nearly as accurate as softmax attention while being much faster for long sequences. For sequence length 8192, linear attention is approximately 4× faster than standard attention and uses 8× less memory.
-
-\subsection{Low-Rank Attention}
-
-Low-rank attention factorizes the attention matrix as $\mA = \mU \mV\transpose$ where $\mU, \mV \in \R^{n \times r}$ and $r \ll n$ is the rank. This reduces memory from $O(n^2)$ to $O(nr)$ and computation from $O(n^2d)$ to $O(nrd)$. Linformer implements this by projecting keys and values to a lower-dimensional space: $\mK_{\text{proj}} = \mE \mK$ and $\mV_{\text{proj}} = \mF \mV$ where $\mE, \mF \in \R^{r \times n}$ are projection matrices. The attention is then computed as:
-\begin{equation}
-\text{Attention}(\mQ, \mK_{\text{proj}}, \mV_{\text{proj}}) = \text{softmax}(\mQ \mK_{\text{proj}}\transpose) \mV_{\text{proj}}
-\end{equation}
-The attention matrix has shape $n \times r$ instead of $n \times n$, reducing memory and computation.
-
-The projection matrices $\mE$ and $\mF$ can be learned or fixed (e.g., random projections or selecting every $n/r$-th position). Learned projections provide better accuracy but add parameters and require careful initialization. The rank $r$ controls the trade-off: $r = 256$ typically provides good accuracy for sequence lengths up to 4096, while $r = 64$ may suffice for shorter sequences. The accuracy loss is typically 1-2\% for appropriate choice of $r$, as the low-rank approximation captures the dominant patterns in the attention matrix while discarding less important details.
-
-These memory-efficient attention variants are explored in greater depth in Chapter 16, where we discuss their application to long-context transformers and provide implementation details. The key insight is that the $O(n^2)$ complexity of standard attention is not fundamental to the transformer architecture—it is a consequence of the specific attention mechanism used. By carefully approximating or restricting attention, we can build transformers that scale to much longer sequences while maintaining most of the modeling power of full attention.
+These variants are covered in depth in Chapter~9 (attention variants and mechanisms) and Chapter~16 (efficient transformers), including detailed complexity analysis, implementation strategies, and benchmark comparisons.
 
 \section{Exercises}
 
@@ -546,6 +487,8 @@ Compare attention weights with and without positional encoding. Show numerically
 
 
 \section{Solutions}
+
+Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.
 
 \begin{solution}[Exercise 1]
 For GPT-2 ($d_{\text{model}} = 1024$, $h = 16$, $n = 1024$):
