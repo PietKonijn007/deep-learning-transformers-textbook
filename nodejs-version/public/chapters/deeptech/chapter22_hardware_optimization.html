@@ -175,13 +175,13 @@ $$
 <h3>GPU Memory Hierarchy and Optimization</h3>
 <pre class="mermaid">
 graph LR
-    PARAM["Model Params\n W in R^P\n FP16: 2P bytes"] --> HBM["HBM (GPU RAM)\n 40-80 GB\n Bandwidth: 2 TB/s\n Stores: params, grads,\n optimizer states, activations"]
-    HBM --> SRAM["SRAM (On-chip)\n ~20 MB per SM\n Bandwidth: 19 TB/s\n Stores: tiles of Q,K,V\n during FlashAttention"]
+    PARAM["Model Params<br/> W ∈ ℝ^P<br/> FP16: 2P bytes"] --> HBM["HBM (GPU RAM)<br/> 40-80 GB<br/> Bandwidth: 2 TB/s<br/> Stores: params, grads,<br/> optimizer states, activations"]
+    HBM --> SRAM["SRAM (On-chip)<br/> ~20 MB per SM<br/> Bandwidth: 19 TB/s<br/> Stores: tiles of Q,K,V<br/> during FlashAttention"]
 
     subgraph Optim["Memory Optimizations"]
-        MP["Mixed Precision\n FP32 master weights\n FP16 forward/backward\n Saves ~50% memory"]
-        GC["Gradient Checkpointing\n Discard activations\n Recompute in backward\n Saves O(L) memory\n Costs ~33% extra compute"]
-        FSDP["FSDP/ZeRO\n Shard params+grads+opt\n across N GPUs\n Memory: O(P/N) per GPU"]
+        MP["Mixed Precision<br/> FP32 master weights<br/> FP16 forward/backward<br/> Saves ~50% memory"]
+        GC["Gradient Checkpointing<br/> Discard activations<br/> Recompute in backward<br/> Saves O(L) memory<br/> Costs ~33% extra compute"]
+        FSDP["FSDP/ZeRO<br/> Shard params+grads+opt<br/> across N GPUs<br/> Memory: O(P/N) per GPU"]
     end
 
     HBM --> Optim

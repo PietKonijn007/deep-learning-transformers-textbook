@@ -168,17 +168,17 @@ where:
 <pre class="mermaid">
 graph LR
     subgraph TimeStep["Each Timestep t"]
-        XT["Input x_t\n in R^d"] -->|"W_xh in R^h x d"| Z["z_t = W_hh*h_t-1\n + W_xh*x_t + b_h\n in R^h"]
-        HT_prev["Hidden h_t-1\n in R^h"] -->|"W_hh in R^h x h"| Z
-        Z -->|"tanh"| HT["h_t = tanh(z_t)\n in R^h\n STORED: z_t for tanh'\n STORED: h_t-1 for dL/dW_hh\n STORED: x_t for dL/dW_xh"]
-        HT -->|"W_hy in R^k x h\n b_y in R^k"| YT["y_t = W_hy*h_t + b_y\n in R^k"]
+        XT["Input x_t<br/> ∈ ℝ^d"] -->|"W_xh ∈ ℝ^h x d"| Z["z_t = W_hh*h_t-1<br/> + W_xh*x_t + b_h<br/> ∈ ℝ^h"]
+        HT_prev["Hidden h_t-1<br/> ∈ ℝ^h"] -->|"W_hh ∈ ℝ^h x h"| Z
+        Z -->|"tanh"| HT["h_t = tanh(z_t)<br/> ∈ ℝ^h<br/> STORED: z_t for tanh'<br/> STORED: h_t-1 for ∂L/∂W_hh<br/> STORED: x_t for ∂L/∂W_xh"]
+        HT -->|"W_hy ∈ ℝ^k x h<br/> b_y ∈ ℝ^k"| YT["y_t = W_hy*h_t + b_y<br/> ∈ ℝ^k"]
     end
 
     subgraph LSTM_Gates["LSTM Gating (Alternative)"]
-        FG["Forget Gate f_t\n sigma(W_f*[h_t-1,x_t])\n in R^h -- STORED"]
-        IG["Input Gate i_t\n sigma(W_i*[h_t-1,x_t])\n in R^h -- STORED"]
-        OG["Output Gate o_t\n sigma(W_o*[h_t-1,x_t])\n in R^h -- STORED"]
-        CS["Cell State c_t\n f_t . c_t-1 + i_t . c_tilde\n in R^h -- STORED"]
+        FG["Forget Gate f_t<br/> σ(W_f*[h_t-1,x_t])<br/> ∈ ℝ^h -- STORED"]
+        IG["Input Gate i_t<br/> σ(W_i*[h_t-1,x_t])<br/> ∈ ℝ^h -- STORED"]
+        OG["Output Gate o_t<br/> σ(W_o*[h_t-1,x_t])<br/> ∈ ℝ^h -- STORED"]
+        CS["Cell State c_t<br/> f_t . c_t-1 + i_t . c_tilde<br/> ∈ ℝ^h -- STORED"]
     end
 
     style XT fill:#e8f5e9,stroke:#4caf50,color:#000

@@ -182,12 +182,12 @@ The most successful applications of deep learning to real domains follow this pa
 <h3>LLM Agent Architecture</h3>
 <pre class="mermaid">
 graph LR
-    USER["User Query\n text input"] --> LLM["LLM Agent\n Decoder-only Transformer\n Context window: n tokens\n STORED: KV cache\n in R^L x 2 x n x d_k\n per layer"]
-    LLM -->|"Function call\n (tool selection)"| TOOL["Tool Execution\n Code / Search / API\n External memory"]
-    TOOL -->|"Observation\n appended to context"| LLM
-    LLM -->|"Reasoning loop\n until done"| OUT["Final Response\n Generated text"]
+    USER["User Query<br/> text input"] --> LLM["LLM Agent<br/> Decoder-only Transformer<br/> Context window: n tokens<br/> STORED: KV cache<br/> ∈ ℝ^L x 2 x n x d_k<br/> per layer"]
+    LLM -->|"Function call<br/> (tool selection)"| TOOL["Tool Execution<br/> Code / Search / API<br/> External memory"]
+    TOOL -->|"Observation<br/> appended to context"| LLM
+    LLM -->|"Reasoning loop<br/> until done"| OUT["Final Response<br/> Generated text"]
 
-    LLM -->|"KV Cache grows\n O(n * L * d) memory\n per generation step"| KV["KV Cache\n Inference bottleneck\n Quantize to INT8\n for efficiency"]
+    LLM -->|"KV Cache grows<br/> O(n * L * d) memory<br/> per generation step"| KV["KV Cache<br/> Inference bottleneck<br/> Quantize to INT8<br/> for efficiency"]
 
     style USER fill:#e8f5e9,stroke:#4caf50,color:#000
     style LLM fill:#fff3e0,stroke:#ff9800,color:#000

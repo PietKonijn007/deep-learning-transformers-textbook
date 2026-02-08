@@ -181,14 +181,14 @@ $$
 <h3>Vision Transformer (ViT) Forward Pass</h3>
 <pre class="mermaid">
 graph LR
-    IMG["Image I\n in R^H x W x C"] -->|"Split P x P patches"| PAT["N = HW/P^2 patches\n each in R^(P^2*C)"]
-    PAT -->|"W_patch in R^(P^2*C) x d\n b in R^d"| EMB["Patch Embeddings\n in R^N x d\n STORED for dL/dW_patch"]
-    CLS["[CLS] token\n learnable in R^d"] --> CAT["Prepend [CLS]\n in R^(N+1) x d"]
+    IMG["Image I<br/> ∈ ℝ^H x W x C"] -->|"Split P x P patches"| PAT["N = HW/P^2 patches<br/> each ∈ ℝ^(P^2*C)"]
+    PAT -->|"W_patch ∈ ℝ^(P^2*C) x d<br/> b ∈ ℝ^d"| EMB["Patch Embeddings<br/> ∈ ℝ^N x d<br/> STORED for ∂L/∂W_patch"]
+    CLS["[CLS] token<br/> learnable ∈ ℝ^d"] --> CAT["Prepend [CLS]<br/> ∈ ℝ^(N+1) x d"]
     EMB --> CAT
-    POS["Position Emb\n E_pos in R^(N+1) x d"] --> ADD["Add Pos Emb\n in R^(N+1) x d"]
+    POS["Position Emb<br/> E_pos ∈ ℝ^(N+1) x d"] --> ADD["Add Pos Emb<br/> ∈ ℝ^(N+1) x d"]
     CAT --> ADD
-    ADD --> ENC["Transformer Encoder\n x L layers\n MHA + FFN + LN\n STORED per layer:\n activations, attn weights\n Memory: O(L*(N+1)^2 + L*(N+1)*d)"]
-    ENC -->|"[CLS] output"| HEAD["MLP Head\n W in R^d x K\n Output in R^K"]
+    ADD --> ENC["Transformer Encoder<br/> x L layers<br/> MHA + FFN + LN<br/> STORED per layer:<br/> activations, attn weights<br/> Memory: O(L*(N+1)^2 + L*(N+1)*d)"]
+    ENC -->|"[CLS] output"| HEAD["MLP Head<br/> W ∈ ℝ^d x K<br/> Output ∈ ℝ^K"]
 
     style IMG fill:#e8f5e9,stroke:#4caf50,color:#000
     style PAT fill:#e3f2fd,stroke:#2196f3,color:#000

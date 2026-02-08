@@ -208,13 +208,13 @@ with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \tim
 <h3>Transformer Encoder Layer Forward Pass</h3>
 <pre class="mermaid">
 graph LR
-    X["Input X\n in R^n x d_model"] --> MHA["Multi-Head\n Self-Attention\n STORED: Q,K,V,\n attn_weights\n for backprop"]
-    MHA --> ADD1["Residual Add\n X + MHA(X)"]
-    ADD1 --> LN1["LayerNorm\n in R^n x d_model\n STORED: mean, var\n for backprop"]
-    LN1 -->|"W1 in R^d_model x d_ff\n b1 in R^d_ff"| FFN1["Linear + ReLU\n ReLU(W1*x + b1)\n in R^n x d_ff\n STORED: pre-ReLU\n for backprop"]
-    FFN1 -->|"W2 in R^d_ff x d_model\n b2 in R^d_model"| FFN2["Linear\n W2*h + b2\n in R^n x d_model\n STORED: h for dL/dW2"]
-    FFN2 --> ADD2["Residual Add\n LN1 + FFN"]
-    ADD2 --> LN2["LayerNorm\n Output in R^n x d_model\n STORED: mean, var"]
+    X["Input X<br/> ∈ ℝ^n x d_model"] --> MHA["Multi-Head<br/> Self-Attention<br/> STORED: Q,K,V,<br/> attn_weights<br/> for backprop"]
+    MHA --> ADD1["Residual Add<br/> X + MHA(X)"]
+    ADD1 --> LN1["LayerNorm<br/> ∈ ℝ^n x d_model<br/> STORED: mean, var<br/> for backprop"]
+    LN1 -->|"W1 ∈ ℝ^d_model x d_ff<br/> b1 ∈ ℝ^d_ff"| FFN1["Linear + ReLU<br/> ReLU(W1*x + b1)<br/> ∈ ℝ^n x d_ff<br/> STORED: pre-ReLU<br/> for backprop"]
+    FFN1 -->|"W2 ∈ ℝ^d_ff x d_model<br/> b2 ∈ ℝ^d_model"| FFN2["Linear<br/> W2*h + b2<br/> ∈ ℝ^n x d_model<br/> STORED: h for ∂L/∂W2"]
+    FFN2 --> ADD2["Residual Add<br/> LN1 + FFN"]
+    ADD2 --> LN2["LayerNorm<br/> Output ∈ ℝ^n x d_model<br/> STORED: mean, var"]
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
     style MHA fill:#fff3e0,stroke:#ff9800,color:#000

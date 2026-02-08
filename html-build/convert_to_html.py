@@ -364,9 +364,45 @@ def convert_latex_to_html(latex_content):
     )
 
     # Convert Mermaid diagram placeholders to HTML
+    def enhance_mermaid_for_html(code):
+        """Enhance mermaid code for HTML: line breaks and math symbols."""
+        # 1. Replace literal \n (backslash+n from LaTeX verbatim) with <br/>
+        code = code.replace('\\n', '<br/>')
+
+        # 2. Partial derivatives FIRST (removes _ before Greek names, enabling step 4)
+        code = re.sub(r'dL/d_?', '∂L/∂', code)
+
+        # 3. Hat notation (before Greek, since _hat contains no Greek)
+        code = code.replace('y_hat', 'ŷ')
+        code = code.replace('x_hat', 'x̂')
+        code = code.replace('p_hat', 'p̂')
+
+        # 4. Greek letters → Unicode (longer names first to avoid partial matches)
+        greek = [
+            ('epsilon', 'ε'), ('lambda', 'λ'), ('sigma', 'σ'),
+            ('theta', 'θ'), ('alpha', 'α'), ('gamma', 'γ'),
+            ('delta', 'δ'), ('omega', 'ω'), ('beta', 'β'),
+            ('phi', 'φ'), ('psi', 'ψ'), ('tau', 'τ'),
+            ('eta', 'η'), ('mu', 'μ'), ('pi', 'π'),
+        ]
+        for name, sym in greek:
+            code = re.sub(r'\b' + name + r'\b', sym, code)
+
+        # 5. Dimension notation
+        code = code.replace(' in R^', ' ∈ ℝ^')
+        code = code.replace(' in N^', ' ∈ ℕ^')
+        code = re.sub(r'(?<!\w)R\^', 'ℝ^', code)
+        code = re.sub(r'(?<!\w)N\^', 'ℕ^', code)
+
+        # 6. Square root
+        code = code.replace('sqrt(', '√(')
+
+        return code
+
     def convert_mermaid_placeholder(match):
         caption = match.group(1) or ''
         mermaid_code = match.group(2).strip()
+        mermaid_code = enhance_mermaid_for_html(mermaid_code)
         caption_html = f'\n<p class="diagram-caption">{caption}</p>' if caption else ''
         title_html = f'<h3>{caption}</h3>\n' if caption else ''
         return (f'<div class="architecture-diagram">\n{title_html}'

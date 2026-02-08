@@ -263,14 +263,14 @@ $$
 <h3>Multi-Head Self-Attention Data Flow</h3>
 <pre class="mermaid">
 graph LR
-    X["Input X\n in R^n x d_model"] -->|"W_Q^i in R^d_model x d_k\n per head"| Q["Q_i = X*W_Q^i\n in R^n x d_k\n STORED: X for dL/dW_Q"]
-    X -->|"W_K^i in R^d_model x d_k"| K["K_i = X*W_K^i\n in R^n x d_k"]
-    X -->|"W_V^i in R^d_model x d_v"| V["V_i = X*W_V^i\n in R^n x d_v"]
-    Q --> ATT["Attention(Q_i,K_i,V_i)\n softmax(Q_i*K_i^T/sqrt(d_k))*V_i\n head_i in R^n x d_v\n h heads in parallel\n STORED: attn weights per head"]
+    X["Input X<br/> ∈ ℝ^n x d_model"] -->|"W_Q^i ∈ ℝ^d_model x d_k<br/> per head"| Q["Q_i = X*W_Q^i<br/> ∈ ℝ^n x d_k<br/> STORED: X for ∂L/∂W_Q"]
+    X -->|"W_K^i ∈ ℝ^d_model x d_k"| K["K_i = X*W_K^i<br/> ∈ ℝ^n x d_k"]
+    X -->|"W_V^i ∈ ℝ^d_model x d_v"| V["V_i = X*W_V^i<br/> ∈ ℝ^n x d_v"]
+    Q --> ATT["Attention(Q_i,K_i,V_i)<br/> softmax(Q_i*K_i^T/√(d_k))*V_i<br/> head_i ∈ ℝ^n x d_v<br/> h heads in parallel<br/> STORED: attn weights per head"]
     K --> ATT
     V --> ATT
-    ATT -->|"Concat h heads"| CAT["[head_1;...;head_h]\n in R^n x h*d_v"]
-    CAT -->|"W_O in R^(h*d_v) x d_model"| OUT["Output\n in R^n x d_model\n STORED: concat for dL/dW_O"]
+    ATT -->|"Concat h heads"| CAT["[head_1;...;head_h]<br/> ∈ ℝ^n x h*d_v"]
+    CAT -->|"W_O ∈ ℝ^(h*d_v) x d_model"| OUT["Output<br/> ∈ ℝ^n x d_model<br/> STORED: concat for ∂L/∂W_O"]
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
     style Q fill:#e3f2fd,stroke:#2196f3,color:#000

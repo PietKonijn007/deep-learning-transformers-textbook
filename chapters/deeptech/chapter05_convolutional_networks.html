@@ -157,12 +157,12 @@ $$
 <h3>CNN Forward Pass with Memory</h3>
 <pre class="mermaid">
 graph LR
-    X["Input\n X in R^H x W x C_in"] -->|"Filters K in R^k x k x C_in x C_out\n bias b in R^C_out"| CONV["Conv2D\n (X * K + b)\n Output in R^H' x W' x C_out\n STORED: X for dL/dK"]
-    CONV -->|"ReLU"| ACT["Activation\n ReLU(conv)\n in R^H' x W' x C_out\n STORED: conv for ReLU'"]
-    ACT -->|"stride s, pool size p"| POOL["MaxPool\n in R^H'' x W'' x C_out\n STORED: max indices\n for backprop routing"]
-    POOL -->|"Flatten"| FLAT["Flat vector\n in R^(H''*W''*C_out)"]
-    FLAT -->|"W_fc in R^K x D\n b_fc in R^K"| FC["FC Layer\n z = W_fc * flat + b_fc\n in R^K\n STORED: flat for dL/dW"]
-    FC -->|"softmax"| OUT["Output\n y_hat in R^K"]
+    X["Input<br/> X ∈ ℝ^H x W x C_in"] -->|"Filters K ∈ ℝ^k x k x C_in x C_out<br/> bias b ∈ ℝ^C_out"| CONV["Conv2D<br/> (X * K + b)<br/> Output ∈ ℝ^H' x W' x C_out<br/> STORED: X for ∂L/∂K"]
+    CONV -->|"ReLU"| ACT["Activation<br/> ReLU(conv)<br/> ∈ ℝ^H' x W' x C_out<br/> STORED: conv for ReLU'"]
+    ACT -->|"stride s, pool size p"| POOL["MaxPool<br/> ∈ ℝ^H'' x W'' x C_out<br/> STORED: max indices<br/> for backprop routing"]
+    POOL -->|"Flatten"| FLAT["Flat vector<br/> ∈ ℝ^(H''*W''*C_out)"]
+    FLAT -->|"W_fc ∈ ℝ^K x D<br/> b_fc ∈ ℝ^K"| FC["FC Layer<br/> z = W_fc * flat + b_fc<br/> ∈ ℝ^K<br/> STORED: flat for ∂L/∂W"]
+    FC -->|"softmax"| OUT["Output<br/> ŷ ∈ ℝ^K"]
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
     style CONV fill:#fff3e0,stroke:#ff9800,color:#000

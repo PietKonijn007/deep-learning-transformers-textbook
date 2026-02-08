@@ -171,12 +171,12 @@ GPT uses transformer decoder blocks with:
 <h3>GPT Decoder-Only Architecture</h3>
 <pre class="mermaid">
 graph LR
-    TOK["Input tokens\n x_1..x_t\n in N^t"] -->|"W_emb in R^V x d\n + W_pos in R^n_max x d"| EMB["Token + Pos Emb\n in R^t x d\n STORED for backprop"]
-    EMB --> DEC["Decoder Layers x L\n Each layer:\n 1. Masked Self-Attn\n (causal mask: upper tri = -inf)\n STORED: Q,K,V,attn,mask\n 2. FFN: W1 in R^d x 4d,\n W2 in R^4d x d\n STORED: activations"]
-    DEC -->|"W_head in R^d x V\n (often tied with W_emb)"| LM["LM Head\n logits in R^t x V"]
-    LM -->|"softmax"| PRED["P(x_t+1 | x_1..x_t)\n in R^V\n STORED: logits for\n cross-entropy backprop"]
+    TOK["Input tokens<br/> x_1..x_t<br/> ∈ ℕ^t"] -->|"W_emb ∈ ℝ^V x d<br/> + W_pos ∈ ℝ^n_max x d"| EMB["Token + Pos Emb<br/> ∈ ℝ^t x d<br/> STORED for backprop"]
+    EMB --> DEC["Decoder Layers x L<br/> Each layer:<br/> 1. Masked Self-Attn<br/> (causal mask: upper tri = -inf)<br/> STORED: Q,K,V,attn,mask<br/> 2. FFN: W1 ∈ ℝ^d x 4d,<br/> W2 ∈ ℝ^4d x d<br/> STORED: activations"]
+    DEC -->|"W_head ∈ ℝ^d x V<br/> (often tied with W_emb)"| LM["LM Head<br/> logits ∈ ℝ^t x V"]
+    LM -->|"softmax"| PRED["P(x_t+1 | x_1..x_t)<br/> ∈ ℝ^V<br/> STORED: logits for<br/> cross-entropy backprop"]
 
-    PRED -.->|"Backprop:\n dL/dlogits --> dL/dW_head\n --> through L decoder layers\n peak memory: O(L*t*d + L*t^2)"| EMB
+    PRED -.->|"Backprop:<br/> ∂L/∂logits --> ∂L/∂W_head<br/> --> through L decoder layers<br/> peak memory: O(L*t*d + L*t^2)"| EMB
 
     style TOK fill:#e8f5e9,stroke:#4caf50,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000

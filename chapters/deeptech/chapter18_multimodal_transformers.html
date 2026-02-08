@@ -158,14 +158,14 @@
 <h3>Multimodal Transformer Fusion</h3>
 <pre class="mermaid">
 graph LR
-    TXT["Text tokens\n in N^n_t"] -->|"W_text in R^V x d"| TE["Text Emb\n in R^n_t x d"]
-    IMG["Image patches\n in R^N x (P^2*C)"] -->|"W_img in R^(P^2*C) x d"| IE["Image Emb\n in R^N x d"]
+    TXT["Text tokens<br/> ∈ ℕ^n_t"] -->|"W_text ∈ ℝ^V x d"| TE["Text Emb<br/> ∈ ℝ^n_t x d"]
+    IMG["Image patches<br/> ∈ ℝ^N x (P^2*C)"] -->|"W_img ∈ ℝ^(P^2*C) x d"| IE["Image Emb<br/> ∈ ℝ^N x d"]
 
-    TE --> FUSE["Concatenate\n [text; image]\n in R^(n_t+N) x d"]
+    TE --> FUSE["Concatenate<br/> [text; image]<br/> ∈ ℝ^(n_t+N) x d"]
     IE --> FUSE
-    FUSE --> ENC["Joint Transformer\n x L layers\n Cross-modal attention\n STORED per layer:\n all activations\n Memory: O(L*(n_t+N)^2)"]
-    ENC --> TOUT["Text output\n in R^n_t x d"]
-    ENC --> IOUT["Image output\n in R^N x d"]
+    FUSE --> ENC["Joint Transformer<br/> x L layers<br/> Cross-modal attention<br/> STORED per layer:<br/> all activations<br/> Memory: O(L*(n_t+N)^2)"]
+    ENC --> TOUT["Text output<br/> ∈ ℝ^n_t x d"]
+    ENC --> IOUT["Image output<br/> ∈ ℝ^N x d"]
 
     style TXT fill:#e8f5e9,stroke:#4caf50,color:#000
     style IMG fill:#e3f2fd,stroke:#2196f3,color:#000

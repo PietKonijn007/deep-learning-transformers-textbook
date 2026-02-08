@@ -167,11 +167,11 @@ A <strong>random variable</strong> $X$ is a function that maps outcomes from a s
 <h3>Cross-Entropy Loss in Classification</h3>
 <pre class="mermaid">
 graph LR
-    X["Input x\n in R^d"] -->|"Model f(x;theta)"| LOGITS["Logits z\n in R^K\n STORED for backprop"]
-    LOGITS -->|"softmax"| P["Predicted P(y|x)\n p_k = exp(z_k)/sum\n in R^K\n STORED: p for gradient"]
-    Y["True label y\n one-hot in R^K"] --> CE["Cross-Entropy\n H(y,p) = -sum(y_k log p_k)\n = -log p_y\n scalar"]
+    X["Input x<br/> ∈ ℝ^d"] -->|"Model f(x;θ)"| LOGITS["Logits z<br/> ∈ ℝ^K<br/> STORED for backprop"]
+    LOGITS -->|"softmax"| P["Predicted P(y|x)<br/> p_k = exp(z_k)/sum<br/> ∈ ℝ^K<br/> STORED: p for gradient"]
+    Y["True label y<br/> one-hot ∈ ℝ^K"] --> CE["Cross-Entropy<br/> H(y,p) = -sum(y_k log p_k)<br/> = -log p_y<br/> scalar"]
     P --> CE
-    CE -.->|"dL/dz_k = p_k - y_k\n simple gradient"| LOGITS
+    CE -.->|"∂L/∂z_k = p_k - y_k<br/> simple gradient"| LOGITS
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
     style LOGITS fill:#fff3e0,stroke:#ff9800,color:#000

@@ -157,14 +157,14 @@
 <pre class="mermaid">
 graph LR
     subgraph Compute["FLOPs per Layer"]
-        SA["Self-Attention\n Q*K^T: O(n^2 * d_k)\n A*V: O(n^2 * d_v)\n Projections: O(n * d^2)"]
-        FF["Feed-Forward\n W1: O(n * d * d_ff)\n W2: O(n * d_ff * d)\n Total: O(n * d * d_ff)"]
+        SA["Self-Attention<br/> Q*K^T: O(n^2 * d_k)<br/> A*V: O(n^2 * d_v)<br/> Projections: O(n * d^2)"]
+        FF["Feed-Forward<br/> W1: O(n * d * d_ff)<br/> W2: O(n * d_ff * d)<br/> Total: O(n * d * d_ff)"]
     end
 
     subgraph Memory["Memory per Layer"]
-        AM["Attention Matrix\n n x n floats\n O(n^2) memory\n DOMINATES for long seq"]
-        WM["Weight Memory\n W_Q,W_K,W_V,W_O: 4*d^2\n W1,W2: 2*d*d_ff\n O(d^2) per layer"]
-        ACT["Activation Memory\n Stored for backprop:\n X, Q, K, V, A,\n FFN intermediate\n O(n*d + n^2) per layer"]
+        AM["Attention Matrix<br/> n x n floats<br/> O(n^2) memory<br/> DOMINATES for long seq"]
+        WM["Weight Memory<br/> W_Q,W_K,W_V,W_O: 4*d^2<br/> W1,W2: 2*d*d_ff<br/> O(d^2) per layer"]
+        ACT["Activation Memory<br/> Stored for backprop:<br/> X, Q, K, V, A,<br/> FFN intermediate<br/> O(n*d + n^2) per layer"]
     end
 
     SA --> AM

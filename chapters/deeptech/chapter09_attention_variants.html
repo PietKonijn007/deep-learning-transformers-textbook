@@ -168,14 +168,14 @@ $$\begin{align}
 <pre class="mermaid">
 graph LR
     subgraph SelfAttn["Self-Attention"]
-        SX["X in R^n x d"] -->|"W_Q, W_K, W_V"| SQ["Q,K,V all\n from X\n Memory: O(n^2)"]
-        SQ --> SOUT["Output in R^n x d"]
+        SX["X ∈ ℝ^n x d"] -->|"W_Q, W_K, W_V"| SQ["Q,K,V all<br/> from X<br/> Memory: O(n^2)"]
+        SQ --> SOUT["Output ∈ ℝ^n x d"]
     end
 
     subgraph CrossAttn["Cross-Attention (Encoder-Decoder)"]
-        DX["Decoder X_dec\n in R^m x d"] -->|"W_Q in R^d x d_k"| CQ["Q = X_dec * W_Q\n in R^m x d_k"]
-        EX["Encoder X_enc\n in R^n x d"] -->|"W_K in R^d x d_k\n W_V in R^d x d_v"| CKV["K in R^n x d_k\n V in R^n x d_v"]
-        CQ --> COUT["Attn(Q,K,V)\n in R^m x d_v\n Memory: O(m*n)\n STORED: Q,K,V,attn_weights"]
+        DX["Decoder X_dec<br/> ∈ ℝ^m x d"] -->|"W_Q ∈ ℝ^d x d_k"| CQ["Q = X_dec * W_Q<br/> ∈ ℝ^m x d_k"]
+        EX["Encoder X_enc<br/> ∈ ℝ^n x d"] -->|"W_K ∈ ℝ^d x d_k<br/> W_V ∈ ℝ^d x d_v"| CKV["K ∈ ℝ^n x d_k<br/> V ∈ ℝ^n x d_v"]
+        CQ --> COUT["Attn(Q,K,V)<br/> ∈ ℝ^m x d_v<br/> Memory: O(m*n)<br/> STORED: Q,K,V,attn_weights"]
         CKV --> COUT
     end
 

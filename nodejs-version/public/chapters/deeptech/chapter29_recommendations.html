@@ -180,11 +180,11 @@ where <code>encoder</code> is a transformer, RNN, or other sequential model that
 <h3>Sequential Recommendation Transformer</h3>
 <pre class="mermaid">
 graph LR
-    HIST["User history\n item_1..item_t\n IDs in N^t"] -->|"W_item in R^I x d\n + W_pos in R^n x d"| EMB["Item Emb\n in R^t x d"]
-    EMB --> ENC["Transformer Encoder\n Causal self-attn\n x L layers\n STORED: attn weights\n per layer for backprop"]
-    ENC -->|"Last position output"| REP["User repr\n in R^d"]
-    REP -->|"dot product with\n all item embs\n W_item^T in R^d x I"| SCORE["Scores\n in R^I"]
-    SCORE -->|"softmax"| TOP["Top-K items\n Recommendations"]
+    HIST["User history<br/> item_1..item_t<br/> IDs ∈ ℕ^t"] -->|"W_item ∈ ℝ^I x d<br/> + W_pos ∈ ℝ^n x d"| EMB["Item Emb<br/> ∈ ℝ^t x d"]
+    EMB --> ENC["Transformer Encoder<br/> Causal self-attn<br/> x L layers<br/> STORED: attn weights<br/> per layer for backprop"]
+    ENC -->|"Last position output"| REP["User repr<br/> ∈ ℝ^d"]
+    REP -->|"dot product with<br/> all item embs<br/> W_item^T ∈ ℝ^d x I"| SCORE["Scores<br/> ∈ ℝ^I"]
+    SCORE -->|"softmax"| TOP["Top-K items<br/> Recommendations"]
 
     style HIST fill:#e8f5e9,stroke:#4caf50,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000

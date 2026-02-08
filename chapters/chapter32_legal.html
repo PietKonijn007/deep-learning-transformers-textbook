@@ -172,11 +172,11 @@ Legal documents follow distinct structural patterns depending on their type. Sta
 <h3>Legal Document Transformer</h3>
 <pre class="mermaid">
 graph LR
-    DOC["Legal Document\n n >> 4096 tokens"] -->|"Chunk into\n segments of c"| CHUNKS["Segments\n n/c chunks\n each in N^c"]
-    CHUNKS -->|"W_emb in R^V x d"| EMB["Segment Emb\n in R^c x d per chunk"]
-    EMB --> LOCAL["Local Encoder\n Self-attn per chunk\n O(c^2) memory"]
-    LOCAL --> GLOBAL["Global Encoder\n Cross-chunk attn\n summary tokens\n STORED: all activations"]
-    GLOBAL -->|"Task head"| OUT["Contract analysis\n Clause classification\n in R^K"]
+    DOC["Legal Document<br/> n >> 4096 tokens"] -->|"Chunk into<br/> segments of c"| CHUNKS["Segments<br/> n/c chunks<br/> each ∈ ℕ^c"]
+    CHUNKS -->|"W_emb ∈ ℝ^V x d"| EMB["Segment Emb<br/> ∈ ℝ^c x d per chunk"]
+    EMB --> LOCAL["Local Encoder<br/> Self-attn per chunk<br/> O(c^2) memory"]
+    LOCAL --> GLOBAL["Global Encoder<br/> Cross-chunk attn<br/> summary tokens<br/> STORED: all activations"]
+    GLOBAL -->|"Task head"| OUT["Contract analysis<br/> Clause classification<br/> ∈ ℝ^K"]
 
     style DOC fill:#e8f5e9,stroke:#4caf50,color:#000
     style LOCAL fill:#e3f2fd,stroke:#2196f3,color:#000
