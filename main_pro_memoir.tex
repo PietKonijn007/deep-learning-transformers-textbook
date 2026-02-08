@@ -1,0 +1,607 @@
+\documentclass[10pt,twoside,a5paper]{memoir}
+
+% Modern font setup - Latin Modern (clean, modern default)
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}  % Latin Modern fonts - modern, clean, excellent readability
+
+% Essential packages only
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs} % For professional tables
+\usepackage{tabularx} % For flexible table columns
+\usepackage{adjustbox} % For scaling tables to fit
+\usepackage{float} % For H float specifier (here, exactly)
+% \usepackage[final]{microtype} % Better typography - disabled due to font issues
+\usepackage{hyperref}
+\hypersetup{
+colorlinks=true,
+linkcolor=black,
+citecolor=blue,
+urlcolor=blue,
+hidelinks
+}
+
+% Table settings for A5 format
+\setlength{\tabcolsep}{4pt}  % Reduce column padding
+\renewcommand{\arraystretch}{1.1}  % Slightly increase row height for readability
+
+% Automatically scale wide tables to fit text width
+% Note: This doesn't apply to tables in float environments
+\let\oldtabular\tabular
+\let\endoldtabular\endtabular
+\renewenvironment{tabular}[1]{%
+  \begin{adjustbox}{max width=\textwidth}%
+  \begin{oldtabular}{#1}%
+}{%
+  \end{oldtabular}%
+  \end{adjustbox}%
+}
+
+% Completely disable table and figure floats inside mdframed environments
+% This prevents "Not in outer par mode" errors and side-by-side placement
+\makeatletter
+\AtBeginEnvironment{mdframed}{%
+  \renewenvironment{table}[1][]{%
+    \par\vspace{8pt}\noindent\ignorespaces
+  }{%
+    \par\vspace{8pt}\ignorespacesafterend
+  }%
+  \renewenvironment{figure}[1][]{%
+    \par\vspace{8pt}\noindent\ignorespaces
+  }{%
+    \par\vspace{8pt}\ignorespacesafterend
+  }%
+}
+\makeatother
+
+% Lulu Print-Ready Layout Configuration
+% Stock size: A5 (5.83" x 8.27") + 0.125" bleed on all sides = 6.08" x 8.52"
+\setstocksize{8.52in}{6.08in}
+% Trim size: Standard A5 (148mm x 210mm = 5.83" x 8.27")
+\settrimmedsize{8.27in}{5.83in}{*}
+% Trim marks: 0.125" bleed on all sides
+\settrims{0.125in}{0.125in}
+
+% Margins for double-sided printing with gutter
+% For 696 pages, gutter = 0.75" (per Lulu guide)
+% Inner margin (binding side): 0.5" base + 0.75" gutter = 1.25"
+% Outer margin: 0.7" (for readability and chapter numbers)
+% Top margin: 0.7"
+% Bottom margin: 0.8"
+\setlrmarginsandblock{1.25in}{0.7in}{*}  % inner, outer
+\setulmarginsandblock{0.7in}{0.8in}{*}   % upper, lower
+\setheadfoot{\baselineskip}{2\baselineskip}
+\setheaderspaces{*}{2\baselineskip}{*}
+\checkandfixthelayout
+
+% Lulu compliance: Increase minimum font sizes
+% Prevent fonts smaller than 8pt (Lulu requirement)
+% Format: \DeclareMathSizes{text}{display}{script}{scriptscript}
+\DeclareMathSizes{10}{10}{8}{8}  % at 10pt base (normalsize)
+\DeclareMathSizes{9}{9}{8}{8}    % at 9pt (\small)
+\DeclareMathSizes{8}{8}{8}{8}    % at 8pt (\footnotesize)
+\DeclareMathSizes{12}{12}{8}{8}  % at 12pt (\large)
+\DeclareMathSizes{14.4}{14.4}{8}{8}  % at 14.4pt (\Large)
+
+% Optimized spacing
+\setSingleSpace{0.88}
+\SingleSpacing
+\setlength{\parskip}{0pt}
+\setlength{\parindent}{1em}
+
+% Reduce section spacing
+\setbeforesecskip{-1.5ex plus -0.5ex minus -0.2ex}
+\setaftersecskip{0.9ex plus 0.2ex}
+\setbeforesubsecskip{-1.2ex plus -0.5ex minus -0.2ex}
+\setaftersubsecskip{0.7ex plus 0.2ex}
+
+% Custom chapter style for A5 with left-aligned numbers
+\makechapterstyle{a5custom}{%
+  \setlength{\beforechapskip}{0pt}
+  \setlength{\afterchapskip}{40pt}
+  \renewcommand*{\chapnamefont}{\normalfont\Large\sffamily}
+  \renewcommand*{\chapnumfont}{\normalfont\huge\sffamily\bfseries}
+  \renewcommand*{\chaptitlefont}{\normalfont\huge\sffamily\bfseries}
+  \renewcommand*{\printchaptername}{}
+  \renewcommand*{\chapternamenum}{}
+  \renewcommand*{\printchapternum}{%
+    \chapnumfont\thechapter\quad}% Left-aligned with space after
+  \renewcommand*{\afterchapternum}{}
+  \renewcommand*{\printchaptertitle}[1]{%
+    \chaptitlefont ##1}
+}
+\chapterstyle{a5custom}
+
+% Modern section styling - scaled for A5
+\setsecheadstyle{\large\bfseries\sffamily}
+\setsubsecheadstyle{\normalsize\bfseries\sffamily}
+\setsubsubsecheadstyle{\normalsize\bfseries\sffamily}
+
+% Page style with running headers
+\pagestyle{ruled}
+
+\usepackage{xcolor}
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{listings}
+
+% Algorithm package with proper styling
+\usepackage[ruled,linesnumbered,vlined]{algorithm2e}
+\usepackage{algorithmic} % For algorithmic environment used in some chapters
+
+% Lulu compliance: Set minimum 8pt fonts for all algorithm elements
+\SetAlFnt{\small}  % Algorithm text at 9pt (small)
+\SetAlCapFnt{\normalsize}  % Caption at 10pt
+\SetAlCapNameFnt{\normalsize}  % "Algorithm" label at 10pt
+
+\SetAlgoLined
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+\SetAlCapSty{textbf}
+\SetAlgoVlined
+\SetNlSty{textbf}{}{}  % Line numbers
+\SetNlSkip{0.3em}  % Minimal spacing
+\DontPrintSemicolon
+
+% Style algorithm boxes - minimal settings for A5
+\SetAlgoSkip{smallskip}
+\SetInd{0.2em}{0.4em}  % Minimal indentation
+\SetAlgoInsideSkip{smallskip}
+
+% Minimal margins for A5
+\setlength{\algomargin}{0.2em}
+\setlength{\algoheightrule}{0.5pt}
+\setlength{\algotitleheightrule}{0.5pt}
+
+% Reduce algorithm line width to fit A5 page
+\AtBeginEnvironment{algorithm}{%
+  \setlength{\hsize}{0.95\textwidth}% Reduce to 95% of text width
+  \small% Use 9pt font
+}
+
+% Custom algorithm box styling
+\makeatletter
+\renewcommand{\@algocf@capt@ruled}{above}
+\renewcommand{\algocf@caption@ruled}{\box\algocf@capbox\vskip\AlCapSkip}
+\makeatother
+
+% Define algorithm frame color
+\definecolor{algframe}{RGB}{44,62,80}
+\definecolor{algbg}{RGB}{248,249,250}
+
+% Define colors matching the web version
+\definecolor{defgreen}{RGB}{76,175,80}
+\definecolor{defgreenlight}{RGB}{76,175,80}
+\definecolor{thmblue}{RGB}{33,150,243}
+\definecolor{thmbluelight}{RGB}{33,150,243}
+\definecolor{exorange}{RGB}{255,152,0}
+\definecolor{exorangelight}{RGB}{255,152,0}
+\definecolor{keypurple}{RGB}{156,39,176}
+\definecolor{keypurplelight}{RGB}{156,39,176}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+
+% Configure listings for code blocks - scaled for A5
+\lstset{
+basicstyle=\ttfamily\footnotesize,  % Uses Source Code Pro
+backgroundcolor=\color{codebg},
+frame=single,
+framerule=0pt,
+rulecolor=\color{codeframe},
+numbers=none,
+breaklines=true,
+breakatwhitespace=true,
+tabsize=4,
+showstringspaces=false,
+captionpos=b,
+xleftmargin=8pt,
+xrightmargin=8pt,
+framexleftmargin=8pt,
+framexrightmargin=8pt,
+framextopmargin=5pt,
+framexbottommargin=5pt,
+columns=flexible,
+keepspaces=true
+}
+
+% Python-specific settings with Source Code Pro
+\lstdefinestyle{python}{
+language=Python,
+basicstyle=\ttfamily\footnotesize,  % Source Code Pro
+keywordstyle=\color{blue}\bfseries,
+commentstyle=\color{gray}\itshape,
+stringstyle=\color{red},
+showstringspaces=false,
+morekeywords={self, True, False, None}
+}
+
+% Theorem environments
+\theoremstyle{definition}
+\newtheorem{definitioninner}{Definition}[chapter]
+\newtheorem{exampleinner}{Example}[chapter]
+\theoremstyle{plain}
+\newtheorem{theoreminner}{Theorem}[chapter]
+\newtheorem{lemmainner}{Lemma}[chapter]
+\newtheorem{corollaryinner}{Corollary}[chapter]
+\newtheorem{propositioninner}{Proposition}[chapter]
+\newtheorem{keypointinner}{Key Point}[chapter]
+
+% Styled environments with colored boxes - scaled for A5
+\newenvironment{definition}[1][]{%
+\begin{mdframed}[
+backgroundcolor=defgreenlight!10,
+linecolor=defgreen,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\vspace{-0.8\baselineskip}%
+\begin{definitioninner}[#1]
+}{%
+\end{definitioninner}
+\vspace{-0.5\baselineskip}%
+\end{mdframed}
+}
+
+\newenvironment{theorem}[1][]{%
+\begin{mdframed}[
+backgroundcolor=thmbluelight!10,
+linecolor=thmblue,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{theoreminner}[#1]
+}{%
+\end{theoreminner}
+\end{mdframed}
+}
+
+\newenvironment{lemma}[1][]{%
+\begin{mdframed}[
+backgroundcolor=thmbluelight!10,
+linecolor=thmblue,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{lemmainner}[#1]
+}{%
+\end{lemmainner}
+\end{mdframed}
+}
+
+\newenvironment{corollary}[1][]{%
+\begin{mdframed}[
+backgroundcolor=thmbluelight!10,
+linecolor=thmblue,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{corollaryinner}[#1]
+}{%
+\end{corollaryinner}
+\end{mdframed}
+}
+
+\newenvironment{proposition}[1][]{%
+\begin{mdframed}[
+backgroundcolor=thmbluelight!10,
+linecolor=thmblue,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{propositioninner}[#1]
+}{%
+\end{propositioninner}
+\end{mdframed}
+}
+
+\newenvironment{example}[1][]{%
+\begin{mdframed}[
+backgroundcolor=exorangelight!10,
+linecolor=exorange,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{exampleinner}[#1]
+}{%
+\end{exampleinner}
+\end{mdframed}
+}
+
+\newenvironment{keypoint}[1][]{%
+\begin{mdframed}[
+backgroundcolor=keypurplelight!10,
+linecolor=keypurple,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{keypointinner}[#1]
+}{%
+\end{keypointinner}
+\end{mdframed}
+}
+
+% Caution environment (similar to keypoint but with warning color)
+\definecolor{cautionorange}{RGB}{255,87,34}
+\newenvironment{caution}{%
+\begin{mdframed}[
+backgroundcolor=cautionorange!10,
+linecolor=cautionorange,
+linewidth=3pt,
+topline=false,
+rightline=false,
+bottomline=false,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\noindent\textbf{Caution:}
+\par\vspace{-2pt}
+}{%
+\end{mdframed}
+}
+
+% Implementation environment for code blocks
+\newenvironment{implementation}{%
+\par\vspace{10pt}
+\noindent\textbf{Implementation:}
+\par\vspace{5pt}
+}{%
+\par\vspace{10pt}
+}
+
+% Exercise environment with light gray box
+\theoremstyle{definition}
+\newtheorem{exerciseinner}{Exercise}[chapter]
+\newenvironment{exercise}[1][]{%
+\begin{mdframed}[
+backgroundcolor=white,
+linecolor=black!30,
+linewidth=1pt,
+topline=true,
+rightline=true,
+bottomline=true,
+leftline=true,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\begin{exerciseinner}[#1]
+}{%
+\end{exerciseinner}
+\end{mdframed}
+}
+
+% Solution environment with light gray frame
+\newenvironment{solution}[1][]{%
+\begin{mdframed}[
+backgroundcolor=black!5,
+linecolor=black!30,
+linewidth=2pt,
+topline=true,
+rightline=true,
+bottomline=true,
+leftline=true,
+innerleftmargin=6pt,
+innerrightmargin=6pt,
+innertopmargin=3pt,
+innerbottommargin=3pt,
+skipabove=3pt,
+skipbelow=3pt
+]
+\noindent\textbf{Solution #1:}
+\par\vspace{-2pt}
+}{%
+\end{mdframed}
+}
+
+% Exclude solutions from PDF — they remain in .tex source for the HTML converter.
+% To re-include solutions in a future PDF, comment out the next two lines.
+\usepackage{verbatim}
+\let\solution\comment
+\let\endsolution\endcomment
+
+% Custom commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\C}{\mathbb{C}}
+
+% Vector commands (all letters)
+\newcommand{\va}{\mathbf{a}}
+\newcommand{\vb}{\mathbf{b}}
+\newcommand{\vc}{\mathbf{c}}
+\newcommand{\vd}{\mathbf{d}}
+\newcommand{\ve}{\mathbf{e}}
+\newcommand{\vf}{\mathbf{f}}
+\newcommand{\vg}{\mathbf{g}}
+\newcommand{\vh}{\mathbf{h}}
+\newcommand{\vi}{\mathbf{i}}
+\newcommand{\vj}{\mathbf{j}}
+\newcommand{\vk}{\mathbf{k}}
+\newcommand{\vl}{\mathbf{l}}
+\newcommand{\vm}{\mathbf{m}}
+\newcommand{\vn}{\mathbf{n}}
+\newcommand{\vo}{\mathbf{o}}
+\newcommand{\vp}{\mathbf{p}}
+\newcommand{\vq}{\mathbf{q}}
+\newcommand{\vr}{\mathbf{r}}
+\newcommand{\vs}{\mathbf{s}}
+\newcommand{\vt}{\mathbf{t}}
+\newcommand{\vu}{\mathbf{u}}
+\newcommand{\vv}{\mathbf{v}}
+\newcommand{\vw}{\mathbf{w}}
+\newcommand{\vx}{\mathbf{x}}
+\newcommand{\vy}{\mathbf{y}}
+\newcommand{\vz}{\mathbf{z}}
+
+% Matrix commands (all letters)
+\newcommand{\mA}{\mathbf{A}}
+\newcommand{\mB}{\mathbf{B}}
+\newcommand{\mC}{\mathbf{C}}
+\newcommand{\mD}{\mathbf{D}}
+\newcommand{\mE}{\mathbf{E}}
+\newcommand{\mF}{\mathbf{F}}
+\newcommand{\mG}{\mathbf{G}}
+\newcommand{\mH}{\mathbf{H}}
+\newcommand{\mI}{\mathbf{I}}
+\newcommand{\mJ}{\mathbf{J}}
+\newcommand{\mK}{\mathbf{K}}
+\newcommand{\mL}{\mathbf{L}}
+\newcommand{\mM}{\mathbf{M}}
+\newcommand{\mN}{\mathbf{N}}
+\newcommand{\mO}{\mathbf{O}}
+\newcommand{\mP}{\mathbf{P}}
+\newcommand{\mQ}{\mathbf{Q}}
+\newcommand{\mR}{\mathbf{R}}
+\newcommand{\mS}{\mathbf{S}}
+\newcommand{\mT}{\mathbf{T}}
+\newcommand{\mU}{\mathbf{U}}
+\newcommand{\mV}{\mathbf{V}}
+\newcommand{\mW}{\mathbf{W}}
+\newcommand{\mX}{\mathbf{X}}
+\newcommand{\mY}{\mathbf{Y}}
+\newcommand{\mZ}{\mathbf{Z}}
+
+% Other math commands
+\newcommand{\transpose}{^\top}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\abs}[1]{\left|#1\right|}
+
+\title{Deep Learning and Transformers:\\From Mathematical Foundations to Silicon Reality: Optimizing Transformers Across Hardware and Industry}
+\author{Edited by Jurgen Hofkens, and vibewritten by Perplexity (TM) and Claude Sonnet 4.5 (TM)}
+\date{2026}
+
+\begin{document}
+
+\frontmatter
+
+% Custom title page to avoid artifacts
+\begin{titlingpage}
+\begin{center}
+\vspace*{2cm}
+{\LARGE\bfseries Deep Learning and Transformers:\\[0.5cm]
+From Mathematical Foundations to Silicon Reality: Optimizing Transformers Across Hardware and Industry\par}
+\vspace{2cm}
+{\Large Edited and Vibewritten by Jurgen Hofkens, using Perplexity\textsuperscript{TM} and Anthropic Claude\textsuperscript{TM}\par}
+\vfill
+{\large 2026\par}
+\end{center}
+\end{titlingpage}
+
+\clearpage  % Ensure TOC starts on a new page
+\tableofcontents
+
+\mainmatter
+
+\part{Mathematical Foundations}
+\include{chapters/chapter01_linear_algebra}
+\include{chapters/chapter02_calculus_optimization}
+\include{chapters/chapter03_probability_information}
+
+\part{Neural Network Fundamentals}
+\include{chapters/chapter04_feedforward_networks}
+\include{chapters/chapter05_convolutional_networks}
+\include{chapters/chapter06_recurrent_networks}
+
+\part{Attention Mechanisms}
+\include{chapters/chapter07_attention_fundamentals}
+\include{chapters/chapter08_self_attention}
+\include{chapters/chapter09_attention_variants}
+
+\part{Transformer Architecture}
+\include{chapters/chapter10_transformer_model}
+\include{chapters/chapter11_training_transformers}
+\include{chapters/chapter12_computational_analysis}
+
+\part{Modern Transformer Variants}
+\include{chapters/chapter13_bert}
+\include{chapters/chapter14_gpt}
+\include{chapters/chapter15_t5_bart}
+\include{chapters/chapter16_efficient_transformers}
+
+\part{Advanced Topics}
+\include{chapters/chapter17_vision_transformers}
+\include{chapters/chapter18_multimodal_transformers}
+\include{chapters/chapter19_long_context}
+\include{chapters/chapter20_pretraining_strategies}
+
+\part{Practical Implementation}
+\include{chapters/chapter21_pytorch_implementation}
+\include{chapters/chapter22_hardware_optimization}
+\include{chapters/chapter23_best_practices}
+
+\part{Domain-Specific Applications}
+\include{chapters/chapter24_domain_specific_models}
+\include{chapters/chapter25_enterprise_nlp}
+\include{chapters/chapter26_code_language}
+\include{chapters/chapter27_video_visual}
+\include{chapters/chapter28_knowledge_graphs}
+\include{chapters/chapter29_recommendations}
+\include{chapters/chapter30_healthcare}
+\include{chapters/chapter31_finance}
+\include{chapters/chapter32_legal}
+\include{chapters/chapter33_observability}
+\include{chapters/chapter34_dsl_agents}
+
+\end{document}
