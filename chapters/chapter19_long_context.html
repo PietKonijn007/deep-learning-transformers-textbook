@@ -157,8 +157,25 @@
 
 <p>The memory bottleneck is even more severe than the computational one. During the forward pass, the attention matrix must be fully materialized in memory before applying softmax, requiring $n^2$ memory locations per attention head. During the backward pass for training, these attention matrices must be stored for gradient computation, effectively doubling the memory requirement. For multi-head attention with $h$ heads, the total memory for attention matrices is $h \times n^2$ floating-point values per layer. In FP32 format, each value requires 4 bytes, while FP16 requires 2 bytes. This memory grows quadratically with sequence length, quickly exceeding available GPU memory for long sequences.</p>
 
-<div class="example"><strong>Example:</strong> 
-Consider a GPT-2 scale model with $d = 768$, $h = 12$ attention heads, and $L = 12$ layers. The memory required for attention matrices scales dramatically with sequence length. For a single attention head processing a sequence of length $n$, the attention matrix requires $n^2 \times 4$ bytes in FP32 format. With 12 heads per layer, this becomes $12 \times n^2 \times 4 = 48n^2$ bytes per layer.
+<div class="example"><strong>Example:</strong> <div class="architecture-diagram">
+<h3>Long Context Attention Strategies</h3>
+<pre class="mermaid">
+graph LR
+    SEQ["Long sequence\n n >> 4096 tokens\n Full attn memory:\n O(n^2) -- infeasible"]
+
+    SEQ --> SW["Sliding Window\n w neighbors each side\n Memory: O(n*w)\n STORED: local attn\n weights only"]
+    SEQ --> CHUNK["Chunked Attention\n Split into n/c chunks\n Intra-chunk: O(c^2)\n Cross-chunk: summary\n STORED: chunk summaries"]
+    SEQ --> ROPE["RoPE Scaling\n Rotary Pos Emb\n Extend via interpolation\n No extra memory\n STORED: same as base"]
+
+    style SEQ fill:#fce4ec,stroke:#e91e63,color:#000
+    style SW fill:#e3f2fd,stroke:#2196f3,color:#000
+    style CHUNK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style ROPE fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Long Context Attention Strategies</p>
+</div>
+
+<p>Consider a GPT-2 scale model with $d = 768$, $h = 12$ attention heads, and $L = 12$ layers. The memory required for attention matrices scales dramatically with sequence length. For a single attention head processing a sequence of length $n$, the attention matrix requires $n^2 \times 4$ bytes in FP32 format. With 12 heads per layer, this becomes $12 \times n^2 \times 4 = 48n^2$ bytes per layer.</p>
 
 <p>At $n = 1024$ tokens (GPT-2's standard context), each layer requires $48 \times 1024^2 = 50.3$ MB for attention matrices. Across 12 layers, this totals 604 MB, which is manageable on modern GPUs. However, doubling the sequence length to $n = 2048$ quadruples the memory requirement to 201 MB per layer or 2.4 GB total—a 4× increase for only a 2× increase in sequence length. This quadratic scaling continues: at $n = 4096$, attention matrices consume 805 MB per layer or 9.7 GB total, nearly filling a 16 GB GPU. At $n = 8192$, the requirement explodes to 3.2 GB per layer or 38.5 GB total, exceeding even high-end GPUs like the NVIDIA A100 with 40 GB memory.</p>
 
@@ -291,62 +308,11 @@ $$
 
 <p>The key insight behind sparse attention is that not all token pairs require attention computation. In many domains, particularly natural language, most relevant information comes from nearby tokens, with occasional long-range dependencies. By carefully designing sparsity patterns that preserve important connections while eliminating redundant ones, sparse attention can maintain model quality while dramatically reducing computational and memory requirements.</p>
 
-<h3>Longformer: Local and Global Attention</h3>
+<h3>Longformer and BigBird</h3>
 
-<p>Longformer combines local windowed attention for all tokens with global attention for task-specific tokens, enabling efficient processing of documents up to 4096 tokens or longer. This hybrid approach recognizes that while most tokens primarily need local context, certain special tokens (such as [CLS] for classification or question tokens for QA) benefit from attending to the entire sequence.</p>
+<p>Longformer combines local windowed attention ($O(nw)$ for window size $w$) with global attention on task-specific tokens, enabling efficient processing of documents up to 4096+ tokens. BigBird extends this with random connections that create small-world shortcuts, proving that sparse attention with $O(n \log n)$ connections is a universal approximator for sequence-to-sequence functions. Both reduce attention memory by 6--8$\times$ compared to full attention. See Chapter~[ref] for the detailed mechanism definitions, complexity analysis, and benchmark results.</p>
 
-<div class="definition"><strong>Definition:</strong> 
-Longformer defines attention patterns based on token type:
-
-<p><strong>Local attention:</strong> Each token attends to tokens within a fixed window of size $w$ on each side:
-<div class="equation">
-$$
-\mathcal{S}_{\text{local}}(i) = \{j : |i - j| \leq w\}
-$$
-</div>
-
-<p><strong>Global attention:</strong> Designated global tokens attend to all positions and are attended by all positions:
-<div class="equation">
-$$
-\mathcal{S}_{\text{global}}(i) = \{1, 2, \ldots, n\} \text{ for global tokens}
-$$
-</div>
-
-<p>For regular tokens, the attention set is $\mathcal{S}(i) = \mathcal{S}_{\text{local}}(i) \cup \mathcal{G}$ where $\mathcal{G}$ is the set of global token positions.
-</div>
-
-<p>The computational complexity of Longformer is $O(n \times w)$ for local attention plus $O(n \times g)$ for global attention, where $g$ is the number of global tokens. For typical configurations with $w = 512$ and $g = 2$, this gives total complexity $O(n \times 514)$ compared to $O(n^2)$ for full attention. At $n = 4096$, this represents a reduction from 16.8 million connections to 2.1 million connections—an 8× reduction.</p>
-
-<p>Memory requirements scale similarly. For a single attention head with $d = 768$ in FP32, Longformer with $w = 512$ and $g = 2$ requires approximately $(4094 \times 1026 + 2 \times 4096) \times 4 = 16.8$ MB per head compared to 67 MB for full attention. With 12 heads and 12 layers, total attention memory decreases from 9.6 GB to 2.4 GB, enabling processing of long documents on GPUs with limited memory.</p>
-
-<p>The window size $w$ determines the trade-off between efficiency and model capacity. Smaller windows reduce computation and memory but limit the model's ability to capture long-range dependencies. Information can propagate at most $w$ positions per layer, requiring $\lceil n/w \rceil$ layers for full sequence communication. With $w = 512$ and $n = 4096$, information requires at least 8 layers to propagate across the full sequence. In practice, Longformer uses 12 layers, providing sufficient depth for information flow while maintaining efficiency.</p>
-
-<p>Longformer has been successfully applied to long-document tasks including question answering, document classification, and summarization. On the WikiHop dataset with documents averaging 3000 tokens, Longformer achieves 74.3\% accuracy compared to 68.5\% for BERT with truncated 512-token contexts, demonstrating that access to full document context improves performance. On the arXiv summarization task with papers averaging 4500 tokens, Longformer generates summaries with ROUGE scores 3-5 points higher than models limited to shorter contexts.</p>
-
-<h3>BigBird: Random, Window, and Global Attention</h3>
-
-<p>BigBird extends sparse attention by adding random connections to Longformer's local and global patterns. These random connections create shortcuts across the sequence that enable faster information propagation and provide theoretical guarantees about the model's expressive power. BigBird proves that sparse attention with $O(n)$ connections can approximate full attention's ability to compute arbitrary sequence-to-sequence functions.</p>
-
-<div class="definition"><strong>Definition:</strong> 
-BigBird combines three attention patterns for each query position $i$:
-<ol>
-    <li><strong>Window attention:</strong> Attend to $w$ neighbors on each side: $\mathcal{W}(i) = \{j : |i-j| \leq w\}$
-    <li><strong>Random attention:</strong> Attend to $r$ randomly selected positions: $\mathcal{R}(i)$ with $|\mathcal{R}(i)| = r$
-    <li><strong>Global attention:</strong> Attend to $g$ designated global tokens: $\mathcal{G}$
-</ol>
-
-<p>The total attention set is $\mathcal{S}(i) = \mathcal{W}(i) \cup \mathcal{R}(i) \cup \mathcal{G}$, giving $|\mathcal{S}(i)| = 2w + r + g$ connections per query.
-</div>
-
-<p>The random attention component is crucial for BigBird's theoretical properties. While local windows provide nearby context and global tokens enable information aggregation, random connections create a small-world network structure where any two positions are connected by a short path through the attention graph. With $r = O(\log n)$ random connections per query, the expected path length between any two positions is $O(\log n)$, enabling efficient information propagation across the sequence.</p>
-
-<p>BigBird's theoretical contribution is proving that this sparse pattern with $O(n \log n)$ total connections can approximate any function that full attention with $O(n^2)$ connections can compute. Specifically, BigBird shows that sparse attention with random connections is a universal approximator for sequence-to-sequence functions, providing a rigorous foundation for sparse attention methods. This result demonstrates that the quadratic number of connections in full attention is not necessary for expressive power—carefully chosen linear or near-linear connections suffice.</p>
-
-<p>In practice, BigBird uses $w = 256$, $r = 64$, and $g = 32$ for sequences up to 4096 tokens. Each query attends to $2 \times 256 + 64 + 32 = 608$ keys instead of 4096, reducing computation by 6.7×. For a single attention head with $d = 768$ in FP32, BigBird requires approximately $((4096 - 32) \times 608 + 32 \times 4096) \times 4 = 10.4$ MB compared to 67 MB for full attention, a 6.4× memory reduction. With 12 heads and 12 layers, total attention memory decreases from 9.6 GB to 1.5 GB.</p>
-
-<p>On an NVIDIA A100 GPU, BigBird processes 4096-token sequences in approximately 15 milliseconds per layer compared to 98 milliseconds for full attention, a 6.5× speedup. For sequences of 8192 tokens, BigBird takes 30 milliseconds per layer while full attention would require approximately 390 milliseconds, a 13× speedup that makes previously impractical sequence lengths feasible. The speedup is slightly less than the theoretical reduction factor due to overhead from irregular memory access patterns in the random attention component, but remains substantial in practice.</p>
-
-<p>BigBird has been applied to long-document natural language processing tasks with strong results. On the Natural Questions dataset with 4096-token contexts, BigBird achieves 79.2\% F1 score compared to 76.8\% for BERT with truncated 512-token contexts, demonstrating that access to longer context improves performance on tasks requiring long-range reasoning. On genomic sequence analysis tasks with sequences of 4096 base pairs, BigBird outperforms both full attention (which is memory-prohibitive) and simple local attention (which lacks long-range connections).</p>
+<p>In the context of long-context processing, the key trade-off is between sparsity pattern and information propagation depth. With window size $w$, information requires $\lceil n/w \rceil$ layers to propagate across the full sequence. BigBird's random connections reduce the expected propagation path to $O(\log n)$ layers, which is particularly valuable for tasks requiring long-range reasoning. For sequences up to 2048 tokens, optimized full attention (e.g., Flash Attention) is typically faster; for 2048--8192 tokens, sparse attention becomes beneficial; beyond 8192 tokens, it becomes essential.</p>
 
 <h3>Comparison of Sparse Attention Methods</h3>
 
@@ -537,17 +503,9 @@ $$
 
 <p>LongT5 has been successfully applied to long-document summarization tasks where input documents exceed 10,000 tokens. On the arXiv summarization dataset with papers averaging 6000 tokens, LongT5 achieves ROUGE-L scores of 48.3 compared to 44.1 for T5 with truncated 512-token inputs, demonstrating that access to full document context significantly improves summary quality. On the PubMed summarization task with medical papers averaging 3000 tokens, LongT5 outperforms T5 by 3-4 ROUGE points across all metrics.</p>
 
-<h3>GPT-4 and Claude: Production Long Context Systems</h3>
+<h3>Production Long Context Systems</h3>
 
-<p>Modern production language models have pushed context lengths to unprecedented scales, with GPT-4 Turbo supporting 128,000 tokens and Claude 2 supporting 100,000 tokens. These context lengths enable entirely new applications: processing entire codebases, analyzing full-length books, maintaining context across extended conversations, and performing complex multi-document reasoning tasks. While the specific architectural details of these models remain proprietary, their capabilities demonstrate that long context processing at scale is not only feasible but practical for real-world deployment.</p>
-
-<p>GPT-4 Turbo's 128,000-token context window represents approximately 300 pages of text or roughly 96,000 words. This enables processing of entire novels, comprehensive technical documentation, or large codebases in a single context. The model maintains strong performance across this full context length, with perplexity remaining relatively stable even for tokens at positions 100,000+. This suggests the use of advanced position encoding schemes (likely RoPE with position interpolation) combined with efficient attention mechanisms that reduce the quadratic memory bottleneck.</p>
-
-<p>The computational and memory requirements for such long contexts are staggering without optimization. Naive full attention for 128,000 tokens with GPT-4 scale parameters would require terabytes of memory just for attention matrices, making it completely impractical. The fact that GPT-4 Turbo can process such contexts in reasonable time (typically 30-60 seconds for full context) indicates the use of multiple optimization techniques: sparse or approximate attention to reduce the quadratic bottleneck, Flash Attention or similar memory-efficient implementations to reduce memory bandwidth requirements, and likely model parallelism to distribute computation across multiple GPUs.</p>
-
-<p>Claude 2's 100,000-token context (approximately 75,000 words) similarly enables processing of book-length documents. Anthropic has demonstrated Claude 2's ability to accurately retrieve information from anywhere within its context window, suggesting effective attention mechanisms that don't degrade at long distances. The model can answer questions about specific details from early in a 100,000-token context while processing tokens at the end, indicating that information flow across the full context length is maintained.</p>
-
-<p>The pricing structure for these long-context models reflects their computational costs. GPT-4 Turbo charges approximately 3× more per token for the 128K context version compared to the 8K context version, indicating that the computational overhead of long context processing remains significant despite optimizations. Claude 2's pricing similarly reflects higher costs for longer contexts. These pricing differences suggest that while long context is feasible, it remains computationally expensive compared to shorter contexts, motivating continued research into more efficient methods.</p>
+<p>As of early 2025, production language models support context lengths of 128K--1M+ tokens, enabling processing of entire codebases, books, and extended conversations.\footnote{Context length capabilities evolve rapidly. Check current documentation for the latest specifications.} These systems combine the techniques covered in this chapter---efficient attention, position interpolation, and memory-efficient implementations---to make long-context processing practical. The fact that such contexts are served at interactive latencies indicates the use of multiple optimizations simultaneously: sparse or approximate attention to reduce the quadratic bottleneck, Flash Attention for memory efficiency, and model parallelism across multiple GPUs.</p>
 
 <h3>Practical Considerations for Long Context</h3>
 
@@ -702,6 +660,8 @@ $$
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Memory Calculation</strong>
 

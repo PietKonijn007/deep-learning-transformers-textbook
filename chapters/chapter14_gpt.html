@@ -166,7 +166,28 @@ GPT uses transformer decoder blocks with:
     <li><strong>No cross-attention:</strong> Decoder-only (vs encoder-decoder)
     <li><strong>Position-wise FFN:</strong> Same as standard transformer
     <li><strong>Pre-norm:</strong> Layer norm before sub-layers (GPT-2+)
-</ul>
+
+<div class="architecture-diagram">
+<h3>GPT Decoder-Only Architecture</h3>
+<pre class="mermaid">
+graph LR
+    TOK["Input tokens\n x_1..x_t\n in N^t"] -->|"W_emb in R^V x d\n + W_pos in R^n_max x d"| EMB["Token + Pos Emb\n in R^t x d\n STORED for backprop"]
+    EMB --> DEC["Decoder Layers x L\n Each layer:\n 1. Masked Self-Attn\n (causal mask: upper tri = -inf)\n STORED: Q,K,V,attn,mask\n 2. FFN: W1 in R^d x 4d,\n W2 in R^4d x d\n STORED: activations"]
+    DEC -->|"W_head in R^d x V\n (often tied with W_emb)"| LM["LM Head\n logits in R^t x V"]
+    LM -->|"softmax"| PRED["P(x_t+1 | x_1..x_t)\n in R^V\n STORED: logits for\n cross-entropy backprop"]
+
+    PRED -.->|"Backprop:\n dL/dlogits --> dL/dW_head\n --> through L decoder layers\n peak memory: O(L*t*d + L*t^2)"| EMB
+
+    style TOK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
+    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
+    style LM fill:#f3e5f5,stroke:#9c27b0,color:#000
+    style PRED fill:#fce4ec,stroke:#e91e63,color:#000
+</pre>
+<p class="diagram-caption">GPT Decoder-Only Architecture</p>
+</div>
+
+<p></ul>
 </div>
 
 <figure>
@@ -373,19 +394,7 @@ $$
 
 <h3>Training Infrastructure and Costs</h3>
 
-<p>The computational requirements for training GPT models reveal the massive scale of resources needed for state-of-the-art language models. Understanding these requirements is essential for practitioners considering whether to train models from scratch or use pre-trained models.</p>
-
-<p>GPT-2's training represented a significant but manageable computational investment. The 1.5 billion parameter XL model was trained on 32 TPU v3 chips for approximately one week. TPU v3 chips provide roughly 420 TFLOPS of bfloat16 performance, giving a total cluster capacity of about 13.4 PFLOPS. The training cost was estimated at approximately \$50,000, making it accessible to well-funded research labs and companies but beyond the reach of individual researchers. The batch size was carefully tuned to maximize GPU utilization while maintaining training stability, typically using batch sizes of 512 sequences with 1024 tokens each. The learning rate followed a cosine decay schedule with warmup, starting from a small value to prevent early training instability.</p>
-
-<p>The relatively modest infrastructure requirements for GPT-2 meant that the model could be trained on a single multi-GPU machine or small cluster. This accessibility contributed to widespread experimentation with the architecture and training approach. Researchers could reproduce the training process, fine-tune on domain-specific data, and explore architectural variations without requiring massive computational resources. The one-week training time also enabled rapid iteration on hyperparameters and training procedures.</p>
-
-<p>GPT-3's training requirements increased by multiple orders of magnitude, necessitating infrastructure available only to the largest technology companies. The 175 billion parameter model required an estimated 10,000 or more V100 GPUs for approximately one month of training. Each V100 provides 125 TFLOPS of FP16 performance, yielding a total cluster capacity exceeding 1 exaFLOP. The training cost was estimated between \$4 million and \$12 million depending on cloud pricing and hardware utilization assumptions. The energy consumption reached approximately 1,287 MWh, equivalent to the annual electricity usage of over 100 average US households.</p>
-
-<p>This massive scale was necessary for several reasons. First, the 175 billion parameters required substantial memory even with model parallelism—the model weights alone occupy 700 GB in FP32 or 350 GB in FP16. Second, processing 300 billion tokens through such a large model requires enormous computational throughput. Third, maintaining reasonable training time (one month rather than one year) demanded massive parallelism across thousands of GPUs. The training employed sophisticated distributed strategies including data parallelism, model parallelism, and pipeline parallelism to efficiently utilize the hardware.</p>
-
-<p>The infrastructure challenges extended beyond raw compute. Network bandwidth between GPUs became critical, as model parallelism requires frequent communication of activations and gradients. High-bandwidth interconnects like NVIDIA NVLink and InfiniBand were essential for maintaining efficiency. Memory bandwidth also constrained performance, as loading model parameters and activations from GPU memory often became the bottleneck rather than arithmetic operations. These hardware considerations influenced architectural choices, such as the FFN expansion factor and attention head dimensions.</p>
-
-<p>The enormous cost of training GPT-3 has profound implications for the AI research ecosystem. Only a handful of organizations can afford to train models at this scale, concentrating power and capability among well-resourced entities. This has motivated research into more efficient training methods, better scaling laws to predict optimal model sizes, and techniques for adapting pre-trained models to new domains without full retraining. The Chinchilla findings, discussed later, suggest that GPT-3 was actually over-parameterized for its training compute budget—a smaller model trained on more data would have achieved better performance for the same cost.</p>
+<p>Training GPT models at scale requires massive infrastructure, with costs increasing by orders of magnitude between model generations. GPT-2's training on 32 TPU v3 chips for one week cost approximately \$50,000---accessible to well-funded labs. GPT-3's training on 10,000+ V100 GPUs for one month cost an estimated \$4--12 million, consuming 1,287~MWh of energy and requiring sophisticated distributed training strategies (model, pipeline, and data parallelism). For a detailed treatment of distributed training infrastructure and cost estimation, see Chapter~[ref] (Training Transformers).</p>
 
 <p><strong>GPT-2 Training:</strong>
 <ul>
@@ -749,6 +758,8 @@ Output: [one-sentence summary]
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Autoregressive Language Modeling Loss</strong>
 

@@ -169,16 +169,16 @@ graph LR
         C1["x_1..x_t"] -->|"Predict next"| C2["P(x_t+1|x_leq_t)\n Causal mask\n Memory: O(t^2) attn"]
     end
 
-<p>subgraph MLM_["Masked LM (BERT)"]
-        M1["x with 15
-    end</p>
+    subgraph MLM_["Masked LM (BERT)"]
+        M1["x with 15% [MASK]"] -->|"Predict masked"| M2["P(x_mask|x_visible)\n Bidirectional\n Memory: O(n^2) attn"]
+    end
 
-<p>subgraph S2S["Seq2Seq (T5)"]
+    subgraph S2S["Seq2Seq (T5)"]
         S1["Corrupted input"] -->|"Encoder"| S2["Enc repr\n in R^n x d"]
         S2 -->|"Decoder"| S3["Reconstruct spans\n Cross-attn memory:\n O(m*n) extra"]
-    end</p>
+    end
 
-<p>style C2 fill:#e3f2fd,stroke:#2196f3,color:#000
+    style C2 fill:#e3f2fd,stroke:#2196f3,color:#000
     style M2 fill:#e8f5e9,stroke:#4caf50,color:#000
     style S3 fill:#fff3e0,stroke:#ff9800,color:#000
 </pre>

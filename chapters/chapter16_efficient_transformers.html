@@ -200,6 +200,27 @@ where $|\mathcal{S}(i)| = k \ll n$ for all positions $i$. The computational comp
 
 <p>The choice of sparsity pattern $\mathcal{S}$ determines which information can flow through the network. Three fundamental patterns have emerged as particularly effective building blocks for sparse attention.</p>
 
+<div class="architecture-diagram">
+<h3>Efficient Attention Approaches and Memory</h3>
+<pre class="mermaid">
+graph LR
+    FULL["Full Attention\n A = softmax(QK^T/sqrt(d))V\n Compute: O(n^2 d)\n Memory: O(n^2)\n STORED: full n x n matrix"]
+
+    FULL --> SPARSE["Sparse Attention\n Only compute S subset\n of n^2 entries\n Memory: O(n * w)\n w = window size"]
+    FULL --> LINEAR["Linear Attention\n phi(Q)*[phi(K)^T * V]\n Compute: O(n * d^2)\n Memory: O(n * d)\n NO n x n matrix stored"]
+    FULL --> FLASH["FlashAttention\n Tiled computation\n Recompute in backward\n Peak memory: O(n)\n IO-aware: minimizes\n HBM reads/writes"]
+
+    SPARSE --> SP1["Longformer: local w\n + global g tokens\n O(n*(w+g))"]
+    LINEAR --> LIN1["Performer: random\n feature map phi\n O(n*d*r), r = features"]
+
+    style FULL fill:#fce4ec,stroke:#e91e63,color:#000
+    style SPARSE fill:#e3f2fd,stroke:#2196f3,color:#000
+    style LINEAR fill:#e8f5e9,stroke:#4caf50,color:#000
+    style FLASH fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Efficient Attention Approaches and Memory</p>
+</div>
+
 <p>The sliding window or local attention pattern restricts each token to attend only to nearby tokens within a fixed window. Formally, $\mathcal{S}_{\text{local}}(i) = \{j : |i-j| \leq w\}$ where $w$ is the window size. Each token attends to $2w+1$ tokens: itself, $w$ tokens before, and $w$ tokens after. This pattern is motivated by the observation that in many domains, particularly natural language, nearby tokens are more relevant than distant ones. For a window size $w = 256$ and sequence length $n = 4096$, each query attends to only 513 keys instead of 4096, reducing computation by 8× and memory by the same factor. The limitation is that information can only propagate $w$ positions per layer, requiring $\lceil n/w \rceil$ layers for full sequence communication.</p>
 
 <p>The strided or dilated attention pattern samples tokens at regular intervals: $\mathcal{S}_{\text{strided}}(i) = \{j : (i-j) \bmod s = 0\}$ where $s$ is the stride. This pattern allows each token to attend to distant tokens, enabling faster information propagation across the sequence. With stride $s = 64$, a token at position 1024 can attend to positions 0, 64, 128, ..., 1024, ..., 4032, providing long-range connectivity with only $n/s$ connections per query. However, strided attention alone misses local context, so it is typically combined with local attention in alternating layers.</p>
@@ -615,6 +636,8 @@ x_1 &= y_1 - \text{Attention}(x_2)
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Sliding Window Attention Implementation</strong>
 

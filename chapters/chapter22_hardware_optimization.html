@@ -171,6 +171,29 @@ $$
 </div>
 </div>
 
+<div class="architecture-diagram">
+<h3>GPU Memory Hierarchy and Optimization</h3>
+<pre class="mermaid">
+graph LR
+    PARAM["Model Params\n W in R^P\n FP16: 2P bytes"] --> HBM["HBM (GPU RAM)\n 40-80 GB\n Bandwidth: 2 TB/s\n Stores: params, grads,\n optimizer states, activations"]
+    HBM --> SRAM["SRAM (On-chip)\n ~20 MB per SM\n Bandwidth: 19 TB/s\n Stores: tiles of Q,K,V\n during FlashAttention"]
+
+    subgraph Optim["Memory Optimizations"]
+        MP["Mixed Precision\n FP32 master weights\n FP16 forward/backward\n Saves ~50% memory"]
+        GC["Gradient Checkpointing\n Discard activations\n Recompute in backward\n Saves O(L) memory\n Costs ~33% extra compute"]
+        FSDP["FSDP/ZeRO\n Shard params+grads+opt\n across N GPUs\n Memory: O(P/N) per GPU"]
+    end
+
+    HBM --> Optim
+
+    style PARAM fill:#e8f5e9,stroke:#4caf50,color:#000
+    style HBM fill:#fff3e0,stroke:#ff9800,color:#000
+    style SRAM fill:#e3f2fd,stroke:#2196f3,color:#000
+    style GC fill:#fce4ec,stroke:#e91e63,color:#000
+</pre>
+<p class="diagram-caption">GPU Memory Hierarchy and Optimization</p>
+</div>
+
 <p>Arithmetic intensity measures the ratio of computation to memory access for a given operation, and it is a critical metric for understanding whether an operation will be compute-bound or memory-bound on modern hardware. For attention mechanisms, the arithmetic intensity varies significantly with sequence length, which has profound implications for optimization strategies.</p>
 
 <p>Consider the computation of $\mQ \mK\transpose$ in the attention mechanism, where both $\mQ$ and $\mK$ have shape $[n, d]$ with $n$ being the sequence length and $d$ the head dimension. This matrix multiplication requires $2n^2d$ floating-point operations (FLOPs), as we compute $n^2$ dot products, each involving $d$ multiply-add operations. The memory traffic consists of loading $\mQ$ (requiring $nd$ elements) and $\mK$ (another $nd$ elements), plus writing the output matrix of size $n^2$. For large $n$, the output dominates, giving approximately $2nd$ bytes transferred. The arithmetic intensity is therefore approximately $\frac{2n^2d}{2nd} = \frac{nd}{d} = n$.</p>
@@ -352,7 +375,7 @@ $$
 where $s$ is scale factor, $z$ is zero-point.
 </div>
 
-<p>The choice of numerical precision fundamentally affects both the performance and accuracy of transformer models. Modern hardware supports several precision formats, each offering different trade-offs between memory usage, computational throughput, and numerical fidelity.</p>
+<p>The choice of numerical precision fundamentally affects both the performance and accuracy of transformer models. For PyTorch quantization implementation (dynamic, static, and QAT), see Chapter~[ref]. Modern hardware supports several precision formats, each offering different trade-offs between memory usage, computational throughput, and numerical fidelity.</p>
 
 <p>FP32 (32-bit floating point) serves as the baseline precision format, providing full numerical precision with a wide dynamic range. This format uses 1 bit for sign, 8 bits for exponent, and 23 bits for mantissa, allowing representation of values from approximately $10^{-38}$ to $10^{38}$ with about 7 decimal digits of precision. While FP32 ensures numerical stability and is the standard for training, it consumes significant memory and cannot leverage specialized hardware acceleration like Tensor Cores.</p>
 
@@ -424,18 +447,6 @@ $$
 <p>QAT recovers most accuracy lost in PTQ!
 </div>
 
-<h3>Quantization in Practice</h3>
-
-<p>Quantization trades arithmetic precision for efficiency by mapping continuous FP32 weights and activations into a discrete set of low-precision integer values. On modern accelerators, this trade-off is rarely academic: Tensor Cores on NVIDIA GPUs expose significantly higher throughput for FP16 and INT8 operations than for FP32, and the corresponding reduction in memory footprint directly lowers bandwidth pressure. For transformer models, where attention and feed-forward layers are dominated by dense matrix multiplications, quantization therefore provides both compute and memory gains.</p>
-
-<p>In practice, post-training quantization is attractive because it does not require access to the full training pipeline. A pre-trained FP32 model can be calibrated on a relatively small sample of data to estimate activation ranges, after which weights and activations are uniformly quantized to INT8. This workflow is well supported in production toolchains (for example, through PyTorch's quantization APIs and hardware-specific compilers such as TensorRT) and is often sufficient for applications that can tolerate a modest drop in accuracy. The BERT-base example in this chapter illustrates this trade-off: naive INT8 PTQ delivers roughly 2.9× speedup but loses more than two GLUE points compared to the FP32 baseline.</p>
-
-<p>Quantization-aware training recovers most of this lost accuracy by inserting ``fake'' quantization operators into the forward pass during training, while still updating full-precision weights. The model learns to position its weights and activations in regions of the value space that are robust to rounding and clipping, which is particularly important for outlier channels in attention projections and LayerNorm parameters. In the same BERT-base experiment, QAT nearly matches FP32 accuracy while preserving the 2.9× speedup of INT8 inference, making it the default choice whenever retraining is feasible.</p>
-
-<p>A subtle but important design choice is granularity: per-tensor quantization uses a single scale and zero-point for an entire weight tensor, whereas per-channel quantization maintains separate scales for each output channel. Per-channel schemes better accommodate heterogeneous distributions across channels (for example, in attention heads) and typically yield higher accuracy at the cost of slightly more complex kernels. Hardware and compiler support has improved to the point that per-channel INT8 convolutions and GEMMs are widely available, so there is little reason to accept the accuracy penalty of coarse granularity for large language models.</p>
-
-<p>Finally, quantization interacts with the rest of the hardware pipeline. Theoretical INT8 throughput assumes that matrices are well aligned with the preferred tile sizes of Tensor Cores, that memory accesses are coalesced, and that kernel launches are sufficiently large to reach high occupancy. In practice, this means that sequence length, batch size, and hidden dimensions should be chosen to be multiples of the tile size (8 or 16, depending on the mode), and that quantization should be combined with kernel fusion and KV caching techniques described earlier in the chapter. When these conditions are satisfied, INT8 transformer inference can achieve multi-fold throughput improvements with negligible degradation in model quality.</p>
-
 <h2>Model Pruning</h2>
 
 <h3>Pruning Strategies</h3>
@@ -479,16 +490,6 @@ BERT-base: 12 layers × 12 heads = 144 heads
 </ul>
 </div>
 
-<h3>Pruning in Practice</h3>
-
-<p>Pruning reduces the computational and memory cost of a model by removing parameters that contribute little to its predictions. For transformers, this can mean zeroing individual weights (unstructured sparsity), dropping entire attention heads, or deleting full feed-forward blocks and layers (structured sparsity). Each choice has implications for both hardware efficiency and software complexity: unstructured sparsity yields the highest potential compression but requires sparse kernels to realize speedups, whereas structured pruning directly reduces matrix dimensions and is immediately compatible with dense linear algebra libraries.</p>
-
-<p>Magnitude-based pruning is the simplest and still one of the most effective approaches. The core idea is to treat the absolute value of a weight as a proxy for its importance and to remove weights whose magnitude falls below a global or layer-wise threshold. When applied iteratively---with alternating phases of pruning and fine-tuning---the model can adapt to the shrinking parameter set and often recovers much of its original accuracy. The iterative algorithm described earlier in this section formalizes this process and provides a practical recipe for pushing sparsity to 80--90\% for some layers before accuracy degrades unacceptably.</p>
-
-<p>For transformers, structured pruning of attention heads has emerged as a particularly appealing lever. Empirical studies show that many heads in BERT-base can be removed with minimal impact on downstream tasks, and the example in this chapter demonstrates that pruning 50\% of heads leads to only a 0.7-point drop in GLUE score while delivering approximately 1.5× faster inference. Because each pruned head translates directly into smaller QKV and output projections, the resulting model is straightforward to export to ONNX or TensorRT, and the performance benefits materialize immediately on standard GPU hardware.</p>
-
-<p>In practice, pruning strategies are often combined with quantization and distillation. A typical workflow first applies structured pruning to remove obviously redundant heads or layers, then fine-tunes the pruned model using a distillation loss to preserve the behavior of the original teacher. After the architecture has been compressed and stabilized, INT8 quantization is applied to exploit low-precision hardware, yielding a model that is simultaneously smaller, faster, and cheaper to deploy. This multi-stage compression pipeline is especially valuable when targeting edge devices or cost-sensitive inference at scale.</p>
-
 <h2>Knowledge Distillation</h2>
 
 <h3>Distillation Loss</h3>
@@ -519,16 +520,6 @@ $$
 <p>The training objective combines three complementary losses. First, the distillation loss encourages the student to match the teacher's output distribution using the temperature-scaled KL divergence described earlier. Second, a standard masked language modeling loss ensures the student can still perform the original pre-training task, maintaining its ability to learn from unlabeled text. Third, a cosine distance loss between the student and teacher hidden states encourages the student's internal representations to align with the teacher's, not just the final outputs. This multi-objective approach helps the student learn both the teacher's behavior and its internal structure.</p>
 
 <p>The results demonstrate the effectiveness of this approach. The final DistilBERT model contains 66 million parameters compared to BERT-base's 110 million, a 40\% reduction. Inference speed improves by approximately 60\%, as the reduced depth directly translates to fewer sequential operations. Most importantly, DistilBERT retains 97\% of BERT's performance on the GLUE benchmark, meaning the accuracy loss is only 3\% despite the substantial reduction in model size and computational cost. This combination of compression, speedup, and accuracy retention makes DistilBERT a compelling choice for production deployments where resources are constrained.</p>
-
-<h3>Distillation in Practice</h3>
-
-<p>Knowledge distillation transfers the behavior of a large ``teacher'' model into a smaller ``student'' by training the student to match the teacher's softened output distribution. Instead of learning solely from hard labels, the student minimizes a combination of standard cross-entropy loss and a distillation loss, typically a KL divergence between the teacher and student logits at an elevated temperature. The temperature smooths the probability distribution, exposing relative preferences among non-argmax classes that encode useful inductive biases from the teacher.</p>
-
-<p>For transformer language models, distillation can operate at multiple levels. The simplest formulation uses only output logits, effectively compressing the teacher's behavior on the next-token prediction task. More sophisticated schemes add auxiliary losses on intermediate hidden states or attention maps, encouraging the student to replicate the internal representation geometry of the teacher. The DistilBERT recipe summarized earlier combines all of these ideas: a reduced-depth student inherits every other layer from BERT-base, is trained with both distillation and masked language modeling losses, and includes a cosine distance term on hidden states.</p>
-
-<p>The practical benefits are substantial. In the DistilBERT example, the student model has roughly 40\% fewer parameters than BERT-base (66M vs. 110M), runs about 60\% faster at inference, and still retains approximately 97\% of the teacher's task performance. Because the architecture remains structurally similar to the original transformer, the distilled model can serve as a drop-in replacement in most pipelines, including those that rely on hardware-specific optimizers or quantization backends. In production settings, it is common to perform distillation first and then apply quantization and pruning to the student, concentrating optimization effort on a single, already efficient architecture.</p>
-
-<p>Distillation is particularly effective in regimes where labeled data is scarce but unlabeled text is abundant. The teacher can be used to generate soft targets on large unlabeled corpora, effectively amplifying the supervision signal without manual annotation. This property makes distillation a powerful tool for domain adaptation: a large, expensive model is fine-tuned on a specialized domain, and a smaller student is then distilled to capture the domain-specific behavior in a production-friendly footprint.</p>
 
 <h2>Multi-GPU Training and Optimization</h2>
 
@@ -598,7 +589,7 @@ Training BERT-large (340M parameters) with batch size 32 per GPU on A100 GPUs:
 
 <p>Graph optimization goes beyond individual operations to restructure the computational graph for better performance. This includes reordering operations to enable better fusion opportunities, inserting explicit memory layout transformations to ensure optimal data formats for hardware accelerators, and selecting specialized kernel implementations based on input shapes and hardware capabilities. For transformer models, ONNX Runtime includes optimizations specifically targeting attention mechanisms, layer normalization, and embedding operations.</p>
 
-<p>The combination of these optimizations typically delivers 1.5-2× speedup over PyTorch inference for transformer models, even before applying quantization or other model-level optimizations. When combined with INT8 quantization, ONNX Runtime can achieve 3-4× speedup, making it a popular choice for production deployment where inference efficiency is critical.</p>
+<p>The combination of these optimizations typically delivers 1.5--2$\times$ speedup over PyTorch inference for transformer models, even before applying quantization or other model-level optimizations. When combined with INT8 quantization, ONNX Runtime can achieve 3--4$\times$ speedup, making it a popular choice for production deployment where inference efficiency is critical. See Chapter~[ref] for ONNX export implementation code.</p>
 
 <h3>TensorRT</h3>
 
@@ -823,6 +814,8 @@ Training BERT-large (340M parameters) with batch size 32 per GPU on A100 GPUs:
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Quantize BERT-base to INT8</strong>
 

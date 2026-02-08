@@ -157,7 +157,34 @@ BERT is a stack of transformer encoder layers with:
     <li><strong>Input:</strong> Token + Segment + Position embeddings
     <li><strong>Processing:</strong> $L$ transformer encoder layers
     <li><strong>Output:</strong> Contextualized representations for all tokens
-</ul>
+
+<div class="architecture-diagram">
+<h3>BERT Architecture Data Flow</h3>
+<pre class="mermaid">
+graph LR
+    TOK["[CLS] tok1 [MASK] tok3 [SEP]\n Token IDs in N^n"] -->|"Token Emb\n W_tok in R^V x d"| TE["Token Emb\n in R^n x d"]
+    SEG["Segment IDs\n in {0,1}^n"] -->|"Segment Emb\n W_seg in R^2 x d"| SE["Seg Emb\n in R^n x d"]
+    POS["Position 0..n-1"] -->|"Pos Emb\n W_pos in R^n_max x d"| PE["Pos Emb\n in R^n x d"]
+
+    TE --> ADD["Sum Embeddings\n E = Tok + Seg + Pos\n in R^n x d\n STORED for backprop"]
+    SE --> ADD
+    PE --> ADD
+
+    ADD --> ENC["Transformer Encoder\n x L layers (12 or 24)\n Each: MHA + FFN + LN\n STORED per layer:\n attn weights, activations"]
+
+    ENC -->|"[CLS] output"| CLS["CLS repr\n in R^d --> NSP head\n W_nsp in R^d x 2"]
+    ENC -->|"masked positions"| MLM["Masked outputs\n in R^k x d --> MLM head\n W_mlm in R^d x V\n STORED for cross-entropy backprop"]
+
+    style TOK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style ADD fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style CLS fill:#f3e5f5,stroke:#9c27b0,color:#000
+    style MLM fill:#fce4ec,stroke:#e91e63,color:#000
+</pre>
+<p class="diagram-caption">BERT Architecture Data Flow</p>
+</div>
+
+<p></ul>
 </div>
 
 <p>BERT represents a fundamental shift in how we approach natural language understanding by using bidirectional context throughout the entire model. Unlike autoregressive language models such as GPT that can only attend to previous tokens, BERT's encoder-only architecture allows each token to attend to all other tokens in the sequence simultaneously. This bidirectional attention enables BERT to build richer contextual representations that capture both left and right context, making it particularly effective for understanding tasks like question answering, named entity recognition, and text classification.</p>
@@ -190,9 +217,7 @@ BERT is a stack of transformer encoder layers with:
 
 <h3>Parameter Breakdown and Memory Requirements</h3>
 
-<p>Understanding the parameter distribution across BERT's components is essential for memory planning and optimization. The embedding layer typically consumes a substantial fraction of total parameters, particularly for models with large vocabularies. For BERT-base, the token embeddings alone account for $V \times d_{\text{model}} = 30{,}000 \times 768 = 23{,}040{,}000$ parameters, representing approximately 21\% of the model. Position embeddings add another $n_{\max} \times d_{\text{model}} = 512 \times 768 = 393{,}216$ parameters, while segment embeddings contribute a negligible $2 \times 768 = 1{,}536$ parameters for distinguishing sentence pairs.</p>
-
-<p>Each transformer encoder layer contains parameters in three main components. The multi-head self-attention mechanism requires four projection matrices: query, key, value, and output projections, each of dimension $d_{\text{model}} \times d_{\text{model}}$. This yields $4 \times 768^2 = 2{,}359{,}296$ parameters per layer for BERT-base. The feed-forward network dominates the per-layer parameter count with two projections: the expansion from $d_{\text{model}}$ to $d_{ff}$ and the contraction back, totaling $2 \times 768 \times 3072 = 4{,}718{,}592$ parameters. Layer normalization adds $4 \times d_{\text{model}} = 3{,}072$ parameters (two layer norms per layer, each with scale and shift parameters). Summing these components gives approximately 7.1 million parameters per layer, or 85 million parameters across all 12 layers.</p>
+<p>Understanding BERT's parameter distribution is essential for memory planning and optimization. BERT-base totals $\approx$110M parameters: embeddings account for $\sim$21\% ($\sim$23M for token embeddings alone), while the 12 encoder layers contribute $\sim$78\% at 7.1M parameters per layer (see Section~[ref] for the complete worked analysis including FLOPs, activation memory, and hardware timing).</p>
 
 <p>The memory footprint depends critically on numerical precision. In standard FP32 (32-bit floating point), each parameter requires 4 bytes, so BERT-base occupies $110{,}000{,}000 \times 4 = 440$ MB. Modern training typically uses mixed precision with FP16 or BF16 (16-bit formats) for activations and gradients while maintaining FP32 master weights for numerical stability. This reduces the working memory for forward and backward passes to $110{,}000{,}000 \times 2 = 220$ MB for the model parameters, though the optimizer still maintains FP32 copies. For inference, pure FP16 weights require only 220 MB, enabling BERT-base to run comfortably on consumer GPUs with 8-16 GB of memory.</p>
 
@@ -676,6 +701,8 @@ $$
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Masked Language Modeling Implementation</strong>
 

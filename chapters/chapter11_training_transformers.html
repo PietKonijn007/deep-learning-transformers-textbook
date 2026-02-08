@@ -153,6 +153,27 @@
 
 <h2>Training Objectives and Loss Functions</h2>
 
+<div class="architecture-diagram">
+<h3>Transformer Training Pipeline</h3>
+<pre class="mermaid">
+graph LR
+    D["Raw Text"] -->|"BPE/WordPiece"| TOK["Token IDs\n in N^B x n"]
+    TOK -->|"Embedding\n W_emb in R^V x d"| EMB["Embeddings\n + Positional Enc\n in R^B x n x d\n STORED for backprop"]
+    EMB --> TF["Transformer\n Layers x L\n STORED per layer:\n activations, attn\n weights, LN stats"]
+    TF -->|"W_head in R^d x V"| LM["LM Head\n logits in R^B x n x V\n STORED for softmax backprop"]
+    LM -->|"Cross-Entropy"| LOSS["Loss\n sum(-y*log(p))"]
+    LOSS -.->|"Backward:\n peak memory =\n O(L * n * d + n^2 * h)"| TF
+    LOSS -.->|"AdamW step:\n 2x param memory\n for m_t, v_t states"| OPT["Optimizer\n theta -= lr * update"]
+
+    style D fill:#e8f5e9,stroke:#4caf50,color:#000
+    style TF fill:#fff3e0,stroke:#ff9800,color:#000
+    style LM fill:#e3f2fd,stroke:#2196f3,color:#000
+    style LOSS fill:#fce4ec,stroke:#e91e63,color:#000
+    style OPT fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Transformer Training Pipeline</p>
+</div>
+
 <p>The training objective fundamentally shapes how a transformer learns and what capabilities it develops. Different transformer architectures employ distinct training objectives tailored to their intended use cases, from masked language modeling in BERT to causal language modeling in GPT to sequence-to-sequence learning in T5. Understanding these objectives in depth—including their mathematical formulations, computational requirements, and practical implications—is essential for training transformers effectively.</p>
 
 <h3>Masked Language Modeling</h3>
@@ -1242,291 +1263,24 @@ $$
 
 <h2>Training Time and Cost Estimates</h2>
 
-<p>Understanding the time and financial costs of training transformers is essential for planning research projects and production deployments. Training costs scale dramatically with model size, and accurate estimates help make informed decisions about model architecture, hardware selection, and training strategies.</p>
+<p>Training costs for transformers scale dramatically with model size, spanning several orders of magnitude from models accessible to academic labs to those requiring industrial-scale infrastructure. Table~[ref] summarizes the approximate costs for representative models, assuming cloud GPU pricing of \$3--4 per V100 GPU-hour.</p>
 
-<h3>BERT-base Training</h3>
+<table>
+<tr><th><strong>Model</strong></th><th><strong>Parameters</strong></th><th><strong>Hardware</strong></th><th><strong>Training Time</strong></th><th><strong>Estimated Cost</strong></th></tr>
+<tr><td>BERT-base</td><td>110M</td><td>16$\times$ V100</td><td>3--4 days</td><td>\$6,000--7,000</td></tr>
+<tr><td>GPT-2 XL</td><td>1.5B</td><td>32$\times$ V100</td><td>$\sim$1 week</td><td>\$20,000--50,000</td></tr>
+<tr><td>GPT-3</td><td>175B</td><td>10,000+ V100-equiv.</td><td>$\sim$1 month</td><td>\$4--12 million</td></tr>
+</table>
 
-<p>BERT-base, with 110 million parameters, represents a moderately-sized transformer that can be trained on a small cluster of GPUs. The original BERT paper reported training on 16 Cloud TPU chips (equivalent to 16 TPU v2 cores), but the model can also be trained efficiently on NVIDIA GPUs.</p>
+<p>The cost increases by 3--4 orders of magnitude from BERT-base to GPT-3, while performance improvements, though substantial, exhibit diminishing returns. For many applications, smaller models fine-tuned on task-specific data provide excellent performance at a fraction of the cost.</p>
 
-<p><strong>Training configuration:</strong>
-<ul>
-    <li>Hardware: 16× NVIDIA V100 GPUs (16 GB each)
-    <li>Batch size: 256 per GPU, 4096 total effective batch size
-    <li>Sequence length: 512 tokens
-    <li>Training data: 3.3 billion words (approximately 16 GB of text)
-    <li>Training steps: 1 million steps
-    <li>Optimizer: AdamW with learning rate $1 \times 10^{-4}$, warmup 10,000 steps
-</ul>
-
-<p><strong>Computational analysis:</strong></p>
-
-<p>Each training step processes $4096 \times 512 = 2{,}097{,}152$ tokens. With 1 million steps, the total training processes approximately 2.1 trillion tokens. Given that the dataset contains 3.3 billion words (approximately 4.4 billion tokens with subword tokenization), the model sees each token approximately 475 times during training.</p>
-
-<p>Each training step requires approximately 290 GFLOPs (96.6 GFLOPs forward + 193.2 GFLOPs backward). With 1 million steps:
-<div class="equation">
-$$
-\text{Total compute} = 1{,}000{,}000 \times 290 \times 10^9 = 2.9 \times 10^{17} \text{ FLOPs}
-$$
+<div class="keypoint">
+<strong>Scaling Laws.</strong> Research on neural scaling laws shows that for a fixed compute budget $C$, the optimal allocation favors larger models: $P \propto C^{0.73}$ and $D \propto C^{0.27}$, where $P$ is model size and $D$ is dataset size. This means most additional compute should go toward larger models rather than more data, and it explains the trend toward ever-larger architectures.
 </div>
 
-<p>On V100 GPUs with 125 TFLOPS (FP16 with Tensor Cores) and assuming 70\% utilization:
-<div class="equation">
-$$
-\text{Time per step} = \frac{290 \times 10^9}{16 \times 125 \times 10^{12} \times 0.7} \approx 0.21 \text{ seconds}
-$$
+<div class="keypoint">
+<strong>Practical Training Recipe.</strong> For a complete training recipe, combine the techniques from this chapter: AdamW optimizer with warmup and cosine decay, mixed precision training, gradient accumulation for large effective batch sizes, and gradient clipping for stability. See Chapter~23 for a practitioner-oriented decision guide.
 </div>
-
-<p><strong>Total training time:</strong>
-<div class="equation">
-$$
-1{,}000{,}000 \times 0.21 \text{ s} = 210{,}000 \text{ s} \approx 58 \text{ hours} \approx 2.4 \text{ days}
-$$
-</div>
-
-<p>In practice, training takes approximately 3-4 days accounting for data loading, checkpointing, validation, and other overhead. The original BERT paper reported approximately 4 days of training on TPUs.</p>
-
-<p><strong>Cost estimate:</strong></p>
-
-<p>On cloud platforms (AWS, Google Cloud, Azure), V100 GPU instances cost approximately \$3-4 per GPU-hour. For 16 GPUs over 4 days:
-<div class="equation">
-$$
-\text{Cost} = 16 \times 96 \text{ hours} \times \$3.50 = \$5{,}376
-$$
-</div>
-
-<p>Including storage, data transfer, and other costs, the total cost is approximately \$6,000-7,000. This makes BERT-base training accessible to academic research groups and small companies.</p>
-
-<h3>GPT-2 Training</h3>
-
-<p>GPT-2 comes in several sizes, with the largest (GPT-2 XL) having 1.5 billion parameters. This model requires more substantial computational resources than BERT-base but remains trainable on a modest cluster.</p>
-
-<p><strong>Training configuration (GPT-2 XL):</strong>
-<ul>
-    <li>Parameters: 1.5 billion
-    <li>Hardware: 32× NVIDIA V100 GPUs
-    <li>Training data: 40 GB of text (WebText dataset)
-    <li>Sequence length: 1024 tokens
-    <li>Batch size: 512 total effective batch size
-    <li>Training time: Approximately 1 week
-</ul>
-
-<p><strong>Computational analysis:</strong></p>
-
-<p>GPT-2 XL has 48 layers with $d_{\text{model}} = 1600$ and $d_{ff} = 6400$. The FLOPs per token are approximately:
-<div class="equation">
-$$
-\text{FLOPs per token} \approx 48 \times (24 \times 1024 \times 1600^2 + 4 \times 1024^2 \times 1600) \approx 6 \times 10^{12}
-$$
-</div>
-
-<p>With 40 GB of text (approximately 10 billion tokens) and multiple epochs:
-<div class="equation">
-$$
-\text{Total compute} \approx 10^{10} \times 6 \times 10^{12} \times 3 = 1.8 \times 10^{23} \text{ FLOPs}
-$$
-</div>
-
-<p>This is approximately 600× more compute than BERT-base, reflecting the larger model size and dataset.</p>
-
-<p><strong>Cost estimate:</strong></p>
-
-<p>With 32 V100 GPUs for 7 days:
-<div class="equation">
-$$
-\text{Cost} = 32 \times 168 \text{ hours} \times \$3.50 = \$18{,}816
-$$
-</div>
-
-<p>Including overhead, the total cost is approximately \$20,000-25,000. OpenAI reported spending approximately \$50,000 on compute for GPT-2, which includes experimentation, hyperparameter tuning, and multiple training runs.</p>
-
-<h3>GPT-3 Training</h3>
-
-<p>GPT-3, with 175 billion parameters, represents the extreme end of transformer training, requiring massive computational resources and sophisticated distributed training strategies.</p>
-
-<p><strong>Training configuration:</strong>
-<ul>
-    <li>Parameters: 175 billion
-    <li>Architecture: 96 layers, $d_{\text{model}} = 12{,}288$, $d_{ff} = 49{,}152$
-    <li>Training data: 300 billion tokens (approximately 570 GB of text)
-    <li>Sequence length: 2048 tokens
-    <li>Hardware: Estimated 10,000+ NVIDIA V100 GPUs (or equivalent)
-    <li>Training time: Approximately 1 month
-</ul>
-
-<p><strong>Computational analysis:</strong></p>
-
-<p>The FLOPs per token for GPT-3 are approximately:
-<div class="equation">
-$$
-\text{FLOPs per token} \approx 96 \times (24 \times 2048 \times 12288^2 + 4 \times 2048^2 \times 12288) \approx 7 \times 10^{14}
-$$
-</div>
-
-<p>With 300 billion tokens:
-<div class="equation">
-$$
-\text{Total compute} \approx 3 \times 10^{11} \times 7 \times 10^{14} \times 3 = 6.3 \times 10^{26} \text{ FLOPs}
-$$
-</div>
-
-<p>This is approximately 2 million times more compute than BERT-base, illustrating the exponential scaling of training costs with model size.</p>
-
-<p><strong>Cost estimate:</strong></p>
-
-<p>The exact hardware configuration for GPT-3 training has not been publicly disclosed, but estimates suggest:
-<ul>
-    <li>Compute cost: \$4-12 million (depending on hardware and efficiency)
-    <li>Energy consumption: Approximately 1,287 MWh
-    <li>Carbon footprint: Approximately 552 metric tons CO$_2$ equivalent (depending on energy source)
-</ul>
-
-<p>These estimates are based on the reported compute of $3.14 \times 10^{23}$ FLOPs (petaflop-days) and typical cloud GPU pricing. The actual cost to OpenAI may be lower due to optimized infrastructure and bulk pricing, but the order of magnitude illustrates the massive investment required for training such large models.</p>
-
-<h3>Scaling Laws</h3>
-
-<p>Research on scaling laws for language models has revealed predictable relationships between model size, dataset size, compute budget, and performance. These laws enable estimation of training costs for models of different sizes.</p>
-
-<p><strong>Key scaling relationships:</strong></p>
-
-<p><strong>Compute scaling:</strong> Doubling the model size (number of parameters) requires approximately 4× the compute for the same amount of training data. This quadratic scaling arises because:
-<ul>
-    <li>FLOPs scale linearly with parameters: $\text{FLOPs} \propto P$
-    <li>Optimal training data scales linearly with parameters: $\text{Data} \propto P$
-    <li>Total compute is FLOPs × Data: $\text{Compute} \propto P^2$
-</ul>
-
-<p><strong>Data scaling:</strong> Doubling the dataset size requires approximately 2× the compute (assuming model size is fixed). This linear scaling is straightforward: processing twice as much data requires twice as many training steps.</p>
-
-<p><strong>Optimal allocation:</strong> For a fixed compute budget $C$, the optimal allocation between model size $P$ and dataset size $D$ follows:
-<div class="equation">
-$$
-P \propto C^{0.73}, \quad D \propto C^{0.27}
-$$
-</div>
-
-<p>This means that as compute increases, most of the additional compute should go toward larger models rather than more data. For example, increasing compute by 10× should increase model size by approximately 5.4× and dataset size by approximately 1.9×.</p>
-
-<p>These scaling laws have important implications for training strategy. For a given compute budget, training a larger model on less data often yields better performance than training a smaller model on more data. This insight has driven the trend toward ever-larger models like GPT-3, GPT-4, and beyond.</p>
-
-<h3>Cost-Performance Trade-offs</h3>
-
-<p>The relationship between training cost and model performance is not linear. Initial improvements are relatively cheap, but achieving state-of-the-art performance requires exponentially increasing compute.</p>
-
-<p><strong>Example progression:</strong>
-<ul>
-    <li>BERT-base (110M params): \$7,000, strong performance on many tasks
-    <li>BERT-large (340M params): \$25,000, 2-3\% improvement over BERT-base
-    <li>GPT-2 XL (1.5B params): \$50,000, significant improvement in generation quality
-    <li>GPT-3 (175B params): \$4-12 million, state-of-the-art few-shot learning
-</ul>
-
-<p>The cost increases by 3-4 orders of magnitude from BERT-base to GPT-3, while performance improvements, though substantial, are more modest. This diminishing return on investment means that the choice of model size should be driven by the specific application requirements and available budget.</p>
-
-<p>For many applications, smaller models like BERT-base or GPT-2 provide excellent performance at a fraction of the cost of the largest models. Fine-tuning these models on task-specific data often yields better results than using much larger models without fine-tuning. The trend toward efficient training methods (distillation, pruning, quantization) aims to achieve strong performance with lower training costs.</p>
-
-<h2>Practical Training Recipe</h2>
-
-<p>This section provides a comprehensive, step-by-step guide for training a transformer model, synthesizing the techniques and considerations discussed throughout the chapter. This recipe is based on best practices from training BERT, GPT-2, and other successful models, adapted for practical use.</p>
-
-<h3>Data Preparation</h3>
-
-<p>Effective training begins with proper data preparation. The quality and format of training data significantly impact model performance and training efficiency.</p>
-
-<p><strong>Tokenization:</strong> Use subword tokenization (BPE, WordPiece, or SentencePiece) to balance vocabulary size and representation quality. For English, a vocabulary size of 30,000-50,000 works well. Train the tokenizer on a representative sample of your data (at least 1 million sentences) to ensure good coverage. The tokenizer should handle rare words, numbers, and special characters appropriately.</p>
-
-<p><strong>Sequence packing:</strong> Combine multiple short documents into single sequences to minimize padding waste. For example, if training with sequence length 512, pack documents separated by special tokens until reaching 512 tokens. This improves efficiency by ensuring most tokens in each sequence are meaningful rather than padding.</p>
-
-<p><strong>Data augmentation:</strong> For tasks where data is limited, consider augmentation strategies like back-translation, synonym replacement, or random insertion/deletion of tokens. However, for large-scale pretraining, augmentation is typically unnecessary and may hurt performance by introducing noise.</p>
-
-<p><strong>Data filtering:</strong> Remove low-quality examples (duplicates, non-linguistic content, extremely short or long sequences) to improve training efficiency. For web-scraped data, filter by language, remove boilerplate content, and deduplicate at the document level.</p>
-
-<h3>Model Initialization</h3>
-
-<p>Proper initialization is crucial for training stability and convergence speed. Poor initialization can lead to vanishing or exploding gradients, slow convergence, or failure to train at all.</p>
-
-<p><strong>Weight initialization:</strong> Use Xavier (Glorot) initialization for linear layers:
-<div class="equation">
-$$
-W_{ij} \sim \mathcal{N}(0, \frac{2}{d_{\text{in}} + d_{\text{out}}})
-$$
-</div>
-where $d_{\text{in}}$ and $d_{\text{out}}$ are the input and output dimensions. This initialization maintains variance across layers, preventing vanishing or exploding activations.</p>
-
-<p><strong>Bias initialization:</strong> Initialize all biases to zero. This is standard practice and works well for transformers.</p>
-
-<p><strong>Embedding initialization:</strong> Initialize token embeddings with Xavier initialization. Position embeddings can be initialized randomly or with sinusoidal patterns (as in the original Transformer). Random initialization is more common in modern models and allows the model to learn task-specific positional patterns.</p>
-
-<p><strong>Layer normalization initialization:</strong> Initialize scale parameters $\gamma$ to 1 and shift parameters $\beta$ to 0. This makes layer normalization initially act as the identity function, allowing gradients to flow freely in early training.</p>
-
-<p><strong>Output layer initialization:</strong> For the output projection to vocabulary logits, use Xavier initialization with a smaller scale (multiply by 0.5 or 0.1) to prevent overly confident initial predictions that can destabilize training.</p>
-
-<h3>Hyperparameter Selection</h3>
-
-<p>Choosing appropriate hyperparameters is critical for successful training. These recommendations are based on extensive empirical experience with transformer training.</p>
-
-<p><strong>Learning rate:</strong> Start with $\eta_{\max} = 1 \times 10^{-4}$ to $3 \times 10^{-4}$ for Adam/AdamW. Larger models typically require smaller learning rates. For BERT-base, use $1 \times 10^{-4}$. For GPT-2, use $2.5 \times 10^{-4}$. For models larger than 1B parameters, use $6 \times 10^{-5}$ or smaller.</p>
-
-<p><strong>Warmup:</strong> Use 10\% of total training steps for warmup, or at least 1,000 steps. For very large models or large batch sizes, extend warmup to 20\% of steps. The warmup period should be long enough for Adam's moment estimates to stabilize.</p>
-
-<p><strong>Batch size:</strong> Use the largest batch size that fits in memory, typically 256-2048 for transformers. If memory-constrained, use gradient accumulation to achieve larger effective batch sizes. Scale the learning rate proportionally when increasing batch size beyond 256.</p>
-
-<p><strong>Weight decay:</strong> Use $\lambda = 0.01$ for AdamW. Exclude biases and layer normalization parameters from weight decay. This moderate regularization prevents overfitting without overly constraining the model.</p>
-
-<p><strong>Dropout:</strong> Use $p = 0.1$ for all dropout locations (attention, residual, embedding). For small datasets, increase to $p = 0.2$ or $p = 0.3$. For very large models (>10B parameters), consider reducing to $p = 0.05$.</p>
-
-<p><strong>Gradient clipping:</strong> Use threshold $\theta = 1.0$. Monitor the fraction of steps where clipping occurs (should be 1-5\%). If clipping occurs more frequently, consider reducing the learning rate.</p>
-
-<p><strong>Adam hyperparameters:</strong> Use $\beta_1 = 0.9$, $\beta_2 = 0.999$, $\epsilon = 10^{-8}$. These values work well across different model sizes and tasks.</p>
-
-<h3>Training Loop</h3>
-
-<p>The training loop orchestrates data loading, forward-backward passes, optimization, and monitoring. A well-structured training loop is essential for efficient and stable training.</p>
-
-<p><strong>Mixed precision:</strong> Enable FP16 or BF16 mixed precision training to reduce memory and accelerate computation. Use automatic mixed precision (AMP) libraries like PyTorch's <code>torch.cuda.amp</code> or NVIDIA Apex to handle the complexity of loss scaling and data type conversions.</p>
-
-<p><strong>Gradient accumulation:</strong> If using gradient accumulation, ensure the loss is scaled by $1/K$ where $K$ is the number of accumulation steps. This ensures the accumulated gradient has the correct magnitude.</p>
-
-<p><strong>Gradient checkpointing:</strong> Enable gradient checkpointing if memory-constrained, particularly for long sequences or deep models. The 20-30\% time overhead is usually acceptable given the memory savings.</p>
-
-<p><strong>Learning rate schedule:</strong> Implement the chosen schedule (warmup + linear decay, warmup + cosine, etc.) and update the learning rate at each step. Most optimization libraries provide schedulers that handle this automatically.</p>
-
-<p><strong>Validation:</strong> Evaluate on a validation set every $N$ steps (typically every 1,000-10,000 steps depending on dataset size). Compute validation loss and task-specific metrics. Use validation performance to detect overfitting and select the best checkpoint.</p>
-
-<p><strong>Checkpointing:</strong> Save model checkpoints regularly (every 10,000-50,000 steps) to enable recovery from failures and to preserve the best model. Save optimizer state along with model parameters to enable seamless resumption of training.</p>
-
-<h3>Monitoring and Debugging</h3>
-
-<p>Effective monitoring helps detect issues early and guides hyperparameter tuning. Track these metrics throughout training:</p>
-
-<p><strong>Training loss:</strong> Should decrease steadily. If loss plateaus early, the learning rate may be too low. If loss spikes or diverges, the learning rate may be too high or gradient clipping may be insufficient.</p>
-
-<p><strong>Validation loss:</strong> Should track training loss initially, then diverge as the model begins to overfit. If validation loss increases while training loss decreases, increase regularization (dropout, weight decay) or reduce model capacity.</p>
-
-<p><strong>Perplexity:</strong> For language modeling, perplexity $= \exp(\text{loss})$ provides an interpretable metric. Lower perplexity indicates better predictions. BERT-base achieves perplexity around 3-4 on masked language modeling.</p>
-
-<p><strong>Learning rate:</strong> Monitor the current learning rate to verify the schedule is working correctly. The learning rate should increase during warmup, then decrease during decay.</p>
-
-<p><strong>Gradient norm:</strong> Track the norm of the gradient vector. Typical values are 0.1-10. Very small gradients (<0.01) may indicate vanishing gradients or a learning rate that's too low. Very large gradients (>100) may indicate exploding gradients or a learning rate that's too high.</p>
-
-<p><strong>Parameter norm:</strong> Track the norm of the parameter vector. This should increase gradually during training as the model learns. Sudden jumps may indicate instability.</p>
-
-<p><strong>GPU memory usage:</strong> Monitor memory consumption to ensure you're using available memory efficiently. If memory usage is much lower than GPU capacity, consider increasing batch size.</p>
-
-<p><strong>Throughput:</strong> Track tokens processed per second. This helps identify performance bottlenecks and measure the impact of optimizations.</p>
-
-<p><strong>Common issues and solutions:</strong></p>
-
-<p><em>Loss doesn't decrease:</em> Check learning rate (may be too low), verify data is loading correctly, check initialization (may be poor), ensure gradients are flowing (check gradient norms).</p>
-
-<p><em>Loss spikes or diverges:</em> Reduce learning rate, increase warmup period, enable or strengthen gradient clipping, check for data quality issues (corrupted examples, extreme outliers).</p>
-
-<p><em>Training is slow:</em> Enable mixed precision if not already enabled, increase batch size if memory allows, use gradient accumulation to increase effective batch size, profile to identify bottlenecks (data loading, computation, communication).</p>
-
-<p><em>Out of memory:</em> Reduce batch size, enable gradient checkpointing, reduce sequence length, enable mixed precision, use gradient accumulation to maintain effective batch size.</p>
-
-<p><em>Poor generalization:</em> Increase regularization (dropout, weight decay), use label smoothing, train on more data, reduce model capacity, use data augmentation.</p>
-
-<p>This comprehensive training recipe provides a solid foundation for training transformers. While specific details may need adjustment based on the task, dataset, and available hardware, these guidelines capture best practices that have proven effective across a wide range of transformer training scenarios.</p>
 
 <h2>Exercises</h2>
 
@@ -1555,6 +1309,8 @@ where $d_{\text{in}}$ and $d_{\text{out}}$ are the input and output dimensions. 
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Mixed Precision Training Implementation</strong>
 

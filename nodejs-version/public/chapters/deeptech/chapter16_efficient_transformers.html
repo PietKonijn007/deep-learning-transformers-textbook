@@ -206,14 +206,14 @@ where $|\mathcal{S}(i)| = k \ll n$ for all positions $i$. The computational comp
 graph LR
     FULL["Full Attention\n A = softmax(QK^T/sqrt(d))V\n Compute: O(n^2 d)\n Memory: O(n^2)\n STORED: full n x n matrix"]
 
-<p>FULL --> SPARSE["Sparse Attention\n Only compute S subset\n of n^2 entries\n Memory: O(n * w)\n w = window size"]
+    FULL --> SPARSE["Sparse Attention\n Only compute S subset\n of n^2 entries\n Memory: O(n * w)\n w = window size"]
     FULL --> LINEAR["Linear Attention\n phi(Q)*[phi(K)^T * V]\n Compute: O(n * d^2)\n Memory: O(n * d)\n NO n x n matrix stored"]
-    FULL --> FLASH["FlashAttention\n Tiled computation\n Recompute in backward\n Peak memory: O(n)\n IO-aware: minimizes\n HBM reads/writes"]</p>
+    FULL --> FLASH["FlashAttention\n Tiled computation\n Recompute in backward\n Peak memory: O(n)\n IO-aware: minimizes\n HBM reads/writes"]
 
-<p>SPARSE --> SP1["Longformer: local w\n + global g tokens\n O(n*(w+g))"]
-    LINEAR --> LIN1["Performer: random\n feature map phi\n O(n*d*r), r = features"]</p>
+    SPARSE --> SP1["Longformer: local w\n + global g tokens\n O(n*(w+g))"]
+    LINEAR --> LIN1["Performer: random\n feature map phi\n O(n*d*r), r = features"]
 
-<p>style FULL fill:#fce4ec,stroke:#e91e63,color:#000
+    style FULL fill:#fce4ec,stroke:#e91e63,color:#000
     style SPARSE fill:#e3f2fd,stroke:#2196f3,color:#000
     style LINEAR fill:#e8f5e9,stroke:#4caf50,color:#000
     style FLASH fill:#fff3e0,stroke:#ff9800,color:#000

@@ -161,7 +161,32 @@ $$\begin{align}
 </div>
 </div>
 
-<p><strong>Dimensions:</strong>
+<p><strong>Dimensions:</strong></p>
+
+<div class="architecture-diagram">
+<h3>Cross-Attention vs Self-Attention Data Flow</h3>
+<pre class="mermaid">
+graph LR
+    subgraph SelfAttn["Self-Attention"]
+        SX["X in R^n x d"] -->|"W_Q, W_K, W_V"| SQ["Q,K,V all\n from X\n Memory: O(n^2)"]
+        SQ --> SOUT["Output in R^n x d"]
+    end
+
+    subgraph CrossAttn["Cross-Attention (Encoder-Decoder)"]
+        DX["Decoder X_dec\n in R^m x d"] -->|"W_Q in R^d x d_k"| CQ["Q = X_dec * W_Q\n in R^m x d_k"]
+        EX["Encoder X_enc\n in R^n x d"] -->|"W_K in R^d x d_k\n W_V in R^d x d_v"| CKV["K in R^n x d_k\n V in R^n x d_v"]
+        CQ --> COUT["Attn(Q,K,V)\n in R^m x d_v\n Memory: O(m*n)\n STORED: Q,K,V,attn_weights"]
+        CKV --> COUT
+    end
+
+    style SX fill:#e8f5e9,stroke:#4caf50,color:#000
+    style DX fill:#e3f2fd,stroke:#2196f3,color:#000
+    style EX fill:#e8f5e9,stroke:#4caf50,color:#000
+    style COUT fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Cross-Attention vs Self-Attention Data Flow</p>
+</div>
+
 <ul>
     <li>Decoder input: $\mX_{\text{dec}} \in \R^{m \times d}$ ($m$ decoder positions)
     <li>Encoder output: $\mX_{\text{enc}} \in \R^{n \times d}$ ($n$ encoder positions)
@@ -254,42 +279,7 @@ where $B_{ij}$ depends only on $|i-j|$ (bucketed by distance).</p>
 
 <h2>Alternative Attention Scoring Functions</h2>
 
-<p>Beyond scaled dot-product, various scoring functions exist:</p>
-
-<h3>Additive (Bahdanau)</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \mathbf{v}\transpose \tanh(\mW_1 \vq + \mW_2 \vk)
-$$
-</div>
-
-<h3>Multiplicative (Luong)</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-$$
-</div>
-
-<h3>Scaled Dot-Product (Transformers)</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \frac{\vq\transpose \vk}{\sqrt{d_k}}
-$$
-</div>
-
-<h3>General</h3>
-<div class="equation">
-$$
-\text{score}(\vq, \vk) = \vq\transpose \mW \vk
-$$
-</div>
-
-<p><strong>Comparison:</strong>
-<ul>
-    <li><strong>Additive:</strong> More parameters, handles different dimensions
-    <li><strong>Dot-product:</strong> Efficient, used in transformers
-    <li><strong>General:</strong> Flexible but more parameters
-</ul>
+<p>Beyond the scaled dot-product used in transformers, several alternative scoring functions exist---additive (Bahdanau), multiplicative (Luong), and general bilinear forms---each with different trade-offs between expressiveness and computational efficiency. These are defined and compared in Chapter~[ref] (Section~7.3). In practice, scaled dot-product attention dominates in transformer architectures due to its hardware-efficient batched matrix multiplication and strong empirical performance.</p>
 
 <h2>Attention Masking</h2>
 
@@ -597,6 +587,8 @@ $$
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Cross-attention PyTorch implementation:</strong>
 

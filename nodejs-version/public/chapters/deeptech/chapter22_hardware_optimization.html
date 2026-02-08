@@ -178,15 +178,15 @@ graph LR
     PARAM["Model Params\n W in R^P\n FP16: 2P bytes"] --> HBM["HBM (GPU RAM)\n 40-80 GB\n Bandwidth: 2 TB/s\n Stores: params, grads,\n optimizer states, activations"]
     HBM --> SRAM["SRAM (On-chip)\n ~20 MB per SM\n Bandwidth: 19 TB/s\n Stores: tiles of Q,K,V\n during FlashAttention"]
 
-<p>subgraph Optim["Memory Optimizations"]
-        MP["Mixed Precision\n FP32 master weights\n FP16 forward/backward\n Saves ~50
-        GC["Gradient Checkpointing\n Discard activations\n Recompute in backward\n Saves O(L) memory\n Costs ~33
+    subgraph Optim["Memory Optimizations"]
+        MP["Mixed Precision\n FP32 master weights\n FP16 forward/backward\n Saves ~50% memory"]
+        GC["Gradient Checkpointing\n Discard activations\n Recompute in backward\n Saves O(L) memory\n Costs ~33% extra compute"]
         FSDP["FSDP/ZeRO\n Shard params+grads+opt\n across N GPUs\n Memory: O(P/N) per GPU"]
-    end</p>
+    end
 
-<p>HBM --> Optim</p>
+    HBM --> Optim
 
-<p>style PARAM fill:#e8f5e9,stroke:#4caf50,color:#000
+    style PARAM fill:#e8f5e9,stroke:#4caf50,color:#000
     style HBM fill:#fff3e0,stroke:#ff9800,color:#000
     style SRAM fill:#e3f2fd,stroke:#2196f3,color:#000
     style GC fill:#fce4ec,stroke:#e91e63,color:#000

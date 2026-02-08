@@ -380,6 +380,15 @@ def convert_latex_to_html(latex_content):
         flags=re.DOTALL
     )
 
+    # Protect architecture-diagram blocks from ALL subsequent processing
+    # (paragraph wrapping, LaTeX command removal, etc.)
+    arch_diagram_blocks = []
+    def save_arch_block(match):
+        arch_diagram_blocks.append(match.group(0))
+        return f'___ARCH_DIAGRAM_{len(arch_diagram_blocks)-1}___'
+
+    html = re.sub(r'<div class="architecture-diagram">.*?</div>', save_arch_block, html, flags=re.DOTALL)
+
     # Convert figure environments
     # Handle figure with caption and label
     def convert_figure(match):
@@ -770,7 +779,7 @@ def convert_latex_to_html(latex_content):
         if not part:
             continue
         # Check if it's a block element (starts with <h, <div, <ul, <ol, <pre, <table, <figure) or a placeholder
-        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote|figure)', part) or '___PRE_BLOCK_' in part:
+        if re.match(r'^\s*<(h[1-6]|div|ul|ol|pre|table|blockquote|figure)', part) or '___PRE_BLOCK_' in part or '___ARCH_DIAGRAM_' in part:
             wrapped_parts.append(part)
         else:
             wrapped_parts.append(f'<p>{part}</p>')
@@ -793,7 +802,11 @@ def convert_latex_to_html(latex_content):
     html = re.sub(r'(</ul>|</ol>)\s*</p>', r'\1', html)
     html = re.sub(r'<p>\s*(<figure)', r'\1', html)
     html = re.sub(r'(</figure>)\s*</p>', r'\1', html)
-    
+
+    # Restore architecture-diagram blocks (protected from all processing above)
+    for i, block in enumerate(arch_diagram_blocks):
+        html = html.replace(f'___ARCH_DIAGRAM_{i}___', block)
+
     return html
 
 def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_chapter=None, output_dirs=None):
