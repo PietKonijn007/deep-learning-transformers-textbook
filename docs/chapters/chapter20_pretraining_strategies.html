@@ -166,16 +166,16 @@
 <pre class="mermaid">
 graph LR
     subgraph CLM["Causal LM (GPT)"]
-        C1["x_1..x_t"] -->|"Predict next"| C2["P(x_t+1|x_leq_t)<br/> Causal mask<br/> Memory: O(t^2) attn"]
+        C1["x_1..x_t"] --> C2["Predict x_t+1<br/> Causal mask<br/> Memory: O(t<sup>2</sup>)"]
     end
 
     subgraph MLM_["Masked LM (BERT)"]
-        M1["x with 15% [MASK]"] -->|"Predict masked"| M2["P(x_mask|x_visible)<br/> Bidirectional<br/> Memory: O(n^2) attn"]
+        M1["x with [MASK]"] --> M2["Predict masked<br/> Bidirectional<br/> Memory: O(n<sup>2</sup>)"]
     end
 
     subgraph S2S["Seq2Seq (T5)"]
-        S1["Corrupted input"] -->|"Encoder"| S2["Enc repr<br/> ∈ ℝ^n x d"]
-        S2 -->|"Decoder"| S3["Reconstruct spans<br/> Cross-attn memory:<br/> O(m*n) extra"]
+        S1["Corrupted input"] --> S2["Encoder repr<br/> ∈ ℝ<sup>n×d</sup>"]
+        S2 --> S3["Decode spans<br/> Cross-attn: O(m*n)"]
     end
 
     style C2 fill:#e3f2fd,stroke:#2196f3,color:#000

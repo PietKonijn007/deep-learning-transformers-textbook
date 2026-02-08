@@ -157,16 +157,22 @@
 <h3>Transformer Training Pipeline</h3>
 <pre class="mermaid">
 graph LR
-    D["Raw Text"] -->|"BPE/WordPiece"| TOK["Token IDs<br/> ∈ ℕ^B x n"]
-    TOK -->|"Embedding<br/> W_emb ∈ ℝ^V x d"| EMB["Embeddings<br/> + Positional Enc<br/> ∈ ℝ^B x n x d<br/> STORED for backprop"]
-    EMB --> TF["Transformer<br/> Layers x L<br/> STORED per layer:<br/> activations, attn<br/> weights, LN stats"]
-    TF -->|"W_head ∈ ℝ^d x V"| LM["LM Head<br/> logits ∈ ℝ^B x n x V<br/> STORED for softmax backprop"]
-    LM -->|"Cross-Entropy"| LOSS["Loss<br/> sum(-y*log(p))"]
-    LOSS -.->|"Backward:<br/> peak memory =<br/> O(L * n * d + n^2 * h)"| TF
-    LOSS -.->|"AdamW step:<br/> 2x param memory<br/> for m_t, v_t states"| OPT["Optimizer<br/> θ -= lr * update"]
+    D["Raw Text"] -->|"BPE/WordPiece"| TOK["Token IDs<br/> ∈ ℕ<sup>B×n</sup>"]
+    TOK --> EMB["Token Embeddings<br/> ∈ ℝ<sup>B×n×d</sup><br/> STORED for backprop"]
+    Wemb["W_emb<br/> ∈ ℝ<sup>V×d</sup>"] --> EMB
+    Wpos["W_pos / sinusoidal<br/> ∈ ℝ<sup>n_max×d</sup>"] --> EMB
+    EMB --> TF["Transformer<br/> Layers x L<br/> STORED per layer:<br/> activations, attn"]
+    TF --> LM["LM Head logits<br/> ∈ ℝ<sup>B×n×V</sup><br/> STORED for softmax"]
+    Whead["W_head<br/> ∈ ℝ<sup>d×V</sup>"] --> LM
+    LM -->|"Cross-Entropy"| LOSS["Loss"]
+    LOSS -.->|"Backward: O(L*n*d + n<sup>2</sup>*h)"| TF
+    LOSS -.->|"AdamW: 2x param memory"| OPT["Optimizer step"]
 
     style D fill:#e8f5e9,stroke:#4caf50,color:#000
-    style TF fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpos fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
+    style TF fill:#e3f2fd,stroke:#2196f3,color:#000
     style LM fill:#e3f2fd,stroke:#2196f3,color:#000
     style LOSS fill:#fce4ec,stroke:#e91e63,color:#000
     style OPT fill:#f3e5f5,stroke:#9c27b0,color:#000

@@ -167,14 +167,18 @@ A <strong>random variable</strong> $X$ is a function that maps outcomes from a s
 <h3>Cross-Entropy Loss in Classification</h3>
 <pre class="mermaid">
 graph LR
-    X["Input x<br/> ∈ ℝ^d"] -->|"Model f(x;θ)"| LOGITS["Logits z<br/> ∈ ℝ^K<br/> STORED for backprop"]
-    LOGITS -->|"softmax"| P["Predicted P(y|x)<br/> p_k = exp(z_k)/sum<br/> ∈ ℝ^K<br/> STORED: p for gradient"]
-    Y["True label y<br/> one-hot ∈ ℝ^K"] --> CE["Cross-Entropy<br/> H(y,p) = -sum(y_k log p_k)<br/> = -log p_y<br/> scalar"]
+    X["Input x<br/> ∈ ℝ<sup>d</sup>"] --> LOGITS["Logits z = Wx + b<br/> ∈ ℝ<sup>K</sup><br/> STORED for backprop"]
+    W["Weights W<br/> ∈ ℝ<sup>K×d</sup>"] --> LOGITS
+    Bb["Bias b<br/> ∈ ℝ<sup>K</sup>"] --> LOGITS
+    LOGITS -->|"softmax"| P["Probabilities<br/> p_k = exp(z_k)/sum<br/> ∈ ℝ<sup>K</sup><br/> STORED for gradient"]
+    Y["True label y<br/> one-hot ∈ ℝ<sup>K</sup>"] --> CE["Cross-Entropy<br/> H = -sum(y_k log p_k)<br/> scalar"]
     P --> CE
-    CE -.->|"∂L/∂z_k = p_k - y_k<br/> simple gradient"| LOGITS
+    CE -.->|"∂L/∂z_k = p_k - y_k"| LOGITS
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
-    style LOGITS fill:#fff3e0,stroke:#ff9800,color:#000
+    style W fill:#fff3e0,stroke:#ff9800,color:#000
+    style Bb fill:#fff3e0,stroke:#ff9800,color:#000
+    style LOGITS fill:#e3f2fd,stroke:#2196f3,color:#000
     style P fill:#e3f2fd,stroke:#2196f3,color:#000
     style CE fill:#fce4ec,stroke:#e91e63,color:#000
 </pre>

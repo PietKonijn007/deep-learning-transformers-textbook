@@ -162,22 +162,34 @@ BERT is a stack of transformer encoder layers with:
 <h3>BERT Architecture Data Flow</h3>
 <pre class="mermaid">
 graph LR
-    TOK["[CLS] tok1 [MASK] tok3 [SEP]<br/> Token IDs ∈ ℕ^n"] -->|"Token Emb<br/> W_tok ∈ ℝ^V x d"| TE["Token Emb<br/> ∈ ℝ^n x d"]
-    SEG["Segment IDs<br/> in {0,1}^n"] -->|"Segment Emb<br/> W_seg ∈ ℝ^2 x d"| SE["Seg Emb<br/> ∈ ℝ^n x d"]
-    POS["Position 0..n-1"] -->|"Pos Emb<br/> W_pos ∈ ℝ^n_max x d"| PE["Pos Emb<br/> ∈ ℝ^n x d"]
+    TOK["Token IDs<br/> [CLS] t1 [MASK] t3 [SEP]<br/> ∈ ℕ<sup>n</sup>"] --> TE["Token Emb<br/> ∈ ℝ<sup>n×d</sup>"]
+    Wtok["W_tok<br/> ∈ ℝ<sup>V×d</sup>"] --> TE
+    SEG["Segment IDs<br/> in {0,1}<sup>n</sup>"] --> SE["Seg Emb<br/> ∈ ℝ<sup>n×d</sup>"]
+    Wseg["W_seg<br/> ∈ ℝ<sup>2×d</sup>"] --> SE
+    POS["Position 0..n-1"] --> PE["Pos Emb<br/> ∈ ℝ<sup>n×d</sup>"]
+    Wpos["W_pos<br/> ∈ ℝ<sup>n_max×d</sup>"] --> PE
 
-    TE --> ADD["Sum Embeddings<br/> E = Tok + Seg + Pos<br/> ∈ ℝ^n x d<br/> STORED for backprop"]
+    TE --> ADD["Sum Embeddings<br/> E = Tok + Seg + Pos<br/> ∈ ℝ<sup>n×d</sup><br/> STORED for backprop"]
     SE --> ADD
     PE --> ADD
 
-    ADD --> ENC["Transformer Encoder<br/> x L layers (12 or 24)<br/> Each: MHA + FFN + LN<br/> STORED per layer:<br/> attn weights, activations"]
+    ADD --> ENC["Transformer Encoder<br/> x L layers (12/24)<br/> MHA + FFN + LN<br/> STORED per layer"]
 
-    ENC -->|"[CLS] output"| CLS["CLS repr<br/> ∈ ℝ^d --> NSP head<br/> W_nsp ∈ ℝ^d x 2"]
-    ENC -->|"masked positions"| MLM["Masked outputs<br/> ∈ ℝ^k x d --> MLM head<br/> W_mlm ∈ ℝ^d x V<br/> STORED for cross-entropy backprop"]
+    ENC --> CLS["CLS output --> NSP<br/> ∈ ℝ<sup>d</sup>"]
+    Wnsp["W_nsp<br/> ∈ ℝ<sup>d×2</sup>"] --> CLS
+    ENC --> MLM["Masked --> MLM head<br/> ∈ ℝ<sup>k×d</sup>"]
+    Wmlm["W_mlm<br/> ∈ ℝ<sup>d×V</sup>"] --> MLM
 
     style TOK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style SEG fill:#e8f5e9,stroke:#4caf50,color:#000
+    style POS fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wtok fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wseg fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpos fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wnsp fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wmlm fill:#fff3e0,stroke:#ff9800,color:#000
     style ADD fill:#e3f2fd,stroke:#2196f3,color:#000
-    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
     style CLS fill:#f3e5f5,stroke:#9c27b0,color:#000
     style MLM fill:#fce4ec,stroke:#e91e63,color:#000
 </pre>

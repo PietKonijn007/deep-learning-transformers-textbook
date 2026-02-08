@@ -163,20 +163,28 @@ where $\mW^{Q(i)}, \mW^{K(i)}, \mW^{V(i)} \in \R^{d_{\text{model}} \times d_k}$ 
 
 \begin{mermaid}[Multi-Head Self-Attention Data Flow]
 graph LR
-    X["Input X\n in R^n x d_model"] -->|"W_Q^i in R^d_model x d_k\n per head"| Q["Q_i = X*W_Q^i\n in R^n x d_k\n STORED: X for dL/dW_Q"]
-    X -->|"W_K^i in R^d_model x d_k"| K["K_i = X*W_K^i\n in R^n x d_k"]
-    X -->|"W_V^i in R^d_model x d_v"| V["V_i = X*W_V^i\n in R^n x d_v"]
-    Q --> ATT["Attention(Q_i,K_i,V_i)\n softmax(Q_i*K_i^T/sqrt(d_k))*V_i\n head_i in R^n x d_v\n h heads in parallel\n STORED: attn weights per head"]
-    K --> ATT
+    X["Input X\n in R^n x d_model"] --> Q["Q_i = X*W_Q\n in R^n x d_k"]
+    WQ["W_Q^i\n in R^d_model x d_k\n per head"] --> Q
+    X --> KK["K_i = X*W_K\n in R^n x d_k"]
+    WK["W_K^i\n in R^d_model x d_k"] --> KK
+    X --> V["V_i = X*W_V\n in R^n x d_v"]
+    WV["W_V^i\n in R^d_model x d_v"] --> V
+    Q --> ATT["Attention\n softmax(QK^T/sqrt(d_k))*V\n h heads in parallel\n STORED: attn weights"]
+    KK --> ATT
     V --> ATT
-    ATT -->|"Concat h heads"| CAT["[head_1;...;head_h]\n in R^n x h*d_v"]
-    CAT -->|"W_O in R^(h*d_v) x d_model"| OUT["Output\n in R^n x d_model\n STORED: concat for dL/dW_O"]
+    ATT -->|"Concat heads"| CAT["Concat\n in R^n x h*d_v"]
+    CAT --> OUT["Output\n in R^n x d_model"]
+    WO["W_O\n in R^h*d_v x d_model"] --> OUT
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
+    style WQ fill:#fff3e0,stroke:#ff9800,color:#000
+    style WK fill:#fff3e0,stroke:#ff9800,color:#000
+    style WV fill:#fff3e0,stroke:#ff9800,color:#000
+    style WO fill:#fff3e0,stroke:#ff9800,color:#000
     style Q fill:#e3f2fd,stroke:#2196f3,color:#000
-    style K fill:#e3f2fd,stroke:#2196f3,color:#000
+    style KK fill:#e3f2fd,stroke:#2196f3,color:#000
     style V fill:#e3f2fd,stroke:#2196f3,color:#000
-    style ATT fill:#fff3e0,stroke:#ff9800,color:#000
+    style ATT fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

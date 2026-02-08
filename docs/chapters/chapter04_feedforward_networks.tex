@@ -64,21 +64,27 @@ where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and 
 
 \begin{mermaid}[MLP Forward and Backward Pass]
 graph LR
-    X["Input x\n x in R^n0"] -->|"W1 in R^n1 x n0\n b1 in R^n1"| Z1["Pre-activation\n z1 = W1*x + b1\n z1 in R^n1\n STORED for backprop"]
-    Z1 -->|"Activation sigma"| H1["h1 = sigma(z1)\n h1 in R^n1\n STORED for backprop"]
-    H1 -->|"W2 in R^n2 x n1\n b2 in R^n2"| Z2["Pre-activation\n z2 = W2*h1 + b2\n z2 in R^n2\n STORED for backprop"]
-    Z2 -->|"softmax"| Y["Output y_hat\n y_hat in R^n2"]
-    Y --> L["Loss L(y_hat, y)"]
+    X["Input x\n in R^n0"] --> Z1["z1 = W1*x + b1\n in R^n1\n STORED for backprop"]
+    W1["W1\n in R^n1 x n0"] --> Z1
+    B1["b1\n in R^n1"] --> Z1
+    Z1 -->|"sigma"| H1["h1 = sigma(z1)\n in R^n1\n STORED for backprop"]
+    H1 --> Z2["z2 = W2*h1 + b2\n in R^n2\n STORED for backprop"]
+    W2["W2\n in R^n2 x n1"] --> Z2
+    B2["b2\n in R^n2"] --> Z2
+    Z2 -->|"softmax"| Y["y_hat in R^n2"]
+    Y --> L["Loss L"]
 
-    L -.->|"dL/dz2 needs: z2, y_hat"| Z2
-    Z2 -.->|"dL/dW2 needs: h1"| H1
-    H1 -.->|"dL/dz1 needs: z1, sigma prime"| Z1
-    Z1 -.->|"dL/dW1 needs: x"| X
+    L -.->|"dL/dz2"| Z2
+    H1 -.->|"dL/dz1"| Z1
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
-    style Z1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style W1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style B1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style W2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style B2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style Z1 fill:#e3f2fd,stroke:#2196f3,color:#000
     style H1 fill:#e3f2fd,stroke:#2196f3,color:#000
-    style Z2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style Z2 fill:#e3f2fd,stroke:#2196f3,color:#000
     style Y fill:#f3e5f5,stroke:#9c27b0,color:#000
     style L fill:#fce4ec,stroke:#e91e63,color:#000
 \end{mermaid}

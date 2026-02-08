@@ -187,16 +187,20 @@
 <h3>Video Transformer Architecture</h3>
 <pre class="mermaid">
 graph LR
-    VID["Video<br/> T x H x W x C<br/> T frames"] -->|"Per-frame patches<br/> P x P"| PAT["Patches<br/> T*N per-frame<br/> each ∈ ℝ^(P^2*C)"]
-    PAT -->|"W_patch ∈ ℝ^(P^2*C) x d"| EMB["Space-Time Emb<br/> ∈ ℝ^(T*N) x d<br/> + temporal pos enc"]
-    EMB --> SENC["Spatial Encoder<br/> per-frame self-attn<br/> O(ℕ^2) per frame<br/> STORED: spatial attn"]
-    SENC --> TENC["Temporal Encoder<br/> cross-frame attn<br/> O(T^2) per position<br/> STORED: temporal attn"]
+    VID["Video<br/> T x H x W x C"] -->|"P x P patches"| PAT["T*N patches<br/> each ∈ ℝ^(P<sup>2</sup>*C)"]
+    PAT --> EMB["Space-Time Emb<br/> ∈ ℝ^(T*N) x d"]
+    Wpatch["W_patch<br/> ∈ ℝ^(P<sup>2</sup>*C) x d"] --> EMB
+    Tpos["Temporal Pos Enc"] --> EMB
+    EMB --> SENC["Spatial Encoder<br/> per-frame self-attn<br/> O(ℕ<sup>2</sup>) per frame"]
+    SENC --> TENC["Temporal Encoder<br/> cross-frame attn<br/> O(T<sup>2</sup>) per position"]
     TENC --> OUT["Video repr<br/> ∈ ℝ^(T*N) x d"]
 
     style VID fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wpatch fill:#fff3e0,stroke:#ff9800,color:#000
+    style Tpos fill:#fff3e0,stroke:#ff9800,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
-    style SENC fill:#fff3e0,stroke:#ff9800,color:#000
-    style TENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style SENC fill:#e3f2fd,stroke:#2196f3,color:#000
+    style TENC fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Video Transformer Architecture</p>

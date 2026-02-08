@@ -181,19 +181,26 @@ $$
 <h3>Vision Transformer (ViT) Forward Pass</h3>
 <pre class="mermaid">
 graph LR
-    IMG["Image I<br/> ∈ ℝ^H x W x C"] -->|"Split P x P patches"| PAT["N = HW/P^2 patches<br/> each ∈ ℝ^(P^2*C)"]
-    PAT -->|"W_patch ∈ ℝ^(P^2*C) x d<br/> b ∈ ℝ^d"| EMB["Patch Embeddings<br/> ∈ ℝ^N x d<br/> STORED for ∂L/∂W_patch"]
-    CLS["[CLS] token<br/> learnable ∈ ℝ^d"] --> CAT["Prepend [CLS]<br/> ∈ ℝ^(N+1) x d"]
+    IMG["Image I<br/> ∈ ℝ<sup>H×W×C</sup>"] -->|"Split P x P patches"| PAT["N = HW/P<sup>2</sup> patches<br/> each ∈ ℝ^(P<sup>2</sup>*C)"]
+    PAT --> EMB["Patch Embeddings<br/> ∈ ℝ<sup>N×d</sup><br/> STORED for backprop"]
+    Wpatch["W_patch<br/> ∈ ℝ^(P<sup>2</sup>*C) x d"] --> EMB
+    Bpatch["b_patch<br/> ∈ ℝ<sup>d</sup>"] --> EMB
+    CLS["[CLS] token<br/> learnable ∈ ℝ<sup>d</sup>"] --> CAT["Prepend [CLS]<br/> ∈ ℝ^(N+1) x d"]
     EMB --> CAT
-    POS["Position Emb<br/> E_pos ∈ ℝ^(N+1) x d"] --> ADD["Add Pos Emb<br/> ∈ ℝ^(N+1) x d"]
+    POS["Position Emb<br/> E_pos ∈ ℝ^(N+1) x d"] --> ADD["Add Pos Emb"]
     CAT --> ADD
-    ADD --> ENC["Transformer Encoder<br/> x L layers<br/> MHA + FFN + LN<br/> STORED per layer:<br/> activations, attn weights<br/> Memory: O(L*(N+1)^2 + L*(N+1)*d)"]
-    ENC -->|"[CLS] output"| HEAD["MLP Head<br/> W ∈ ℝ^d x K<br/> Output ∈ ℝ^K"]
+    ADD --> ENC["Transformer Encoder<br/> x L layers<br/> STORED: activations<br/> Memory: O(L*(N+1)<sup>2</sup>)"]
+    ENC --> HEAD["MLP Head<br/> Output ∈ ℝ<sup>K</sup>"]
+    Whead["W_head<br/> ∈ ℝ<sup>d×K</sup>"] --> HEAD
 
     style IMG fill:#e8f5e9,stroke:#4caf50,color:#000
-    style PAT fill:#e3f2fd,stroke:#2196f3,color:#000
-    style EMB fill:#fff3e0,stroke:#ff9800,color:#000
-    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpatch fill:#fff3e0,stroke:#ff9800,color:#000
+    style Bpatch fill:#fff3e0,stroke:#ff9800,color:#000
+    style CLS fill:#fff3e0,stroke:#ff9800,color:#000
+    style POS fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
     style HEAD fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Vision Transformer (ViT) Forward Pass</p>

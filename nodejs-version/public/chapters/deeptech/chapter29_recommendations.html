@@ -180,15 +180,20 @@ where <code>encoder</code> is a transformer, RNN, or other sequential model that
 <h3>Sequential Recommendation Transformer</h3>
 <pre class="mermaid">
 graph LR
-    HIST["User history<br/> item_1..item_t<br/> IDs ∈ ℕ^t"] -->|"W_item ∈ ℝ^I x d<br/> + W_pos ∈ ℝ^n x d"| EMB["Item Emb<br/> ∈ ℝ^t x d"]
-    EMB --> ENC["Transformer Encoder<br/> Causal self-attn<br/> x L layers<br/> STORED: attn weights<br/> per layer for backprop"]
-    ENC -->|"Last position output"| REP["User repr<br/> ∈ ℝ^d"]
-    REP -->|"dot product with<br/> all item embs<br/> W_item^T ∈ ℝ^d x I"| SCORE["Scores<br/> ∈ ℝ^I"]
-    SCORE -->|"softmax"| TOP["Top-K items<br/> Recommendations"]
+    HIST["User history<br/> item_1..item_t<br/> ∈ ℕ<sup>t</sup>"] --> EMB["Item Emb<br/> ∈ ℝ<sup>t×d</sup>"]
+    Witem["W_item<br/> ∈ ℝ<sup>I×d</sup>"] --> EMB
+    Wpos["W_pos<br/> ∈ ℝ<sup>n×d</sup>"] --> EMB
+    EMB --> ENC["Transformer Encoder<br/> Causal self-attn x L<br/> STORED: attn per layer"]
+    ENC --> REP["User repr<br/> ∈ ℝ<sup>d</sup>"]
+    REP --> SCORE["Scores = repr * W_item<sup>T</sup><br/> ∈ ℝ<sup>I</sup>"]
+    Witem --> SCORE
+    SCORE -->|"softmax"| TOP["Top-K items"]
 
     style HIST fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Witem fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpos fill:#fff3e0,stroke:#ff9800,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
-    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
     style TOP fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Sequential Recommendation Transformer</p>

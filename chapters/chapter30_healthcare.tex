@@ -59,14 +59,17 @@ Clinical language differs from general English in several fundamental ways that 
 
 \begin{mermaid}[Clinical NLP Pipeline]
 graph LR
-    EHR["Clinical Notes\n free text"] -->|"De-identification\n PHI removal"| CLEAN["Clean text\n HIPAA compliant"]
-    CLEAN -->|"Domain tokenizer"| TOK["Tokens in N^n"]
-    TOK --> MODEL["ClinicalBERT\n Encoder x L layers\n Pre-trained on MIMIC\n STORED: activations"]
-    MODEL -->|"Task head\n W in R^d x K"| OUT["NER / Diagnosis\n predictions"]
+    EHR["Clinical Notes\n free text"] -->|"De-identify"| CLEAN["Clean text"]
+    CLEAN -->|"Tokenize"| TOK["Tokens in N^n"]
+    TOK --> MODEL["ClinicalBERT Encoder\n x L layers\n Pre-trained on MIMIC"]
+    Wbert["BERT weights\n domain pre-trained"] --> MODEL
+    MODEL --> OUT["NER / Diagnosis"]
+    Wtask["Task head W\n in R^d x K"] --> OUT
 
     style EHR fill:#e8f5e9,stroke:#4caf50,color:#000
-    style CLEAN fill:#e3f2fd,stroke:#2196f3,color:#000
-    style MODEL fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wbert fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wtask fill:#fff3e0,stroke:#ff9800,color:#000
+    style MODEL fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

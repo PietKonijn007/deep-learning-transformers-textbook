@@ -35,20 +35,24 @@ The implementation of multi-head attention in PyTorch requires careful attention
 graph LR
     TF["Transformer\n nn.Module"] --> ENC["Encoder\n N x EncoderLayer"]
     TF --> DEC["Decoder\n N x DecoderLayer"]
-    TF --> EMB["Embedding\n nn.Embedding(V, d)\n params: V*d"]
-    TF --> HEAD["LM Head\n nn.Linear(d, V)\n params: d*V"]
+    EMB_M["nn.Embedding\n V x d params"] --> TF
+    HEAD_M["nn.Linear\n d x V params"] --> TF
 
-    ENC --> ELYR["EncoderLayer\n Self-Attn + FFN + LN"]
-    ELYR --> MHA["MultiHeadAttn\n W_Q,W_K,W_V: 3*d^2\n W_O: d^2\n params: 4*d^2"]
-    ELYR --> FFN["FFN\n W1: d*4d, W2: 4d*d\n params: 8*d^2"]
-    ELYR --> LN["LayerNorm\n gamma, beta: 2*d"]
+    ENC --> ELYR["EncoderLayer"]
+    MHA_M["MultiHeadAttn\n W_Q,W_K,W_V,W_O\n params: 4*d^2"] --> ELYR
+    FFN_M["FFN\n W1: d*4d, W2: 4d*d\n params: 8*d^2"] --> ELYR
+    LN_M["LayerNorm\n gamma, beta: 2*d"] --> ELYR
 
     DEC --> DLYR["DecoderLayer\n Masked Self-Attn\n + Cross-Attn + FFN"]
 
     style TF fill:#e8f5e9,stroke:#4caf50,color:#000
+    style EMB_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style HEAD_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style MHA_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style FFN_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style LN_M fill:#fff3e0,stroke:#ff9800,color:#000
     style ELYR fill:#e3f2fd,stroke:#2196f3,color:#000
-    style MHA fill:#fff3e0,stroke:#ff9800,color:#000
-    style FFN fill:#fff3e0,stroke:#ff9800,color:#000
+    style DLYR fill:#e3f2fd,stroke:#2196f3,color:#000
 \end{mermaid}
 
 

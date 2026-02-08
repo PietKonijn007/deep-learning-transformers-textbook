@@ -161,11 +161,11 @@
 <h3>Long Context Attention Strategies</h3>
 <pre class="mermaid">
 graph LR
-    SEQ["Long sequence<br/> n >> 4096 tokens<br/> Full attn memory:<br/> O(n^2) -- infeasible"]
+    SEQ["Long sequence<br/> n >> 4096 tokens<br/> Full attn: O(n<sup>2</sup>)"]
 
-    SEQ --> SW["Sliding Window<br/> w neighbors each side<br/> Memory: O(n*w)<br/> STORED: local attn<br/> weights only"]
-    SEQ --> CHUNK["Chunked Attention<br/> Split into n/c chunks<br/> Intra-chunk: O(c^2)<br/> Cross-chunk: summary<br/> STORED: chunk summaries"]
-    SEQ --> ROPE["RoPE Scaling<br/> Rotary Pos Emb<br/> Extend via interpolation<br/> No extra memory<br/> STORED: same as base"]
+    SEQ --> SW["Sliding Window<br/> w neighbors each side<br/> Memory: O(n*w)<br/> STORED: local attn only"]
+    SEQ --> CHUNK["Chunked Attention<br/> n/c chunks of size c<br/> Intra: O(c<sup>2</sup>)<br/> Cross: summary tokens"]
+    SEQ --> ROPE["RoPE Scaling<br/> Rotary Pos Emb<br/> Extend via interpolation<br/> No extra memory"]
 
     style SEQ fill:#fce4ec,stroke:#e91e63,color:#000
     style SW fill:#e3f2fd,stroke:#2196f3,color:#000

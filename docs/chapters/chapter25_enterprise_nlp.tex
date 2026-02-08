@@ -61,15 +61,19 @@ This happens offline, typically during nightly batch jobs. For a corpus of 1 mil
 
 \begin{mermaid}[RAG Pipeline Architecture]
 graph LR
-    Q["Query\n in text"] -->|"Encoder\n W_enc in R^V x d"| QE["Query Emb\n in R^d"]
-    DOCS["Document Store\n N docs"] -->|"Encoder"| DE["Doc Embs\n in R^N x d\n Pre-computed"]
-    QE -->|"Similarity\n cos(q, d_i)"| RET["Top-K Retrieval\n K docs in R^K x d"]
+    Q["Query text"] --> QE["Query Emb\n in R^d"]
+    Wenc["Encoder W\n in R^V x d"] --> QE
+    DOCS["Document Store\n N docs"] --> DE["Doc Embs\n in R^N x d\n Pre-computed"]
+    Wenc --> DE
+    QE --> RET["Top-K Retrieval\n cos(q, d_i)\n K docs"]
     DE --> RET
-    RET --> GEN["Generator LLM\n Context = query + K docs\n Attn memory: O((n_q+K*n_d)^2)\n STORED: full activations"]
-    GEN --> ANS["Answer\n Generated text"]
+    RET --> GEN["Generator LLM\n Context = query + K docs\n Memory: O((n_q+K*n_d)^2)"]
+    GEN --> ANS["Answer text"]
 
     style Q fill:#e8f5e9,stroke:#4caf50,color:#000
-    style RET fill:#fff3e0,stroke:#ff9800,color:#000
+    style DOCS fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wenc fill:#fff3e0,stroke:#ff9800,color:#000
+    style RET fill:#e3f2fd,stroke:#2196f3,color:#000
     style GEN fill:#e3f2fd,stroke:#2196f3,color:#000
     style ANS fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}

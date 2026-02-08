@@ -173,18 +173,25 @@ All tasks formulated as: text input $\to$ text output
 <h3>T5 Encoder-Decoder Architecture</h3>
 <pre class="mermaid">
 graph LR
-    SRC["Source text<br/> tokens ∈ ℕ^n"] -->|"Shared W_emb<br/> ∈ ℝ^V x d<br/> + Relative Pos Bias"| EEMB["Encoder Emb<br/> ∈ ℝ^n x d"]
-    EEMB --> ENC["Encoder x L layers<br/> Self-Attn + FFN<br/> STORED: all activations<br/> Output ∈ ℝ^n x d"]
+    SRC["Source tokens<br/> ∈ ℕ<sup>n</sup>"] --> EEMB["Encoder Emb<br/> ∈ ℝ<sup>n×d</sup>"]
+    Wemb["Shared W_emb<br/> ∈ ℝ<sup>V×d</sup>"] --> EEMB
+    RelP["Relative Pos Bias"] --> EEMB
+    EEMB --> ENC["Encoder x L layers<br/> Self-Attn + FFN<br/> STORED: all activations<br/> Output ∈ ℝ<sup>n×d</sup>"]
 
-    TGT["Target prefix<br/> tokens ∈ ℕ^m"] -->|"Shared W_emb"| DEMB["Decoder Emb<br/> ∈ ℝ^m x d"]
-    DEMB --> DSAL["Decoder x L layers<br/> 1. Causal Self-Attn<br/> 2. Cross-Attn to Encoder<br/> 3. FFN<br/> STORED: Q,K,V per layer<br/> + cross-attn K,V from encoder"]
+    TGT["Target tokens<br/> ∈ ℕ<sup>m</sup>"] --> DEMB["Decoder Emb<br/> ∈ ℝ<sup>m×d</sup>"]
+    Wemb --> DEMB
+    DEMB --> DSAL["Decoder x L layers<br/> 1. Causal Self-Attn<br/> 2. Cross-Attn to Enc<br/> 3. FFN<br/> STORED: Q,K,V per layer"]
     ENC --> DSAL
 
-    DSAL -->|"W_head ∈ ℝ^d x V"| OUT["Output logits<br/> ∈ ℝ^m x V<br/> STORED for backprop"]
+    DSAL --> OUT["Output logits<br/> ∈ ℝ<sup>m×V</sup>"]
+    Whead["W_head<br/> ∈ ℝ<sup>d×V</sup>"] --> OUT
 
     style SRC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style TGT fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
     style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
-    style DSAL fill:#fff3e0,stroke:#ff9800,color:#000
+    style DSAL fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">T5 Encoder-Decoder Architecture</p>

@@ -263,20 +263,28 @@ $$
 <h3>Multi-Head Self-Attention Data Flow</h3>
 <pre class="mermaid">
 graph LR
-    X["Input X<br/> ∈ ℝ^n x d_model"] -->|"W_Q^i ∈ ℝ^d_model x d_k<br/> per head"| Q["Q_i = X*W_Q^i<br/> ∈ ℝ^n x d_k<br/> STORED: X for ∂L/∂W_Q"]
-    X -->|"W_K^i ∈ ℝ^d_model x d_k"| K["K_i = X*W_K^i<br/> ∈ ℝ^n x d_k"]
-    X -->|"W_V^i ∈ ℝ^d_model x d_v"| V["V_i = X*W_V^i<br/> ∈ ℝ^n x d_v"]
-    Q --> ATT["Attention(Q_i,K_i,V_i)<br/> softmax(Q_i*K_i^T/√(d_k))*V_i<br/> head_i ∈ ℝ^n x d_v<br/> h heads in parallel<br/> STORED: attn weights per head"]
-    K --> ATT
+    X["Input X<br/> ∈ ℝ<sup>n×d_model</sup>"] --> Q["Q_i = X*W_Q<br/> ∈ ℝ<sup>n×d_k</sup>"]
+    WQ["W_Q<sup>i</sup><br/> ∈ ℝ<sup>d_model×d_k</sup><br/> per head"] --> Q
+    X --> KK["K_i = X*W_K<br/> ∈ ℝ<sup>n×d_k</sup>"]
+    WK["W_K<sup>i</sup><br/> ∈ ℝ<sup>d_model×d_k</sup>"] --> KK
+    X --> V["V_i = X*W_V<br/> ∈ ℝ<sup>n×d_v</sup>"]
+    WV["W_V<sup>i</sup><br/> ∈ ℝ<sup>d_model×d_v</sup>"] --> V
+    Q --> ATT["Attention<br/> softmax(QK<sup>T</sup>/√(d_k))*V<br/> h heads in parallel<br/> STORED: attn weights"]
+    KK --> ATT
     V --> ATT
-    ATT -->|"Concat h heads"| CAT["[head_1;...;head_h]<br/> ∈ ℝ^n x h*d_v"]
-    CAT -->|"W_O ∈ ℝ^(h*d_v) x d_model"| OUT["Output<br/> ∈ ℝ^n x d_model<br/> STORED: concat for ∂L/∂W_O"]
+    ATT -->|"Concat heads"| CAT["Concat<br/> ∈ ℝ<sup>n×h</sup>*d_v"]
+    CAT --> OUT["Output<br/> ∈ ℝ<sup>n×d_model</sup>"]
+    WO["W_O<br/> ∈ ℝ<sup>h</sup>*d_v x d_model"] --> OUT
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
+    style WQ fill:#fff3e0,stroke:#ff9800,color:#000
+    style WK fill:#fff3e0,stroke:#ff9800,color:#000
+    style WV fill:#fff3e0,stroke:#ff9800,color:#000
+    style WO fill:#fff3e0,stroke:#ff9800,color:#000
     style Q fill:#e3f2fd,stroke:#2196f3,color:#000
-    style K fill:#e3f2fd,stroke:#2196f3,color:#000
+    style KK fill:#e3f2fd,stroke:#2196f3,color:#000
     style V fill:#e3f2fd,stroke:#2196f3,color:#000
-    style ATT fill:#fff3e0,stroke:#ff9800,color:#000
+    style ATT fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Multi-Head Self-Attention Data Flow</p>

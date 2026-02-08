@@ -186,12 +186,18 @@ General models struggle with:
 <h3>Domain Adaptation Pipeline</h3>
 <pre class="mermaid">
 graph LR
-    BASE["Pre-trained LM<br/> params ∈ ℝ^P"] -->|"Domain corpus"| DAPT["Domain-Adaptive<br/> Pre-training<br/> Continue MLM/CLM<br/> on domain text<br/> STORED: same as base"]
-    DAPT -->|"Task data"| FT["Fine-tuning<br/> Task-specific head<br/> W_task ∈ ℝ^d x K<br/> STORED: all activations<br/> for backprop"]
-    FT --> DEPLOY["Domain Model<br/> e.g. BioBERT,<br/> LegalBERT, FinBERT"]
+    BASE["Pre-trained LM<br/> params ∈ ℝ<sup>P</sup>"] --> DAPT["Domain-Adaptive<br/> Pre-training<br/> on domain text"]
+    CORPUS["Domain Corpus"] --> DAPT
+    DAPT --> FT["Fine-tuning<br/> on task data"]
+    TASK["Task Data<br/> labeled"] --> FT
+    Wtask["W_task<br/> ∈ ℝ<sup>d×K</sup>"] --> FT
+    FT --> DEPLOY["Domain Model<br/> BioBERT / LegalBERT"]
 
     style BASE fill:#e8f5e9,stroke:#4caf50,color:#000
-    style DAPT fill:#fff3e0,stroke:#ff9800,color:#000
+    style CORPUS fill:#e8f5e9,stroke:#4caf50,color:#000
+    style TASK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wtask fill:#fff3e0,stroke:#ff9800,color:#000
+    style DAPT fill:#e3f2fd,stroke:#2196f3,color:#000
     style FT fill:#e3f2fd,stroke:#2196f3,color:#000
     style DEPLOY fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>

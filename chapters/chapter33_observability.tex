@@ -43,14 +43,19 @@ Machine data consists of several distinct types, each providing different insigh
 
 \begin{mermaid}[ML Observability Architecture]
 graph LR
-    MODEL["Model\n in Production"] -->|"Inference logs"| METRICS["Metrics Collector\n latency, throughput\n predictions"]
-    DATA["Input Data\n Stream"] -->|"Feature stats"| DRIFT["Drift Detector\n Compare P_train vs P_prod\n KL divergence, PSI"]
+    MODEL["Model in Production"] --> METRICS["Metrics Collector\n latency, throughput"]
+    DATA["Input Data Stream"] --> DRIFT["Drift Detector\n P_train vs P_prod\n KL divergence"]
+    REF["Training Distribution\n reference stats"] --> DRIFT
     METRICS --> DASH["Dashboard\n Alerts on:\n accuracy drop\n latency spike"]
     DRIFT --> DASH
-    DASH -->|"Trigger"| RETRAIN["Retrain Pipeline\n Fine-tune on\n new data\n Memory: same as training"]
+    DASH -->|"Trigger"| RETRAIN["Retrain Pipeline"]
+    NEWDATA["New labeled data"] --> RETRAIN
 
     style MODEL fill:#e8f5e9,stroke:#4caf50,color:#000
-    style DRIFT fill:#fff3e0,stroke:#ff9800,color:#000
+    style DATA fill:#e8f5e9,stroke:#4caf50,color:#000
+    style REF fill:#fff3e0,stroke:#ff9800,color:#000
+    style NEWDATA fill:#fff3e0,stroke:#ff9800,color:#000
+    style DRIFT fill:#e3f2fd,stroke:#2196f3,color:#000
     style DASH fill:#e3f2fd,stroke:#2196f3,color:#000
     style RETRAIN fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}

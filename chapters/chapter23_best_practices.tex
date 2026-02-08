@@ -33,16 +33,17 @@ T5 represents a unified approach that frames all tasks as sequence-to-sequence p
 
 \begin{mermaid}[Model Development Pipeline]
 graph LR
-    DATA["Data\n Train/Val/Test\n splits"] -->|"Tokenize"| TOK["Token IDs\n Vocab V"]
-    TOK --> BASE["Baseline Model\n small config\n Validate loss"]
-    BASE -->|"Scale up"| TRAIN["Full Training\n STORED in memory:\n Params: 2P bytes (FP16)\n Grads: 2P bytes\n Adam states: 8P bytes\n Activations: O(L*n*d)"]
-    TRAIN -->|"Evaluate"| EVAL["Metrics\n Loss, Perplexity\n Task accuracy"]
-    EVAL -->|"Tune"| HP["Hyperparams\n lr, warmup, wd\n batch size"]
-    HP --> TRAIN
+    DATA["Training Data"] --> TOK["Tokenize\n Vocab V"]
+    TOK --> BASE["Baseline Model\n small config"]
+    BASE -->|"Scale up"| TRAIN["Full Training\n Memory budget:\n Params: 2P (FP16)\n Grads: 2P\n Adam: 8P\n Acts: O(L*n*d)"]
+    LR["Hyperparams\n lr, warmup, wd"] --> TRAIN
+    TRAIN --> EVAL["Evaluate\n Loss, Perplexity"]
+    EVAL -->|"Tune"| LR
 
     style DATA fill:#e8f5e9,stroke:#4caf50,color:#000
-    style TRAIN fill:#fff3e0,stroke:#ff9800,color:#000
-    style EVAL fill:#e3f2fd,stroke:#2196f3,color:#000
+    style LR fill:#fff3e0,stroke:#ff9800,color:#000
+    style TRAIN fill:#e3f2fd,stroke:#2196f3,color:#000
+    style EVAL fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 
 

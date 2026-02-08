@@ -400,16 +400,17 @@ $$
 <h3>Scaled Dot-Product Attention Data Flow</h3>
 <pre class="mermaid">
 graph LR
-    Q["Queries Q<br/> ∈ ℝ^m x d_k"] -->|"Matmul Q*K^T"| S["Score Matrix<br/> E = Q*K^T<br/> ∈ ℝ^m x n<br/> STORED for backprop"]
-    K["Keys K<br/> ∈ ℝ^n x d_k"] --> S
-    S -->|"Scale by 1/√(d_k)"| SC["Scaled Scores<br/> E / √(d_k)<br/> ∈ ℝ^m x n"]
-    SC -->|"Softmax (row-wise)"| A["Attention Weights<br/> A = softmax(E_scaled)<br/> ∈ ℝ^m x n<br/> STORED: A for ∂L/∂V<br/> STORED: softmax input for backprop"]
-    A -->|"Matmul A*V"| OUT["Output<br/> A*V ∈ ℝ^m x d_v<br/> STORED: A for ∂L/∂V<br/> STORED: V for ∂L/∂A"]
-    V["Values V<br/> ∈ ℝ^n x d_v"] --> OUT
+    Q["Queries Q<br/> ∈ ℝ<sup>m×d_k</sup>"] --> S["Scores<br/> E = Q * K<sup>T</sup><br/> ∈ ℝ<sup>m×n</sup><br/> STORED for backprop"]
+    K["Keys K<br/> ∈ ℝ<sup>n×d_k</sup>"] --> S
+    S -->|"/ √(d_k)"| SC["Scaled Scores<br/> E / √(d_k)<br/> ∈ ℝ<sup>m×n</sup>"]
+    SC -->|"softmax row-wise"| A["Attn Weights A<br/> ∈ ℝ<sup>m×n</sup><br/> STORED for ∂L/∂V"]
+    A --> OUT["Output A*V<br/> ∈ ℝ<sup>m×d_v</sup><br/> STORED: A, V"]
+    V["Values V<br/> ∈ ℝ<sup>n×d_v</sup>"] --> OUT
 
     style Q fill:#e3f2fd,stroke:#2196f3,color:#000
     style K fill:#e8f5e9,stroke:#4caf50,color:#000
     style V fill:#fff3e0,stroke:#ff9800,color:#000
+    style S fill:#e3f2fd,stroke:#2196f3,color:#000
     style A fill:#f3e5f5,stroke:#9c27b0,color:#000
     style OUT fill:#fce4ec,stroke:#e91e63,color:#000
 </pre>

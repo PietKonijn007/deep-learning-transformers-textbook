@@ -41,17 +41,22 @@ Knowledge graphs are semi-formal: they have structure (typed entities, relations
 
 \begin{mermaid}[Knowledge-Enhanced Transformer]
 graph LR
-    TXT["Text input\n tokens in N^n"] -->|"W_emb in R^V x d"| TE["Text Emb\n in R^n x d"]
-    KG["Knowledge Graph\n entities + relations"] -->|"Entity Emb\n W_ent in R^E x d"| KE["Entity Emb\n in R^k x d"]
+    TXT["Text input\n tokens in N^n"] --> TE["Text Emb\n in R^n x d"]
+    Wemb["W_emb\n in R^V x d"] --> TE
+    KG["Knowledge Graph\n entities + relations"] --> KE["Entity Emb\n in R^k x d"]
+    Went["W_ent\n in R^E x d"] --> KE
 
-    TE --> FUSE["Knowledge Fusion\n Inject entity emb\n at linked positions\n in R^n x d"]
+    TE --> FUSE["Knowledge Fusion\n at linked positions\n in R^n x d"]
     KE --> FUSE
-    FUSE --> ENC["Transformer Encoder\n x L layers\n STORED: activations\n + entity attention"]
+    FUSE --> ENC["Transformer Encoder\n x L layers\n STORED: activations"]
     ENC --> OUT["Enhanced repr\n in R^n x d"]
 
     style TXT fill:#e8f5e9,stroke:#4caf50,color:#000
-    style KG fill:#e3f2fd,stroke:#2196f3,color:#000
-    style FUSE fill:#fff3e0,stroke:#ff9800,color:#000
+    style KG fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Went fill:#fff3e0,stroke:#ff9800,color:#000
+    style FUSE fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

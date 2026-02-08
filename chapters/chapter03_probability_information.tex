@@ -38,14 +38,18 @@ A \textbf{random variable} $X$ is a function that maps outcomes from a sample sp
 
 \begin{mermaid}[Cross-Entropy Loss in Classification]
 graph LR
-    X["Input x\n in R^d"] -->|"Model f(x;theta)"| LOGITS["Logits z\n in R^K\n STORED for backprop"]
-    LOGITS -->|"softmax"| P["Predicted P(y|x)\n p_k = exp(z_k)/sum\n in R^K\n STORED: p for gradient"]
-    Y["True label y\n one-hot in R^K"] --> CE["Cross-Entropy\n H(y,p) = -sum(y_k log p_k)\n = -log p_y\n scalar"]
+    X["Input x\n in R^d"] --> LOGITS["Logits z = Wx + b\n in R^K\n STORED for backprop"]
+    W["Weights W\n in R^K x d"] --> LOGITS
+    Bb["Bias b\n in R^K"] --> LOGITS
+    LOGITS -->|"softmax"| P["Probabilities\n p_k = exp(z_k)/sum\n in R^K\n STORED for gradient"]
+    Y["True label y\n one-hot in R^K"] --> CE["Cross-Entropy\n H = -sum(y_k log p_k)\n scalar"]
     P --> CE
-    CE -.->|"dL/dz_k = p_k - y_k\n simple gradient"| LOGITS
+    CE -.->|"dL/dz_k = p_k - y_k"| LOGITS
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
-    style LOGITS fill:#fff3e0,stroke:#ff9800,color:#000
+    style W fill:#fff3e0,stroke:#ff9800,color:#000
+    style Bb fill:#fff3e0,stroke:#ff9800,color:#000
+    style LOGITS fill:#e3f2fd,stroke:#2196f3,color:#000
     style P fill:#e3f2fd,stroke:#2196f3,color:#000
     style CE fill:#fce4ec,stroke:#e91e63,color:#000
 \end{mermaid}

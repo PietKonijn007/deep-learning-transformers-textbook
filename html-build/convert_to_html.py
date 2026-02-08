@@ -397,6 +397,14 @@ def convert_latex_to_html(latex_content):
         # 6. Square root
         code = code.replace('sqrt(', '√(')
 
+        # 7. Superscripts: ^expression → <sup>expression</sup>
+        # Handles simple (^n) and compound (^n x d_model) dimension expressions
+        def superscript_replace(m):
+            content = m.group(1)
+            content = content.replace(' x ', '×')
+            return f'<sup>{content}</sup>'
+        code = re.sub(r'\^([a-zA-Z0-9_\']+(?:\s+x\s+[a-zA-Z0-9_\']+)*)', superscript_replace, code)
+
         return code
 
     def convert_mermaid_placeholder(match):

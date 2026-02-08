@@ -52,14 +52,20 @@ The vocabulary size for code tokenizers is typically 32,000--50,000 tokens, comp
 
 \begin{mermaid}[Code Language Model Architecture]
 graph LR
-    CODE["Source Code\n raw text"] -->|"BPE tokenizer\n V = 32K-50K"| TOK["Code Tokens\n in N^n"]
-    TOK -->|"W_emb in R^V x d"| EMB["Embeddings\n + Pos Enc\n in R^n x d"]
-    EMB --> DEC["Decoder Layers\n Causal Self-Attn\n + FFN x L layers\n STORED: activations\n for fill-in-middle\n and next-token pred"]
-    DEC -->|"W_head in R^d x V"| OUT["Logits in R^n x V\n Predict next token\n or infill [MASK]"]
+    CODE["Source Code\n raw text"] -->|"BPE V=32K-50K"| TOK["Code Tokens\n in N^n"]
+    TOK --> EMB["Embeddings\n in R^n x d"]
+    Wemb["W_emb\n in R^V x d"] --> EMB
+    Wpos["Pos Enc"] --> EMB
+    EMB --> DEC["Decoder Layers x L\n Causal Self-Attn + FFN\n STORED: activations"]
+    DEC --> OUT["Logits in R^n x V"]
+    Whead["W_head\n in R^d x V"] --> OUT
 
     style CODE fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpos fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
-    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
+    style DEC fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

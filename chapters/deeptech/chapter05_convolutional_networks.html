@@ -157,17 +157,25 @@ $$
 <h3>CNN Forward Pass with Memory</h3>
 <pre class="mermaid">
 graph LR
-    X["Input<br/> X ∈ ℝ^H x W x C_in"] -->|"Filters K ∈ ℝ^k x k x C_in x C_out<br/> bias b ∈ ℝ^C_out"| CONV["Conv2D<br/> (X * K + b)<br/> Output ∈ ℝ^H' x W' x C_out<br/> STORED: X for ∂L/∂K"]
-    CONV -->|"ReLU"| ACT["Activation<br/> ReLU(conv)<br/> ∈ ℝ^H' x W' x C_out<br/> STORED: conv for ReLU'"]
-    ACT -->|"stride s, pool size p"| POOL["MaxPool<br/> ∈ ℝ^H'' x W'' x C_out<br/> STORED: max indices<br/> for backprop routing"]
-    POOL -->|"Flatten"| FLAT["Flat vector<br/> ∈ ℝ^(H''*W''*C_out)"]
-    FLAT -->|"W_fc ∈ ℝ^K x D<br/> b_fc ∈ ℝ^K"| FC["FC Layer<br/> z = W_fc * flat + b_fc<br/> ∈ ℝ^K<br/> STORED: flat for ∂L/∂W"]
-    FC -->|"softmax"| OUT["Output<br/> ŷ ∈ ℝ^K"]
+    X["Input X<br/> ∈ ℝ<sup>H×W×C_in</sup>"] --> CONV["Conv2D Output<br/> ∈ ℝ<sup>H'×W'×C_out</sup><br/> STORED: X for ∂L/∂K"]
+    K["Filters K<br/> ∈ ℝ<sup>k×k×C_in×C_out</sup>"] --> CONV
+    BC["Bias b<br/> ∈ ℝ<sup>C_out</sup>"] --> CONV
+    CONV -->|"ReLU"| ACT["ReLU(conv)<br/> ∈ ℝ<sup>H'×W'×C_out</sup><br/> STORED for ReLU'"]
+    ACT --> POOL["MaxPool<br/> ∈ ℝ<sup>H''×W''×C_out</sup><br/> STORED: max indices"]
+    POOL -->|"Flatten"| FLAT["Flat vector<br/> ∈ ℝ<sup>D</sup>"]
+    FLAT --> FC["FC: z = W*flat + b<br/> ∈ ℝ<sup>K</sup>"]
+    WFC["W_fc<br/> ∈ ℝ<sup>K×D</sup>"] --> FC
+    BFC["b_fc<br/> ∈ ℝ<sup>K</sup>"] --> FC
+    FC -->|"softmax"| OUT["ŷ ∈ ℝ<sup>K</sup>"]
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
-    style CONV fill:#fff3e0,stroke:#ff9800,color:#000
+    style K fill:#fff3e0,stroke:#ff9800,color:#000
+    style BC fill:#fff3e0,stroke:#ff9800,color:#000
+    style WFC fill:#fff3e0,stroke:#ff9800,color:#000
+    style BFC fill:#fff3e0,stroke:#ff9800,color:#000
+    style CONV fill:#e3f2fd,stroke:#2196f3,color:#000
     style ACT fill:#e3f2fd,stroke:#2196f3,color:#000
-    style POOL fill:#fff3e0,stroke:#ff9800,color:#000
+    style POOL fill:#e3f2fd,stroke:#2196f3,color:#000
     style FC fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>

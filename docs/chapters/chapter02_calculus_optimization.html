@@ -168,15 +168,17 @@ $$
 <h3>Gradient Descent with Backpropagation</h3>
 <pre class="mermaid">
 graph LR
-    T["Parameters θ<br/> ∈ ℝ^p"] -->|"Forward pass"| F["f(x; θ)<br/> Compute loss L<br/> STORED: all intermediates<br/> z_l, h_l per layer"]
-    F --> L["Loss L(ŷ, y)<br/> scalar"]
-    L -->|"Backward pass<br/> chain rule"| G["Gradients<br/> ∂L/∂θ ∈ ℝ^p<br/> Uses stored z_l, h_l<br/> Memory: O(L * n * d)"]
-    G -->|"θ -= η * ∂L/∂θ<br/> η = learning rate"| T
+    X["Data batch x<br/> ∈ ℝ<sup>B×d</sup>"] --> FWD["Forward pass<br/> f(x; θ)<br/> STORED: all z_l, h_l<br/> per layer"]
+    T["Parameters θ<br/> ∈ ℝ<sup>p</sup>"] --> FWD
+    FWD --> L["Loss L(ŷ, y)<br/> scalar"]
+    L --> G["Gradients<br/> ∂L/∂θ ∈ ℝ<sup>p</sup><br/> via chain rule<br/> Uses stored z_l, h_l"]
+    G -->|"θ -= η * grad"| T
 
-    style T fill:#e8f5e9,stroke:#4caf50,color:#000
-    style F fill:#fff3e0,stroke:#ff9800,color:#000
+    style X fill:#e8f5e9,stroke:#4caf50,color:#000
+    style T fill:#fff3e0,stroke:#ff9800,color:#000
+    style FWD fill:#e3f2fd,stroke:#2196f3,color:#000
     style L fill:#fce4ec,stroke:#e91e63,color:#000
-    style G fill:#e3f2fd,stroke:#2196f3,color:#000
+    style G fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Gradient Descent with Backpropagation</p>
 </div>

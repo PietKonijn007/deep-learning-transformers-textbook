@@ -42,18 +42,25 @@ All tasks formulated as: text input $\to$ text output
 
 \begin{mermaid}[T5 Encoder-Decoder Architecture]
 graph LR
-    SRC["Source text\n tokens in N^n"] -->|"Shared W_emb\n in R^V x d\n + Relative Pos Bias"| EEMB["Encoder Emb\n in R^n x d"]
+    SRC["Source tokens\n in N^n"] --> EEMB["Encoder Emb\n in R^n x d"]
+    Wemb["Shared W_emb\n in R^V x d"] --> EEMB
+    RelP["Relative Pos Bias"] --> EEMB
     EEMB --> ENC["Encoder x L layers\n Self-Attn + FFN\n STORED: all activations\n Output in R^n x d"]
 
-    TGT["Target prefix\n tokens in N^m"] -->|"Shared W_emb"| DEMB["Decoder Emb\n in R^m x d"]
-    DEMB --> DSAL["Decoder x L layers\n 1. Causal Self-Attn\n 2. Cross-Attn to Encoder\n 3. FFN\n STORED: Q,K,V per layer\n + cross-attn K,V from encoder"]
+    TGT["Target tokens\n in N^m"] --> DEMB["Decoder Emb\n in R^m x d"]
+    Wemb --> DEMB
+    DEMB --> DSAL["Decoder x L layers\n 1. Causal Self-Attn\n 2. Cross-Attn to Enc\n 3. FFN\n STORED: Q,K,V per layer"]
     ENC --> DSAL
 
-    DSAL -->|"W_head in R^d x V"| OUT["Output logits\n in R^m x V\n STORED for backprop"]
+    DSAL --> OUT["Output logits\n in R^m x V"]
+    Whead["W_head\n in R^d x V"] --> OUT
 
     style SRC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style TGT fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
     style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
-    style DSAL fill:#fff3e0,stroke:#ff9800,color:#000
+    style DSAL fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

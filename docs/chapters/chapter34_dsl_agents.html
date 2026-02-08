@@ -182,15 +182,17 @@ The most successful applications of deep learning to real domains follow this pa
 <h3>LLM Agent Architecture</h3>
 <pre class="mermaid">
 graph LR
-    USER["User Query<br/> text input"] --> LLM["LLM Agent<br/> Decoder-only Transformer<br/> Context window: n tokens<br/> STORED: KV cache<br/> ∈ ℝ^L x 2 x n x d_k<br/> per layer"]
-    LLM -->|"Function call<br/> (tool selection)"| TOOL["Tool Execution<br/> Code / Search / API<br/> External memory"]
-    TOOL -->|"Observation<br/> appended to context"| LLM
-    LLM -->|"Reasoning loop<br/> until done"| OUT["Final Response<br/> Generated text"]
-
-    LLM -->|"KV Cache grows<br/> O(n * L * d) memory<br/> per generation step"| KV["KV Cache<br/> Inference bottleneck<br/> Quantize to INT8<br/> for efficiency"]
+    USER["User Query"] --> LLM["LLM Agent<br/> Decoder Transformer<br/> Context: n tokens"]
+    SYSP["System Prompt<br/> + Tools schema"] --> LLM
+    KV["KV Cache<br/> ∈ ℝ<sup>L×2×n×d_k</sup><br/> grows per step<br/> O(n*L*d) memory"] --> LLM
+    LLM -->|"Tool call"| TOOL["Tool Execution<br/> Code / Search / API"]
+    TOOL -->|"Observation"| LLM
+    LLM --> OUT["Final Response"]
 
     style USER fill:#e8f5e9,stroke:#4caf50,color:#000
-    style LLM fill:#fff3e0,stroke:#ff9800,color:#000
+    style SYSP fill:#e8f5e9,stroke:#4caf50,color:#000
+    style KV fill:#fff3e0,stroke:#ff9800,color:#000
+    style LLM fill:#e3f2fd,stroke:#2196f3,color:#000
     style TOOL fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>

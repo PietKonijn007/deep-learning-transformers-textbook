@@ -172,17 +172,22 @@
 <h3>Knowledge-Enhanced Transformer</h3>
 <pre class="mermaid">
 graph LR
-    TXT["Text input<br/> tokens ∈ ℕ^n"] -->|"W_emb ∈ ℝ^V x d"| TE["Text Emb<br/> ∈ ℝ^n x d"]
-    KG["Knowledge Graph<br/> entities + relations"] -->|"Entity Emb<br/> W_ent ∈ ℝ^E x d"| KE["Entity Emb<br/> ∈ ℝ^k x d"]
+    TXT["Text input<br/> tokens ∈ ℕ<sup>n</sup>"] --> TE["Text Emb<br/> ∈ ℝ<sup>n×d</sup>"]
+    Wemb["W_emb<br/> ∈ ℝ<sup>V×d</sup>"] --> TE
+    KG["Knowledge Graph<br/> entities + relations"] --> KE["Entity Emb<br/> ∈ ℝ<sup>k×d</sup>"]
+    Went["W_ent<br/> ∈ ℝ<sup>E×d</sup>"] --> KE
 
-    TE --> FUSE["Knowledge Fusion<br/> Inject entity emb<br/> at linked positions<br/> ∈ ℝ^n x d"]
+    TE --> FUSE["Knowledge Fusion<br/> at linked positions<br/> ∈ ℝ<sup>n×d</sup>"]
     KE --> FUSE
-    FUSE --> ENC["Transformer Encoder<br/> x L layers<br/> STORED: activations<br/> + entity attention"]
-    ENC --> OUT["Enhanced repr<br/> ∈ ℝ^n x d"]
+    FUSE --> ENC["Transformer Encoder<br/> x L layers<br/> STORED: activations"]
+    ENC --> OUT["Enhanced repr<br/> ∈ ℝ<sup>n×d</sup>"]
 
     style TXT fill:#e8f5e9,stroke:#4caf50,color:#000
-    style KG fill:#e3f2fd,stroke:#2196f3,color:#000
-    style FUSE fill:#fff3e0,stroke:#ff9800,color:#000
+    style KG fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Went fill:#fff3e0,stroke:#ff9800,color:#000
+    style FUSE fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Knowledge-Enhanced Transformer</p>

@@ -208,18 +208,25 @@ with $\mW_1 \in \R^{d_{\text{model}} \times d_{ff}}$, $\mW_2 \in \R^{d_{ff} \tim
 <h3>Transformer Encoder Layer Forward Pass</h3>
 <pre class="mermaid">
 graph LR
-    X["Input X<br/> ∈ ℝ^n x d_model"] --> MHA["Multi-Head<br/> Self-Attention<br/> STORED: Q,K,V,<br/> attn_weights<br/> for backprop"]
-    MHA --> ADD1["Residual Add<br/> X + MHA(X)"]
-    ADD1 --> LN1["LayerNorm<br/> ∈ ℝ^n x d_model<br/> STORED: mean, var<br/> for backprop"]
-    LN1 -->|"W1 ∈ ℝ^d_model x d_ff<br/> b1 ∈ ℝ^d_ff"| FFN1["Linear + ReLU<br/> ReLU(W1*x + b1)<br/> ∈ ℝ^n x d_ff<br/> STORED: pre-ReLU<br/> for backprop"]
-    FFN1 -->|"W2 ∈ ℝ^d_ff x d_model<br/> b2 ∈ ℝ^d_model"| FFN2["Linear<br/> W2*h + b2<br/> ∈ ℝ^n x d_model<br/> STORED: h for ∂L/∂W2"]
-    FFN2 --> ADD2["Residual Add<br/> LN1 + FFN"]
-    ADD2 --> LN2["LayerNorm<br/> Output ∈ ℝ^n x d_model<br/> STORED: mean, var"]
+    X["Input X<br/> ∈ ℝ<sup>n×d_model</sup>"] --> MHA["Multi-Head<br/> Self-Attention<br/> STORED: Q,K,V,<br/> attn weights"]
+    MHA --> ADD1["Residual<br/> X + MHA(X)"]
+    ADD1 --> LN1["LayerNorm<br/> ∈ ℝ<sup>n×d_model</sup><br/> STORED: mean, var"]
+    LN1 --> FFN1["ReLU(W1*x + b1)<br/> ∈ ℝ<sup>n×d_ff</sup><br/> STORED: pre-ReLU"]
+    W1["W1<br/> ∈ ℝ<sup>d_model×d_ff</sup>"] --> FFN1
+    B1ff["b1<br/> ∈ ℝ<sup>d_ff</sup>"] --> FFN1
+    FFN1 --> FFN2["W2*h + b2<br/> ∈ ℝ<sup>n×d_model</sup><br/> STORED: h for ∂L/∂W2"]
+    W2["W2<br/> ∈ ℝ<sup>d_ff×d_model</sup>"] --> FFN2
+    B2ff["b2<br/> ∈ ℝ<sup>d_model</sup>"] --> FFN2
+    FFN2 --> ADD2["Residual<br/> LN1 + FFN"]
+    ADD2 --> LN2["LayerNorm Output<br/> ∈ ℝ<sup>n×d_model</sup>"]
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
-    style MHA fill:#fff3e0,stroke:#ff9800,color:#000
-    style LN1 fill:#e3f2fd,stroke:#2196f3,color:#000
-    style FFN1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style MHA fill:#e3f2fd,stroke:#2196f3,color:#000
+    style W1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style B1ff fill:#fff3e0,stroke:#ff9800,color:#000
+    style W2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style B2ff fill:#fff3e0,stroke:#ff9800,color:#000
+    style FFN1 fill:#e3f2fd,stroke:#2196f3,color:#000
     style FFN2 fill:#e3f2fd,stroke:#2196f3,color:#000
     style LN2 fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>

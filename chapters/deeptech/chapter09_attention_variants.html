@@ -168,21 +168,39 @@ $$\begin{align}
 <pre class="mermaid">
 graph LR
     subgraph SelfAttn["Self-Attention"]
-        SX["X ∈ ℝ^n x d"] -->|"W_Q, W_K, W_V"| SQ["Q,K,V all<br/> from X<br/> Memory: O(n^2)"]
-        SQ --> SOUT["Output ∈ ℝ^n x d"]
+        SX["X ∈ ℝ<sup>n×d</sup>"] --> SQ["Q from X"]
+        SX --> SK["K from X"]
+        SX --> SV["V from X"]
+        SWQ["W_Q"] --> SQ
+        SWK["W_K"] --> SK
+        SWV["W_V"] --> SV
+        SQ --> SOUT["Output ∈ ℝ<sup>n×d</sup><br/> Memory: O(n<sup>2</sup>)"]
+        SK --> SOUT
+        SV --> SOUT
     end
 
-    subgraph CrossAttn["Cross-Attention (Encoder-Decoder)"]
-        DX["Decoder X_dec<br/> ∈ ℝ^m x d"] -->|"W_Q ∈ ℝ^d x d_k"| CQ["Q = X_dec * W_Q<br/> ∈ ℝ^m x d_k"]
-        EX["Encoder X_enc<br/> ∈ ℝ^n x d"] -->|"W_K ∈ ℝ^d x d_k<br/> W_V ∈ ℝ^d x d_v"| CKV["K ∈ ℝ^n x d_k<br/> V ∈ ℝ^n x d_v"]
-        CQ --> COUT["Attn(Q,K,V)<br/> ∈ ℝ^m x d_v<br/> Memory: O(m*n)<br/> STORED: Q,K,V,attn_weights"]
-        CKV --> COUT
+    subgraph CrossAttn["Cross-Attention"]
+        DX["Decoder X_dec<br/> ∈ ℝ<sup>m×d</sup>"] --> CQ["Q = X_dec*W_Q<br/> ∈ ℝ<sup>m×d_k</sup>"]
+        CWQ["W_Q<br/> ∈ ℝ<sup>d×d_k</sup>"] --> CQ
+        EX["Encoder X_enc<br/> ∈ ℝ<sup>n×d</sup>"] --> CK["K ∈ ℝ<sup>n×d_k</sup>"]
+        EX --> CV["V ∈ ℝ<sup>n×d_v</sup>"]
+        CWK["W_K<br/> ∈ ℝ<sup>d×d_k</sup>"] --> CK
+        CWV["W_V<br/> ∈ ℝ<sup>d×d_v</sup>"] --> CV
+        CQ --> COUT["Output ∈ ℝ<sup>m×d_v</sup><br/> Memory: O(m*n)"]
+        CK --> COUT
+        CV --> COUT
     end
 
     style SX fill:#e8f5e9,stroke:#4caf50,color:#000
     style DX fill:#e3f2fd,stroke:#2196f3,color:#000
     style EX fill:#e8f5e9,stroke:#4caf50,color:#000
-    style COUT fill:#fff3e0,stroke:#ff9800,color:#000
+    style SWQ fill:#fff3e0,stroke:#ff9800,color:#000
+    style SWK fill:#fff3e0,stroke:#ff9800,color:#000
+    style SWV fill:#fff3e0,stroke:#ff9800,color:#000
+    style CWQ fill:#fff3e0,stroke:#ff9800,color:#000
+    style CWK fill:#fff3e0,stroke:#ff9800,color:#000
+    style CWV fill:#fff3e0,stroke:#ff9800,color:#000
+    style COUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Cross-Attention vs Self-Attention Data Flow</p>
 </div>

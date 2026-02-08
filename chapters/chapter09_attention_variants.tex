@@ -35,21 +35,39 @@ In encoder-decoder architectures, decoder attends to encoder output via cross-at
 \begin{mermaid}[Cross-Attention vs Self-Attention Data Flow]
 graph LR
     subgraph SelfAttn["Self-Attention"]
-        SX["X in R^n x d"] -->|"W_Q, W_K, W_V"| SQ["Q,K,V all\n from X\n Memory: O(n^2)"]
-        SQ --> SOUT["Output in R^n x d"]
+        SX["X in R^n x d"] --> SQ["Q from X"]
+        SX --> SK["K from X"]
+        SX --> SV["V from X"]
+        SWQ["W_Q"] --> SQ
+        SWK["W_K"] --> SK
+        SWV["W_V"] --> SV
+        SQ --> SOUT["Output in R^n x d\n Memory: O(n^2)"]
+        SK --> SOUT
+        SV --> SOUT
     end
 
-    subgraph CrossAttn["Cross-Attention (Encoder-Decoder)"]
-        DX["Decoder X_dec\n in R^m x d"] -->|"W_Q in R^d x d_k"| CQ["Q = X_dec * W_Q\n in R^m x d_k"]
-        EX["Encoder X_enc\n in R^n x d"] -->|"W_K in R^d x d_k\n W_V in R^d x d_v"| CKV["K in R^n x d_k\n V in R^n x d_v"]
-        CQ --> COUT["Attn(Q,K,V)\n in R^m x d_v\n Memory: O(m*n)\n STORED: Q,K,V,attn_weights"]
-        CKV --> COUT
+    subgraph CrossAttn["Cross-Attention"]
+        DX["Decoder X_dec\n in R^m x d"] --> CQ["Q = X_dec*W_Q\n in R^m x d_k"]
+        CWQ["W_Q\n in R^d x d_k"] --> CQ
+        EX["Encoder X_enc\n in R^n x d"] --> CK["K in R^n x d_k"]
+        EX --> CV["V in R^n x d_v"]
+        CWK["W_K\n in R^d x d_k"] --> CK
+        CWV["W_V\n in R^d x d_v"] --> CV
+        CQ --> COUT["Output in R^m x d_v\n Memory: O(m*n)"]
+        CK --> COUT
+        CV --> COUT
     end
 
     style SX fill:#e8f5e9,stroke:#4caf50,color:#000
     style DX fill:#e3f2fd,stroke:#2196f3,color:#000
     style EX fill:#e8f5e9,stroke:#4caf50,color:#000
-    style COUT fill:#fff3e0,stroke:#ff9800,color:#000
+    style SWQ fill:#fff3e0,stroke:#ff9800,color:#000
+    style SWK fill:#fff3e0,stroke:#ff9800,color:#000
+    style SWV fill:#fff3e0,stroke:#ff9800,color:#000
+    style CWQ fill:#fff3e0,stroke:#ff9800,color:#000
+    style CWK fill:#fff3e0,stroke:#ff9800,color:#000
+    style CWV fill:#fff3e0,stroke:#ff9800,color:#000
+    style COUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 
 \begin{itemize}

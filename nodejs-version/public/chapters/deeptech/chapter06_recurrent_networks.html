@@ -168,21 +168,31 @@ where:
 <pre class="mermaid">
 graph LR
     subgraph TimeStep["Each Timestep t"]
-        XT["Input x_t<br/> ∈ ℝ^d"] -->|"W_xh ∈ ℝ^h x d"| Z["z_t = W_hh*h_t-1<br/> + W_xh*x_t + b_h<br/> ∈ ℝ^h"]
-        HT_prev["Hidden h_t-1<br/> ∈ ℝ^h"] -->|"W_hh ∈ ℝ^h x h"| Z
-        Z -->|"tanh"| HT["h_t = tanh(z_t)<br/> ∈ ℝ^h<br/> STORED: z_t for tanh'<br/> STORED: h_t-1 for ∂L/∂W_hh<br/> STORED: x_t for ∂L/∂W_xh"]
-        HT -->|"W_hy ∈ ℝ^k x h<br/> b_y ∈ ℝ^k"| YT["y_t = W_hy*h_t + b_y<br/> ∈ ℝ^k"]
+        XT["Input x_t<br/> ∈ ℝ<sup>d</sup>"] --> Z["z_t<br/> ∈ ℝ<sup>h</sup><br/> STORED for tanh'"]
+        HTP["Hidden h_t-1<br/> ∈ ℝ<sup>h</sup>"] --> Z
+        Wxh["W_xh<br/> ∈ ℝ<sup>h×d</sup>"] --> Z
+        Whh["W_hh<br/> ∈ ℝ<sup>h×h</sup>"] --> Z
+        Bh["b_h<br/> ∈ ℝ<sup>h</sup>"] --> Z
+        Z -->|"tanh"| HT["h_t = tanh(z_t)<br/> ∈ ℝ<sup>h</sup><br/> STORED: h_t-1, x_t"]
+        HT --> YT["y_t ∈ ℝ<sup>k</sup>"]
+        Why["W_hy<br/> ∈ ℝ<sup>k×h</sup>"] --> YT
+        By["b_y<br/> ∈ ℝ<sup>k</sup>"] --> YT
     end
 
-    subgraph LSTM_Gates["LSTM Gating (Alternative)"]
-        FG["Forget Gate f_t<br/> σ(W_f*[h_t-1,x_t])<br/> ∈ ℝ^h -- STORED"]
-        IG["Input Gate i_t<br/> σ(W_i*[h_t-1,x_t])<br/> ∈ ℝ^h -- STORED"]
-        OG["Output Gate o_t<br/> σ(W_o*[h_t-1,x_t])<br/> ∈ ℝ^h -- STORED"]
-        CS["Cell State c_t<br/> f_t . c_t-1 + i_t . c_tilde<br/> ∈ ℝ^h -- STORED"]
+    subgraph LSTM["LSTM Gating"]
+        FG["Forget f_t = σ(W_f*[h,x])<br/> ∈ ℝ<sup>h</sup> -- STORED"]
+        IG["Input i_t = σ(W_i*[h,x])<br/> ∈ ℝ<sup>h</sup> -- STORED"]
+        CS["Cell c_t = f*c + i*c~<br/> ∈ ℝ<sup>h</sup> -- STORED"]
     end
 
     style XT fill:#e8f5e9,stroke:#4caf50,color:#000
-    style Z fill:#fff3e0,stroke:#ff9800,color:#000
+    style HTP fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wxh fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whh fill:#fff3e0,stroke:#ff9800,color:#000
+    style Bh fill:#fff3e0,stroke:#ff9800,color:#000
+    style Why fill:#fff3e0,stroke:#ff9800,color:#000
+    style By fill:#fff3e0,stroke:#ff9800,color:#000
+    style Z fill:#e3f2fd,stroke:#2196f3,color:#000
     style HT fill:#e3f2fd,stroke:#2196f3,color:#000
     style YT fill:#f3e5f5,stroke:#9c27b0,color:#000
     style CS fill:#fce4ec,stroke:#e91e63,color:#000

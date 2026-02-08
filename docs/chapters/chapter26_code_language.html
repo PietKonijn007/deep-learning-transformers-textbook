@@ -183,14 +183,20 @@
 <h3>Code Language Model Architecture</h3>
 <pre class="mermaid">
 graph LR
-    CODE["Source Code<br/> raw text"] -->|"BPE tokenizer<br/> V = 32K-50K"| TOK["Code Tokens<br/> ∈ ℕ^n"]
-    TOK -->|"W_emb ∈ ℝ^V x d"| EMB["Embeddings<br/> + Pos Enc<br/> ∈ ℝ^n x d"]
-    EMB --> DEC["Decoder Layers<br/> Causal Self-Attn<br/> + FFN x L layers<br/> STORED: activations<br/> for fill-in-middle<br/> and next-token pred"]
-    DEC -->|"W_head ∈ ℝ^d x V"| OUT["Logits ∈ ℝ^n x V<br/> Predict next token<br/> or infill [MASK]"]
+    CODE["Source Code<br/> raw text"] -->|"BPE V=32K-50K"| TOK["Code Tokens<br/> ∈ ℕ<sup>n</sup>"]
+    TOK --> EMB["Embeddings<br/> ∈ ℝ<sup>n×d</sup>"]
+    Wemb["W_emb<br/> ∈ ℝ<sup>V×d</sup>"] --> EMB
+    Wpos["Pos Enc"] --> EMB
+    EMB --> DEC["Decoder Layers x L<br/> Causal Self-Attn + FFN<br/> STORED: activations"]
+    DEC --> OUT["Logits ∈ ℝ<sup>n×V</sup>"]
+    Whead["W_head<br/> ∈ ℝ<sup>d×V</sup>"] --> OUT
 
     style CODE fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpos fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
-    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
+    style DEC fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Code Language Model Architecture</p>

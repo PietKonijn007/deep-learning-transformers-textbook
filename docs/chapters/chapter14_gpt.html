@@ -171,18 +171,24 @@ GPT uses transformer decoder blocks with:
 <h3>GPT Decoder-Only Architecture</h3>
 <pre class="mermaid">
 graph LR
-    TOK["Input tokens<br/> x_1..x_t<br/> ∈ ℕ^t"] -->|"W_emb ∈ ℝ^V x d<br/> + W_pos ∈ ℝ^n_max x d"| EMB["Token + Pos Emb<br/> ∈ ℝ^t x d<br/> STORED for backprop"]
-    EMB --> DEC["Decoder Layers x L<br/> Each layer:<br/> 1. Masked Self-Attn<br/> (causal mask: upper tri = -inf)<br/> STORED: Q,K,V,attn,mask<br/> 2. FFN: W1 ∈ ℝ^d x 4d,<br/> W2 ∈ ℝ^4d x d<br/> STORED: activations"]
-    DEC -->|"W_head ∈ ℝ^d x V<br/> (often tied with W_emb)"| LM["LM Head<br/> logits ∈ ℝ^t x V"]
-    LM -->|"softmax"| PRED["P(x_t+1 | x_1..x_t)<br/> ∈ ℝ^V<br/> STORED: logits for<br/> cross-entropy backprop"]
+    TOK["Input tokens<br/> x_1..x_t<br/> ∈ ℕ<sup>t</sup>"] --> EMB["Token + Pos Emb<br/> ∈ ℝ<sup>t×d</sup><br/> STORED for backprop"]
+    Wemb["W_emb<br/> ∈ ℝ<sup>V×d</sup>"] --> EMB
+    Wpos["W_pos<br/> ∈ ℝ<sup>n_max×d</sup>"] --> EMB
+    EMB --> DEC["Decoder x L layers<br/> 1. Masked Self-Attn<br/> (causal mask)<br/> STORED: Q,K,V,attn<br/> 2. FFN<br/> STORED: activations"]
+    DEC --> LM["LM Head logits<br/> ∈ ℝ<sup>t×V</sup>"]
+    Whead["W_head<br/> ∈ ℝ<sup>d×V</sup><br/> (tied with W_emb)"] --> LM
+    LM -->|"softmax"| PRED["P(x_t+1 | x_1..x_t)<br/> ∈ ℝ<sup>V</sup>"]
 
-    PRED -.->|"Backprop:<br/> ∂L/∂logits --> ∂L/∂W_head<br/> --> through L decoder layers<br/> peak memory: O(L*t*d + L*t^2)"| EMB
+    PRED -.->|"Backprop: O(L*t*d + L*t<sup>2</sup>)"| EMB
 
     style TOK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpos fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whead fill:#fff3e0,stroke:#ff9800,color:#000
     style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
-    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
-    style LM fill:#f3e5f5,stroke:#9c27b0,color:#000
-    style PRED fill:#fce4ec,stroke:#e91e63,color:#000
+    style DEC fill:#e3f2fd,stroke:#2196f3,color:#000
+    style LM fill:#e3f2fd,stroke:#2196f3,color:#000
+    style PRED fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">GPT Decoder-Only Architecture</p>
 </div>

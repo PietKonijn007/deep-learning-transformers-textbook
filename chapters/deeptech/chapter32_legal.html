@@ -172,15 +172,20 @@ Legal documents follow distinct structural patterns depending on their type. Sta
 <h3>Legal Document Transformer</h3>
 <pre class="mermaid">
 graph LR
-    DOC["Legal Document<br/> n >> 4096 tokens"] -->|"Chunk into<br/> segments of c"| CHUNKS["Segments<br/> n/c chunks<br/> each ∈ ℕ^c"]
-    CHUNKS -->|"W_emb ∈ ℝ^V x d"| EMB["Segment Emb<br/> ∈ ℝ^c x d per chunk"]
-    EMB --> LOCAL["Local Encoder<br/> Self-attn per chunk<br/> O(c^2) memory"]
-    LOCAL --> GLOBAL["Global Encoder<br/> Cross-chunk attn<br/> summary tokens<br/> STORED: all activations"]
-    GLOBAL -->|"Task head"| OUT["Contract analysis<br/> Clause classification<br/> ∈ ℝ^K"]
+    DOC["Legal Document<br/> n >> 4096 tokens"] -->|"Chunk"| CHUNKS["Segments<br/> n/c chunks ∈ ℕ<sup>c</sup>"]
+    CHUNKS --> EMB["Segment Emb<br/> ∈ ℝ<sup>c×d</sup>"]
+    Wemb["W_emb<br/> ∈ ℝ<sup>V×d</sup>"] --> EMB
+    EMB --> LOCAL["Local Encoder<br/> Self-attn per chunk<br/> O(c<sup>2</sup>) memory"]
+    LOCAL --> GLOBAL["Global Encoder<br/> Cross-chunk attn<br/> STORED: activations"]
+    GLOBAL --> OUT["Clause classification<br/> ∈ ℝ<sup>K</sup>"]
+    Wtask["Task head W<br/> ∈ ℝ<sup>d×K</sup>"] --> OUT
 
     style DOC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wtask fill:#fff3e0,stroke:#ff9800,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
     style LOCAL fill:#e3f2fd,stroke:#2196f3,color:#000
-    style GLOBAL fill:#fff3e0,stroke:#ff9800,color:#000
+    style GLOBAL fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 </pre>
 <p class="diagram-caption">Legal Document Transformer</p>

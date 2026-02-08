@@ -167,20 +167,24 @@
 graph LR
     TF["Transformer<br/> nn.Module"] --> ENC["Encoder<br/> N x EncoderLayer"]
     TF --> DEC["Decoder<br/> N x DecoderLayer"]
-    TF --> EMB["Embedding<br/> nn.Embedding(V, d)<br/> params: V*d"]
-    TF --> HEAD["LM Head<br/> nn.Linear(d, V)<br/> params: d*V"]
+    EMB_M["nn.Embedding<br/> V x d params"] --> TF
+    HEAD_M["nn.Linear<br/> d x V params"] --> TF
 
-    ENC --> ELYR["EncoderLayer<br/> Self-Attn + FFN + LN"]
-    ELYR --> MHA["MultiHeadAttn<br/> W_Q,W_K,W_V: 3*d^2<br/> W_O: d^2<br/> params: 4*d^2"]
-    ELYR --> FFN["FFN<br/> W1: d*4d, W2: 4d*d<br/> params: 8*d^2"]
-    ELYR --> LN["LayerNorm<br/> γ, β: 2*d"]
+    ENC --> ELYR["EncoderLayer"]
+    MHA_M["MultiHeadAttn<br/> W_Q,W_K,W_V,W_O<br/> params: 4*d<sup>2</sup>"] --> ELYR
+    FFN_M["FFN<br/> W1: d*4d, W2: 4d*d<br/> params: 8*d<sup>2</sup>"] --> ELYR
+    LN_M["LayerNorm<br/> γ, β: 2*d"] --> ELYR
 
     DEC --> DLYR["DecoderLayer<br/> Masked Self-Attn<br/> + Cross-Attn + FFN"]
 
     style TF fill:#e8f5e9,stroke:#4caf50,color:#000
+    style EMB_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style HEAD_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style MHA_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style FFN_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style LN_M fill:#fff3e0,stroke:#ff9800,color:#000
     style ELYR fill:#e3f2fd,stroke:#2196f3,color:#000
-    style MHA fill:#fff3e0,stroke:#ff9800,color:#000
-    style FFN fill:#fff3e0,stroke:#ff9800,color:#000
+    style DLYR fill:#e3f2fd,stroke:#2196f3,color:#000
 </pre>
 <p class="diagram-caption">PyTorch Transformer Module Hierarchy</p>
 </div>

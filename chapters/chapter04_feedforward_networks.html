@@ -197,21 +197,27 @@ where $\mW^{(\ell)} \in \R^{n_\ell \times n_{\ell-1}}$ is the weight matrix and 
 <h3>MLP Forward and Backward Pass</h3>
 <pre class="mermaid">
 graph LR
-    X["Input x<br/> x ∈ ℝ^n0"] -->|"W1 ∈ ℝ^n1 x n0<br/> b1 ∈ ℝ^n1"| Z1["Pre-activation<br/> z1 = W1*x + b1<br/> z1 ∈ ℝ^n1<br/> STORED for backprop"]
-    Z1 -->|"Activation σ"| H1["h1 = σ(z1)<br/> h1 ∈ ℝ^n1<br/> STORED for backprop"]
-    H1 -->|"W2 ∈ ℝ^n2 x n1<br/> b2 ∈ ℝ^n2"| Z2["Pre-activation<br/> z2 = W2*h1 + b2<br/> z2 ∈ ℝ^n2<br/> STORED for backprop"]
-    Z2 -->|"softmax"| Y["Output ŷ<br/> ŷ ∈ ℝ^n2"]
-    Y --> L["Loss L(ŷ, y)"]
+    X["Input x<br/> ∈ ℝ<sup>n0</sup>"] --> Z1["z1 = W1*x + b1<br/> ∈ ℝ<sup>n1</sup><br/> STORED for backprop"]
+    W1["W1<br/> ∈ ℝ<sup>n1×n0</sup>"] --> Z1
+    B1["b1<br/> ∈ ℝ<sup>n1</sup>"] --> Z1
+    Z1 -->|"σ"| H1["h1 = σ(z1)<br/> ∈ ℝ<sup>n1</sup><br/> STORED for backprop"]
+    H1 --> Z2["z2 = W2*h1 + b2<br/> ∈ ℝ<sup>n2</sup><br/> STORED for backprop"]
+    W2["W2<br/> ∈ ℝ<sup>n2×n1</sup>"] --> Z2
+    B2["b2<br/> ∈ ℝ<sup>n2</sup>"] --> Z2
+    Z2 -->|"softmax"| Y["ŷ ∈ ℝ<sup>n2</sup>"]
+    Y --> L["Loss L"]
 
-    L -.->|"∂L/∂z2 needs: z2, ŷ"| Z2
-    Z2 -.->|"∂L/∂W2 needs: h1"| H1
-    H1 -.->|"∂L/∂z1 needs: z1, σ prime"| Z1
-    Z1 -.->|"∂L/∂W1 needs: x"| X
+    L -.->|"∂L/∂z2"| Z2
+    H1 -.->|"∂L/∂z1"| Z1
 
     style X fill:#e8f5e9,stroke:#4caf50,color:#000
-    style Z1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style W1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style B1 fill:#fff3e0,stroke:#ff9800,color:#000
+    style W2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style B2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style Z1 fill:#e3f2fd,stroke:#2196f3,color:#000
     style H1 fill:#e3f2fd,stroke:#2196f3,color:#000
-    style Z2 fill:#fff3e0,stroke:#ff9800,color:#000
+    style Z2 fill:#e3f2fd,stroke:#2196f3,color:#000
     style Y fill:#f3e5f5,stroke:#9c27b0,color:#000
     style L fill:#fce4ec,stroke:#e91e63,color:#000
 </pre>

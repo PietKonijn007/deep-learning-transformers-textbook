@@ -60,15 +60,23 @@ Transformers offer several key advantages for financial time series modeling. Pa
 
 \begin{mermaid}[Financial Time Series Transformer]
 graph LR
-    TS["Price/Volume\n x_1..x_T\n in R^T x F\n F features"] -->|"W_proj in R^F x d"| EMB["Temporal Emb\n in R^T x d\n + time pos enc"]
-    NEWS["News text\n tokens in N^n"] -->|"W_emb in R^V x d"| NE["News Emb\n in R^n x d"]
-    EMB --> CROSS["Cross-modal Attn\n Time attends to news\n Memory: O(T*n)\n STORED: attn weights"]
+    TS["Price/Volume\n x_1..x_T\n in R^T x F"] --> TEMB["Temporal Emb\n in R^T x d"]
+    Wproj["W_proj\n in R^F x d"] --> TEMB
+    Tpos["Time Pos Enc"] --> TEMB
+    NEWS["News tokens\n in N^n"] --> NE["News Emb\n in R^n x d"]
+    Wemb["W_emb\n in R^V x d"] --> NE
+    TEMB --> CROSS["Cross-modal Attn\n Memory: O(T*n)"]
     NE --> CROSS
-    CROSS --> PRED["Prediction Head\n W in R^d x 1\n price / sentiment"]
+    CROSS --> PRED["Prediction"]
+    Wpred["W_pred\n in R^d x 1"] --> PRED
 
     style TS fill:#e8f5e9,stroke:#4caf50,color:#000
-    style NEWS fill:#e3f2fd,stroke:#2196f3,color:#000
-    style CROSS fill:#fff3e0,stroke:#ff9800,color:#000
+    style NEWS fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wproj fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wpred fill:#fff3e0,stroke:#ff9800,color:#000
+    style TEMB fill:#e3f2fd,stroke:#2196f3,color:#000
+    style CROSS fill:#e3f2fd,stroke:#2196f3,color:#000
     style PRED fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

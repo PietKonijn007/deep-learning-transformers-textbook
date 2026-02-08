@@ -42,19 +42,25 @@ The memory bandwidth available at each level determines how quickly data can be 
 
 \begin{mermaid}[GPU Memory Hierarchy and Optimization]
 graph LR
-    PARAM["Model Params\n W in R^P\n FP16: 2P bytes"] --> HBM["HBM (GPU RAM)\n 40-80 GB\n Bandwidth: 2 TB/s\n Stores: params, grads,\n optimizer states, activations"]
-    HBM --> SRAM["SRAM (On-chip)\n ~20 MB per SM\n Bandwidth: 19 TB/s\n Stores: tiles of Q,K,V\n during FlashAttention"]
+    PARAM["Model Params\n W in R^P\n FP16: 2P bytes"] --> HBM["HBM (GPU RAM)\n 40-80 GB\n BW: 2 TB/s"]
+    GRAD["Gradients\n in R^P\n FP16: 2P bytes"] --> HBM
+    OPT_S["Optimizer States\n m_t, v_t in R^P\n FP32: 8P bytes"] --> HBM
+    ACT_M["Activations\n O(L*n*d)\n for backprop"] --> HBM
+    HBM --> SRAM["SRAM On-chip\n ~20 MB/SM\n BW: 19 TB/s\n FlashAttn tiles"]
 
-    subgraph Optim["Memory Optimizations"]
-        MP["Mixed Precision\n FP32 master weights\n FP16 forward/backward\n Saves ~50% memory"]
-        GC["Gradient Checkpointing\n Discard activations\n Recompute in backward\n Saves O(L) memory\n Costs ~33% extra compute"]
-        FSDP["FSDP/ZeRO\n Shard params+grads+opt\n across N GPUs\n Memory: O(P/N) per GPU"]
+    subgraph Optim["Optimizations"]
+        MP["Mixed Precision\n FP16 fwd/bwd\n Saves ~50%"]
+        GC["Grad Checkpoint\n Recompute acts\n +33% compute"]
+        FSDP["FSDP/ZeRO\n Shard across N GPUs\n O(P/N) per GPU"]
     end
 
     HBM --> Optim
 
     style PARAM fill:#e8f5e9,stroke:#4caf50,color:#000
-    style HBM fill:#fff3e0,stroke:#ff9800,color:#000
+    style GRAD fill:#e8f5e9,stroke:#4caf50,color:#000
+    style OPT_S fill:#fff3e0,stroke:#ff9800,color:#000
+    style ACT_M fill:#fff3e0,stroke:#ff9800,color:#000
+    style HBM fill:#e3f2fd,stroke:#2196f3,color:#000
     style SRAM fill:#e3f2fd,stroke:#2196f3,color:#000
     style GC fill:#fce4ec,stroke:#e91e63,color:#000
 \end{mermaid}

@@ -41,15 +41,20 @@ Legal documents follow distinct structural patterns depending on their type. Sta
 
 \begin{mermaid}[Legal Document Transformer]
 graph LR
-    DOC["Legal Document\n n >> 4096 tokens"] -->|"Chunk into\n segments of c"| CHUNKS["Segments\n n/c chunks\n each in N^c"]
-    CHUNKS -->|"W_emb in R^V x d"| EMB["Segment Emb\n in R^c x d per chunk"]
+    DOC["Legal Document\n n >> 4096 tokens"] -->|"Chunk"| CHUNKS["Segments\n n/c chunks in N^c"]
+    CHUNKS --> EMB["Segment Emb\n in R^c x d"]
+    Wemb["W_emb\n in R^V x d"] --> EMB
     EMB --> LOCAL["Local Encoder\n Self-attn per chunk\n O(c^2) memory"]
-    LOCAL --> GLOBAL["Global Encoder\n Cross-chunk attn\n summary tokens\n STORED: all activations"]
-    GLOBAL -->|"Task head"| OUT["Contract analysis\n Clause classification\n in R^K"]
+    LOCAL --> GLOBAL["Global Encoder\n Cross-chunk attn\n STORED: activations"]
+    GLOBAL --> OUT["Clause classification\n in R^K"]
+    Wtask["Task head W\n in R^d x K"] --> OUT
 
     style DOC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wemb fill:#fff3e0,stroke:#ff9800,color:#000
+    style Wtask fill:#fff3e0,stroke:#ff9800,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
     style LOCAL fill:#e3f2fd,stroke:#2196f3,color:#000
-    style GLOBAL fill:#fff3e0,stroke:#ff9800,color:#000
+    style GLOBAL fill:#e3f2fd,stroke:#2196f3,color:#000
     style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
 \end{mermaid}
 

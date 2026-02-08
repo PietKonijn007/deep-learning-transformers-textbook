@@ -204,15 +204,17 @@ where $|\mathcal{S}(i)| = k \ll n$ for all positions $i$. The computational comp
 <h3>Efficient Attention Approaches and Memory</h3>
 <pre class="mermaid">
 graph LR
-    FULL["Full Attention<br/> A = softmax(QK^T/√(d))V<br/> Compute: O(n^2 d)<br/> Memory: O(n^2)<br/> STORED: full n x n matrix"]
+    Q["Query Q<br/> ∈ ℝ<sup>n×d</sup>"] --> FULL["Full Attention<br/> softmax(QK<sup>T</sup>/√(d))V<br/> Compute: O(n<sup>2</sup> d)<br/> Memory: O(n<sup>2</sup>)"]
+    K["Key K<br/> ∈ ℝ<sup>n×d</sup>"] --> FULL
+    V["Value V<br/> ∈ ℝ<sup>n×d</sup>"] --> FULL
 
-    FULL --> SPARSE["Sparse Attention<br/> Only compute S subset<br/> of n^2 entries<br/> Memory: O(n * w)<br/> w = window size"]
-    FULL --> LINEAR["Linear Attention<br/> φ(Q)*[φ(K)^T * V]<br/> Compute: O(n * d^2)<br/> Memory: O(n * d)<br/> NO n x n matrix stored"]
-    FULL --> FLASH["FlashAttention<br/> Tiled computation<br/> Recompute in backward<br/> Peak memory: O(n)<br/> IO-aware: minimizes<br/> HBM reads/writes"]
+    FULL --> SPARSE["Sparse Attention<br/> Subset of n<sup>2</sup> entries<br/> Memory: O(n * w)<br/> w = window size"]
+    FULL --> LINEAR["Linear Attention<br/> φ(Q)*[φ(K)<sup>T</sup>*V]<br/> Compute: O(n * d<sup>2</sup>)<br/> Memory: O(n * d)"]
+    FULL --> FLASH["FlashAttention<br/> Tiled computation<br/> Recompute in backward<br/> Peak memory: O(n)"]
 
-    SPARSE --> SP1["Longformer: local w<br/> + global g tokens<br/> O(n*(w+g))"]
-    LINEAR --> LIN1["Performer: random<br/> feature map φ<br/> O(n*d*r), r = features"]
-
+    style Q fill:#e8f5e9,stroke:#4caf50,color:#000
+    style K fill:#e8f5e9,stroke:#4caf50,color:#000
+    style V fill:#e8f5e9,stroke:#4caf50,color:#000
     style FULL fill:#fce4ec,stroke:#e91e63,color:#000
     style SPARSE fill:#e3f2fd,stroke:#2196f3,color:#000
     style LINEAR fill:#e8f5e9,stroke:#4caf50,color:#000

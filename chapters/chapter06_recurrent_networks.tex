@@ -35,21 +35,31 @@ where:
 \begin{mermaid}[RNN/LSTM Forward Pass with Memory]
 graph LR
     subgraph TimeStep["Each Timestep t"]
-        XT["Input x_t\n in R^d"] -->|"W_xh in R^h x d"| Z["z_t = W_hh*h_t-1\n + W_xh*x_t + b_h\n in R^h"]
-        HT_prev["Hidden h_t-1\n in R^h"] -->|"W_hh in R^h x h"| Z
-        Z -->|"tanh"| HT["h_t = tanh(z_t)\n in R^h\n STORED: z_t for tanh'\n STORED: h_t-1 for dL/dW_hh\n STORED: x_t for dL/dW_xh"]
-        HT -->|"W_hy in R^k x h\n b_y in R^k"| YT["y_t = W_hy*h_t + b_y\n in R^k"]
+        XT["Input x_t\n in R^d"] --> Z["z_t\n in R^h\n STORED for tanh'"]
+        HTP["Hidden h_t-1\n in R^h"] --> Z
+        Wxh["W_xh\n in R^h x d"] --> Z
+        Whh["W_hh\n in R^h x h"] --> Z
+        Bh["b_h\n in R^h"] --> Z
+        Z -->|"tanh"| HT["h_t = tanh(z_t)\n in R^h\n STORED: h_t-1, x_t"]
+        HT --> YT["y_t in R^k"]
+        Why["W_hy\n in R^k x h"] --> YT
+        By["b_y\n in R^k"] --> YT
     end
 
-    subgraph LSTM_Gates["LSTM Gating (Alternative)"]
-        FG["Forget Gate f_t\n sigma(W_f*[h_t-1,x_t])\n in R^h -- STORED"]
-        IG["Input Gate i_t\n sigma(W_i*[h_t-1,x_t])\n in R^h -- STORED"]
-        OG["Output Gate o_t\n sigma(W_o*[h_t-1,x_t])\n in R^h -- STORED"]
-        CS["Cell State c_t\n f_t . c_t-1 + i_t . c_tilde\n in R^h -- STORED"]
+    subgraph LSTM["LSTM Gating"]
+        FG["Forget f_t = sigma(W_f*[h,x])\n in R^h -- STORED"]
+        IG["Input i_t = sigma(W_i*[h,x])\n in R^h -- STORED"]
+        CS["Cell c_t = f*c + i*c~\n in R^h -- STORED"]
     end
 
     style XT fill:#e8f5e9,stroke:#4caf50,color:#000
-    style Z fill:#fff3e0,stroke:#ff9800,color:#000
+    style HTP fill:#e8f5e9,stroke:#4caf50,color:#000
+    style Wxh fill:#fff3e0,stroke:#ff9800,color:#000
+    style Whh fill:#fff3e0,stroke:#ff9800,color:#000
+    style Bh fill:#fff3e0,stroke:#ff9800,color:#000
+    style Why fill:#fff3e0,stroke:#ff9800,color:#000
+    style By fill:#fff3e0,stroke:#ff9800,color:#000
+    style Z fill:#e3f2fd,stroke:#2196f3,color:#000
     style HT fill:#e3f2fd,stroke:#2196f3,color:#000
     style YT fill:#f3e5f5,stroke:#9c27b0,color:#000
     style CS fill:#fce4ec,stroke:#e91e63,color:#000
