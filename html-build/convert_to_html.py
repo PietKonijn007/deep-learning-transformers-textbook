@@ -240,49 +240,98 @@ def convert_tikz_to_svg(tikz_code, output_path, chapter_name, diagram_hash):
 
 def process_tikz_diagrams(latex_content, chapter_name, output_dirs):
     """Extract and convert all TikZ diagrams in the content, return modified content"""
-    
+
     # Extract all TikZ diagrams
     diagrams = extract_tikz_diagrams(latex_content, chapter_name)
-    
+
     if not diagrams:
         return latex_content
-    
+
     print(f"   → Found {len(diagrams)} TikZ diagram(s)")
-    
+
     # Create diagrams directory in each output location
     for output_dir in output_dirs:
         diagrams_dir = output_dir / "diagrams"
         diagrams_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Convert each diagram
     converted_count = 0
+    reused_count = 0
     for tikz_code, diagram_hash in diagrams:
         svg_filename = f"{chapter_name}_{diagram_hash}.svg"
-        
+
+        # Check if SVG already exists in any output directory (from previous builds)
+        existing_svg = None
+        for output_dir in output_dirs:
+            candidate = output_dir / "diagrams" / svg_filename
+            if candidate.exists():
+                existing_svg = candidate
+                break
+
+        if existing_svg:
+            # Reuse existing SVG — no need to recompile
+            reused_count += 1
+            import shutil
+            for output_dir in output_dirs:
+                dest = output_dir / "diagrams" / svg_filename
+                if not dest.exists():
+                    shutil.copy2(existing_svg, dest)
+            placeholder = f"%%%TIKZ_SVG:{svg_filename}%%%"
+            latex_content = latex_content.replace(tikz_code, placeholder)
+            continue
+
         # Convert to SVG (use first output dir for conversion)
         primary_output = output_dirs[0] / "diagrams" / svg_filename
-        
+
         if convert_tikz_to_svg(tikz_code, primary_output, chapter_name, diagram_hash):
             converted_count += 1
-            
+
             # Copy to other output directories
             for output_dir in output_dirs[1:]:
                 dest = output_dir / "diagrams" / svg_filename
                 if primary_output.exists():
                     import shutil
                     shutil.copy2(primary_output, dest)
-            
+
             # Replace TikZ code with SVG reference in the LaTeX content
             # Wrap in figure environment if not already
             svg_html = f'<div class="tikz-diagram"><img src="../diagrams/{svg_filename}" alt="TikZ Diagram" /></div>'
-            
+
             # Replace the tikzpicture with a placeholder that will be converted to HTML
             placeholder = f"%%%TIKZ_SVG:{svg_filename}%%%"
             latex_content = latex_content.replace(tikz_code, placeholder)
-    
+
     if converted_count > 0:
         print(f"   ✓ Converted {converted_count}/{len(diagrams)} TikZ diagram(s) to SVG")
-    
+    if reused_count > 0:
+        print(f"   ✓ Reused {reused_count}/{len(diagrams)} existing TikZ SVG(s)")
+
+    return latex_content
+
+
+def process_mermaid_diagrams(latex_content):
+    """Extract mermaid diagram environments and replace with HTML-ready placeholders.
+
+    Handles: \\begin{mermaid}[Optional Caption]...\\end{mermaid}
+    The listings-based mermaid environment in LaTeX stores verbatim code.
+    """
+    # Match \begin{mermaid}[optional caption] ... \end{mermaid}
+    pattern = r'\\begin\{mermaid\}(?:\[([^\]]*)\])?\s*\n?(.*?)\\end\{mermaid\}'
+    matches = list(re.finditer(pattern, latex_content, re.DOTALL))
+
+    if not matches:
+        return latex_content
+
+    print(f"   → Found {len(matches)} Mermaid diagram(s)")
+
+    for match in reversed(matches):  # reverse to preserve positions
+        caption = match.group(1) or ''
+        mermaid_code = match.group(2).strip()
+
+        # Create a placeholder that convert_latex_to_html will turn into proper HTML
+        placeholder = f'%%%MERMAID_DIAGRAM:{caption}%%%\n{mermaid_code}\n%%%END_MERMAID%%%'
+        latex_content = latex_content[:match.start()] + placeholder + latex_content[match.end():]
+
     return latex_content
 
 def read_latex_file(filepath):
@@ -313,7 +362,24 @@ def convert_latex_to_html(latex_content):
         r'<div class="tikz-diagram"><img src="../diagrams/\1" alt="TikZ Diagram" /></div>',
         html
     )
-    
+
+    # Convert Mermaid diagram placeholders to HTML
+    def convert_mermaid_placeholder(match):
+        caption = match.group(1) or ''
+        mermaid_code = match.group(2).strip()
+        caption_html = f'\n<p class="diagram-caption">{caption}</p>' if caption else ''
+        title_html = f'<h3>{caption}</h3>\n' if caption else ''
+        return (f'<div class="architecture-diagram">\n{title_html}'
+                f'<pre class="mermaid">\n{mermaid_code}\n</pre>'
+                f'{caption_html}\n</div>')
+
+    html = re.sub(
+        r'%%%MERMAID_DIAGRAM:(.*?)%%%\n(.*?)\n%%%END_MERMAID%%%',
+        convert_mermaid_placeholder,
+        html,
+        flags=re.DOTALL
+    )
+
     # Convert figure environments
     # Handle figure with caption and label
     def convert_figure(match):
@@ -746,7 +812,10 @@ def create_chapter_html(chapter_file, chapter_title, prev_chapter=None, next_cha
     
     # Process TikZ diagrams before converting to HTML
     latex_content = process_tikz_diagrams(latex_content, chapter_file, output_dirs)
-    
+
+    # Process Mermaid diagrams before converting to HTML
+    latex_content = process_mermaid_diagrams(latex_content)
+
     html_content = convert_latex_to_html(latex_content)
     
     # Navigation

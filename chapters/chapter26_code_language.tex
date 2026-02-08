@@ -50,6 +50,20 @@ The key insight is that code tokenization should respect the syntactic and seman
 
 The vocabulary size for code tokenizers is typically 32,000--50,000 tokens, comparable to natural language models. However, the token distribution differs significantly: code has higher entropy (more unique tokens appear frequently), reducing compression compared to natural language. A natural language model might compress English text to 0.7 tokens per word on average; a code model might only achieve 1.2 tokens per word due to the diversity of identifiers and the precision required for operators.
 
+\begin{mermaid}[Code Language Model Architecture]
+graph LR
+    CODE["Source Code\n raw text"] -->|"BPE tokenizer\n V = 32K-50K"| TOK["Code Tokens\n in N^n"]
+    TOK -->|"W_emb in R^V x d"| EMB["Embeddings\n + Pos Enc\n in R^n x d"]
+    EMB --> DEC["Decoder Layers\n Causal Self-Attn\n + FFN x L layers\n STORED: activations\n for fill-in-middle\n and next-token pred"]
+    DEC -->|"W_head in R^d x V"| OUT["Logits in R^n x V\n Predict next token\n or infill [MASK]"]
+
+    style CODE fill:#e8f5e9,stroke:#4caf50,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
+    style DEC fill:#fff3e0,stroke:#ff9800,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
 \subsection{Context Window and Code Understanding}
 
 Code understanding benefits from longer context windows, and the reasons are both technical and practical. A function definition might span 50 lines; understanding its behavior requires reading the entire function plus imported modules and class definitions. A class might span hundreds of lines; understanding a method requires knowing the class's state and other methods. A module might import dozens of dependencies; understanding a function call requires knowing what those dependencies provide.

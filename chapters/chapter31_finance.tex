@@ -58,6 +58,21 @@ Transformers, originally designed for sequences, adapt well to time series:
 
 Transformers offer several key advantages for financial time series modeling. Parallelization enables processing the entire price history simultaneously, unlike RNNs which must process sequences step-by-step. This dramatically reduces training time and enables efficient use of modern GPU hardware. The attention mechanism naturally captures long-range dependencies, allowing the model to identify patterns like mean reversion over months or seasonal effects over years—relationships that RNNs struggle to learn due to vanishing gradients. Finally, attention weights provide interpretability by revealing which historical days most influenced each prediction, helping traders understand and trust model decisions.
 
+\begin{mermaid}[Financial Time Series Transformer]
+graph LR
+    TS["Price/Volume\n x_1..x_T\n in R^T x F\n F features"] -->|"W_proj in R^F x d"| EMB["Temporal Emb\n in R^T x d\n + time pos enc"]
+    NEWS["News text\n tokens in N^n"] -->|"W_emb in R^V x d"| NE["News Emb\n in R^n x d"]
+    EMB --> CROSS["Cross-modal Attn\n Time attends to news\n Memory: O(T*n)\n STORED: attn weights"]
+    NE --> CROSS
+    CROSS --> PRED["Prediction Head\n W in R^d x 1\n price / sentiment"]
+
+    style TS fill:#e8f5e9,stroke:#4caf50,color:#000
+    style NEWS fill:#e3f2fd,stroke:#2196f3,color:#000
+    style CROSS fill:#fff3e0,stroke:#ff9800,color:#000
+    style PRED fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
 \subsection{Addressing Non-Stationarity}
 
 Several techniques help address non-stationarity in financial models. Differencing transforms the problem by modeling log-returns instead of raw prices—returns are approximately stationary with mean near zero, while prices exhibit clear trends and non-stationarity. Normalization standardizes features to zero mean and unit variance before feeding them to the model, preventing scale differences from dominating learning. Regime detection explicitly models market state changes, using different models or parameters for bull markets, bear markets, and crisis periods. Online learning continuously retrains models on recent data, weighting recent observations more heavily to adapt to current conditions. Finally, ensemble methods combine predictions from models trained on different time periods, providing robustness when any single model fails due to regime changes.

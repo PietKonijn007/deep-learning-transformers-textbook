@@ -152,6 +152,34 @@
 
 <h3>Self-Attention Complexity</h3>
 
+<div class="architecture-diagram">
+<h3>Transformer Computation and Memory per Layer</h3>
+<pre class="mermaid">
+graph LR
+    subgraph Compute["FLOPs per Layer"]
+        SA["Self-Attention\n Q*K^T: O(n^2 * d_k)\n A*V: O(n^2 * d_v)\n Projections: O(n * d^2)"]
+        FF["Feed-Forward\n W1: O(n * d * d_ff)\n W2: O(n * d_ff * d)\n Total: O(n * d * d_ff)"]
+    end
+
+<p>subgraph Memory["Memory per Layer"]
+        AM["Attention Matrix\n n x n floats\n O(n^2) memory\n DOMINATES for long seq"]
+        WM["Weight Memory\n W_Q,W_K,W_V,W_O: 4*d^2\n W1,W2: 2*d*d_ff\n O(d^2) per layer"]
+        ACT["Activation Memory\n Stored for backprop:\n X, Q, K, V, A,\n FFN intermediate\n O(n*d + n^2) per layer"]
+    end</p>
+
+<p>SA --> AM
+    FF --> WM
+    SA --> ACT
+    FF --> ACT</p>
+
+<p>style SA fill:#fff3e0,stroke:#ff9800,color:#000
+    style FF fill:#e3f2fd,stroke:#2196f3,color:#000
+    style AM fill:#fce4ec,stroke:#e91e63,color:#000
+    style ACT fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Transformer Computation and Memory per Layer</p>
+</div>
+
 <p>Self-attention is the defining operation of transformers, and its computational characteristics determine much of the model's behavior. For a sequence of length $n$ with model dimension $d_{\text{model}}$, we analyze each component of the attention mechanism in detail.</p>
 
 <p><strong>QKV Projections:</strong> The first step projects the input $\mX \in \R^{n \times d_{\text{model}}}$ into query, key, and value spaces. Each projection is a matrix multiplication:
@@ -401,122 +429,11 @@ $$
 <p>This breakdown is crucial for optimization: for short sequences, optimizing FFN yields the largest gains; for long sequences, efficient attention mechanisms become critical.</p>
 
 <div class="example"><strong>Example:</strong> 
-BERT-base parameters: $n = 512$, $d_{\text{model}} = 768$, $h = 12$, $d_k = d_v = 64$, $d_{ff} = 3072$
+BERT-base ($n = 512$, $d_{\text{model}} = 768$, $h = 12$, $d_{ff} = 3072$) illustrates the component-level FLOPs breakdown. Self-attention totals 3.21~GFLOPs per layer (QKV projections: 1.81~G, attention scores: 0.40~G each for $\mQ\mK\transpose$ and $\mA\mV$, output projection: 0.60~G). The feed-forward network totals 4.84~GFLOPs (two projections of 2.42~G each). The complete layer costs 8.05~GFLOPs, giving 96.6~GFLOPs for the 12-layer forward pass and $\approx$290~GFLOPs for a full training step.
 
-<p><strong>Self-Attention Computation:</strong></p>
+<p>On an NVIDIA A100 (312~TFLOPS FP16, 70\% utilization), this yields a batch-of-32 forward pass in $\approx$14~ms and throughput of $\approx$390,000~tokens/sec. At 1.6~TB/s memory bandwidth, loading 440~MB of parameters takes 0.28~ms---comparable to compute time, making small-batch inference memory-bandwidth bound.</p>
 
-<p><em>QKV Projections (all heads):</em>
-<div class="equation">
-$$
-3 \times 2 \times 512 \times 768 \times 768 = 1{,}811{,}939{,}328 \approx 1.81\text{ GFLOPs}
-$$
-</div>
-
-<p><em>Attention scores</em> ($\mQ \mK\transpose$ for 12 heads):
-<div class="equation">
-$$
-12 \times 2 \times 512^2 \times 64 = 402{,}653{,}184 \approx 403\text{ MFLOPs}
-$$
-</div>
-
-<p><em>Attention output</em> ($\mA \mV$ for 12 heads):
-<div class="equation">
-$$
-12 \times 2 \times 512^2 \times 64 = 402{,}653{,}184 \approx 403\text{ MFLOPs}
-$$
-</div>
-
-<p><em>Output projection:</em>
-<div class="equation">
-$$
-2 \times 512 \times 768 \times 768 = 603{,}979{,}776 \approx 604\text{ MFLOPs}
-$$
-</div>
-
-<p><em>Total self-attention:</em>
-<div class="equation">
-$$
-1.81 + 0.40 + 0.40 + 0.60 = 3.21\text{ GFLOPs}
-$$
-</div>
-
-<p><strong>Feed-Forward Network:</strong></p>
-
-<p><em>First projection</em> ($\mX \mW_1$, where $\mW_1 \in \R^{768 \times 3072}$):
-<div class="equation">
-$$
-2 \times 512 \times 768 \times 3072 = 2{,}415{,}919{,}104 \approx 2.42\text{ GFLOPs}
-$$
-</div>
-
-<p><em>Second projection</em> ($\mH \mW_2$, where $\mW_2 \in \R^{3072 \times 768}$):
-<div class="equation">
-$$
-2 \times 512 \times 3072 \times 768 = 2{,}415{,}919{,}104 \approx 2.42\text{ GFLOPs}
-$$
-</div>
-
-<p><em>Total FFN:</em>
-<div class="equation">
-$$
-2.42 + 2.42 = 4.84\text{ GFLOPs}
-$$
-</div>
-
-<p><strong>Complete Layer:</strong>
-<div class="equation">
-$$
-3.21 + 4.84 = 8.05\text{ GFLOPs per layer}
-$$
-</div>
-
-<p><strong>Full 12-Layer BERT-base:</strong>
-<div class="equation">
-$$
-12 \times 8.05 = 96.6\text{ GFLOPs per forward pass}
-$$
-</div>
-
-<p><strong>Training (forward + backward):</strong> Backward pass requires approximately $2\times$ the FLOPs of forward pass:
-<div class="equation">
-$$
-\text{Training step} \approx 3 \times 96.6 = 290\text{ GFLOPs}
-$$
-</div>
-
-<p><strong>Hardware timing on NVIDIA A100 (312 TFLOPS FP16):</strong></p>
-
-<p>Assuming 70\% utilization (realistic for mixed operations):
-<div class="equation">
-$$
-\text{Forward pass time} \approx \frac{96.6\text{ GFLOPS}}{312 \times 0.7\text{ TFLOPS}} \approx 0.44\text{ ms}
-$$
-</div>
-
-<p>For batch size 32:
-<div class="equation">
-$$
-\text{Batch forward time} \approx 32 \times 0.44 = 14\text{ ms}
-$$
-</div>
-
-<p><strong>Training throughput:</strong> With batch size 32, sequence length 512:
-<div class="equation">
-$$
-\text{Tokens per second} = \frac{32 \times 512}{14\text{ ms} \times 3} \approx 390{,}000\text{ tokens/sec}
-$$
-</div>
-
-<p>This analysis shows why BERT-base training is feasible on single GPUs, while larger models require distributed training.</p>
-
-<p><strong>Memory bandwidth considerations:</strong> The A100 has 1.6 TB/s memory bandwidth. Loading model parameters (110M $\times$ 4 bytes = 440 MB) takes:
-<div class="equation">
-$$
-\text{Parameter load time} = \frac{440\text{ MB}}{1600\text{ GB/s}} \approx 0.28\text{ ms}
-$$
-</div>
-
-<p>This is comparable to compute time, indicating that for small batch sizes, the model can become memory-bandwidth bound rather than compute-bound. Larger batch sizes amortize parameter loading across more computation, improving utilization.
+<p>See Section~[ref] for the step-by-step derivation.
 </div>
 
 <h3>Complexity Analysis</h3>
@@ -990,28 +907,7 @@ T=4096: \quad &36{,}864 \times 4096 = 150{,}994{,}944\text{ bytes} \approx 151\t
 \end{align}$$
 </div>
 
-<p>For GPT-3 ($L=96$, $h=96$, $d_k=128$, $T=2048$, FP16):
-<div class="equation">
-$$
-2 \times 96 \times 96 \times 2048 \times 128 \times 2 = 9{,}663{,}676{,}416\text{ bytes} \approx 9.7\text{ GB per sequence}
-$$
-</div>
-
-<p><strong>Batch inference with KV cache:</strong> For batch size $B$:
-<div class="equation">
-$$
-\text{Total KV cache} = B \times 2 \times L \times h \times T \times d_k \times \text{sizeof(float)}
-$$
-</div>
-
-<p>For GPT-3 with $B=8$: $8 \times 9.7\text{ GB} = 77.6\text{ GB}$—nearly filling an A100 (80 GB)!</p>
-
-<p>This is why large-scale inference services:
-<ul>
-    <li>Use smaller batch sizes for long contexts
-    <li>Implement dynamic batching (group requests of similar lengths)
-    <li>Use quantization (INT8) to reduce cache size by 2-4×
-</ul>
+<p>For GPT-3, the cache reaches 9.7~GB per sequence (see Chapter~[ref] for the derivation), nearly filling an A100 for batch size 8 ($77.6$~GB). Practitioners manage this through smaller batch sizes for long contexts, dynamic batching, and INT8 quantization to reduce cache size by 2--4$\times$.</p>
 
 <h3>Batched Inference</h3>
 
@@ -1128,32 +1024,7 @@ $$\begin{align}
 
 <h2>Scaling Laws</h2>
 
-<h3>Kaplan et al. Scaling Laws</h3>
-
-<p>Performance scales as power law with model size $N$, dataset size $D$, and compute $C$:
-<div class="equation">
-$$
-L(N, D, C) \approx \left(\frac{N_c}{N}\right)^{\alpha_N} + \left(\frac{D_c}{D}\right)^{\alpha_D} + \left(\frac{C_c}{C}\right)^{\alpha_C}
-$$
-</div>
-
-<p><strong>Key findings:</strong>
-<ul>
-    <li>Larger models are more sample-efficient
-    <li>Compute-optimal: Balance model size and data
-    <li>Doubling compute $\to$ consistent loss reduction
-</ul>
-
-<h3>Chinchilla Scaling Laws</h3>
-
-<p>For fixed compute budget, optimal allocation:
-<div class="equation">
-$$
-N_{\text{optimal}} \propto C^{0.5}, \quad D_{\text{optimal}} \propto C^{0.5}
-$$
-</div>
-
-<p><strong>Implication:</strong> Many large models (GPT-3) are over-parameterized and under-trained! Chinchilla (70B params, more data) outperforms Gopher (280B params, less data).</p>
+<p>Performance scales as power laws with model size $N$, dataset size $D$, and compute budget $C$. The Kaplan scaling laws established that larger models are more sample-efficient, while the Chinchilla scaling laws (Hoffmann et al., 2022) refined the optimal allocation: $N_{\text{opt}} \propto C^{0.5}$ and $D_{\text{opt}} \propto C^{0.5}$, implying that many large models are over-parameterized and under-trained. See Section~[ref] for the full treatment including GPT-3 vs Chinchilla analysis and practical implications for training strategy.</p>
 
 <h2>Exercises</h2>
 
@@ -1170,6 +1041,8 @@ $$
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: GPT-3 FLOPs Calculation</strong>
 

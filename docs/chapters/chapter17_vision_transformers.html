@@ -175,8 +175,31 @@ $$
 <p><strong>Step 3:</strong> Add position embeddings
 <div class="equation">
 $$
-\mX = \mX + \mE_{\text{pos}}
-$$
+\mX = \mX + \mE_{\text{pos}}</p>
+
+<div class="architecture-diagram">
+<h3>Vision Transformer (ViT) Forward Pass</h3>
+<pre class="mermaid">
+graph LR
+    IMG["Image I\n in R^H x W x C"] -->|"Split P x P patches"| PAT["N = HW/P^2 patches\n each in R^(P^2*C)"]
+    PAT -->|"W_patch in R^(P^2*C) x d\n b in R^d"| EMB["Patch Embeddings\n in R^N x d\n STORED for dL/dW_patch"]
+    CLS["[CLS] token\n learnable in R^d"] --> CAT["Prepend [CLS]\n in R^(N+1) x d"]
+    EMB --> CAT
+    POS["Position Emb\n E_pos in R^(N+1) x d"] --> ADD["Add Pos Emb\n in R^(N+1) x d"]
+    CAT --> ADD
+    ADD --> ENC["Transformer Encoder\n x L layers\n MHA + FFN + LN\n STORED per layer:\n activations, attn weights\n Memory: O(L*(N+1)^2 + L*(N+1)*d)"]
+    ENC -->|"[CLS] output"| HEAD["MLP Head\n W in R^d x K\n Output in R^K"]
+
+<p>style IMG fill:#e8f5e9,stroke:#4caf50,color:#000
+    style PAT fill:#e3f2fd,stroke:#2196f3,color:#000
+    style EMB fill:#fff3e0,stroke:#ff9800,color:#000
+    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style HEAD fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Vision Transformer (ViT) Forward Pass</p>
+</div>
+
+<p>$$
 </div>
 </div>
 
@@ -694,6 +717,8 @@ Compare FLOPs for ResNet-50 and ViT-Base across resolutions:
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Patch Embedding Implementation</strong>
 

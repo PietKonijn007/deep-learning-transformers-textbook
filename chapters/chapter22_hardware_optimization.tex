@@ -40,6 +40,26 @@ The memory bandwidth available at each level determines how quickly data can be 
 \end{equation}
 \end{definition}
 
+\begin{mermaid}[GPU Memory Hierarchy and Optimization]
+graph LR
+    PARAM["Model Params\n W in R^P\n FP16: 2P bytes"] --> HBM["HBM (GPU RAM)\n 40-80 GB\n Bandwidth: 2 TB/s\n Stores: params, grads,\n optimizer states, activations"]
+    HBM --> SRAM["SRAM (On-chip)\n ~20 MB per SM\n Bandwidth: 19 TB/s\n Stores: tiles of Q,K,V\n during FlashAttention"]
+
+    subgraph Optim["Memory Optimizations"]
+        MP["Mixed Precision\n FP32 master weights\n FP16 forward/backward\n Saves ~50% memory"]
+        GC["Gradient Checkpointing\n Discard activations\n Recompute in backward\n Saves O(L) memory\n Costs ~33% extra compute"]
+        FSDP["FSDP/ZeRO\n Shard params+grads+opt\n across N GPUs\n Memory: O(P/N) per GPU"]
+    end
+
+    HBM --> Optim
+
+    style PARAM fill:#e8f5e9,stroke:#4caf50,color:#000
+    style HBM fill:#fff3e0,stroke:#ff9800,color:#000
+    style SRAM fill:#e3f2fd,stroke:#2196f3,color:#000
+    style GC fill:#fce4ec,stroke:#e91e63,color:#000
+\end{mermaid}
+
+
 Arithmetic intensity measures the ratio of computation to memory access for a given operation, and it is a critical metric for understanding whether an operation will be compute-bound or memory-bound on modern hardware. For attention mechanisms, the arithmetic intensity varies significantly with sequence length, which has profound implications for optimization strategies.
 
 Consider the computation of $\mQ \mK\transpose$ in the attention mechanism, where both $\mQ$ and $\mK$ have shape $[n, d]$ with $n$ being the sequence length and $d$ the head dimension. This matrix multiplication requires $2n^2d$ floating-point operations (FLOPs), as we compute $n^2$ dot products, each involving $d$ multiply-add operations. The memory traffic consists of loading $\mQ$ (requiring $nd$ elements) and $\mK$ (another $nd$ elements), plus writing the output matrix of size $n^2$. For large $n$, the output dominates, giving approximately $2nd$ bytes transferred. The arithmetic intensity is therefore approximately $\frac{2n^2d}{2nd} = \frac{nd}{d} = n$.

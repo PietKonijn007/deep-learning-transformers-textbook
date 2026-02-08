@@ -28,6 +28,29 @@ BERT is a stack of transformer encoder layers with:
     \item \textbf{Input:} Token + Segment + Position embeddings
     \item \textbf{Processing:} $L$ transformer encoder layers
     \item \textbf{Output:} Contextualized representations for all tokens
+
+\begin{mermaid}[BERT Architecture Data Flow]
+graph LR
+    TOK["[CLS] tok1 [MASK] tok3 [SEP]\n Token IDs in N^n"] -->|"Token Emb\n W_tok in R^V x d"| TE["Token Emb\n in R^n x d"]
+    SEG["Segment IDs\n in {0,1}^n"] -->|"Segment Emb\n W_seg in R^2 x d"| SE["Seg Emb\n in R^n x d"]
+    POS["Position 0..n-1"] -->|"Pos Emb\n W_pos in R^n_max x d"| PE["Pos Emb\n in R^n x d"]
+
+    TE --> ADD["Sum Embeddings\n E = Tok + Seg + Pos\n in R^n x d\n STORED for backprop"]
+    SE --> ADD
+    PE --> ADD
+
+    ADD --> ENC["Transformer Encoder\n x L layers (12 or 24)\n Each: MHA + FFN + LN\n STORED per layer:\n attn weights, activations"]
+
+    ENC -->|"[CLS] output"| CLS["CLS repr\n in R^d --> NSP head\n W_nsp in R^d x 2"]
+    ENC -->|"masked positions"| MLM["Masked outputs\n in R^k x d --> MLM head\n W_mlm in R^d x V\n STORED for cross-entropy backprop"]
+
+    style TOK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style ADD fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style CLS fill:#f3e5f5,stroke:#9c27b0,color:#000
+    style MLM fill:#fce4ec,stroke:#e91e63,color:#000
+\end{mermaid}
+
 \end{itemize}
 \end{definition}
 

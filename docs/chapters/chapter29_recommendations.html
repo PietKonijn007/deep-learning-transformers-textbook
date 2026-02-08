@@ -176,6 +176,24 @@ where <code>encoder</code> is a transformer, RNN, or other sequential model that
 
 <p>This formulation enables the model to capture rich temporal patterns. If a user watches three action movies in a row, the model learns that action movies have high probability for the next interaction. If a user alternates between genres, the model learns that pattern too. The model can even capture long-range dependencies—a user who watched a TV show's first episode two weeks ago is likely interested in episode two, even if they watched other content in between.</p>
 
+<div class="architecture-diagram">
+<h3>Sequential Recommendation Transformer</h3>
+<pre class="mermaid">
+graph LR
+    HIST["User history\n item_1..item_t\n IDs in N^t"] -->|"W_item in R^I x d\n + W_pos in R^n x d"| EMB["Item Emb\n in R^t x d"]
+    EMB --> ENC["Transformer Encoder\n Causal self-attn\n x L layers\n STORED: attn weights\n per layer for backprop"]
+    ENC -->|"Last position output"| REP["User repr\n in R^d"]
+    REP -->|"dot product with\n all item embs\n W_item^T in R^d x I"| SCORE["Scores\n in R^I"]
+    SCORE -->|"softmax"| TOP["Top-K items\n Recommendations"]
+
+<p>style HIST fill:#e8f5e9,stroke:#4caf50,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style TOP fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Sequential Recommendation Transformer</p>
+</div>
+
 <p>Historically, RNNs (LSTM, GRU) were the standard for sequence modeling in recommendations. However, transformers with self-attention provide several critical advantages that translate directly to business value:</p>
 
 <p><strong>Parallelization during training.</strong> RNNs process sequences sequentially, making training slow on long user histories. Transformers process entire sequences in parallel, reducing training time by 5-10x. For platforms retraining models daily on billions of interactions, this means the difference between 8-hour and 2-hour training jobs—enabling faster iteration and more frequent model updates.</p>
@@ -501,103 +519,17 @@ $$\begin{align}
 
 <p><strong>Cross-platform and cross-device drift.</strong> Users increasingly interact with platforms across multiple devices (phone, tablet, desktop, TV) and contexts (commute, home, work). Preferences and engagement patterns differ by device and context. A user might watch short clips on mobile during commute but long-form content on TV at home. Models must adapt to these context-dependent patterns.</p>
 
-<h3>Business Impact of Recommendation Drift</h3>
+<div class="keypoint">
+For the generic drift detection and continuous learning framework, see Chapter~[ref], Section~[ref]. Recommendation systems typically require the most aggressive retraining cadence (daily to weekly) due to the rapid pace of preference and content evolution.
+</div>
 
-<p>The business consequences of unmanaged drift in recommendation systems are severe and measurable:</p>
-
-<p><strong>Engagement degradation.</strong> As models drift, recommendation quality declines, reducing click-through rates, watch time, and session length. A 2\% drop in CTR might seem small but translates to millions of lost interactions daily for large platforms. One e-commerce platform observed a 3\% decline in conversion rate over four months due to drift, costing \$15 million in lost revenue.</p>
-
-<p><strong>User churn and retention impact.</strong> Poor recommendations frustrate users, increasing churn. Users who consistently receive irrelevant recommendations are 2-3x more likely to stop using the platform. For subscription services, this directly impacts recurring revenue. For ad-supported platforms, it reduces the user base and advertising inventory. One streaming service found that users experiencing poor recommendations (measured by low engagement with recommended content) had 25\% higher churn rates.</p>
-
-<p><strong>Creator and supplier dissatisfaction.</strong> When recommendation systems drift, content distribution becomes skewed. New creators struggle to get exposure. Niche content gets buried. This frustrates creators and suppliers, potentially causing them to leave the platform or reduce content production. For platforms dependent on user-generated content or third-party suppliers, this threatens content supply and platform viability.</p>
-
-<p><strong>Revenue and monetization impact.</strong> Recommendation quality directly affects revenue. E-commerce platforms lose sales when product recommendations are poor. Advertising platforms lose revenue when ad targeting becomes less effective. Subscription platforms face churn. One major platform estimated that a 1\% improvement in recommendation quality generates \$50 million in annual revenue—conversely, 1\% degradation costs \$50 million.</p>
-
-<p><strong>Competitive disadvantage.</strong> In competitive markets, recommendation quality is a key differentiator. Users choose platforms with better personalization. If competitors adapt to drift faster, they gain market share. The platform with the best recommendations wins user attention and engagement, creating a competitive moat. Falling behind on recommendation quality can be existential for platforms in crowded markets.</p>
-
-<h3>Detecting Drift in Recommendation Systems</h3>
-
-<p>Effective drift detection requires monitoring multiple signals across different time scales:</p>
-
-<p><strong>Performance-based detection.</strong> Monitor key business metrics continuously: click-through rate, conversion rate, watch time, session length, return rate. Establish baseline performance and alert when metrics degrade beyond thresholds. Use statistical process control to distinguish normal variation from systematic drift.</p>
-
-<p>Example: If CTR drops 1\% week-over-week for three consecutive weeks, trigger drift investigation. If watch time per session declines 2\% month-over-month, investigate potential model staleness. Set up automated dashboards that track these metrics by user segment, content category, and device type to identify where drift is occurring.</p>
-
-<p><strong>Prediction confidence monitoring.</strong> Track model confidence scores over time. If average prediction confidence decreases or the proportion of low-confidence predictions increases, the model may be encountering out-of-distribution patterns. For example, if a CTR prediction model's average confidence drops from 0.75 to 0.65 over a month, investigate whether user behavior or item characteristics have shifted.</p>
-
-<p><strong>Temporal pattern analysis.</strong> Recommendation systems have strong temporal patterns (hourly, daily, weekly, seasonal). Establish baseline patterns and detect anomalies. If weekend engagement patterns suddenly differ from historical weekends, investigate. If holiday season performance differs from previous years, drift may be occurring. Use time-series anomaly detection to identify deviations from expected patterns.</p>
-
-<p><strong>Item and user distribution monitoring.</strong> Track distributions of recommended items and user interactions. If the distribution of recommended categories shifts (e.g., more action movies, fewer documentaries) without corresponding changes in user preferences, the model may be drifting. If new items receive disproportionately low recommendation rates, cold-start handling may be failing.</p>
-
-<p><strong>Cohort analysis.</strong> Track performance for different user cohorts: new users vs. long-time users, different demographics, different engagement levels. Drift often affects cohorts differently. New users might be more sensitive to poor recommendations (higher churn), while engaged users might tolerate lower quality. Identifying which cohorts are affected helps prioritize fixes.</p>
-
-<p><strong>A/B test monitoring.</strong> Continuously run A/B tests comparing current production model to recent alternatives. If a model trained on more recent data significantly outperforms the production model, drift has occurred and retraining is needed. This provides early warning before business metrics degrade significantly.</p>
-
-<p><strong>Human evaluation and feedback.</strong> Continuously sample recommendations for human review. Ask raters: "Are these recommendations relevant and high-quality?" Track agreement between model predictions and human judgments. If agreement drops from 85\% to 75\%, investigate. Collect user feedback ("Why did you recommend this?") and track negative feedback rates.</p>
-
-<h3>Strategies for Continuous Learning in Recommendation Systems</h3>
-
-<p>Managing drift in recommendation systems requires aggressive continuous learning strategies due to the rapid pace of preference and content evolution:</p>
-
-<p><strong>Frequent periodic retraining.</strong> Retrain models on a regular, frequent schedule using recent data. For high-velocity platforms (social media, news), this might mean daily or weekly retraining. For slower-moving platforms (e-commerce, streaming), monthly retraining may suffice. Use rolling windows of recent data (e.g., last 3-6 months) to ensure models reflect current patterns while maintaining sufficient training data.</p>
-
-<p>Implementation: Maintain automated retraining pipelines that run on schedule. Use the most recent N days of interaction data. Validate on held-out recent data (last week). Deploy if validation metrics exceed current production model. For a large platform, daily retraining might cost \$5,000-10,000 in compute but generates \$100,000s in additional revenue through improved recommendations.</p>
-
-<p><strong>Online learning and real-time updates.</strong> For systems with continuous user feedback, implement online learning to update models in real-time or near-real-time. This is technically challenging for large models but possible with careful engineering. Use techniques like online gradient descent, incremental matrix factorization, or parameter-efficient fine-tuning (LoRA) to update model weights based on recent interactions.</p>
-
-<p>Example: Update user embeddings hourly based on recent interactions. Update item embeddings daily as new items receive interactions. This keeps the model fresh without full retraining. One video platform implemented hourly user embedding updates and saw 2\% improvement in CTR for active users.</p>
-
-<p><strong>Ensemble approaches with temporal diversity.</strong> Maintain an ensemble of models trained on different time periods. Combine predictions from models trained on recent data (captures current trends) and older data (maintains stability and captures long-term preferences). Weight ensemble members based on recency and performance.</p>
-
-<p>Example: Maintain three models: trained on last month, last quarter, and last year. For each user, weight predictions based on user activity level—active users get more weight on recent model, inactive users get more weight on long-term model. This provides robustness to drift while maintaining performance on stable patterns.</p>
-
-<p><strong>Separate models for different time scales.</strong> Build separate models for short-term and long-term preferences. Short-term model captures recent session behavior (last hour, last day). Long-term model captures stable preferences (last months, last year). Combine predictions to balance immediate context with enduring interests.</p>
-
-<p>Example: Short-term model uses transformer on recent 20 interactions. Long-term model uses matrix factorization on all historical interactions. Final score is weighted combination: 70\% short-term, 30\% long-term. This captures both "what user wants right now" and "what user generally likes."</p>
-
-<p><strong>Contextual bandits and exploration.</strong> Use multi-armed bandit algorithms to balance exploitation (recommend known good items) with exploration (try new items to learn preferences). This provides continuous learning through exploration while maintaining engagement through exploitation. Contextual bandits incorporate user and item features to make exploration more efficient.</p>
-
-<p>Example: Allocate 10\% of recommendations to exploration (items with high uncertainty or new items). Use Thompson sampling or upper confidence bound (UCB) algorithms to select exploration candidates. Track performance and update item value estimates in real-time. This enables rapid adaptation to new items and changing preferences.</p>
-
-<p><strong>Transfer learning and meta-learning.</strong> Use transfer learning to adapt models to new users and items quickly. Pretrain on large datasets, then fine-tune on specific user segments or item categories. Use meta-learning (learning to learn) to enable rapid adaptation with few examples. This is particularly valuable for cold-start scenarios.</p>
-
-<p>Example: Pretrain a sequence model on all users. For new users, fine-tune on their first 10 interactions using meta-learning techniques (MAML, Reptile). This enables personalized recommendations after just a few interactions, reducing cold-start period from weeks to hours.</p>
-
-<p><strong>Seasonal and event-aware modeling.</strong> Explicitly model seasonal patterns and events. Include temporal features (month, day of week, holiday indicators) in models. Train separate models or model components for different seasons or events. This enables proactive adaptation to predictable drift.</p>
-
-<p>Example: Train separate models for holiday season (November-December) and regular season. Switch models based on calendar. Include features for major events (sports championships, award shows). This improves recommendations during high-value periods when engagement and revenue are highest.</p>
-
-<h3>Practical Implementation Considerations</h3>
-
-<p>Successfully implementing continuous learning for recommendation systems requires careful attention to operational details:</p>
-
-<p><strong>Data pipeline and freshness.</strong> Maintain real-time or near-real-time data pipelines that collect user interactions, process them, and make them available for training. Latency in data pipelines directly impacts model freshness. A 24-hour delay in data availability means models are always one day behind reality. Invest in streaming data infrastructure (Kafka, Flink) to minimize latency.</p>
-
-<p><strong>Feature engineering and computation.</strong> Many recommendation features require expensive computation (user similarity, item popularity, co-occurrence statistics). Precompute features offline and update regularly. Use approximate algorithms (MinHash for similarity, HyperLogLog for counting) to make computation tractable at scale. Cache frequently accessed features to reduce latency.</p>
-
-<p><strong>Model versioning and experimentation.</strong> Maintain strict versioning of models, training data, and features. Enable rapid experimentation by making it easy to train, validate, and deploy new model variants. Use feature flags to control which users see which models, enabling gradual rollouts and A/B tests. Implement automated rollback if new models degrade metrics.</p>
-
-<p><strong>Monitoring and alerting infrastructure.</strong> Build comprehensive monitoring that tracks all relevant metrics: business KPIs, model performance, data quality, system latency, and cost. Set up alerts for anomalies. Ensure dashboards are accessible to both ML engineers and product managers. Invest in observability tools that enable rapid diagnosis when issues occur.</p>
-
-<p><strong>Cost management and optimization.</strong> Continuous learning is expensive. Daily retraining for a large platform can cost \$50,000-100,000 monthly. Optimize costs through: (1) efficient model architectures, (2) smart data sampling (don't train on all data, sample strategically), (3) incremental learning where possible, (4) spot instances for training, (5) careful monitoring to avoid unnecessary retraining.</p>
-
-<p>Budget example: Platform with 100M users, 10M items, 1B daily interactions. Daily retraining costs \$3,000 (compute). Inference costs \$20,000/day (serving). Monitoring and storage \$5,000/day. Total: \$28,000/day = \$840,000/month. Compare to business value: if continuous learning maintains 2\% higher engagement worth \$5M/month in revenue, ROI is 6x.</p>
-
-<p><strong>Organizational structure and ownership.</strong> Recommendation systems require cross-functional collaboration: ML engineers (models), data engineers (pipelines), backend engineers (serving), product managers (metrics), and data scientists (analysis). Establish clear ownership and communication channels. Use shared dashboards and regular reviews to ensure alignment. Invest in tools that enable non-ML team members to understand and influence recommendation behavior.</p>
-
-<h3>Cross-Domain Patterns and Connections</h3>
-
-<p>The continuous learning challenges in recommendation systems share patterns with other domains while having unique characteristics:</p>
-
-<p><strong>Chapter 24 (Domain-Specific Models):</strong> The general continuous learning framework from Chapter~[ref] applies here, but recommendations face more severe drift due to the dynamic nature of user preferences and content. While enterprise NLP might retrain quarterly, recommendation systems often need daily or weekly updates to maintain performance.</p>
-
-<p><strong>Chapter 27 (Video \& Visual):</strong> Video recommendation systems combine visual content understanding (Chapter~[ref]) with recommendation algorithms. Drift occurs in both visual content characteristics (new video styles, effects) and user preferences. The visual understanding models and recommendation models must be updated in coordination to maintain quality.</p>
-
-<p><strong>Chapter 28 (Knowledge Graphs):</strong> Knowledge graph-based recommendations (Chapter~[ref]) face drift as the knowledge graph evolves—new entities, new relationships, changing entity attributes. The graph structure itself drifts, requiring continuous graph updates and embedding recomputation. Techniques like temporal knowledge graphs and incremental embedding updates are essential.</p>
-
-<p><strong>Chapter 30 (Healthcare):</strong> Healthcare recommendation systems (treatment recommendations, care pathways) face drift as medical knowledge evolves and patient populations change. However, the stakes are higher (patient safety) and the pace is slower (medical knowledge evolves over years, not days). The continuous learning strategies must be adapted to prioritize safety and regulatory compliance over rapid adaptation.</p>
-
-<p><strong>Chapter 33 (Observability):</strong> Monitoring recommendation systems requires specialized observability infrastructure discussed in Chapter~[ref]. Recommendation quality is multidimensional (accuracy, diversity, fairness) and difficult to measure in real-time. Effective observability is essential for detecting drift early and diagnosing root causes. Invest in recommendation-specific monitoring tools and dashboards.</p>
+<p>Key recommendation-specific strategies beyond the generic framework include:
+<ul>
+<li><strong>Separate short-term and long-term models:</strong> Use a transformer on recent interactions for ``what the user wants right now'' and a collaborative filter on full history for ``what the user generally likes,'' combining with learned weights.
+<li><strong>Contextual bandits for exploration:</strong> Allocate 5--10\% of recommendations to exploration via Thompson sampling or UCB, enabling continuous learning about new items and shifting preferences.
+<li><strong>Seasonal and event-aware modeling:</strong> Explicitly include temporal features (day-of-week, holiday indicators, event flags) and train separate model components for predictable seasonal shifts.
+<li><strong>Online user embedding updates:</strong> Update user embeddings hourly based on recent interactions while keeping item embeddings on a daily cycle, balancing freshness with stability.
+</ul>
 
 <h2>Exercises</h2>
 
@@ -611,6 +543,8 @@ $$\begin{align}
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Sequence-Based Recommender</strong>
 

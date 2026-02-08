@@ -40,6 +40,25 @@ All tasks formulated as: text input $\to$ text output
 
 \subsection{T5 Architecture}
 
+\begin{mermaid}[T5 Encoder-Decoder Architecture]
+graph LR
+    SRC["Source text\n tokens in N^n"] -->|"Shared W_emb\n in R^V x d\n + Relative Pos Bias"| EEMB["Encoder Emb\n in R^n x d"]
+    EEMB --> ENC["Encoder x L layers\n Self-Attn + FFN\n STORED: all activations\n Output in R^n x d"]
+
+    TGT["Target prefix\n tokens in N^m"] -->|"Shared W_emb"| DEMB["Decoder Emb\n in R^m x d"]
+    DEMB --> DSAL["Decoder x L layers\n 1. Causal Self-Attn\n 2. Cross-Attn to Encoder\n 3. FFN\n STORED: Q,K,V per layer\n + cross-attn K,V from encoder"]
+    ENC --> DSAL
+
+    DSAL -->|"W_head in R^d x V"| OUT["Output logits\n in R^m x V\n STORED for backprop"]
+
+    style SRC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
+    style DSAL fill:#fff3e0,stroke:#ff9800,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
+
 T5 employs a standard encoder-decoder transformer architecture with several important modifications that distinguish it from the original transformer design. The architecture combines the bidirectional encoding capabilities of BERT with the autoregressive generation capabilities of GPT, creating a model that excels at both understanding input context and generating coherent output sequences.
 
 The encoder processes the input text using fully-visible self-attention, identical to BERT's architecture. Each token in the encoder can attend to all other tokens in the input sequence without any causal masking, enabling the model to build rich bidirectional representations that capture both left and right context. This bidirectional attention is crucial for understanding tasks where the meaning of each token depends on the entire input context. The encoder consists of a stack of transformer layers, each containing multi-head self-attention followed by a position-wise feed-forward network, with residual connections and layer normalization applied in the pre-norm configuration for improved training stability.

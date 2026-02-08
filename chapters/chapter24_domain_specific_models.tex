@@ -53,6 +53,20 @@ General models struggle with:
 
 \subsection{Example: Legal Document Analysis}
 
+\begin{mermaid}[Domain Adaptation Pipeline]
+graph LR
+    BASE["Pre-trained LM\n params in R^P"] -->|"Domain corpus"| DAPT["Domain-Adaptive\n Pre-training\n Continue MLM/CLM\n on domain text\n STORED: same as base"]
+    DAPT -->|"Task data"| FT["Fine-tuning\n Task-specific head\n W_task in R^d x K\n STORED: all activations\n for backprop"]
+    FT --> DEPLOY["Domain Model\n e.g. BioBERT,\n LegalBERT, FinBERT"]
+
+    style BASE fill:#e8f5e9,stroke:#4caf50,color:#000
+    style DAPT fill:#fff3e0,stroke:#ff9800,color:#000
+    style FT fill:#e3f2fd,stroke:#2196f3,color:#000
+    style DEPLOY fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
+
 Let's examine a concrete example that illustrates why domain specialization matters. A general GPT-3 model can summarize legal documents---it understands language structure, can identify key points, and generates coherent summaries. However, several critical issues emerge in professional legal practice:
 
 First, the model may misinterpret binding clauses or liability limitations. Legal language is precise; a single word can change the meaning of a contract. ``Shall'' versus ``may'' has legal significance that a general model might not capture. A clause stating ``Party A shall indemnify Party B'' creates a binding obligation; ``Party A may indemnify Party B'' creates an option. Misinterpreting this distinction could lead to incorrect legal advice.

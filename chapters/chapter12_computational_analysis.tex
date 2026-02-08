@@ -22,6 +22,32 @@ Understanding the computational complexity of transformers is essential for maki
 
 \subsection{Self-Attention Complexity}
 
+\begin{mermaid}[Transformer Computation and Memory per Layer]
+graph LR
+    subgraph Compute["FLOPs per Layer"]
+        SA["Self-Attention\n Q*K^T: O(n^2 * d_k)\n A*V: O(n^2 * d_v)\n Projections: O(n * d^2)"]
+        FF["Feed-Forward\n W1: O(n * d * d_ff)\n W2: O(n * d_ff * d)\n Total: O(n * d * d_ff)"]
+    end
+
+    subgraph Memory["Memory per Layer"]
+        AM["Attention Matrix\n n x n floats\n O(n^2) memory\n DOMINATES for long seq"]
+        WM["Weight Memory\n W_Q,W_K,W_V,W_O: 4*d^2\n W1,W2: 2*d*d_ff\n O(d^2) per layer"]
+        ACT["Activation Memory\n Stored for backprop:\n X, Q, K, V, A,\n FFN intermediate\n O(n*d + n^2) per layer"]
+    end
+
+    SA --> AM
+    FF --> WM
+    SA --> ACT
+    FF --> ACT
+
+    style SA fill:#fff3e0,stroke:#ff9800,color:#000
+    style FF fill:#e3f2fd,stroke:#2196f3,color:#000
+    style AM fill:#fce4ec,stroke:#e91e63,color:#000
+    style ACT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
+
 Self-attention is the defining operation of transformers, and its computational characteristics determine much of the model's behavior. For a sequence of length $n$ with model dimension $d_{\text{model}}$, we analyze each component of the attention mechanism in detail.
 
 \textbf{QKV Projections:} The first step projects the input $\mX \in \R^{n \times d_{\text{model}}}$ into query, key, and value spaces. Each projection is a matrix multiplication:

@@ -136,51 +136,6 @@
 
 <p>This concluding chapter synthesizes the domain-specific applications explored throughout this book into a unified framework for building production AI systems. Across healthcare, finance, legal, recommendations, visual content, and observability, we observe recurring patterns: domains are formalized into structured representations, models learn to operate within these formalizations, and systems integrate models with tools to achieve business objectives. Understanding these patterns enables practitioners to systematically approach new domains rather than reinventing solutions.</p>
 
-<div class="architecture-diagram">
-<h3>LLM Agent System Architecture</h3>
-<pre class="mermaid">
-graph TD
-    A["User Query"] --> B["LLM Agent<br/>(Planning & Reasoning)"]
-
-    B --> C["Tool Selection"]
-
-    subgraph Tools["Available Tools"]
-        direction LR
-        T1["Code<br/>Executor"]
-        T2["Web<br/>Search"]
-        T3["Database<br/>Query"]
-        T4["API<br/>Calls"]
-    end
-
-    C --> Tools
-    Tools --> D["Observation<br/>/ Result"]
-    D --> B
-
-    B --> E{"Task<br/>Complete?"}
-    E -->|No| C
-    E -->|Yes| F["Final<br/>Response"]
-
-    subgraph Framework["Agent Framework"]
-        direction LR
-        F1["ReAct<br/>Reason + Act"]
-        F2["Chain-of-Thought<br/>Reasoning"]
-        F3["DSL / Function<br/>Calling"]
-    end
-
-    Framework -.-> B
-
-    G["Memory /<br/>Context Window"] -.-> B
-
-    style A fill:#e8f5e9,stroke:#4caf50,color:#000
-    style B fill:#fff3e0,stroke:#ff9800,color:#000
-    style F fill:#e3f2fd,stroke:#2196f3,color:#000
-    style D fill:#f3e5f5,stroke:#9c27b0,color:#000
-</pre>
-<p class="diagram-caption">Figure: LLM agent systems use a reasoning-action loop where the LLM plans, selects tools, observes results, and iterates until the task is complete.</p>
-</div>
-
-
-
 <p>The business imperative is clear. Organizations that successfully deploy domain-specific AI systems achieve measurable competitive advantages: 50-70\% cost reductions (legal contract review, healthcare documentation), 10-30\% revenue increases (recommendations, fraud detection), and 40-60\% efficiency gains (observability, visual content creation). However, success requires more than technical capability—it demands understanding domain constraints, managing model drift, balancing accuracy with explainability, and navigating regulatory requirements. The patterns synthesized in this chapter provide a reusable playbook for these challenges.</p>
 
 <p>This chapter examines the world-to-language-to-tool pattern that underlies successful AI deployments, explores how to design domain-specific languages that enable reliable model-system integration, and investigates tool-augmented agents that orchestrate complex workflows. We synthesize drift management patterns across domains, compare accuracy-cost-latency trade-offs, and provide a practical framework for building domain-specific systems from requirements through deployment.</p>
@@ -222,6 +177,25 @@ The most successful applications of deep learning to real domains follow this pa
 </div>
 
 <h2>Designing Domain-Specific Languages</h2>
+
+<div class="architecture-diagram">
+<h3>LLM Agent Architecture</h3>
+<pre class="mermaid">
+graph LR
+    USER["User Query\n text input"] --> LLM["LLM Agent\n Decoder-only Transformer\n Context window: n tokens\n STORED: KV cache\n in R^L x 2 x n x d_k\n per layer"]
+    LLM -->|"Function call\n (tool selection)"| TOOL["Tool Execution\n Code / Search / API\n External memory"]
+    TOOL -->|"Observation\n appended to context"| LLM
+    LLM -->|"Reasoning loop\n until done"| OUT["Final Response\n Generated text"]
+
+<p>LLM -->|"KV Cache grows\n O(n * L * d) memory\n per generation step"| KV["KV Cache\n Inference bottleneck\n Quantize to INT8\n for efficiency"]</p>
+
+<p>style USER fill:#e8f5e9,stroke:#4caf50,color:#000
+    style LLM fill:#fff3e0,stroke:#ff9800,color:#000
+    style TOOL fill:#e3f2fd,stroke:#2196f3,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">LLM Agent Architecture</p>
+</div>
 
 <p>A well-designed DSL makes models easier to train and systems easier to build. Poor DSL design leads to model confusion and system brittleness.</p>
 
@@ -521,6 +495,8 @@ Model output:
 
 <h2>Solutions</h2>
 
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Restaurant Reservation DSL</strong>
 
 <p>\itshape Core Entities:
@@ -678,101 +654,31 @@ Model response: "Tomorrow hourly: 6am 4°C, 9am 6°C, 12pm 8°C, ..."
 
 <h2>Synthesis: Patterns Across Domains</h2>
 
-<p>Having explored domain-specific AI systems across healthcare, finance, legal, recommendations, visual content, and observability, we can now synthesize common patterns, identify domain-specific variations, and extract universal principles for building production AI systems. This synthesis provides a unified framework for approaching new domains and understanding trade-offs inherent in domain-specific AI deployment.</p>
+<p>Having explored domain-specific AI systems across healthcare, finance, legal, recommendations, visual content, and observability, we can now synthesize the key patterns. The universal themes---drift inevitability, the accuracy-cost-latency trade-off, human-in-the-loop necessity, and explainability requirements---manifest differently in each domain. Table~[ref] summarizes these variations.</p>
 
-<h3>Universal Patterns in Domain-Specific AI</h3>
+<table>
+<tr><th><strong>Domain</strong></th><th><strong>Drift Pace</strong></th><th><strong>Retrain Cadence</strong></th><th><strong>Validation Rigor</strong></th><th><strong>Key Constraint</strong></th></tr>
+<tr><td>Healthcare</td><td>Quarterly</td><td>Quarterly--annual</td><td>Extreme (FDA)</td><td>Patient safety</td></tr>
+<tr><td>Finance</td><td>Daily</td><td>Daily--weekly</td><td>High (regulatory)</td><td>Latency + adversarial</td></tr>
+<tr><td>Legal</td><td>Episodic</td><td>Quarterly--semi-annual</td><td>Very high (liability)</td><td>Professional responsibility</td></tr>
+<tr><td>Recommendations</td><td>Weekly</td><td>Daily--weekly</td><td>Moderate (A/B tests)</td><td>Scale + freshness</td></tr>
+<tr><td>Visual Content</td><td>Monthly</td><td>Monthly--weekly</td><td>Moderate</td><td>Trend velocity</td></tr>
+<tr><td>Observability</td><td>Continuous</td><td>Online + monthly</td><td>High (reliability)</td><td>24/7 uptime</td></tr>
+</table>
 
-<p>Across all domains examined, several patterns emerge consistently:</p>
+<p>Three universal principles emerge across all domains:</p>
 
-<p><strong>The formalization imperative.</strong> Every successful domain-specific AI system begins with formalization—transforming messy, unstructured reality into structured representations that models can learn and systems can process. Healthcare formalizes clinical notes into structured EHR data. Finance formalizes market behavior into time series and events. Legal formalizes contracts into clause hierarchies. Recommendations formalize user behavior into interaction sequences. This formalization is not optional—it is the foundation that enables everything else.</p>
+<ol>
+<li><strong>Drift is inevitable, not exceptional.</strong> Every production AI system degrades over time. Successful deployments plan for drift from deployment day, budgeting for detection, retraining pipelines, and continuous maintenance. The retraining frequency must match the domain's drift pace while respecting its validation requirements.
 
-<p>The quality of formalization directly impacts system success. Well-designed formalizations (clear schemas, consistent formats, complete information) enable models to learn effectively and systems to integrate reliably. Poor formalizations (ambiguous fields, inconsistent formats, missing information) cause model confusion and system brittleness. Organizations that invest in thoughtful domain formalization achieve better results with less effort than those that skip this step.</p>
+<p><li><strong>Human oversight remains essential.</strong> The form varies---physician review of diagnoses, lawyer review of contract analysis, trader oversight of algorithmic decisions, product manager oversight of recommendation changes---but no high-stakes domain deploys AI without human judgment in the loop.</p>
 
-<p><strong>The drift inevitability.</strong> Every domain faces drift—the phenomenon where model performance degrades over time as the world changes. However, drift manifests differently across domains. Finance faces severe, rapid drift (daily market regime changes, adversarial adaptation). Recommendations face moderate drift (weekly user preference evolution, seasonal patterns). Healthcare faces controlled drift (quarterly medical knowledge updates, validated before deployment). Legal faces episodic drift (legislative changes, precedent shifts). Visual content faces trend-driven drift (monthly aesthetic evolution). Observability faces infrastructure drift (continuous deployment, traffic growth).</p>
+<p><li><strong>Explainability is a business requirement, not a technical luxury.</strong> Stakeholders across all domains demand explanations for AI decisions. Attention mechanisms, retrieval-augmented generation, ensemble confidence estimates, and rule-based components all serve this need. Black-box models fail to achieve adoption regardless of accuracy.
+</ol>
 
-<p>The universal lesson: drift is not a bug to be fixed but a fundamental characteristic of production AI systems. Successful deployments plan for drift from the beginning—implementing detection mechanisms, establishing retraining pipelines, and budgeting for continuous maintenance. Organizations that treat models as static artifacts fail; those that treat them as living systems requiring continuous care succeed.</p>
+<h3>Future Directions</h3>
 
-<p><strong>The accuracy-cost-latency triangle.</strong> Every domain faces trade-offs between accuracy (model performance), cost (computational resources, development effort), and latency (response time). These trade-offs manifest differently by domain but are universally present. Healthcare prioritizes accuracy over cost (patient safety paramount). Finance balances accuracy and latency (millisecond trading decisions). Recommendations balance all three (slight accuracy edge, massive scale, real-time serving). Legal prioritizes accuracy and explainability over latency. Observability prioritizes latency and reliability over perfect accuracy.</p>
-
-<p>Understanding these trade-offs enables informed architectural decisions. High-stakes domains (healthcare, legal) justify expensive, accurate models with extensive validation. High-volume domains (recommendations, observability) require efficient models that scale. Real-time domains (finance, fraud detection) demand low-latency architectures even at accuracy cost. There is no universal "best" model—only models optimized for specific domain constraints.</p>
-
-<p><strong>The human-in-the-loop necessity.</strong> Despite AI advances, human oversight remains essential across all domains, though the form varies. Healthcare requires physician review of AI diagnoses (professional liability, patient safety). Legal requires lawyer review of AI contract analysis (malpractice prevention, professional responsibility). Finance requires trader oversight of algorithmic decisions (risk management, regulatory compliance). Recommendations require product manager oversight of algorithm changes (business alignment, ethical considerations). The pattern is universal: AI augments human capability but does not replace human judgment in high-stakes decisions.</p>
-
-<p>The key insight is designing appropriate human-AI collaboration. Some domains require human approval before AI actions (healthcare treatment recommendations, legal advice). Others require human monitoring with intervention capability (algorithmic trading, fraud detection). Still others require periodic human review and feedback (recommendations, content moderation). Successful systems design human-AI interaction patterns appropriate to domain stakes and constraints.</p>
-
-<p><strong>The explainability requirement.</strong> Across domains, stakeholders demand explanations for AI decisions, though the form and rigor vary. Healthcare requires clinical explanations (which symptoms, lab values, prior cases influenced diagnosis). Legal requires professional explanations (which clauses, precedents, statutes support analysis). Finance requires risk explanations (which factors, correlations, scenarios drive predictions). Recommendations require user-facing explanations (why this content was recommended). Observability requires operational explanations (which metrics, logs, patterns triggered alerts).</p>
-
-<p>The universal principle: black-box AI is insufficient for production deployment. Stakeholders need to understand, validate, and trust AI decisions. This drives architectural choices—attention mechanisms provide interpretability, retrieval-augmented generation provides citations, ensemble methods provide confidence estimates, and rule-based components provide explicit logic. Explainability is not just a technical feature but a business requirement for adoption and trust.</p>
-
-<h3>Domain-Specific Variations and Specializations</h3>
-
-<p>While universal patterns exist, each domain has unique characteristics requiring specialized approaches:</p>
-
-<p><strong>Adversarial vs. natural drift.</strong> Finance and fraud detection face adversarial drift—intelligent actors actively adapting to evade detection. This requires fundamentally different drift management than natural drift. Adversarial drift demands rapid adaptation (daily/weekly retraining), adversarial training (generating attack examples), and security mindset (assuming attackers will probe for weaknesses). In contrast, healthcare and legal face natural drift from knowledge evolution, requiring periodic updates but not adversarial robustness.</p>
-
-<p><strong>Regulatory burden spectrum.</strong> Domains vary dramatically in regulatory requirements. Healthcare and finance face intense regulation (FDA approval, Basel III, Dodd-Frank) requiring extensive validation, documentation, and ongoing compliance. Legal faces professional responsibility rules and bar association oversight. Recommendations and visual content face lighter regulation (primarily privacy and content moderation). This regulatory burden directly impacts development timelines, costs, and deployment approaches. Heavily regulated domains require 2-5 years from development to deployment; lightly regulated domains can deploy in months.</p>
-
-<p><strong>Professional liability gradients.</strong> Healthcare and legal face extreme professional liability—errors cause malpractice claims, regulatory sanctions, and potential disbarment. Finance faces regulatory liability and direct monetary losses. Recommendations and visual content face business liability (lost revenue, user churn) but not professional liability. This liability gradient drives accuracy requirements: healthcare and legal demand 95</p>
-
-<p><strong>Data availability and quality.</strong> Domains vary in data availability. Recommendations and observability have massive data volumes (billions of interactions, events). Finance has moderate data (decades of market history but limited independent samples). Healthcare and legal have limited data (privacy restrictions, small patient populations, rare cases). This data availability drives modeling approaches: data-rich domains use large models trained from scratch; data-poor domains use transfer learning, few-shot learning, and domain adaptation.</p>
-
-<p><strong>Latency requirements.</strong> Domains have vastly different latency requirements. Finance and fraud detection require sub-second latency (millisecond trading decisions, real-time fraud blocking). Observability requires minute-scale latency (rapid incident detection). Recommendations require second-scale latency (real-time serving). Healthcare and legal tolerate minute-to-hour latency (diagnosis support, contract review). These latency requirements drive architectural choices: low-latency domains use efficient models, caching, and approximate algorithms; high-latency domains can use expensive, accurate models.</p>
-
-<h3>Drift Management: A Unified Framework</h3>
-
-<p>Synthesizing drift patterns across domains reveals a unified framework for drift management:</p>
-
-<p><strong>Drift detection strategies.</strong> All domains use similar detection approaches but with different emphasis:
-<ul>
-<li>Performance monitoring: Track domain-specific metrics (accuracy, engagement, MTTR) over time
-<li>Distribution monitoring: Detect shifts in input data distributions
-<li>Confidence monitoring: Track model uncertainty and prediction confidence
-<li>Human feedback: Collect stakeholder feedback on model outputs
-<li>Comparative analysis: Compare model performance to human experts or baselines
-<li>Subgroup analysis: Monitor performance across demographic or categorical subgroups
-</ul>
-
-<p>The key is implementing multiple detection mechanisms—no single signal suffices. Drift often manifests subtly across multiple dimensions before becoming obvious in aggregate metrics.</p>
-
-<p><strong>Continuous learning strategies.</strong> Domains employ similar continuous learning approaches but with different frequencies and validation rigor:
-<ul>
-<li>Periodic retraining: Daily (finance, fraud), weekly (recommendations), monthly (visual content), quarterly (legal, healthcare)
-<li>Online learning: Real-time updates for high-velocity domains (observability, fraud)
-<li>Ensemble approaches: Combine models from different time periods for robustness
-<li>Transfer learning: Adapt pretrained models to new conditions with limited data
-<li>Human-in-the-loop: Collect feedback and use for retraining
-</ul>
-
-<p>The universal principle: retraining frequency must match drift pace while respecting validation requirements. Fast-drifting domains need frequent updates; high-stakes domains need extensive validation. The challenge is balancing these competing demands.</p>
-
-<p><strong>Validation and deployment.</strong> All domains follow similar validation patterns but with different rigor:
-<ul>
-<li>Offline validation: Test on held-out data before deployment
-<li>Prospective validation: Test on new data collected after training
-<li>A/B testing: Deploy to subset of users and compare to baseline
-<li>Canary deployment: Gradual rollout with monitoring and rollback capability
-<li>Expert review: Human validation before deployment (critical for high-stakes domains)
-</ul>
-
-<p>High-stakes domains (healthcare, legal) require all validation steps and take months. Lower-stakes domains can skip steps and deploy faster. The key is matching validation rigor to domain stakes.</p>
-
-<h3>Future Directions: Emerging Patterns and Challenges</h3>
-
-<p>Looking forward, several emerging patterns and challenges will shape domain-specific AI:</p>
-
-<p><strong>Multi-domain agents.</strong> Future agents will operate across multiple domains simultaneously—a healthcare agent accessing medical knowledge graphs, financial records, and legal regulations to provide comprehensive patient care recommendations. This requires integrating domain-specific knowledge, managing cross-domain drift, and navigating conflicting domain constraints. The technical challenges are substantial but the business value is enormous.</p>
-
-<p><strong>Federated learning and privacy.</strong> As privacy regulations tighten (GDPR, CCPA, HIPAA), federated learning—training models across organizations without sharing data—becomes essential. This enables learning from larger, more diverse datasets while maintaining privacy. Healthcare, finance, and legal domains will increasingly adopt federated approaches to overcome data scarcity while respecting privacy constraints.</p>
-
-<p><strong>Automated governance and compliance.</strong> As AI systems proliferate, manual governance becomes infeasible. Automated governance systems will monitor model performance, detect drift, ensure fairness, and maintain compliance automatically. This is particularly critical for regulated domains (healthcare, finance, legal) where compliance failures have severe consequences.</p>
-
-<p><strong>Explainable and trustworthy AI.</strong> Explainability requirements will intensify as AI systems make higher-stakes decisions. Future systems will provide not just predictions but comprehensive explanations—citing evidence, showing reasoning, quantifying uncertainty, and enabling human validation. This is essential for adoption in professional domains (healthcare, legal) and regulated industries (finance).</p>
-
-<p><strong>Energy efficiency and sustainability.</strong> As AI systems scale, energy consumption becomes a critical concern. Training large models consumes megawatt-hours; serving billions of inferences daily consumes significant power. Future systems will prioritize efficiency—smaller models, efficient architectures, and green computing. This is both an environmental imperative and a business necessity as energy costs rise.</p>
-
-<p><strong>Democratization and access.</strong> AI capabilities will become more accessible through better tools, pretrained models, and standardized frameworks. This democratization will enable smaller organizations to deploy domain-specific AI, expanding applications beyond large enterprises. However, this also raises concerns about misuse, quality control, and professional standards.</p>
-
-<p>The future of domain-specific AI is not about replacing human expertise but augmenting it—enabling professionals to work faster, more accurately, and more effectively. The patterns synthesized in this chapter provide the foundation for this future while remaining grounded in today's practical realities. Success requires understanding both universal patterns and domain-specific variations, balancing technical capability with business constraints, and maintaining focus on delivering measurable value to stakeholders.</p>
+<p>Looking forward, four trends will shape domain-specific AI: (1)~<strong>multi-domain agents</strong> that operate across healthcare, finance, and legal simultaneously, requiring cross-domain drift management; (2)~<strong>federated learning</strong> enabling cross-organizational training while maintaining privacy; (3)~<strong>automated governance</strong> that monitors performance, detects drift, and maintains compliance at scale; and (4)~<strong>energy-efficient architectures</strong> as sustainability concerns grow alongside model scale.</p>
         
         <div class="chapter-nav">
   <a href="chapter33_observability.html">← Chapter 33: Observability and Monitoring</a>

@@ -45,6 +45,21 @@ where \texttt{encoder} is a transformer, RNN, or other sequential model that pro
 
 This formulation enables the model to capture rich temporal patterns. If a user watches three action movies in a row, the model learns that action movies have high probability for the next interaction. If a user alternates between genres, the model learns that pattern too. The model can even capture long-range dependencies—a user who watched a TV show's first episode two weeks ago is likely interested in episode two, even if they watched other content in between.
 
+\begin{mermaid}[Sequential Recommendation Transformer]
+graph LR
+    HIST["User history\n item_1..item_t\n IDs in N^t"] -->|"W_item in R^I x d\n + W_pos in R^n x d"| EMB["Item Emb\n in R^t x d"]
+    EMB --> ENC["Transformer Encoder\n Causal self-attn\n x L layers\n STORED: attn weights\n per layer for backprop"]
+    ENC -->|"Last position output"| REP["User repr\n in R^d"]
+    REP -->|"dot product with\n all item embs\n W_item^T in R^d x I"| SCORE["Scores\n in R^I"]
+    SCORE -->|"softmax"| TOP["Top-K items\n Recommendations"]
+
+    style HIST fill:#e8f5e9,stroke:#4caf50,color:#000
+    style EMB fill:#e3f2fd,stroke:#2196f3,color:#000
+    style ENC fill:#fff3e0,stroke:#ff9800,color:#000
+    style TOP fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
 Historically, RNNs (LSTM, GRU) were the standard for sequence modeling in recommendations. However, transformers with self-attention provide several critical advantages that translate directly to business value:
 
 \textbf{Parallelization during training.} RNNs process sequences sequentially, making training slow on long user histories. Transformers process entire sequences in parallel, reducing training time by 5-10x. For platforms retraining models daily on billions of interactions, this means the difference between 8-hour and 2-hour training jobs—enabling faster iteration and more frequent model updates.

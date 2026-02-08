@@ -312,6 +312,33 @@
 \usepackage{comment}
 \excludecomment{solution}
 
+% Mermaid diagram environment
+% In PDF: renders as a styled code listing inside a blue-bordered box
+% In HTML: convert_to_html.py extracts the code and renders via Mermaid.js client-side
+\definecolor{mermaidbg}{RGB}{240,245,255}
+\definecolor{mermaidframe}{RGB}{33,150,243}
+\lstnewenvironment{mermaid}[1][]{%
+    \lstset{
+        basicstyle=\ttfamily\scriptsize,
+        backgroundcolor=\color{mermaidbg},
+        frame=single,
+        framerule=1.5pt,
+        rulecolor=\color{mermaidframe},
+        title={\small\bfseries\color{mermaidframe} Architecture Diagram\ifx&#1& \else: #1\fi},
+        breaklines=true,
+        columns=flexible,
+        keepspaces=true,
+        xleftmargin=10pt,
+        xrightmargin=10pt,
+        framexleftmargin=10pt,
+        framexrightmargin=10pt,
+        framextopmargin=6pt,
+        framexbottommargin=6pt,
+        aboveskip=15pt,
+        belowskip=15pt,
+    }%
+}{}
+
 % Custom commands
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\N}{\mathbb{N}}

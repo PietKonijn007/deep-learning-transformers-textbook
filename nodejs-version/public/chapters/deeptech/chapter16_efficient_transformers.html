@@ -147,46 +147,6 @@
     <li>Deploy long-context models (Longformer, BigBird)
 </ol>
 
-<div class="architecture-diagram">
-<h3>Efficient Transformer Approaches</h3>
-<pre class="mermaid">
-graph TD
-    A["Standard Attention<br/>O(n²) memory & compute"] --> B["Sparse Patterns"]
-    A --> C["Low-Rank<br/>Approximation"]
-    A --> D["Kernel Methods"]
-    A --> E["Memory<br/>Compression"]
-
-    B --> B1["Longformer<br/>Local + Global Attention"]
-    B --> B2["BigBird<br/>Random + Window + Global"]
-
-    C --> C1["Linformer<br/>Project K,V to lower dim"]
-
-    D --> D1["Performer<br/>FAVOR+ Random Features"]
-
-    E --> E1["Compressive<br/>Transformer"]
-
-    subgraph Complexity["Complexity Comparison"]
-        direction LR
-        O1["Full: O(n²)"]
-        O2["Sparse: O(n√n)"]
-        O3["Linear: O(n)"]
-    end
-
-    B1 --> Complexity
-    C1 --> Complexity
-    D1 --> Complexity
-
-    style A fill:#fce4ec,stroke:#e91e63,color:#000
-    style B1 fill:#e3f2fd,stroke:#2196f3,color:#000
-    style C1 fill:#e8f5e9,stroke:#4caf50,color:#000
-    style D1 fill:#fff3e0,stroke:#ff9800,color:#000
-    style O3 fill:#e8f5e9,stroke:#4caf50,color:#000
-</pre>
-<p class="diagram-caption">Figure: Efficient Transformer variants reduce the quadratic complexity of standard attention through sparse patterns, low-rank projections, and kernel approximations.</p>
-</div>
-
-
-
 <h2>The Quadratic Bottleneck</h2>
 
 <h3>Complexity Analysis</h3>
@@ -239,6 +199,27 @@ where $|\mathcal{S}(i)| = k \ll n$ for all positions $i$. The computational comp
 </div>
 
 <p>The choice of sparsity pattern $\mathcal{S}$ determines which information can flow through the network. Three fundamental patterns have emerged as particularly effective building blocks for sparse attention.</p>
+
+<div class="architecture-diagram">
+<h3>Efficient Attention Approaches and Memory</h3>
+<pre class="mermaid">
+graph LR
+    FULL["Full Attention\n A = softmax(QK^T/sqrt(d))V\n Compute: O(n^2 d)\n Memory: O(n^2)\n STORED: full n x n matrix"]
+
+<p>FULL --> SPARSE["Sparse Attention\n Only compute S subset\n of n^2 entries\n Memory: O(n * w)\n w = window size"]
+    FULL --> LINEAR["Linear Attention\n phi(Q)*[phi(K)^T * V]\n Compute: O(n * d^2)\n Memory: O(n * d)\n NO n x n matrix stored"]
+    FULL --> FLASH["FlashAttention\n Tiled computation\n Recompute in backward\n Peak memory: O(n)\n IO-aware: minimizes\n HBM reads/writes"]</p>
+
+<p>SPARSE --> SP1["Longformer: local w\n + global g tokens\n O(n*(w+g))"]
+    LINEAR --> LIN1["Performer: random\n feature map phi\n O(n*d*r), r = features"]</p>
+
+<p>style FULL fill:#fce4ec,stroke:#e91e63,color:#000
+    style SPARSE fill:#e3f2fd,stroke:#2196f3,color:#000
+    style LINEAR fill:#e8f5e9,stroke:#4caf50,color:#000
+    style FLASH fill:#fff3e0,stroke:#ff9800,color:#000
+</pre>
+<p class="diagram-caption">Efficient Attention Approaches and Memory</p>
+</div>
 
 <p>The sliding window or local attention pattern restricts each token to attend only to nearby tokens within a fixed window. Formally, $\mathcal{S}_{\text{local}}(i) = \{j : |i-j| \leq w\}$ where $w$ is the window size. Each token attends to $2w+1$ tokens: itself, $w$ tokens before, and $w$ tokens after. This pattern is motivated by the observation that in many domains, particularly natural language, nearby tokens are more relevant than distant ones. For a window size $w = 256$ and sequence length $n = 4096$, each query attends to only 513 keys instead of 4096, reducing computation by 8× and memory by the same factor. The limitation is that information can only propagate $w$ positions per layer, requiring $\lceil n/w \rceil$ layers for full sequence communication.</p>
 
@@ -655,6 +636,8 @@ x_1 &= y_1 - \text{Attention}(x_2)
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Sliding Window Attention Implementation</strong>
 

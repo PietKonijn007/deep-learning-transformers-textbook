@@ -40,6 +40,25 @@ All tasks formulated as: text input $\to$ text output
 
 \subsection{T5 Architecture}
 
+\begin{mermaid}[T5 Encoder-Decoder Architecture]
+graph LR
+    SRC["Source text\n tokens in N^n"] -->|"Shared W_emb\n in R^V x d\n + Relative Pos Bias"| EEMB["Encoder Emb\n in R^n x d"]
+    EEMB --> ENC["Encoder x L layers\n Self-Attn + FFN\n STORED: all activations\n Output in R^n x d"]
+
+    TGT["Target prefix\n tokens in N^m"] -->|"Shared W_emb"| DEMB["Decoder Emb\n in R^m x d"]
+    DEMB --> DSAL["Decoder x L layers\n 1. Causal Self-Attn\n 2. Cross-Attn to Encoder\n 3. FFN\n STORED: Q,K,V per layer\n + cross-attn K,V from encoder"]
+    ENC --> DSAL
+
+    DSAL -->|"W_head in R^d x V"| OUT["Output logits\n in R^m x V\n STORED for backprop"]
+
+    style SRC fill:#e8f5e9,stroke:#4caf50,color:#000
+    style ENC fill:#e3f2fd,stroke:#2196f3,color:#000
+    style DSAL fill:#fff3e0,stroke:#ff9800,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
+
 T5 employs a standard encoder-decoder transformer architecture with several important modifications that distinguish it from the original transformer design. The architecture combines the bidirectional encoding capabilities of BERT with the autoregressive generation capabilities of GPT, creating a model that excels at both understanding input context and generating coherent output sequences.
 
 The encoder processes the input text using fully-visible self-attention, identical to BERT's architecture. Each token in the encoder can attend to all other tokens in the input sequence without any causal masking, enabling the model to build rich bidirectional representations that capture both left and right context. This bidirectional attention is crucial for understanding tasks where the meaning of each token depends on the entire input context. The encoder consists of a stack of transformer layers, each containing multi-head self-attention followed by a position-wise feed-forward network, with residual connections and layer normalization applied in the pre-norm configuration for improved training stability.
@@ -219,17 +238,7 @@ Model must predict masked content and sentinel order, requiring understanding of
 
 \subsection{T5 Model Sizes and Scaling}
 
-T5 was released in five different sizes to accommodate different computational budgets and performance requirements. This range of model sizes enables practitioners to choose the appropriate trade-off between accuracy and computational cost for their specific use case. The scaling behavior across these sizes provides valuable insights into how encoder-decoder architectures benefit from increased capacity.
-
-T5-Small contains only 60 million parameters with 6 encoder and 6 decoder layers, hidden dimension $d = 512$, and 8 attention heads. This compact model requires approximately 240 MB in FP32 or 120 MB in FP16, making it suitable for deployment on resource-constrained devices or for applications where inference latency is critical. Despite its small size, T5-Small achieves reasonable performance on many tasks, demonstrating that the text-to-text framework and pre-training objective provide strong inductive biases even with limited capacity. Training T5-Small requires approximately 2-3 days on 8 GPUs, making it accessible for academic research and smaller organizations.
-
-T5-Base, with 220 million parameters as detailed previously, represents the standard configuration that balances performance and computational cost. This size is comparable to BERT-base and GPT-2 Small, enabling direct comparisons across architectural paradigms. T5-Base training requires approximately 1 week on 64 TPU cores or equivalent GPU clusters, with an estimated cost of \$10,000-\$15,000 using cloud computing resources. The model achieves strong performance across diverse tasks, often matching or exceeding BERT-large despite having fewer parameters, demonstrating the effectiveness of the encoder-decoder architecture for many applications.
-
-T5-Large scales to 770 million parameters with 24 encoder and 24 decoder layers, hidden dimension $d = 1024$, and 16 attention heads. The parameter count increases by 3.5× compared to T5-Base, requiring approximately 3 GB in FP32 or 1.5 GB in FP16. Training T5-Large demands approximately 2-3 weeks on 256 TPU cores, with estimated costs of \$50,000-\$75,000. The performance improvements over T5-Base are substantial, particularly on challenging tasks requiring deep reasoning or long-range dependencies. However, the inference latency also increases proportionally, making T5-Large more suitable for offline processing or applications where accuracy is paramount.
-
-T5-3B pushes to 3 billion parameters with 24 encoder and 24 decoder layers, hidden dimension $d = 1024$, and 32 attention heads. The increased head count (compared to T5-Large's 16 heads) allows for more diverse attention patterns without increasing the per-head dimension. The model requires approximately 12 GB in FP32 or 6 GB in FP16, necessitating high-memory GPUs like the A100 (40-80 GB) for training. Training T5-3B takes approximately 1 month on 512 TPU cores, with estimated costs exceeding \$200,000. The performance gains over T5-Large are more modest, suggesting diminishing returns as model size increases, though T5-3B still achieves state-of-the-art results on several benchmarks.
-
-T5-11B represents the largest variant with 11 billion parameters, using 24 encoder and 24 decoder layers, hidden dimension $d = 1024$, and 128 attention heads. The massive increase in attention heads (from 32 to 128) enables extremely fine-grained attention patterns, though each head operates on a smaller dimension ($d_k = 1024 / 128 = 8$). The model requires approximately 44 GB in FP32 or 22 GB in FP16, necessitating model parallelism across multiple GPUs even for inference. Training T5-11B demands approximately 2-3 months on 1024 TPU cores, with estimated costs exceeding \$1 million. The model achieves the best performance across virtually all tasks, setting new state-of-the-art results on GLUE, SuperGLUE, and SQuAD at the time of release. However, the computational requirements limit its practical deployment to scenarios where maximum accuracy justifies the cost.
+T5 was released in five sizes to accommodate different computational budgets and performance requirements:
 
 \textbf{T5 Model Sizes:}
 \begin{itemize}
@@ -328,7 +337,7 @@ Bidirectional And Auto-Regressive Transformers:
 
 Understanding BART-large's parameter distribution reveals how the model allocates capacity across its components. Each encoder layer contains approximately 12.6 million parameters. The self-attention mechanism requires four projection matrices ($\mW^Q$, $\mW^K$, $\mW^V$, $\mW^O$), each of dimension $1024 \times 1024$, contributing $4 \times 1024^2 = 4{,}194{,}304$ parameters. The feed-forward network uses expansion factor 4, projecting from 1024 to 4096 dimensions and back, contributing $2 \times 1024 \times 4096 = 8{,}388{,}608$ parameters. Layer normalization adds minimal parameters. Multiplying by 12 encoder layers yields approximately 151 million parameters in the encoder stack.
 
-Each decoder layer contains approximately 16.8 million parameters due to the additional cross-attention mechanism. The causal self-attention contributes 4.2 million parameters, identical to the encoder's self-attention. The cross-attention layer adds another 4.2 million parameters for its query, key, value, and output projections. The feed-forward network contributes 8.4 million parameters, same as the encoder. Multiplying by 12 decoder layers yields approximately 202 million parameters in the decoder stack. The token embeddings add $50{,}000 \times 1024 = 51{,}200{,}000$ parameters, and positional embeddings for sequences up to 1024 tokens add another $1024 \times 1024 = 1{,}048{,}576$ parameters. The total reaches approximately 406 million parameters.
+Each decoder layer contains approximately 16.8 million parameters due to the additional cross-attention mechanism. The causal self-attention contributes 4.2 million parameters, identical to the encoder's self-attention. The cross-attention layer adds another 4.2 million parameters for its query, key, value, and output projections. The feed-forward network contributes 8.4 million parameters, same as the encoder. Multiplying by 12 decoder layers yields approximately 202 million parameters in the decoder stack. The token embeddings add $50{,}000 \times 1024 = 51{,}200{,}000$ parameters, and positional embeddings for sequences up to 1024 tokens add another $1024 \times 1024 = 1{,}048{,}576$ parameters. The total reaches approximately 406 million parameters. This analysis follows the same component-level methodology used for BERT-base in Section~\ref{sec:bert_base_analysis}.
 
 The memory requirements for BART-large are substantial. In FP32, the 406 million parameters occupy $406{,}000{,}000 \times 4 = 1{,}624$ MB, or approximately 1.6 GB. Mixed precision training with FP16 activations and FP32 master weights reduces the working memory to approximately 812 MB for the model parameters during forward and backward passes. For inference, pure FP16 weights require only 812 MB, enabling BART-large to run on GPUs with 12-16 GB of memory with reasonable batch sizes. Training with batch size 32 and sequence length 512 requires approximately 20-25 GB of GPU memory, necessitating high-memory GPUs like the V100 (32 GB) or A100 (40-80 GB).
 
@@ -725,6 +734,8 @@ Implement text-to-text framework. Convert these tasks to T5 format:
 
 
 \section{Solutions}
+
+Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.
 
 \begin{solution}
 \textbf{Exercise 1: Span Corruption Implementation}

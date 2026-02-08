@@ -34,6 +34,21 @@ For function $f: \R^n \to \R$, the \textbf{partial derivative} with respect to $
 \end{definition}
 
 \begin{example}[Computing Partial Derivatives]
+
+\begin{mermaid}[Gradient Descent with Backpropagation]
+graph LR
+    T["Parameters theta\n in R^p"] -->|"Forward pass"| F["f(x; theta)\n Compute loss L\n STORED: all intermediates\n z_l, h_l per layer"]
+    F --> L["Loss L(y_hat, y)\n scalar"]
+    L -->|"Backward pass\n chain rule"| G["Gradients\n dL/d_theta in R^p\n Uses stored z_l, h_l\n Memory: O(L * n * d)"]
+    G -->|"theta -= eta * dL/d_theta\n eta = learning rate"| T
+
+    style T fill:#e8f5e9,stroke:#4caf50,color:#000
+    style F fill:#fff3e0,stroke:#ff9800,color:#000
+    style L fill:#fce4ec,stroke:#e91e63,color:#000
+    style G fill:#e3f2fd,stroke:#2196f3,color:#000
+\end{mermaid}
+
+
 \label{ex:partial_derivatives}
 For $f(x_1, x_2) = x_1^2 + 3x_1 x_2 + x_2^2$:
 \begin{align}
@@ -368,20 +383,6 @@ Each parameter $w_i$ gets an effective learning rate of $\frac{\alpha}{\sqrt{\ha
     \item Parameters with small, noisy gradients: $\hat{v}_{i,t}$ is small $\Rightarrow$ effective learning rate is large (accelerates learning)
 \end{itemize}
 
-\subsubsection{Why Adam Works Better Than SGD and Momentum}
-
-\begin{enumerate}
-    \item \textbf{Automatic learning rate adaptation:} No need to manually tune learning rates for different parameter groups. Adam automatically scales updates based on gradient history.
-    
-    \item \textbf{Handles sparse gradients:} For parameters that are rarely updated (e.g., embeddings for rare words), Adam maintains larger effective learning rates, enabling faster learning.
-    
-    \item \textbf{Robust to hyperparameter choices:} Default values ($\alpha = 0.001$, $\beta_1 = 0.9$, $\beta_2 = 0.999$) work well across a wide range of problems.
-    
-    \item \textbf{Combines benefits of momentum and RMSProp:} Gets both the acceleration from momentum and the adaptive learning rates from RMSProp.
-    
-    \item \textbf{Stable in non-stationary settings:} The second moment estimate adapts to changing gradient distributions during training.
-\end{enumerate}
-
 \begin{example}[Adam vs SGD with Momentum]
 \label{ex:adam_vs_momentum}
 Training a 2-layer network on MNIST with 10,000 examples:
@@ -429,30 +430,6 @@ Parameter 2 gets 25× larger effective learning rate, compensating for its small
 \begin{keypoint}
 Adam is the most commonly used optimizer for training transformers and large language models due to its robustness, fast convergence, and ability to handle the diverse gradient patterns across different layers and attention heads.
 \end{keypoint}
-
-\subsubsection{Practical Considerations for Adam}
-
-\textbf{Memory overhead:} Adam requires 2× more memory than SGD with momentum (stores both $\mathbf{m}$ and $\mathbf{v}$). For a model with $n$ parameters:
-\begin{itemize}
-    \item SGD: $n$ parameters
-    \item SGD + Momentum: $n$ parameters + $n$ velocity
-    \item Adam: $n$ parameters + $n$ first moment + $n$ second moment
-\end{itemize}
-
-\textbf{Typical hyperparameters for transformers:}
-\begin{itemize}
-    \item Learning rate $\alpha$: $10^{-4}$ to $10^{-3}$ (often with warmup)
-    \item $\beta_1$: 0.9 (rarely changed)
-    \item $\beta_2$: 0.999 for transformers, 0.98-0.99 for RNNs
-    \item $\epsilon$: $10^{-8}$ (numerical stability)
-\end{itemize}
-
-\textbf{When to use Adam vs alternatives:}
-\begin{itemize}
-    \item \textbf{Use Adam:} Default choice for most deep learning tasks, especially transformers, NLP, and when training time is critical
-    \item \textbf{Use SGD + Momentum:} When memory is constrained, or for some computer vision tasks where SGD can achieve slightly better generalization
-    \item \textbf{Use AdamW:} Adam with decoupled weight decay, often better for transformers
-\end{itemize}
 
 \section{Gradient Computation Complexity}
 \label{sec:gradient_complexity}
@@ -504,20 +481,7 @@ where $d_\ell$ is the dimension of layer $\ell$'s output.
 
 \begin{example}[BERT-base Activation Memory]
 \label{ex:bert_activation_memory}
-For BERT-base with batch size $B = 32$, sequence length $n = 512$, $d = 768$:
-
-\textbf{Per transformer layer:}
-\begin{itemize}
-    \item Query, Key, Value projections: $3 \times Bnd = 3 \times 32 \times 512 \times 768 \times 4 \text{ bytes} \approx 113$ MB
-    \item Attention scores: $B \times h \times n \times n = 32 \times 12 \times 512 \times 512 \times 4 \text{ bytes} \approx 402$ MB
-    \item Attention output: $Bnd \approx 38$ MB
-    \item Feed-forward intermediate: $B \times n \times 4d \approx 151$ MB
-    \item \textbf{Per layer total: $\approx 704$ MB}
-\end{itemize}
-
-\textbf{For 12 layers: $704 \times 12 \approx 8.4$ GB}
-
-This excludes gradients and optimizer states!
+For BERT-base ($B = 32$, $n = 512$, $d = 768$), per-layer activations total $\approx$704~MB in FP32---dominated by attention scores ($B \times h \times n^2 \times 4 = 402$~MB, or 57\% of per-layer memory). Across all 12 layers, activations alone consume $\approx$8.4~GB, excluding gradients and optimizer states. See Section~\ref{sec:bert_base_analysis} for the complete breakdown.
 \end{example}
 
 \subsection{Automatic Differentiation: Forward vs Reverse Mode}
@@ -925,168 +889,8 @@ where $\gamma < 1$ (e.g., 0.1) and $s$ is step size (e.g., every 10 epochs).
 
 The warmup phase prevents instability in early training of transformers.
 
-\section{Hardware Considerations for Gradient Computation}
-\label{sec:hardware_gradients}
-
-Modern deep learning relies on specialized hardware for efficient gradient computation.
-
-\subsection{Gradient Computation on GPUs}
-
-GPUs excel at gradient computation due to massive parallelism in matrix operations.
-
-\begin{example}[GPU vs CPU Gradient Computation]
-\label{ex:gpu_cpu_gradients}
-Computing gradients for BERT-base (110M parameters) on one training batch:
-
-\textbf{NVIDIA A100 GPU:}
-\begin{itemize}
-    \item Forward pass: 0.31 ms (96 GFLOPs ÷ 312 TFLOPS)
-    \item Backward pass: 0.62 ms (193 GFLOPs ÷ 312 TFLOPS)
-    \item \textbf{Total: 0.93 ms per batch}
-    \item Throughput: 1,075 batches/second
-\end{itemize}
-
-\textbf{Intel Xeon CPU (32 cores):}
-\begin{itemize}
-    \item Forward pass: 45 ms (96 GFLOPs ÷ 2.1 TFLOPS)
-    \item Backward pass: 90 ms (193 GFLOPs ÷ 2.1 TFLOPS)
-    \item \textbf{Total: 135 ms per batch}
-    \item Throughput: 7.4 batches/second
-\end{itemize}
-
-\textbf{GPU speedup: 145×}
-\end{example}
-
-\subsection{Mixed Precision Training}
-
-Mixed precision uses FP16 for computation and FP32 for accumulation, reducing memory and increasing speed.
-
-\begin{algorithm}[H]
-\caption{Mixed Precision Training}
-\label{alg:mixed_precision}
-\KwIn{Model parameters $\vw$ (FP32 master copy)}
-\For{each training step}{
-    Convert $\vw$ to FP16: $\vw_{16} = \text{FP16}(\vw)$ \\
-    Forward pass in FP16: $\hat{y} = f(\vx; \vw_{16})$ \\
-    Compute loss: $L = \text{Loss}(y, \hat{y})$ \\
-    Scale loss: $L_{\text{scaled}} = s \cdot L$ (prevent underflow) \\
-    Backward pass in FP16: $\mathbf{g}_{16} = \nabla_{\vw_{16}} L_{\text{scaled}}$ \\
-    Unscale gradients: $\mathbf{g}_{16} = \mathbf{g}_{16} / s$ \\
-    Convert to FP32: $\mathbf{g} = \text{FP32}(\mathbf{g}_{16})$ \\
-    Update FP32 master: $\vw \leftarrow \vw - \eta \mathbf{g}$
-}
-\end{algorithm}
-
-\begin{example}[Mixed Precision Impact]
-\label{ex:mixed_precision_impact}
-Training BERT-base on A100 GPU:
-
-\textbf{FP32 training:}
-\begin{itemize}
-    \item Forward + backward: 0.93 ms
-    \item Memory: 12.6 GB
-    \item Max batch size: 32
-    \item Throughput: 34,400 samples/sec
-\end{itemize}
-
-\textbf{Mixed precision (FP16) training:}
-\begin{itemize}
-    \item Forward + backward: 0.48 ms (1.94× faster)
-    \item Memory: 8.2 GB (35\% reduction)
-    \item Max batch size: 64
-    \item Throughput: 133,300 samples/sec (3.87× faster)
-\end{itemize}
-
-Mixed precision provides 1.94× computational speedup and enables 2× larger batches, yielding 3.87× total throughput improvement.
-\end{example}
-
-\subsection{Gradient Accumulation}
-
-Gradient accumulation simulates large batch sizes by accumulating gradients over multiple forward-backward passes.
-
-\begin{algorithm}[H]
-\caption{Gradient Accumulation}
-\label{alg:gradient_accumulation}
-\KwIn{Desired batch size $B$, physical batch size $b$, accumulation steps $k = B/b$}
-Initialize gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$ \\
-\For{$i = 1$ \KwTo $k$}{
-    Sample mini-batch $\mathcal{B}_i$ of size $b$ \\
-    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
-    Backward pass: $\mathbf{g}_i = \nabla L_i$ \\
-    Accumulate: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} + \mathbf{g}_i$
-}
-Average: $\mathbf{g}_{\text{acc}} \leftarrow \mathbf{g}_{\text{acc}} / k$ \\
-Update parameters: $\vw \leftarrow \vw - \eta \mathbf{g}_{\text{acc}}$ \\
-Clear gradients: $\mathbf{g}_{\text{acc}} = \mathbf{0}$
-\end{algorithm}
-
-\begin{example}[Gradient Accumulation for Large Batches]
-\label{ex:gradient_accumulation}
-Training GPT-2 (1.5B parameters) on single A100 GPU (80 GB):
-
-\textbf{Without accumulation:}
-\begin{itemize}
-    \item Max batch size: 4 (memory limit)
-    \item Update frequency: every 4 samples
-    \item Training unstable (batch too small)
-\end{itemize}
-
-\textbf{With gradient accumulation (32 steps):}
-\begin{itemize}
-    \item Physical batch size: 4
-    \item Effective batch size: $4 \times 32 = 128$
-    \item Update frequency: every 128 samples
-    \item Memory: same as batch size 4
-    \item Training stable and efficient
-\end{itemize}
-
-Trade-off: 32× more forward-backward passes per update, but enables training large models on limited hardware.
-\end{example}
-
-\subsection{Distributed Gradient Synchronization}
-
-For multi-GPU training, gradients must be synchronized across devices.
-
-\begin{algorithm}[H]
-\caption{Data Parallel Training with Gradient Synchronization}
-\label{alg:data_parallel}
-\KwIn{$N$ GPUs, global batch size $B$, local batch size $b = B/N$}
-\For{each GPU $i = 1, \ldots, N$ in parallel}{
-    Sample local mini-batch $\mathcal{B}_i$ of size $b$ \\
-    Forward pass: $L_i = \text{Loss}(\mathcal{B}_i)$ \\
-    Backward pass: $\mathbf{g}_i = \nabla L_i$
-}
-All-reduce gradients: $\mathbf{g} = \frac{1}{N} \sum_{i=1}^N \mathbf{g}_i$ \\
-\For{each GPU $i = 1, \ldots, N$ in parallel}{
-    Update local parameters: $\vw_i \leftarrow \vw_i - \eta \mathbf{g}$
-}
-\end{algorithm}
-
-\begin{example}[Distributed Training Efficiency]
-\label{ex:distributed_efficiency}
-Training BERT-base on 8× A100 GPUs with NVLink:
-
-\textbf{Single GPU baseline:}
-\begin{itemize}
-    \item Batch size: 32
-    \item Time per step: 0.93 ms
-    \item Throughput: 34,400 samples/sec
-\end{itemize}
-
-\textbf{8 GPUs (data parallel):}
-\begin{itemize}
-    \item Global batch size: 256
-    \item Time per step: 0.93 ms (computation) + 0.12 ms (communication)
-    \item Total: 1.05 ms
-    \item Throughput: 243,800 samples/sec
-    \item \textbf{Scaling efficiency: 243,800 / (8 × 34,400) = 88.6\%}
-\end{itemize}
-
-Communication overhead is 11.4\% due to gradient all-reduce. NVLink (600 GB/s) enables efficient synchronization.
-\end{example}
-
 \begin{keypoint}
-For large models, gradient synchronization can become a bottleneck. Techniques like gradient compression, ZeRO optimizer, and pipeline parallelism reduce communication overhead.
+Gradient computation benefits enormously from GPU parallelism, achieving 100--150$\times$ speedup over CPUs for transformer-sized models. Mixed precision training (FP16 compute with FP32 accumulation) provides an additional 2--4$\times$ throughput improvement. Gradient accumulation enables large effective batch sizes on memory-constrained hardware, and distributed training with all-reduce synchronization scales near-linearly across GPUs. These techniques are covered in detail in Chapters~11 and~22.
 \end{keypoint}
 
 \section{Exercises}
@@ -1170,6 +974,8 @@ Analyze distributed training efficiency for 8 GPUs:
 \end{exercise}
 
 \section{Solutions}
+
+Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.
 
 \begin{solution}[Exercise 1]
 For $f(\vw) = \vw\transpose \mA \vw + \vb\transpose \vw + c$ where $\mA$ is symmetric:

@@ -31,6 +31,22 @@ T5 represents a unified approach that frames all tasks as sequence-to-sequence p
 
 \subsection{Model Size Selection}
 
+\begin{mermaid}[Model Development Pipeline]
+graph LR
+    DATA["Data\n Train/Val/Test\n splits"] -->|"Tokenize"| TOK["Token IDs\n Vocab V"]
+    TOK --> BASE["Baseline Model\n small config\n Validate loss"]
+    BASE -->|"Scale up"| TRAIN["Full Training\n STORED in memory:\n Params: 2P bytes (FP16)\n Grads: 2P bytes\n Adam states: 8P bytes\n Activations: O(L*n*d)"]
+    TRAIN -->|"Evaluate"| EVAL["Metrics\n Loss, Perplexity\n Task accuracy"]
+    EVAL -->|"Tune"| HP["Hyperparams\n lr, warmup, wd\n batch size"]
+    HP --> TRAIN
+
+    style DATA fill:#e8f5e9,stroke:#4caf50,color:#000
+    style TRAIN fill:#fff3e0,stroke:#ff9800,color:#000
+    style EVAL fill:#e3f2fd,stroke:#2196f3,color:#000
+\end{mermaid}
+
+
+
 Selecting the appropriate model size requires balancing performance requirements against computational constraints. The relationship between model size and performance generally follows a power law, with diminishing returns as models grow larger. For most practical applications, the base-sized models provide an excellent balance between capability and efficiency.
 
 BERT-base with 110 million parameters serves as the standard choice for most understanding tasks. It provides strong performance across a wide range of benchmarks while remaining tractable for fine-tuning on a single GPU. BERT-large with 340 million parameters offers modest improvements, typically 1-3 percentage points on downstream tasks, but requires significantly more memory and computation. The large variant is justified primarily when you need to extract maximum performance and have sufficient computational resources.

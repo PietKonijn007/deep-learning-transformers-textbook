@@ -41,6 +41,22 @@ Machine data consists of several distinct types, each providing different insigh
 
 \subsection{Machine Language Grammar}
 
+\begin{mermaid}[ML Observability Architecture]
+graph LR
+    MODEL["Model\n in Production"] -->|"Inference logs"| METRICS["Metrics Collector\n latency, throughput\n predictions"]
+    DATA["Input Data\n Stream"] -->|"Feature stats"| DRIFT["Drift Detector\n Compare P_train vs P_prod\n KL divergence, PSI"]
+    METRICS --> DASH["Dashboard\n Alerts on:\n accuracy drop\n latency spike"]
+    DRIFT --> DASH
+    DASH -->|"Trigger"| RETRAIN["Retrain Pipeline\n Fine-tune on\n new data\n Memory: same as training"]
+
+    style MODEL fill:#e8f5e9,stroke:#4caf50,color:#000
+    style DRIFT fill:#fff3e0,stroke:#ff9800,color:#000
+    style DASH fill:#e3f2fd,stroke:#2196f3,color:#000
+    style RETRAIN fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
+
 Machine data has structure, though not formal grammar:
 
 Machine data exhibits structural patterns despite lacking formal grammar. Log templates follow consistent patterns where multiple logs share the same structure, typically formatted as \texttt{[LEVEL] Message with parameters}. Metric names use hierarchical naming conventions like \texttt{system.cpu.usage} or \texttt{app.request.latency}, enabling organized aggregation and querying. Trace structure forms directed acyclic graphs (DAGs) of service calls with associated timings, revealing request paths through distributed systems. Event sequences follow causal chains where actions trigger consequences—for example, a deployment leads to configuration updates, which trigger service restarts, culminating in system recovery.

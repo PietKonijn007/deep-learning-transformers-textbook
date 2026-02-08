@@ -35,6 +35,22 @@ A \textbf{random variable} $X$ is a function that maps outcomes from a sample sp
 \end{definition}
 
 \begin{definition}[Probability Mass Function (PMF)]
+
+\begin{mermaid}[Cross-Entropy Loss in Classification]
+graph LR
+    X["Input x\n in R^d"] -->|"Model f(x;theta)"| LOGITS["Logits z\n in R^K\n STORED for backprop"]
+    LOGITS -->|"softmax"| P["Predicted P(y|x)\n p_k = exp(z_k)/sum\n in R^K\n STORED: p for gradient"]
+    Y["True label y\n one-hot in R^K"] --> CE["Cross-Entropy\n H(y,p) = -sum(y_k log p_k)\n = -log p_y\n scalar"]
+    P --> CE
+    CE -.->|"dL/dz_k = p_k - y_k\n simple gradient"| LOGITS
+
+    style X fill:#e8f5e9,stroke:#4caf50,color:#000
+    style LOGITS fill:#fff3e0,stroke:#ff9800,color:#000
+    style P fill:#e3f2fd,stroke:#2196f3,color:#000
+    style CE fill:#fce4ec,stroke:#e91e63,color:#000
+\end{mermaid}
+
+
 \label{def:pmf}
 For discrete random variable $X$, the \textbf{probability mass function} is:
 \begin{equation}

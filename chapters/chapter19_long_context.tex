@@ -28,6 +28,22 @@ The computational complexity of self-attention is $O(n^2 d)$ where $d$ is the mo
 The memory bottleneck is even more severe than the computational one. During the forward pass, the attention matrix must be fully materialized in memory before applying softmax, requiring $n^2$ memory locations per attention head. During the backward pass for training, these attention matrices must be stored for gradient computation, effectively doubling the memory requirement. For multi-head attention with $h$ heads, the total memory for attention matrices is $h \times n^2$ floating-point values per layer. In FP32 format, each value requires 4 bytes, while FP16 requires 2 bytes. This memory grows quadratically with sequence length, quickly exceeding available GPU memory for long sequences.
 
 \begin{example}[Memory Scaling Analysis]
+
+\begin{mermaid}[Long Context Attention Strategies]
+graph LR
+    SEQ["Long sequence\n n >> 4096 tokens\n Full attn memory:\n O(n^2) -- infeasible"]
+
+    SEQ --> SW["Sliding Window\n w neighbors each side\n Memory: O(n*w)\n STORED: local attn\n weights only"]
+    SEQ --> CHUNK["Chunked Attention\n Split into n/c chunks\n Intra-chunk: O(c^2)\n Cross-chunk: summary\n STORED: chunk summaries"]
+    SEQ --> ROPE["RoPE Scaling\n Rotary Pos Emb\n Extend via interpolation\n No extra memory\n STORED: same as base"]
+
+    style SEQ fill:#fce4ec,stroke:#e91e63,color:#000
+    style SW fill:#e3f2fd,stroke:#2196f3,color:#000
+    style CHUNK fill:#e8f5e9,stroke:#4caf50,color:#000
+    style ROPE fill:#fff3e0,stroke:#ff9800,color:#000
+\end{mermaid}
+
+
 \label{ex:memory_scaling}
 Consider a GPT-2 scale model with $d = 768$, $h = 12$ attention heads, and $L = 12$ layers. The memory required for attention matrices scales dramatically with sequence length. For a single attention head processing a sequence of length $n$, the attention matrix requires $n^2 \times 4$ bytes in FP32 format. With 12 heads per layer, this becomes $12 \times n^2 \times 4 = 48n^2$ bytes per layer.
 

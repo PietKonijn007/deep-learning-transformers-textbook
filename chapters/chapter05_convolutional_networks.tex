@@ -22,6 +22,24 @@ Convolutional Neural Networks (CNNs) revolutionized computer vision by exploitin
 For input $\mX \in \R^{H \times W}$ and kernel $\mK \in \R^{k_h \times k_w}$:
 \begin{equation}
 (\mX \star \mK)_{i,j} = \sum_{m=0}^{k_h-1} \sum_{n=0}^{k_w-1} \mX_{i+m, j+n} \cdot \mK_{m,n}
+
+\begin{mermaid}[CNN Forward Pass with Memory]
+graph LR
+    X["Input\n X in R^H x W x C_in"] -->|"Filters K in R^k x k x C_in x C_out\n bias b in R^C_out"| CONV["Conv2D\n (X * K + b)\n Output in R^H' x W' x C_out\n STORED: X for dL/dK"]
+    CONV -->|"ReLU"| ACT["Activation\n ReLU(conv)\n in R^H' x W' x C_out\n STORED: conv for ReLU'"]
+    ACT -->|"stride s, pool size p"| POOL["MaxPool\n in R^H'' x W'' x C_out\n STORED: max indices\n for backprop routing"]
+    POOL -->|"Flatten"| FLAT["Flat vector\n in R^(H''*W''*C_out)"]
+    FLAT -->|"W_fc in R^K x D\n b_fc in R^K"| FC["FC Layer\n z = W_fc * flat + b_fc\n in R^K\n STORED: flat for dL/dW"]
+    FC -->|"softmax"| OUT["Output\n y_hat in R^K"]
+
+    style X fill:#e8f5e9,stroke:#4caf50,color:#000
+    style CONV fill:#fff3e0,stroke:#ff9800,color:#000
+    style ACT fill:#e3f2fd,stroke:#2196f3,color:#000
+    style POOL fill:#fff3e0,stroke:#ff9800,color:#000
+    style FC fill:#e3f2fd,stroke:#2196f3,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
 \end{equation}
 \end{definition}
 

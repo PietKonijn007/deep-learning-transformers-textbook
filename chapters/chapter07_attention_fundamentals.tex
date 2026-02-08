@@ -230,6 +230,23 @@ where entry $e_{i,j} = \vq_i\transpose \vk_j$ measures the compatibility of quer
 The complete formula in one line:
 \begin{equation}
 \text{Attention}(\mQ, \mK, \mV) = \text{softmax}\left(\frac{\mQ \mK\transpose}{\sqrt{d_k}}\right) \mV
+
+\begin{mermaid}[Scaled Dot-Product Attention Data Flow]
+graph LR
+    Q["Queries Q\n in R^m x d_k"] -->|"Matmul Q*K^T"| S["Score Matrix\n E = Q*K^T\n in R^m x n\n STORED for backprop"]
+    K["Keys K\n in R^n x d_k"] --> S
+    S -->|"Scale by 1/sqrt(d_k)"| SC["Scaled Scores\n E / sqrt(d_k)\n in R^m x n"]
+    SC -->|"Softmax (row-wise)"| A["Attention Weights\n A = softmax(E_scaled)\n in R^m x n\n STORED: A for dL/dV\n STORED: softmax input for backprop"]
+    A -->|"Matmul A*V"| OUT["Output\n A*V in R^m x d_v\n STORED: A for dL/dV\n STORED: V for dL/dA"]
+    V["Values V\n in R^n x d_v"] --> OUT
+
+    style Q fill:#e3f2fd,stroke:#2196f3,color:#000
+    style K fill:#e8f5e9,stroke:#4caf50,color:#000
+    style V fill:#fff3e0,stroke:#ff9800,color:#000
+    style A fill:#f3e5f5,stroke:#9c27b0,color:#000
+    style OUT fill:#fce4ec,stroke:#e91e63,color:#000
+\end{mermaid}
+
 \end{equation}
 \end{definition}
 

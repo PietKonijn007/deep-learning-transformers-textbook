@@ -21,6 +21,25 @@ Training transformers requires specialized techniques beyond standard optimizati
 \end{enumerate}
 
 \section{Training Objectives and Loss Functions}
+
+\begin{mermaid}[Transformer Training Pipeline]
+graph LR
+    D["Raw Text"] -->|"BPE/WordPiece"| TOK["Token IDs\n in N^B x n"]
+    TOK -->|"Embedding\n W_emb in R^V x d"| EMB["Embeddings\n + Positional Enc\n in R^B x n x d\n STORED for backprop"]
+    EMB --> TF["Transformer\n Layers x L\n STORED per layer:\n activations, attn\n weights, LN stats"]
+    TF -->|"W_head in R^d x V"| LM["LM Head\n logits in R^B x n x V\n STORED for softmax backprop"]
+    LM -->|"Cross-Entropy"| LOSS["Loss\n sum(-y*log(p))"]
+    LOSS -.->|"Backward:\n peak memory =\n O(L * n * d + n^2 * h)"| TF
+    LOSS -.->|"AdamW step:\n 2x param memory\n for m_t, v_t states"| OPT["Optimizer\n theta -= lr * update"]
+
+    style D fill:#e8f5e9,stroke:#4caf50,color:#000
+    style TF fill:#fff3e0,stroke:#ff9800,color:#000
+    style LM fill:#e3f2fd,stroke:#2196f3,color:#000
+    style LOSS fill:#fce4ec,stroke:#e91e63,color:#000
+    style OPT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
 \label{sec:training_objectives}
 
 The training objective fundamentally shapes how a transformer learns and what capabilities it develops. Different transformer architectures employ distinct training objectives tailored to their intended use cases, from masked language modeling in BERT to causal language modeling in GPT to sequence-to-sequence learning in T5. Understanding these objectives in depth—including their mathematical formulations, computational requirements, and practical implications—is essential for training transformers effectively.

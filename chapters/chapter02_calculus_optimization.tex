@@ -34,6 +34,21 @@ For function $f: \R^n \to \R$, the \textbf{partial derivative} with respect to $
 \end{definition}
 
 \begin{example}[Computing Partial Derivatives]
+
+\begin{mermaid}[Gradient Descent with Backpropagation]
+graph LR
+    T["Parameters theta\n in R^p"] -->|"Forward pass"| F["f(x; theta)\n Compute loss L\n STORED: all intermediates\n z_l, h_l per layer"]
+    F --> L["Loss L(y_hat, y)\n scalar"]
+    L -->|"Backward pass\n chain rule"| G["Gradients\n dL/d_theta in R^p\n Uses stored z_l, h_l\n Memory: O(L * n * d)"]
+    G -->|"theta -= eta * dL/d_theta\n eta = learning rate"| T
+
+    style T fill:#e8f5e9,stroke:#4caf50,color:#000
+    style F fill:#fff3e0,stroke:#ff9800,color:#000
+    style L fill:#fce4ec,stroke:#e91e63,color:#000
+    style G fill:#e3f2fd,stroke:#2196f3,color:#000
+\end{mermaid}
+
+
 \label{ex:partial_derivatives}
 For $f(x_1, x_2) = x_1^2 + 3x_1 x_2 + x_2^2$:
 \begin{align}

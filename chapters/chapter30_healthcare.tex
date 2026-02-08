@@ -57,6 +57,20 @@ Timelines establish the temporal ordering of all these elements, which is critic
 
 Clinical language differs from general English in several fundamental ways that require specialized processing.
 
+\begin{mermaid}[Clinical NLP Pipeline]
+graph LR
+    EHR["Clinical Notes\n free text"] -->|"De-identification\n PHI removal"| CLEAN["Clean text\n HIPAA compliant"]
+    CLEAN -->|"Domain tokenizer"| TOK["Tokens in N^n"]
+    TOK --> MODEL["ClinicalBERT\n Encoder x L layers\n Pre-trained on MIMIC\n STORED: activations"]
+    MODEL -->|"Task head\n W in R^d x K"| OUT["NER / Diagnosis\n predictions"]
+
+    style EHR fill:#e8f5e9,stroke:#4caf50,color:#000
+    style CLEAN fill:#e3f2fd,stroke:#2196f3,color:#000
+    style MODEL fill:#fff3e0,stroke:#ff9800,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
 Abbreviations are ubiquitous in clinical documentation, with terms like CHF (congestive heart failure), MI (myocardial infarction), and HTN (hypertension) appearing frequently. These abbreviations are often ambiguous—MS could mean multiple sclerosis, mitral stenosis, or morphine sulfate depending on context. Models must learn to disambiguate based on surrounding clinical information.
 
 Negations are critical for correct interpretation because they completely reverse meaning. The phrase "no fever" indicates the absence of fever, not its presence. Negation detection is essential for accurate information extraction, as failing to recognize negation can lead to opposite conclusions about patient status.

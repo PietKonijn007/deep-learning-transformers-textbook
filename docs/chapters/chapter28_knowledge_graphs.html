@@ -168,6 +168,26 @@
 
 <p>Knowledge graphs are semi-formal: they have structure (typed entities, relationships) but allow uncertainty (confidence scores, probability distributions).</p>
 
+<div class="architecture-diagram">
+<h3>Knowledge-Enhanced Transformer</h3>
+<pre class="mermaid">
+graph LR
+    TXT["Text input\n tokens in N^n"] -->|"W_emb in R^V x d"| TE["Text Emb\n in R^n x d"]
+    KG["Knowledge Graph\n entities + relations"] -->|"Entity Emb\n W_ent in R^E x d"| KE["Entity Emb\n in R^k x d"]
+
+<p>TE --> FUSE["Knowledge Fusion\n Inject entity emb\n at linked positions\n in R^n x d"]
+    KE --> FUSE
+    FUSE --> ENC["Transformer Encoder\n x L layers\n STORED: activations\n + entity attention"]
+    ENC --> OUT["Enhanced repr\n in R^n x d"]</p>
+
+<p>style TXT fill:#e8f5e9,stroke:#4caf50,color:#000
+    style KG fill:#e3f2fd,stroke:#2196f3,color:#000
+    style FUSE fill:#fff3e0,stroke:#ff9800,color:#000
+    style OUT fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">Knowledge-Enhanced Transformer</p>
+</div>
+
 <h3>Examples of Knowledge Graphs</h3>
 
 <p><strong>DBpedia:</strong> Extracted from Wikipedia infoboxes. 14M entities, 645M relationships. Public and incomplete.</p>
@@ -391,8 +411,6 @@ $$\begin{align}
 <h2>Semantic Type Inference and Reasoning</h2>
 
 <p>Beyond individual triples, knowledge graphs support reasoning.</p>
-
-<h3>Type Constraints</h3>
 
 <h3>Type Constraints</h3>
 
@@ -998,37 +1016,12 @@ predictions = result.model.predict_tails('Apple_Inc', 'COMPETITOR')
 
 <p>Knowledge graphs integrate with many domains covered in this book:</p>
 
-<h3>Connection to Chapter 25: Enterprise NLP</h3>
-
-<p><strong>Entity extraction:</strong> NER and relation extraction (Chapter 25) populate knowledge graphs. KGs provide structured output for NLP pipelines.</p>
-
-<p><strong>Semantic search:</strong> Combine text embeddings (Chapter 25) with KG embeddings for hybrid retrieval: text similarity + graph structure.</p>
-
-<p><strong>Example:</strong> Customer support system uses NER to extract entities from tickets, links to customer KG, retrieves relevant context.</p>
-
-<h3>Connection to Chapter 29: Recommendations</h3>
-
-<p><strong>Collaborative filtering parallels:</strong> Matrix factorization in recommenders is analogous to KG embeddings. Both learn latent representations.</p>
-
-<p><strong>Hybrid systems:</strong> Combine user-item interactions (Chapter 29) with item knowledge graph. Recommend items similar in both interaction patterns and semantic properties.</p>
-
-<p><strong>Example:</strong> Movie recommender uses KG (actors, directors, genres) + user watch history for better cold-start performance.</p>
-
-<h3>Connection to Chapter 34: DSL and Agents</h3>
-
-<p><strong>Structured reasoning:</strong> KGs provide formal language for agent reasoning. Agents query KGs to retrieve facts, infer new knowledge.</p>
-
-<p><strong>Tool augmentation:</strong> KG query APIs are tools agents can call. Agent decides when to query KG vs. generate from language model.</p>
-
-<p><strong>Example:</strong> Question-answering agent first queries KG for factual information, then generates natural language response using retrieved facts.</p>
-
-<h3>Connection to Chapter 30: Healthcare</h3>
-
-<p><strong>Biomedical KGs:</strong> Drug-target-disease graphs enable precision medicine. Link prediction identifies drug repurposing opportunities.</p>
-
-<p><strong>Clinical reasoning:</strong> Patient symptoms + medical KG → differential diagnosis through graph traversal.</p>
-
-<p><strong>Example:</strong> Given patient symptoms, traverse disease-symptom KG to rank likely diagnoses; suggest tests to disambiguate.</p>
+<ul>
+    <li><strong>Enterprise NLP (Chapter~25):</strong> NER and relation extraction populate KGs; KG embeddings combine with text embeddings for hybrid semantic search.
+    <li><strong>Recommendations (Chapter~29):</strong> KG embeddings are analogous to collaborative filtering; combining user--item interactions with item KGs improves cold-start performance.
+    <li><strong>Agents (Chapter~34):</strong> KG query APIs serve as tools for structured reasoning; agents decide when to query the KG versus generate from a language model.
+    <li><strong>Healthcare (Chapter~30):</strong> Biomedical KGs (drug--target--disease) enable link prediction for drug repurposing; patient symptom graphs support differential diagnosis.
+</ul>
 
 <h2>Scalability and Practical Considerations</h2>
 
@@ -1110,27 +1103,9 @@ $$\begin{align}
 
 <p>A financial services company maintains customer data scattered across systems. A knowledge graph unifies and enables new insights.</p>
 
-<h3>Data Sources</h3>
+<h3>Data Sources and Schema</h3>
 
-<p>The enterprise knowledge graph integrates information from multiple disparate systems across the organization.</p>
-
-<p>Customer records provide foundational information including names, contact details, and demographic data. This core customer information serves as the starting point for building entity profiles and establishing identity.</p>
-
-<p>Account data captures financial relationships including account types (checking, savings, investment), current balances, and detailed transaction histories. This information reveals customer financial behavior and enables analysis of banking patterns.</p>
-
-<p>Relationships map connections between customers including family members, business associates, and employers. These social and professional networks provide context for understanding customer behavior and enable graph-based reasoning about risk and opportunity.</p>
-
-<p>Transactions record all financial activities including transfers, purchases, and payment patterns. The temporal sequence of transactions reveals behavior patterns and enables detection of anomalies that might indicate fraud or other issues.</p>
-
-<p>External data sources augment internal information with credit scores, public records, and news mentions. This external context enriches customer profiles and enables more informed decision-making about risk and opportunity.</p>
-
-<h3>Knowledge Graph Schema</h3>
-
-<p>The schema defines the entity types and relationships that structure the knowledge graph.</p>
-
-<p>Entities represent the key objects in the domain. Person entities include customers, employees, and beneficiaries, capturing all individuals relevant to the business. Organization entities represent employers and business partners, modeling the institutional relationships. Account entities distinguish between checking, savings, and investment accounts, each with different characteristics. Transaction entities record individual financial activities including payments, transfers, and purchases.</p>
-
-<p>Relationships connect entities to express their associations. The owns\_account relationship links people to their financial accounts. The employed\_by relationship connects people to their employers, providing employment context. The related\_to relationship captures family and personal connections between individuals. The transacted\_with relationship records financial interactions between entities. The account\_has\_transaction relationship links accounts to their transaction history, and person\_has\_credit\_score associates individuals with their creditworthiness metrics.</p>
+<p>The enterprise KG integrates five source systems: customer records (demographics, contact), account data (types, balances, transactions), relationship data (family, employer, associate links), transaction logs, and external data (credit scores, public records). The schema uses four entity types---Person, Organization, Account, Transaction---connected by relationships including <code>owns\_account</code>, <code>employed\_by</code>, <code>related\_to</code>, <code>transacted\_with</code>, and <code>has\_credit\_score</code>.</p>
 
 <h3>Applications</h3>
 
@@ -1173,6 +1148,8 @@ $$\begin{align}
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Entity and Relation Extraction</strong>
 

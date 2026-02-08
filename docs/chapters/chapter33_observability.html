@@ -170,6 +170,24 @@ Machine data consists of several distinct types, each providing different insigh
 
 <h3>Machine Language Grammar</h3>
 
+<div class="architecture-diagram">
+<h3>ML Observability Architecture</h3>
+<pre class="mermaid">
+graph LR
+    MODEL["Model\n in Production"] -->|"Inference logs"| METRICS["Metrics Collector\n latency, throughput\n predictions"]
+    DATA["Input Data\n Stream"] -->|"Feature stats"| DRIFT["Drift Detector\n Compare P_train vs P_prod\n KL divergence, PSI"]
+    METRICS --> DASH["Dashboard\n Alerts on:\n accuracy drop\n latency spike"]
+    DRIFT --> DASH
+    DASH -->|"Trigger"| RETRAIN["Retrain Pipeline\n Fine-tune on\n new data\n Memory: same as training"]
+
+<p>style MODEL fill:#e8f5e9,stroke:#4caf50,color:#000
+    style DRIFT fill:#fff3e0,stroke:#ff9800,color:#000
+    style DASH fill:#e3f2fd,stroke:#2196f3,color:#000
+    style RETRAIN fill:#f3e5f5,stroke:#9c27b0,color:#000
+</pre>
+<p class="diagram-caption">ML Observability Architecture</p>
+</div>
+
 <p>Machine data has structure, though not formal grammar:</p>
 
 <p>Machine data exhibits structural patterns despite lacking formal grammar. Log templates follow consistent patterns where multiple logs share the same structure, typically formatted as <code>[LEVEL] Message with parameters</code>. Metric names use hierarchical naming conventions like <code>system.cpu.usage</code> or <code>app.request.latency</code>, enabling organized aggregation and querying. Trace structure forms directed acyclic graphs (DAGs) of service calls with associated timings, revealing request paths through distributed systems. Event sequences follow causal chains where actions trigger consequences—for example, a deployment leads to configuration updates, which trigger service restarts, culminating in system recovery.</p>
@@ -488,107 +506,18 @@ $$\begin{align}
 
 <p><strong>Alert fatigue and threshold drift.</strong> As engineers respond to alerts, they adjust thresholds to reduce false positives. This threshold drift changes what the system considers anomalous. Additionally, engineers become desensitized to frequent alerts (alert fatigue), effectively raising their personal threshold for action. Models must adapt to these changing expectations.</p>
 
-<h3>Business and Operational Impact of Observability Drift</h3>
+<div class="keypoint">
+For the generic drift detection and continuous learning framework, see Chapter~[ref], Section~[ref]. Observability systems face a meta-monitoring paradox: they must remain reliable 24/7 while adapting to constantly evolving infrastructure.
+</div>
 
-<p>The consequences of unmanaged drift in observability systems are severe and multifaceted:</p>
-
-<p><strong>Increased false positives and alert fatigue.</strong> When anomaly detection models drift, they generate false positives—alerting on normal behavior. Alert fatigue is a serious problem in operations. Engineers receiving 100+ false alerts daily become desensitized and may miss real incidents. Studies show that alert fatigue increases incident response time by 30-50\% and contributes to engineer burnout. One company reported 40\% on-call engineer turnover attributed partially to alert fatigue from drifted models.</p>
-
-<p><strong>Missed incidents and prolonged outages.</strong> When models drift toward false negatives, they miss real failures. Undetected failures cause prolonged outages until customers report issues or engineers notice manually. Each hour of undetected outage costs \$100K-1M for large enterprises. One e-commerce company experienced a 4-hour outage that went undetected by drifted anomaly detection, costing \$2M in lost revenue plus customer trust damage.</p>
-
-<p><strong>Increased MTTR and operational costs.</strong> When root-cause analysis models drift, they provide incorrect or irrelevant diagnoses. Engineers waste time investigating wrong causes, increasing MTTR. If MTTR increases from 15 minutes to 45 minutes due to poor RCA, and the company has 100 incidents monthly, that's 50 additional hours of engineer time monthly = \$15K-30K in labor costs plus extended downtime costs.</p>
-
-<p><strong>Loss of engineer trust and system abandonment.</strong> Engineers quickly lose trust in observability systems that produce frequent false positives or miss real incidents. Once trust is lost, engineers ignore alerts or bypass the system entirely, eliminating any benefit. Rebuilding trust takes months of demonstrated reliability. One company's observability AI was abandoned after 6 months when drift caused false positive rate to reach 30\%, wasting \$500K in development investment.</p>
-
-<p><strong>Operational blind spots.</strong> When observability systems drift, they create blind spots—areas of the infrastructure that are no longer properly monitored. New services, changed architectures, or evolved failure patterns may not be detected. These blind spots create risk—failures in unmonitored areas go undetected until they cause major outages.</p>
-
-<p><strong>Increased infrastructure costs.</strong> To compensate for unreliable observability, organizations over-provision infrastructure as a safety margin. If you can't trust anomaly detection to catch resource exhaustion, you provision 2x capacity "just in case." This over-provisioning costs millions annually for large infrastructures. Reliable observability enables running closer to capacity, reducing costs by 20-30\%.</p>
-
-<h3>Detecting Drift in Observability Systems</h3>
-
-<p>Effective drift detection for observability requires meta-monitoring—monitoring the monitors:</p>
-
-<p><strong>Alert quality metrics and feedback loops.</strong> Track alert quality metrics: true positive rate, false positive rate, alert resolution time, engineer feedback. When engineers dismiss alerts as false positives, capture this feedback. Track these metrics over time—increasing false positive rates signal drift. Implement feedback mechanisms where engineers can mark alerts as "false positive," "true positive," or "unclear."</p>
-
-<p>Implementation: Build alert feedback UI. After each alert, prompt engineer: "Was this a real issue?" Track responses in database. Generate weekly reports showing false positive rate by alert type. Alert if FPR exceeds 10\% for two consecutive weeks.</p>
-
-<p><strong>Incident coverage analysis.</strong> Track whether observability systems detect known incidents. For every incident (detected by any means—customer reports, manual discovery, automated detection), analyze whether observability systems should have detected it. If incidents are occurring without automated detection, models may have drifted toward false negatives.</p>
-
-<p>Example: Company has 50 incidents monthly. Observability system detects 45 (90\% coverage). Over 3 months, coverage drops to 40/50 (80\%). Investigation reveals new failure patterns (microservices cascading failures) that models don't recognize. Models require retraining on recent incidents.</p>
-
-<p><strong>Model performance monitoring.</strong> Monitor anomaly detection model performance: prediction accuracy, confidence scores, detection latency. Track these metrics over time. Degrading performance signals drift. For time-series prediction models, track prediction error (RMSE, MAE). For classification models, track precision, recall, F1 score.</p>
-
-<p><strong>Data distribution monitoring.</strong> Monitor distributions of metrics, logs, and traces. Use statistical tests (Kolmogorov-Smirnov, chi-square) to detect distribution shifts. When distributions shift significantly, models trained on old distributions may perform poorly. However, be cautious—some distribution shifts are legitimate (traffic growth, seasonal changes) and don't indicate drift.</p>
-
-<p><strong>Baseline drift detection.</strong> Track learned baselines over time. If baselines shift significantly (e.g., normal CPU usage increases from 40\% to 60\%), investigate whether this is legitimate growth or model drift. Legitimate growth requires baseline updates; drift requires model fixes.</p>
-
-<p><strong>Comparative analysis with human experts.</strong> Periodically have engineers manually review incidents and compare their assessments to automated system assessments. Measure agreement rates. If agreement drops from 90\% to 75\%, investigate potential drift. This is expensive but provides ground truth for model performance.</p>
-
-<p><strong>Canary deployments and A/B testing.</strong> When deploying updated observability models, use canary deployments—route 5-10\% of traffic to new model, 90-95\% to old model. Compare performance. If new model has higher false positive rate or lower incident detection rate, rollback. This prevents bad models from affecting entire infrastructure.</p>
-
-<p><strong>Synthetic incident injection.</strong> Inject synthetic failures (in test environments or carefully in production) to verify observability systems detect them. If synthetic failures go undetected, models may have drifted. This is similar to fire drills—testing that detection systems work when needed.</p>
-
-<h3>Strategies for Continuous Learning in Observability Systems</h3>
-
-<p>Managing drift in observability requires careful strategies that balance adaptation with reliability:</p>
-
-<p><strong>Online learning with conservative updates.</strong> Implement online learning that continuously updates models as new data arrives, but with conservative update rates to prevent instability. Use exponential moving averages for baselines, allowing gradual adaptation to traffic growth while resisting sudden spikes. Update models incrementally rather than wholesale retraining.</p>
-
-<p>Implementation: Update anomaly detection baselines daily using exponential moving average with decay factor 0.95 (95\% old baseline, 5\% new data). This allows adaptation to gradual changes while resisting sudden anomalies. For more significant model updates, use weekly or monthly retraining with validation.</p>
-
-<p><strong>Deployment-aware anomaly detection.</strong> Integrate deployment information into anomaly detection. When deployments occur, temporarily relax anomaly thresholds or suppress alerts for expected changes. Track metrics before and after deployments to learn deployment impact patterns. This reduces false positives from legitimate deployment-related changes.</p>
-
-<p>Example: When deployment occurs, suppress anomaly alerts for 15 minutes (deployment stabilization period). Track metric changes during this period. If changes persist beyond 15 minutes, flag as potential deployment-related issue. This prevents alerting on expected deployment effects while catching deployment-introduced bugs.</p>
-
-<p><strong>Seasonal and trend-aware models.</strong> Explicitly model seasonality (daily, weekly, yearly patterns) and trends (traffic growth, resource usage increases). Use seasonal decomposition or seasonal ARIMA models. This enables models to distinguish between expected seasonal variations and true anomalies.</p>
-
-<p>Example: E-commerce platform has strong weekly seasonality (weekend traffic 2x weekday) and yearly seasonality (holiday spikes). Model learns these patterns. Weekend traffic is not flagged as anomalous. Holiday traffic is expected. Only deviations from seasonal patterns trigger alerts.</p>
-
-<p><strong>Ensemble approaches with temporal diversity.</strong> Maintain ensemble of models trained on different time periods: recent model (last month), medium-term model (last quarter), long-term model (last year). Combine predictions with dynamic weighting based on recent performance. This provides robustness to drift—if recent model drifts, older models compensate.</p>
-
-<p><strong>Human-in-the-loop feedback and retraining.</strong> Collect engineer feedback on alerts and use it for retraining. When engineers mark alerts as false positives, add these examples to training data with negative labels. When engineers confirm true positives, reinforce these patterns. This creates a feedback loop that continuously improves models based on operational experience.</p>
-
-<p>Implementation: Monthly, retrain models on last quarter's data plus engineer feedback. Weight feedback examples 2x higher than unlabeled data to prioritize learning from human corrections. Validate on held-out recent data before deployment.</p>
-
-<p><strong>Adaptive thresholds and dynamic baselines.</strong> Rather than static thresholds, use adaptive thresholds that adjust based on recent behavior. If traffic grows 20\% over a month, baselines should adjust accordingly. Use percentile-based thresholds (e.g., alert if metric exceeds 99th percentile of recent values) rather than absolute thresholds.</p>
-
-<p><strong>Multi-signal correlation and context-aware detection.</strong> Rather than analyzing metrics in isolation, correlate multiple signals (metrics, logs, traces, deployments, configuration changes). Anomalies that appear across multiple correlated signals are more likely to be real issues. Single-signal anomalies might be noise or expected variations.</p>
-
-<p>Example: CPU spike alone might be normal (batch job). CPU spike + memory spike + increased error logs + no recent deployment = likely real issue. Multi-signal correlation reduces false positives by 50-70\%.</p>
-
-<p><strong>Gradual model updates with validation gates.</strong> When updating models, use gradual rollout with validation gates. Deploy new model to 5\% of infrastructure. Monitor for 24-48 hours. If false positive rate is acceptable and incident detection is maintained, expand to 25\%, then 50\%, then 100\%. If any validation gate fails, rollback immediately.</p>
-
-<h3>Practical Implementation Considerations</h3>
-
-<p>Successfully implementing continuous learning for observability requires careful attention to operational details:</p>
-
-<p><strong>Real-time processing and low latency.</strong> Observability systems must operate in real-time with sub-minute latency. Anomaly detection that takes 10 minutes is too slow—outages extend unnecessarily. Implement streaming processing (Kafka, Flink) for real-time analysis. Optimize models for inference speed. Use approximate algorithms where exact computation is too slow.</p>
-
-<p><strong>Scalability and data volume.</strong> Observability systems process massive data volumes—billions of events daily. Infrastructure must scale horizontally. Use distributed processing (Spark, Flink). Implement sampling for less critical metrics. Use approximate algorithms (HyperLogLog, Count-Min Sketch) for large-scale aggregations.</p>
-
-<p><strong>Reliability and fault tolerance.</strong> Observability systems must be more reliable than systems they monitor. Implement redundancy, failover, and graceful degradation. If anomaly detection fails, fall back to simple threshold-based alerts. If RCA fails, still alert engineers even without diagnosis. Never let observability system failure cause monitoring blind spots.</p>
-
-<p><strong>Alert prioritization and noise reduction.</strong> Implement intelligent alert prioritization. Not all anomalies are equally important. Prioritize based on: business impact (customer-facing services higher priority), severity (complete failures higher than degradations), confidence (high-confidence anomalies higher priority). Suppress low-priority alerts during high-incident periods to reduce noise.</p>
-
-<p><strong>Explainability and engineer trust.</strong> Provide clear explanations for alerts: which metrics are anomalous, how they compare to baselines, similar past incidents, suggested actions. Engineers must understand why they're being alerted to trust the system. Implement visualization tools showing metric trends, anomaly scores, and correlation patterns.</p>
-
-<p><strong>Cost management and resource optimization.</strong> Observability infrastructure is expensive: data storage (terabytes daily), compute (real-time processing), and personnel (engineers maintaining systems). Optimize costs through: data retention policies (keep detailed data 7 days, aggregated data 90 days, summaries 1 year), sampling (sample less critical metrics), and efficient storage (compression, columnar formats).</p>
-
-<h3>Cross-Domain Patterns and Connections</h3>
-
-<p>Observability systems monitor all the domain-specific systems discussed in previous chapters, creating unique cross-domain challenges:</p>
-
-<p><strong>Chapter 24-26 (Domain-Specific Models, Enterprise NLP, Code):</strong> Observability systems monitor ML model deployments, tracking model performance, inference latency, and resource usage. When domain-specific models drift (Chapters 27-32), observability systems should detect degraded performance. This creates a meta-monitoring challenge—observability must detect drift in other ML systems while managing its own drift.</p>
-
-<p><strong>Chapter 27 (Video \& Visual):</strong> Video platforms generate massive observability data—streaming metrics, CDN performance, encoding latency. Observability systems must handle high-volume, high-velocity data from video infrastructure. Video-specific failure patterns (buffering, quality degradation) require specialized anomaly detection.</p>
-
-<p><strong>Chapter 29 (Recommendations):</strong> Recommendation systems generate observability data on user interactions, model performance, and business metrics. Observability systems monitor recommendation quality (CTR, engagement) and detect when recommendations degrade. This requires understanding business metrics, not just infrastructure metrics.</p>
-
-<p><strong>Chapter 30 (Healthcare):</strong> Healthcare systems have strict uptime requirements and regulatory compliance. Observability systems must detect failures before they impact patient care. Alert prioritization must consider patient safety—failures in critical systems (patient monitoring, medication dispensing) require immediate response.</p>
-
-<p><strong>Chapter 31 (Finance):</strong> Financial systems require real-time monitoring with sub-second latency. Trading systems cannot tolerate minutes of downtime. Observability systems must detect failures in milliseconds and trigger immediate failover. Additionally, financial systems have security monitoring requirements—detecting fraud, intrusions, and anomalous transactions.</p>
-
-<p><strong>Chapter 32 (Legal):</strong> Legal systems have audit trail requirements. Observability systems must maintain complete logs of all system activities for compliance and liability defense. Log retention policies must balance storage costs with regulatory requirements (often 7 years for financial/legal data).</p>
+<p>Key observability-specific strategies beyond the generic framework include:
+<ul>
+<li><strong>Online learning with conservative updates:</strong> Use exponential moving averages (e.g.\ decay factor 0.95) for baselines, allowing gradual adaptation to traffic growth while resisting sudden anomalous spikes.
+<li><strong>Deployment-aware anomaly detection:</strong> Integrate CI/CD deployment events to temporarily relax thresholds during expected change windows, reducing false positives from legitimate deployments.
+<li><strong>Multi-signal correlation:</strong> Correlate metrics, logs, traces, and deployment events rather than analyzing signals in isolation---multi-signal anomalies are far more likely to be real issues, reducing false positives by 50--70\%.
+<li><strong>Synthetic incident injection:</strong> Inject synthetic failures in test environments to verify detection systems catch them---analogous to fire drills for monitoring infrastructure.
+<li><strong>Adaptive percentile-based thresholds:</strong> Use percentile thresholds (e.g.\ alert if metric exceeds 99th percentile of recent values) rather than absolute thresholds, automatically adjusting to growth and seasonal patterns.
+</ul>
 
 <h2>Exercises</h2>
 
@@ -602,6 +531,8 @@ $$\begin{align}
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Anomaly Detection</strong>
 

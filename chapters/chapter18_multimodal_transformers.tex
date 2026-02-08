@@ -24,6 +24,25 @@ Multimodal transformers process multiple modalities (text, images, audio, video)
 The choice of fusion strategy determines how modalities interact, with direct implications for computational cost and expressiveness. Three primary approaches have emerged:
 
 \begin{figure}[htbp]
+
+\begin{mermaid}[Multimodal Transformer Fusion]
+graph LR
+    TXT["Text tokens\n in N^n_t"] -->|"W_text in R^V x d"| TE["Text Emb\n in R^n_t x d"]
+    IMG["Image patches\n in R^N x (P^2*C)"] -->|"W_img in R^(P^2*C) x d"| IE["Image Emb\n in R^N x d"]
+
+    TE --> FUSE["Concatenate\n [text; image]\n in R^(n_t+N) x d"]
+    IE --> FUSE
+    FUSE --> ENC["Joint Transformer\n x L layers\n Cross-modal attention\n STORED per layer:\n all activations\n Memory: O(L*(n_t+N)^2)"]
+    ENC --> TOUT["Text output\n in R^n_t x d"]
+    ENC --> IOUT["Image output\n in R^N x d"]
+
+    style TXT fill:#e8f5e9,stroke:#4caf50,color:#000
+    style IMG fill:#e3f2fd,stroke:#2196f3,color:#000
+    style FUSE fill:#fff3e0,stroke:#ff9800,color:#000
+    style ENC fill:#f3e5f5,stroke:#9c27b0,color:#000
+\end{mermaid}
+
+
 \centering
 \begin{tikzpicture}[
   node/.style={circle, draw, minimum size=0.6cm, font=\footnotesize},
