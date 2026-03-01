@@ -65,7 +65,7 @@ app.get('/api/chapters/:bookId', (req, res) => {
     { id: 'chapter19_long_context', title: 'Chapter 19: Long Context Handling', part: 'Part VI: Advanced Topics' },
     { id: 'chapter20_pretraining_strategies', title: 'Chapter 20: Pretraining Strategies', part: 'Part VI: Advanced Topics' },
     { id: 'chapter21_pytorch_implementation', title: 'Chapter 21: PyTorch Implementation', part: 'Part VII: Practical Implementation' },
-    { id: 'chapter22_hardware_optimization', title: 'Chapter 22: Hardware Optimization', part: 'Part VII: Practical Implementation' },
+    { id: 'chapter22_hardware_optimization', title: 'Chapter 22: From PyTorch to Accelerator Silicon', part: 'Part VII: Practical Implementation' },
     { id: 'chapter23_best_practices', title: 'Chapter 23: Best Practices', part: 'Part VII: Practical Implementation' },
     { id: 'chapter24_domain_specific_models', title: 'Chapter 24: Domain-Specific Models', part: 'Part VIII: Domain Applications' },
     { id: 'chapter25_enterprise_nlp', title: 'Chapter 25: Enterprise NLP', part: 'Part VIII: Domain Applications' },
