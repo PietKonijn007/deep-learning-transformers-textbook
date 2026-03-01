@@ -166,7 +166,39 @@ where:
 </div>
 
 <figure>
-<div class="tikz-diagram"><img src="../diagrams/chapter06_recurrent_networks_b260b1fb6b03.svg" alt="TikZ Diagram" /></div>
+\begin{tikzpicture}[
+    node/.style={circle, draw, minimum size=1cm, font=\small},
+    input/.style={rectangle, draw, minimum size=0.6cm, font=\small},
+    arrow/.style={->, >=stealth, thick},
+    recurrent/.style={->, >=stealth, red!70, very thick}
+]
+
+<p>\node[node] (h0) at (0,0) {$\vh_0$};
+\node[node] (h1) at (3,0) {$\vh_1$};
+\node[node] (h2) at (6,0) {$\vh_2$};
+\node[node] (h3) at (9,0) {$\vh_3$};</p>
+
+<p>\node[input] (x1) at (3,1.5) {$\vx_1$};
+\node[input] (x2) at (6,1.5) {$\vx_2$};
+\node[input] (x3) at (9,1.5) {$\vx_3$};</p>
+
+<p>\node[input] (y1) at (3,-1.5) {$\vy_1$};
+\node[input] (y2) at (6,-1.5) {$\vy_2$};
+\node[input] (y3) at (9,-1.5) {$\vy_3$};</p>
+
+<p>\draw[recurrent] (h0) -- (h1);
+\draw[recurrent] (h1) -- (h2);
+\draw[recurrent] (h2) -- (h3);</p>
+
+<p>\draw[arrow, blue!70] (x1) -- (h1);
+\draw[arrow, blue!70] (x2) -- (h2);
+\draw[arrow, blue!70] (x3) -- (h3);</p>
+
+<p>\draw[arrow] (h1) -- (y1);
+\draw[arrow] (h2) -- (y2);
+\draw[arrow] (h3) -- (y3);</p>
+
+<p>\end{tikzpicture}
 <figcaption>RNN unrolled through time showing sequential dependencies. Each hidden state $\vh_t$ depends on both the current input $\vx_t$ (blue arrows) and the previous hidden state $\vh_{t-1}$ (red arrows). The same weight matrices are shared across all time steps. This sequential structure prevents parallelization: $\vh_2$ cannot be computed until $\vh_1$ is complete.</figcaption>
 </figure>
 
@@ -278,7 +310,52 @@ where $\sigma$ is sigmoid, $\odot$ is element-wise multiplication, and $[\cdot, 
 </ul>
 
 <figure>
-<div class="tikz-diagram"><img src="../diagrams/chapter06_recurrent_networks_70319ea06696.svg" alt="TikZ Diagram" /></div>
+\begin{tikzpicture}[
+    gate/.style={rectangle, draw, fill=blue!20, minimum width=1.2cm, minimum height=0.8cm, font=\small},
+    operation/.style={circle, draw, fill=green!20, minimum size=0.8cm, font=\small},
+    state/.style={rectangle, draw, fill=yellow!20, minimum width=2cm, minimum height=0.6cm, font=\small},
+    arrow/.style={->, >=stealth, thick},
+    cell_flow/.style={->, >=stealth, very thick, red!70}
+]
+
+<p>\node[state] (input) at (0,4) {$[\vh_{t-1}, \vx_t]$};</p>
+
+<p>\node[gate] (forget) at (-3,2.5) {$\sigma$};
+\node[gate] (input_gate) at (-1,2.5) {$\sigma$};
+\node[gate] (candidate) at (1,2.5) {$\tanh$};
+\node[gate] (output_gate) at (3,2.5) {$\sigma$};</p>
+
+<p>\node[state] (c_prev) at (-4,0) {$\mathbf{c}_{t-1}$};
+\node[state] (c_curr) at (2,0) {$\mathbf{c}_t$};</p>
+
+<p>\node[operation] (mult1) at (-3,0) {$\odot$};
+\node[operation] (mult2) at (1,0) {$\odot$};
+\node[operation] (add) at (-1,0) {$+$};
+\node[operation] (tanh_c) at (2,-1.5) {$\tanh$};
+\node[operation] (mult3) at (3,-1.5) {$\odot$};</p>
+
+<p>\node[state] (h_out) at (3,-3) {$\vh_t$};</p>
+
+<p>\draw[arrow] (input) -- (-3,3.2);
+\draw[arrow] (input) -- (-1,3.2);
+\draw[arrow] (input) -- (1,3.2);
+\draw[arrow] (input) -- (3,3.2);</p>
+
+<p>\draw[arrow] (forget) -- (mult1);
+\draw[arrow] (input_gate) -- (mult2);
+\draw[arrow] (candidate) -- (mult2);
+\draw[arrow] (output_gate) -- (mult3);</p>
+
+<p>\draw[cell_flow] (c_prev) -- (mult1);
+\draw[cell_flow] (mult1) -- (add);
+\draw[cell_flow] (add) -- (c_curr);
+\draw[arrow] (mult2) -- (add);</p>
+
+<p>\draw[arrow] (c_curr) -- (tanh_c);
+\draw[arrow] (tanh_c) -- (mult3);
+\draw[arrow] (mult3) -- (h_out);</p>
+
+<p>\end{tikzpicture}
 <figcaption>LSTM cell internal structure showing the four gates and cell state flow. The cell state $\mathbf{c}_t$ (red path) provides an additive "highway" for gradient flow, addressing the vanishing gradient problem. The forget gate $\vf_t$ controls what to keep from $\mathbf{c}_{t-1}$, the input gate $\vi_t$ and candidate $\tilde{\mathbf{c}}_t$ control what new information to add, and the output gate $\vo_t$ controls what to output. All gates receive the same input $[\vh_{t-1}, \vx_t]$ but learn different transformations.</figcaption>
 </figure>
 
@@ -389,62 +466,27 @@ $$\begin{align}
 
 <h2>RNNs vs Transformers: A Computational Comparison</h2>
 
-<p>The transition from RNNs to transformers represents one of the most significant architectural shifts in deep learning history. While RNNs were the dominant architecture for sequence modeling from the 1990s through 2017, transformers have almost entirely replaced them for natural language processing tasks. Understanding the computational, memory, and hardware efficiency differences between these architectures explains this dramatic shift and provides insight into modern deep learning system design.</p>
+<p>The transition from RNNs to transformers represents one of the most significant architectural shifts in deep learning. The following table summarizes the key computational differences:</p>
 
-<h3>Sequential vs Parallel Computation</h3>
+<div style="text-align: center;">
 
-<p>The fundamental difference between RNNs and transformers lies in their computational structure. RNNs process sequences sequentially, computing $\vh_t$ from $\vh_{t-1}$ and $\vx_t$ at each time step. This sequential dependency means that position $t$ cannot be computed until position $t-1$ is complete, preventing parallelization across time steps. For a sequence of length $n$, the RNN requires $n$ sequential operations, each taking time $T_{\text{step}}$, for a total time of $nT_{\text{step}}$. Even with infinite computational resources, this sequential bottleneck cannot be overcome.</p>
+<table>
+<tr><th><strong>Property</strong></th><th><strong>RNNs</strong></th><th><strong>Transformers</strong></th></tr>
+<tr><td>Computation</td><td>Sequential ($n$ steps)</td><td>Parallel (constant depth)</td></tr>
+<tr><td>Memory scaling</td><td>$O(nd)$</td><td>$O(n^2 + nd)$</td></tr>
+<tr><td>GPU utilization</td><td>1--5\%</td><td>40--60\%</td></tr>
+<tr><td>Memory bandwidth</td><td>Reload weights each step</td><td>Load weights once</td></tr>
+<tr><td>Training time (BERT-scale)</td><td>Estimated 100--200 days</td><td>4 days</td></tr>
+</table>
 
-<p>Transformers, by contrast, compute all positions simultaneously using self-attention. The query, key, and value projections $\mQ = \mX\mW_Q$, $\mK = \mX\mW_K$, $\mV = \mX\mW_V$ are batched matrix multiplications that process all $n$ positions in parallel. The attention scores $\mA = \text{softmax}(\frac{\mQ\mK\transpose}{\sqrt{d_k}})$ and outputs $\mO = \mA\mV$ similarly operate on all positions simultaneously. The total computation time is independent of sequence length in terms of sequential depth—all positions are processed in a constant number of parallel operations.</p>
+<p></div>
 
-<p>For concrete comparison, consider processing a sequence of length $n = 512$ with model dimension $d = 768$ (BERT-base dimensions) on an NVIDIA A100 GPU. An LSTM requires 512 sequential steps, each taking approximately 1-3 microseconds (as computed in Section~[ref]), for a total time of 512-1,536 microseconds (0.5-1.5 milliseconds). A transformer layer processes the entire sequence in approximately 50-100 microseconds—5-30× faster despite having more total FLOPs. The speedup comes entirely from parallelization: the transformer exploits the GPU's 6,912 CUDA cores to process all 512 positions simultaneously, while the LSTM can only process one position at a time.</p>
+<p>The fundamental bottleneck of RNNs is sequential processing: each hidden state $\vh_t$ depends on $\vh_{t-1}$, preventing parallelization across time steps. On an A100 GPU with 6,912 CUDA cores, an LSTM processing batch size 32 utilizes only $\sim$0.5\% of parallel capacity. Transformers eliminate this bottleneck by computing all positions simultaneously via matrix multiplication, achieving 15$\times$ or greater speedup despite having more total FLOPs.</p>
 
-<p>This parallelization advantage scales with sequence length. For $n = 2048$ (GPT-2's maximum length), the LSTM time increases to 2-6 milliseconds, while the transformer time increases to approximately 200-400 microseconds—still 5-30× faster. For $n = 4096$, the LSTM requires 4-12 milliseconds, while the transformer requires 800-1,600 microseconds. The transformer's advantage is consistent across sequence lengths because both architectures scale linearly with $n$ in terms of FLOPs, but the transformer can parallelize while the LSTM cannot.</p>
-
-<h3>Memory Complexity: $O(nd)$ vs $O(n^2)$</h3>
-
-<p>The memory requirements of RNNs and transformers scale differently with sequence length, leading to different bottlenecks for long sequences. RNNs store hidden states $\vh_t \in \R^{B \times d}$ for each time step, requiring $O(Bnd)$ memory for a batch of size $B$ with sequence length $n$ and hidden dimension $d$. This linear scaling with sequence length makes RNNs memory-efficient for long sequences: doubling the sequence length doubles the memory requirement.</p>
-
-<p>Transformers store attention score matrices $\mA \in \R^{B \times h \times n \times n}$ for each layer, requiring $O(Bhn^2)$ memory where $h$ is the number of attention heads. This quadratic scaling with sequence length makes transformers memory-intensive for long sequences: doubling the sequence length quadruples the memory requirement. For BERT-base with $B = 32$, $h = 12$, $n = 512$, attention scores require 384 MB per layer, or 4.6 GB across 12 layers. For $n = 2048$, this increases to 6.1 GB per layer, or 73.7 GB across 12 layers—exceeding the memory of most GPUs.</p>
-
-<p>However, this comparison is incomplete because it ignores the different memory access patterns. RNNs must load the recurrence matrix $\mW_{hh} \in \R^{d \times d}$ from memory at each time step, requiring $n$ memory loads of size $d^2$. For BERT-base dimensions with $d = 768$ and $n = 512$, this totals $512 \times 768^2 \times 4 = 1{,}207{,}959{,}552$ bytes, or approximately 1.15 GB of memory bandwidth. Transformers load the attention weight matrices $\mW_Q, \mW_K, \mW_V \in \R^{d \times d}$ once per layer, requiring $3d^2$ memory loads. For the same dimensions, this totals $3 \times 768^2 \times 4 = 7{,}077{,}888$ bytes, or approximately 6.75 MB—170× less memory bandwidth than the LSTM.</p>
-
-<p>The memory bandwidth difference is critical for understanding hardware efficiency. Modern GPUs have memory bandwidth of 1-2 TB/s (e.g., A100 has 1.6 TB/s), which limits the rate at which data can be loaded from GPU memory to compute units. For the LSTM, loading 1.15 GB of weights requires $\frac{1.15 \text{ GB}}{1.6 \text{ TB/s}} = 0.72$ milliseconds, which is comparable to the 0.5-1.5 milliseconds of compute time. This means the LSTM is memory-bandwidth-bound: the GPU spends as much time loading weights as performing computation, achieving only 50\% efficiency. For the transformer, loading 6.75 MB requires $\frac{6.75 \text{ MB}}{1.6 \text{ TB/s}} = 4.2$ microseconds, which is negligible compared to the 50-100 microseconds of compute time. The transformer is compute-bound, achieving 90-95\% efficiency.</p>
-
-<h3>Training Time Comparison</h3>
-
-<p>The combined effects of parallelization and memory bandwidth lead to dramatic differences in training time between RNNs and transformers. For BERT-base training on the BookCorpus and English Wikipedia datasets (approximately 3.3 billion words, or 16 billion tokens with WordPiece tokenization), the original BERT paper reports training time of 4 days on 16 Cloud TPU chips (64 TPU cores total). Each TPU core has peak throughput of 45 TFLOPS (FP16), giving a total of 2,880 TFLOPS across 64 cores.</p>
-
-<p>To train an LSTM with equivalent capacity (110 million parameters) on the same dataset, we can estimate the training time based on the computational and memory bandwidth analysis above. An LSTM with hidden dimension $d = 768$ has approximately $4 \times 768 \times (768 + 768) = 4{,}718{,}592$ parameters per layer (4 gates, each with weight matrix for concatenated input). To reach 110 million parameters, we need approximately $\frac{110{,}000{,}000}{4{,}718{,}592} \approx 23$ layers. Each layer requires 4.8 GFLOPs per sequence of length 512, so 23 layers require 110.4 GFLOPs per sequence.</p>
-
-<p>For 16 billion tokens with sequence length 512, we have $\frac{16 \times 10^9}{512} = 31{,}250{,}000$ sequences. At 110.4 GFLOPs per sequence, the total computation is $31{,}250{,}000 \times 110.4 \times 10^9 = 3.45 \times 10^{18}$ FLOPs, or 3.45 exaFLOPs. At 2,880 TFLOPS peak throughput, this would take $\frac{3.45 \times 10^{18}}{2{,}880 \times 10^{12}} = 1{,}197{,}917$ seconds, or approximately 14 days, if we could achieve 100\% hardware utilization.</p>
-
-<p>However, as discussed above, LSTMs achieve only 1-5\% of peak throughput due to sequential processing and memory bandwidth limitations. At 3\% utilization, the training time increases to $\frac{14 \text{ days}}{0.03} = 467$ days—more than a year. Even with aggressive optimizations, LSTM training would likely require 100-200 days on the same hardware that trains BERT in 4 days. This 25-50× slowdown makes LSTMs impractical for large-scale pretraining, explaining why transformers have completely replaced RNNs for modern language models.</p>
-
-<p>The training time difference becomes even more extreme for larger models. GPT-3 with 175 billion parameters was trained on 300 billion tokens in approximately 34 days on 10,000 NVIDIA V100 GPUs. An LSTM with equivalent capacity would require an estimated 3-5 years on the same hardware, making it economically infeasible. The transformer's parallelization advantage is the primary enabler of large-scale language model pretraining.</p>
-
-<h3>Hardware Limitations of RNNs</h3>
-
-<p>The poor hardware efficiency of RNNs stems from three fundamental limitations: insufficient parallelism for GPU saturation, memory bandwidth bottlenecks, and poor cache utilization. Modern GPUs are designed for massively parallel workloads with thousands of concurrent operations, but RNNs provide only batch-level parallelism. For batch size $B = 32$ and hidden dimension $d = 768$, the LSTM matrix multiplication $\mW[\vh_{t-1}, \vx_t]$ has dimensions $768 \times (32 \times 1536)$, which can process only 32 rows in parallel. An A100 GPU with 6,912 CUDA cores can theoretically process 6,912 operations simultaneously, but the LSTM provides only 32 concurrent operations—leaving 99.5\% of the GPU idle.</p>
-
-<p>Increasing batch size improves GPU utilization but has diminishing returns. At batch size 256, the LSTM achieves approximately 5-10\% of peak throughput. At batch size 2048, it reaches 15-20\% of peak throughput. However, batch sizes beyond 256 are impractical for most training scenarios due to memory constraints and optimization difficulties. Even at batch size 2048, the LSTM achieves only 15-20\% utilization, compared to 40-60\% for transformers at the same batch size. The sequential dependency fundamentally limits the LSTM's ability to exploit GPU parallelism.</p>
-
-<p>The memory bandwidth bottleneck exacerbates the parallelism problem. As computed above, the LSTM requires 1.15 GB of memory bandwidth per sequence, compared to 6.75 MB for the transformer—a 170× difference. For batch size 32, the LSTM requires $32 \times 1.15 = 36.8$ GB of memory bandwidth, which takes $\frac{36.8 \text{ GB}}{1.6 \text{ TB/s}} = 23$ milliseconds to load. The actual compute time is approximately 16-48 milliseconds (0.5-1.5 milliseconds per sequence × 32 sequences), so memory bandwidth accounts for 30-60\% of the total time. The transformer requires $32 \times 6.75 = 216$ MB of memory bandwidth, taking only 0.135 milliseconds to load—negligible compared to the 1.6-3.2 milliseconds of compute time.</p>
-
-<p>Cache utilization is similarly poor for RNNs. Modern GPUs have L1 cache (128 KB per streaming multiprocessor) and L2 cache (40 MB for A100) that can dramatically accelerate memory access for data that fits in cache. The transformer's attention computation reuses the query, key, and value matrices across all positions, enabling effective cache utilization. For BERT-base, the $\mQ, \mK, \mV$ matrices have size $32 \times 512 \times 768 \times 4 = 50.3$ MB, which fits in L2 cache. The LSTM's recurrence matrix $\mW_{hh}$ has size $768 \times 768 \times 4 = 2.36$ MB, which also fits in cache, but it must be loaded at each time step, and the sequential dependency prevents batching these loads. The cache hit rate for LSTMs is typically 20-40\%, compared to 60-80\% for transformers, further reducing hardware efficiency.</p>
-
-<h3>Why Transformers Replaced RNNs</h3>
-
-<p>The dominance of transformers over RNNs can be summarized in three key advantages: parallelization, gradient flow, and hardware efficiency. The parallel computation structure of transformers enables 5-30× faster training than RNNs on modern GPUs, making large-scale pretraining feasible. The direct attention connections enable gradient flow across arbitrary distances without vanishing, allowing transformers to learn dependencies spanning thousands of tokens. The high GPU utilization (40-60\% vs 1-5\% for RNNs) makes transformers 10-60× more hardware-efficient, reducing training costs proportionally.</p>
-
-<p>These advantages compound: the 5-30× speedup from parallelization, combined with the 10-60× improvement in hardware efficiency, yields an overall 50-1,800× advantage for transformers. In practice, transformers train 100-500× faster than RNNs for equivalent model capacity and dataset size. This speedup difference is the primary reason why transformers have completely replaced RNNs for natural language processing: the economic cost of training an LSTM-based language model is prohibitive compared to a transformer.</p>
-
-<p>However, RNNs retain advantages for specific use cases. For online or streaming applications where inputs arrive sequentially and outputs must be produced in real-time, RNNs can process each input immediately without waiting for the full sequence. Transformers require the entire sequence to compute attention, making them unsuitable for true streaming applications. For very long sequences exceeding 10,000 tokens, the $O(n^2)$ memory complexity of transformers becomes prohibitive, while RNNs' $O(n)$ memory scaling remains manageable. For edge deployment on devices with limited memory and compute, RNNs' smaller memory footprint can be advantageous.</p>
-
-<p>Despite these niche advantages, transformers dominate modern deep learning due to their superior training efficiency and scalability. The development of efficient attention mechanisms (Chapter 16) addresses the $O(n^2)$ memory bottleneck for long sequences, and techniques like streaming transformers enable online processing. The architectural innovations that made transformers successful—parallel computation, direct gradient flow, and hardware efficiency—represent fundamental advances that are unlikely to be superseded by sequential architectures.</p>
+<p>The parallelization advantage compounds with hardware efficiency: transformers achieve high arithmetic intensity through data reuse in matrix multiplications ($\sim$256 FLOPs/byte), while RNNs perform small matrix-vector products with low data reuse ($\sim$1--10 FLOPs/byte). The combined effect is 100--500$\times$ faster training for equivalent model capacity.</p>
 
 <div class="keypoint">
-While RNNs were dominant for sequences, transformers now excel in most NLP tasks due to: (1) Better parallelization enabling 5-30× faster training, (2) Direct long-range dependencies via attention avoiding vanishing gradients, (3) Superior hardware efficiency achieving 40-60\% GPU utilization vs 1-5\% for RNNs. The combined effect is 100-500× faster training, making transformers economically superior for large-scale pretraining. RNNs remain useful only for online/streaming tasks and extremely long sequences where $O(n^2)$ memory is prohibitive.
+Transformers dominate modern sequence modeling due to parallel computation (5--30$\times$ speedup), superior hardware utilization (40--60\% vs 1--5\%), and direct long-range gradient flow. RNNs retain advantages for online/streaming applications and extremely long sequences where $O(n^2)$ attention memory is prohibitive. Efficient attention mechanisms (Chapter~16) increasingly address this limitation.
 </div>
 
 <h2>Exercises</h2>
@@ -468,6 +510,8 @@ While RNNs were dominant for sequences, transformers now excel in most NLP tasks
 </div>
 
 <h2>Solutions</h2>
+
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
 
 <div class="solution"><strong>Solution:</strong> For vanilla RNN with $d=128$, $h=256$, $T=50$:
 

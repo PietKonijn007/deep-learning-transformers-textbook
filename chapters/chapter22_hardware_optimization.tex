@@ -1,330 +1,745 @@
-\chapter{Hardware Optimization and Deployment}
+\chapter{From PyTorch to Accelerator Silicon}
 \label{chap:hardware_optimization}
 
 \section*{Chapter Overview}
 
-Deploying transformers efficiently requires understanding hardware architectures, optimization techniques, and deployment strategies. This chapter covers GPUs, TPUs, model quantization, pruning, distillation, and production deployment best practices.
+You understand the mathematics of transformers. You know that attention is a softmax-weighted average over value vectors, that feed-forward networks are two linear projections with a nonlinearity, and that the whole structure repeats for dozens or hundreds of layers. But there is an enormous gap between understanding the math and understanding how it executes. When you write \texttt{output = self.attention(x)}, what happens? Which chip does the multiplication? How does data get there? Why does one serving configuration produce ten times the throughput of another on identical hardware?
+
+This chapter is not a catalog of tricks. It is a framework for reasoning about trade-offs. Seven layers of engineering separate your Python code from the transistors. Each layer is an optimization surface with its own controls, constraints, and failure modes. Decisions at one layer propagate to others. An engineer who understands these interactions can diagnose bottlenecks, select optimizations in the right order, and avoid wasted effort.
+
+We use NVIDIA H100 as the primary worked example and explicitly map every concept to AMD MI300X, Google TPU v5p, and AWS Trainium2. For PyTorch quantization implementation code (dynamic, static, and QAT), see Chapter~\ref{chap:pytorch_implementation}.
 
 \subsection*{Learning Objectives}
 
 \begin{enumerate}
-    \item Understand GPU/TPU architectures for transformers
-    \item Apply model quantization (INT8, FP16)
-    \item Implement pruning and sparsity
-    \item Use knowledge distillation for compression
-    \item Optimize inference latency and throughput
-    \item Deploy models in production environments
+    \item Understand the seven-layer inference stack from model definition to accelerator silicon
+    \item Reason about the prefill vs.\ decode asymmetry and its optimization implications
+    \item Apply tensor, pipeline, and expert parallelism with correct communication patterns
+    \item Understand frontend runtimes: eager dispatch, lazy tensors, graph capture, compilation, and replay
+    \item Configure inference engines: continuous batching, PagedAttention, and scheduler knobs
+    \item Analyze compute-bound vs.\ memory-bound regimes using roofline reasoning
+    \item Apply model compression: quantization (FP8, INT8, INT4), pruning, and distillation
+    \item Diagnose bottlenecks systematically and select optimizations by regime
+    \item Evaluate hardware across NVIDIA, AMD, TPU, and Trainium platforms
 \end{enumerate}
 
-\section{Hardware Architectures}
-\label{sec:hardware_architectures}
+\subsection*{Three Optimization Objectives}
 
-\subsection{GPU Architecture for Deep Learning}
+Every optimization targets one or more of three objectives. They often conflict, so you must choose which to prioritize before optimizing:
 
-Modern GPUs contain two primary types of compute units that are critical for transformer training and inference. CUDA cores are general-purpose floating-point units that can execute arbitrary arithmetic operations, while Tensor Cores are specialized matrix multiplication units designed specifically for deep learning workloads. Understanding the distinction between these units is essential for achieving optimal performance.
+\textbf{Latency:} time from request arrival to first/last token. Dominates interactive and real-time applications. Sensitive to serialized dependencies, interconnect latency, and runtime overhead.
 
-\textbf{CUDA Cores vs Tensor Cores.} CUDA cores provide flexibility for general computation but operate at lower throughput for matrix operations. A single NVIDIA A100 GPU contains 6912 CUDA cores capable of 19.5 TFLOPS at FP32 precision. In contrast, Tensor Cores are specialized hardware units that perform fused multiply-add operations on small matrix tiles. The same A100 GPU contains 432 third-generation Tensor Cores that deliver 312 TFLOPS for FP16 matrix multiplication, representing a 16× advantage over CUDA cores for this specific operation. This dramatic performance difference makes Tensor Cores essential for transformer workloads, which are dominated by matrix multiplications in attention mechanisms and feed-forward layers.
+\textbf{Throughput:} tokens per second across all concurrent requests. Dominates batch and offline workloads. Sensitive to accelerator utilization, batching efficiency, and memory capacity.
 
-\textbf{Memory Hierarchy.} GPU memory is organized in a hierarchy that trades capacity for access speed. At the top of the hierarchy, each streaming multiprocessor (SM) contains registers that provide the fastest access with approximately 256KB of storage per SM. These registers are private to individual threads and have single-cycle latency. The next level is shared memory, a software-managed cache that allows threads within a block to communicate efficiently. The A100 provides 164KB of shared memory per SM with latency of approximately 20-30 cycles. Below this sits the L2 cache, a 40MB hardware-managed cache shared across all SMs with latency around 200 cycles. Finally, high-bandwidth memory (HBM) provides the largest capacity at 40-80GB but with the highest latency of 300-400 cycles. This hierarchy means that keeping data in faster memory levels is critical for performance.
+\textbf{Cost-efficiency:} tokens per dollar (or per watt). Dominates at scale. Often requires trading latency for throughput via larger batches, aggressive quantization, or fewer devices.
 
-The memory bandwidth available at each level determines how quickly data can be moved. The A100's HBM provides 1.6 TB/s of bandwidth, while the V100 provides 900 GB/s. Although these numbers seem large, they are often the bottleneck for transformer operations. Consider that the A100's Tensor Cores can consume data at a rate of 312 TFLOPS × 2 bytes (FP16) = 624 TB/s if fully utilized, far exceeding the 1.6 TB/s that HBM can supply. This mismatch between compute capability and memory bandwidth is why memory optimization is crucial for transformers.
+Numbers in this chapter are a mix of conceptual examples, representative measurements from published benchmarks, and platform-specific values. Each is labeled accordingly. Exact performance depends on model, hardware, software versions, and workload shape. Always measure on your own stack.
 
-\textbf{Streaming Multiprocessors.} The A100 contains 108 streaming multiprocessors, each capable of executing multiple thread blocks concurrently. Each SM has its own register file, shared memory, and L1 cache, along with 4 Tensor Cores. The SM scheduler can switch between thread warps (groups of 32 threads) with zero overhead, hiding memory latency by executing other warps while some wait for data. Achieving high occupancy, defined as the ratio of active warps to maximum possible warps, is essential for hiding latency and maximizing throughput.
+%% ============================================================
+\section{The Two Phases of Inference: Prefill and Decode}
+\label{sec:prefill_decode}
 
-\subsection{Computational Intensity}
+Almost every optimization decision depends on which phase dominates your workload, and the two phases have completely different performance characteristics.
 
-\begin{definition}[Arithmetic Intensity]
-\label{def:arithmetic_intensity}
-\begin{equation}
-\text{Arithmetic Intensity} = \frac{\text{FLOPs}}{\text{Bytes transferred}}
-\end{equation}
-\end{definition}
+\textbf{Prefill (processing the prompt).} The entire prompt is processed in one forward pass. Every token in the prompt is handled simultaneously. If the prompt has 500 tokens, the model runs matrix multiplications on all 500 at once---for example, a $[500 \times 8192]$ activation matrix times a $[8192 \times 8192]$ weight matrix. Large matrix multiplications keep the GPU's compute cores busy. Prefill is \emph{compute-bound}.
 
-Arithmetic intensity measures the ratio of computation to memory access for a given operation, and it is a critical metric for understanding whether an operation will be compute-bound or memory-bound on modern hardware. For attention mechanisms, the arithmetic intensity varies significantly with sequence length, which has profound implications for optimization strategies.
+\textbf{Decode (generating the response).} After prefill, the model generates one token at a time. Each token requires a full forward pass through all layers, but the ``batch'' of new tokens is tiny---just one new token (or a handful if batching multiple requests). The matrix multiplication is now $[1 \times 8192]$ times $[8192 \times 8192]$. The weight matrix is exactly the same size as during prefill, but the activation vector is tiny. The GPU loads the entire weight matrix from memory just to multiply it by a single row. Decode is \emph{memory-bandwidth-bound}.
 
-Consider the computation of $\mQ \mK\transpose$ in the attention mechanism, where both $\mQ$ and $\mK$ have shape $[n, d]$ with $n$ being the sequence length and $d$ the head dimension. This matrix multiplication requires $2n^2d$ floating-point operations (FLOPs), as we compute $n^2$ dot products, each involving $d$ multiply-add operations. The memory traffic consists of loading $\mQ$ (requiring $nd$ elements) and $\mK$ (another $nd$ elements), plus writing the output matrix of size $n^2$. For large $n$, the output dominates, giving approximately $2nd$ bytes transferred. The arithmetic intensity is therefore approximately $\frac{2n^2d}{2nd} = \frac{nd}{d} = n$.
-
-This analysis reveals a crucial insight: for small sequence lengths (such as $n < 1024$), the arithmetic intensity is low, meaning the operation transfers nearly as much data as it performs computation. On an A100 GPU with 1.6 TB/s memory bandwidth and 312 TFLOPS compute capability, operations with intensity below 195 FLOPs/byte will be memory-bound. Since attention with $n = 512$ has intensity of only 512 FLOPs/byte when considering all memory traffic, it operates well below the compute-bound regime. For large sequence lengths ($n > 4096$), the arithmetic intensity increases proportionally, and the operation becomes increasingly compute-bound, allowing better utilization of Tensor Cores. This is why techniques like FlashAttention, which restructure attention to increase data reuse and reduce memory traffic, provide the most dramatic speedups for moderate sequence lengths where memory bandwidth is the primary bottleneck.
-
-\subsection{Tensor Core Optimization}
-
-Tensor Cores achieve their peak performance only when specific conditions are met regarding data types, matrix dimensions, and memory layout. Understanding these requirements is essential for extracting maximum performance from modern GPUs.
-
-\textbf{Precision Requirements.} Tensor Cores support several precision modes, each with different performance characteristics. FP16 (half precision) provides 312 TFLOPS on the A100, making it the standard choice for training. BF16 (bfloat16) offers the same throughput but with a larger dynamic range that better matches FP32, reducing the need for loss scaling during mixed-precision training. For inference, INT8 provides 624 TOPS, doubling throughput at the cost of reduced precision. The choice of precision involves trading off between speed, memory usage, and numerical accuracy.
-
-\textbf{Dimension Requirements.} Tensor Cores operate on small matrix tiles and achieve peak performance when matrix dimensions are multiples of specific values. For FP16 operations, dimensions should be multiples of 8, while BF16 and INT8 operations prefer multiples of 16. When dimensions are not multiples of these values, the hardware must pad matrices or fall back to slower execution paths. For example, a matrix multiplication with dimensions 1023×1023 will perform significantly worse than 1024×1024 because the former requires padding or partial tile operations.
-
-\begin{example}[BERT-base Tensor Core Utilization]
-\label{ex:bert_tensor_core}
-Consider BERT-base with hidden size $d=768$ and 12 attention heads. The per-head dimension is $d_k = 768/12 = 64$, which is a multiple of 8, allowing efficient Tensor Core usage. The query, key, and value projections have shape $[b \times n, 768] \times [768, 768]$ where $b$ is batch size and $n$ is sequence length.
-
-\textbf{Baseline configuration:} Batch size 16, sequence length 128, FP32 precision
+This distinction is critical because different bottlenecks require different optimizations:
 \begin{itemize}
-    \item Throughput: 145 sequences/second
-    \item GPU utilization: 42\%
-    \item Memory bandwidth: 890 GB/s (56\% of peak)
+    \item Making the compute cores faster (e.g., FP8) helps prefill much more than decode.
+    \item Reducing memory traffic (e.g., quantizing weights so there is less to load) helps decode much more than prefill.
+    \item Reducing communication latency (e.g., faster all-reduce) helps decode more, because decode's per-token compute is so short that even a few microseconds of communication overhead is proportionally large.
 \end{itemize}
 
-\textbf{Optimized configuration:} Batch size 32, sequence length 128, FP16 with Tensor Cores
-\begin{itemize}
-    \item Throughput: 520 sequences/second (3.6× improvement)
-    \item GPU utilization: 78\%
-    \item Memory bandwidth: 1.45 TB/s (91\% of peak)
-    \item Tensor Core utilization: 85\%
-\end{itemize}
+A chatbot generates thousands of decode tokens per request but prefills once, so decode performance usually dominates. A document summarization service might process very long prompts and generate short summaries, so prefill dominates instead.
 
-The optimization involved: (1) switching to FP16 to enable Tensor Cores, (2) increasing batch size to improve arithmetic intensity, and (3) ensuring all matrix dimensions are multiples of 8. The result is a 3.6× speedup with negligible accuracy loss when using mixed-precision training with loss scaling.
-\end{example}
 
-\textbf{Achieving Peak Performance.} Reaching 90\% of theoretical peak TFLOPS requires careful attention to several factors. First, ensure sufficient work is available by using large batch sizes or long sequences to keep all Tensor Cores busy. Second, minimize memory transfers by fusing operations and reusing data in shared memory. Third, maintain high occupancy by using appropriate thread block sizes and avoiding resource limitations. Finally, profile the application to identify bottlenecks using tools like NVIDIA Nsight Compute, which can show Tensor Core utilization and identify whether operations are compute-bound or memory-bound.
+%% ============================================================
+\section{The Seven-Layer Inference Stack}
+\label{sec:seven_layer_stack}
 
-\subsection{TPU Architecture}
-
-Tensor Processing Units (TPUs) represent Google's specialized hardware for machine learning workloads, built around a fundamentally different architectural philosophy than GPUs. At the core of each TPU is a systolic array, a grid of processing elements where data flows rhythmically through the array in a wave-like pattern. This architecture is specifically optimized for the matrix multiplications that dominate transformer computations, achieving high efficiency by minimizing data movement and maximizing computational density.
-
-The TPU v4, Google's latest generation at the time of writing, delivers 275 TFLOPS of compute throughput using bfloat16 precision, a 16-bit floating-point format that maintains the dynamic range of FP32 while halving memory requirements. The systolic array architecture enables this performance with 900 GB/s of memory bandwidth, comparable to high-end GPUs. Unlike GPUs, which evolved from graphics rendering and retain general-purpose programmability, TPUs are purpose-built for machine learning and sacrifice some flexibility for higher efficiency on matrix operations.
-
-The choice between TPUs and GPUs involves several trade-offs. GPUs offer greater flexibility through CUDA programming and support for arbitrary computational patterns, making them well-suited for research environments where novel architectures and operations are frequently explored. TPUs excel at large-scale training of standard transformer architectures, particularly when very large batch sizes can be used to fully utilize the systolic array. In terms of raw performance, the A100 GPU delivers 312 TFLOPS for FP16 operations compared to the TPU v4's 275 TFLOPS for bfloat16, though direct comparisons are complicated by differences in precision formats and memory hierarchies.
-
-Memory capacity also differs between the platforms. Modern GPUs like the A100 offer 40-80 GB of high-bandwidth memory per device, while TPU v4 chips provide 32 GB per chip but are typically deployed in pods of multiple chips with fast interconnects. For training, GPUs are often preferred for their flexibility and mature software ecosystem, while TPUs can be more cost-effective for large-scale production training of well-established architectures. The optimal choice depends on the specific workload, scale, and whether the application requires custom operations or can work within the constraints of TPU-optimized frameworks like JAX and TensorFlow.
+The path from PyTorch to silicon follows seven conceptual layers, numbered 7 (closest to you) down to 1 (bare metal). The top layers are portable; the bottom layers are device-specific. A single software tool (e.g., XLA) may span multiple conceptual layers. The layer model is an analytical framework, not a claim about software module boundaries.
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{lll}
+\small
+\begin{tabular}{clllp{3.2cm}}
 \toprule
-\textbf{Aspect} & \textbf{GPU} & \textbf{TPU} \\
+\textbf{\#} & \textbf{Layer} & \textbf{What It Controls} & \textbf{Portable?} & \textbf{Example Implementations} \\
 \midrule
-Flexibility & High (general purpose) & Medium (ML-specific) \\
-Peak FLOPS & 312 (A100 FP16) & 275 (v4 bf16) \\
-Memory & 40-80 GB & 32 GB (per chip) \\
-Batch size & Medium-Large & Very Large \\
-Best for & Flexibility, research & Large-scale training \\
+7 & Model Definition & Architecture dims, parallelism, sharding & Yes & Same \texttt{nn.Module} on all backends \\
+6 & Frontend Runtime & Eager dispatch, lazy tracing, compiled capture & Mostly & CUDA/HIP eager; XLA lazy; \texttt{torch.compile} \\
+5 & Graph Compilation & Fusion, memory plan, comm scheduling & IR portable & TorchInductor; XLA HLO; NeuronX Compiler \\
+4 & Inference Engine & Batching, KV-cache mgmt, orchestration & Concepts yes & vLLM; TensorRT-LLM; NeuronX Serving \\
+3 & Device Kernels & GEMM, attention, all-reduce implementations & Concepts only & cuBLAS+NCCL; rocBLAS+RCCL; XLA; Neuron \\
+2 & Device Compiler & Final lowering to native ISA, scheduling & No & nvcc$\to$SASS; LLVM$\to$AMDGPU; XLA$\to$TPU ISA \\
+1 & Accelerator HW & Compute units, memory hierarchy, interconnect & No & H100+NVLink; MI300X+IF; TPU+ICI; Trn2 \\
 \bottomrule
 \end{tabular}
+\caption{The seven-layer inference stack. Layers 7--5 are portable across vendors. Layers 3--1 are device-specific.}
+\label{tab:seven_layers}
 \end{table}
 
-\section{Memory Optimization Techniques}
-\label{sec:memory_optimization}
+How the layers interact: Layer~7 determines communication patterns---how often devices must talk and how much data they exchange. Layer~4 determines request shape distributions---how variable or regular the work is. Layers~5 and~2 determine how much overhead is optimized away. Layers~3 and~1 set the execution efficiency ceiling---the physical limits of how fast things can run.
 
-Memory access patterns have a profound impact on GPU performance, often determining whether an operation runs at 10\% or 90\% of peak throughput. This section explores the key memory optimization techniques that are essential for efficient transformer implementations.
+\begin{keypoint}[Misconception Alert]
+A single tool may span multiple layers. XLA implements both graph optimization (Layer~5) and final lowering (Layer~2). vLLM orchestrates scheduling (Layer~4) and inserts collectives (affecting Layer~3). Do not assume one-to-one mapping between tools and layers.
+\end{keypoint}
 
-\subsection{Coalesced Memory Access}
+\subsection{Backend Cheat Sheet}
 
-When threads in a warp access global memory, the hardware attempts to combine these accesses into a single transaction. Coalesced access occurs when consecutive threads access consecutive memory locations, allowing the hardware to issue one memory transaction instead of 32 separate ones. For example, if thread 0 accesses address 0, thread 1 accesses address 4, thread 2 accesses address 8, and so on (assuming 4-byte elements), the hardware can coalesce these into a single 128-byte transaction. In contrast, if threads access random or strided locations, each access may require a separate transaction, reducing effective bandwidth by up to 32×.
+This reference maps every concept to its vendor-specific implementation. Later sections cite it rather than repeating the mapping.
 
-For transformer operations, coalesced access is particularly important in matrix multiplications and attention computations. When loading a row of the query matrix, ensuring that consecutive threads load consecutive elements allows full utilization of memory bandwidth. This often requires careful consideration of matrix layout (row-major vs column-major) and access patterns in custom CUDA kernels.
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Concept} & \textbf{NVIDIA (CUDA)} & \textbf{AMD (ROCm)} & \textbf{Google TPU} & \textbf{AWS Trainium} \\
+\midrule
+Graph capture & \texttt{torch.compile} & \texttt{torch.compile} & XLA lazy/compile & \texttt{torch\_neuronx.trace} \\
+IR & Inductor/Triton & Inductor+HIP & StableHLO/HLO & Neuron HLO \\
+GEMM library & cuBLAS/CUTLASS & rocBLAS/CK & XLA GEMM & Neuron GEMM \\
+Attention kernel & FlashAttention-2/3 & CK FlashAttn & Pallas attention & Neuron attention \\
+All-reduce & NCCL & RCCL & XLA collectives & Neuron collectives \\
+LLM engine & vLLM, TRT-LLM & vLLM ROCm & vLLM TPU & NeuronX Serving \\
+Graph replay & CUDA Graphs & hipGraphs & XLA executable & Neuron NEFF \\
+Intra-node link & NVLink/NVSwitch & Infinity Fabric & ICI torus & NeuronLink \\
+Inter-node fabric & InfiniBand NDR & InfiniBand NDR & ICI across pods & EFA (3.2~Tb/s) \\
+\bottomrule
+\end{tabular}
+\caption{Backend cheat sheet: vendor-specific implementations of each inference stack concept.}
+\label{tab:backend_cheat_sheet}
+\end{table}
 
-\subsection{Shared Memory and Bank Conflicts}
+\subsection{Latency and Bandwidth Ladder}
 
-Shared memory is divided into 32 banks that can be accessed simultaneously. When multiple threads in a warp access the same bank but different addresses, a bank conflict occurs, serializing the accesses and reducing throughput. The A100's shared memory has 32 banks with 4-byte bank width, meaning addresses that differ by 128 bytes map to the same bank.
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{llllll}
+\toprule
+\textbf{Link Type} & \textbf{Example} & \textbf{BW (bidi)} & \textbf{Latency} & \textbf{Scope} & \textbf{Use Case} \\
+\midrule
+NVLink 4.0 & H100 (8 GPUs) & 900~GB/s & $\sim$1--2~$\mu$s & Intra-node & TP, EP \\
+NVLink 5.0 & B200 (72 via NVSwitch) & 1.8~TB/s & $\sim$1--2~$\mu$s & Multi-rack & Extended TP \\
+ICI torus & TPU v5p pod slice & Multi-TB/s & $\sim$1--3~$\mu$s & Within pod & TP/EP \\
+Infinity Fabric & MI300X (8 GPUs) & $\sim$896~GB/s & $\sim$2--3~$\mu$s & Intra-node & TP, EP \\
+NeuronLink & Trn2 (16 chips) & $\sim$1.6~TB/s & $\sim$few~$\mu$s & Intra-instance & TP \\
+InfiniBand NDR & Multi-node cluster & 400~Gb/s/port & $\sim$5--10~$\mu$s & Cross-node & PP, param sync \\
+EFA & AWS instances & 3.2~Tb/s/inst & $\sim$5--15~$\mu$s & Cross-node & PP, cross-inst EP \\
+\bottomrule
+\end{tabular}
+\caption{Interconnect latency and bandwidth ladder. TP (frequent, latency-sensitive) goes on the fastest link. PP (infrequent, large) tolerates slower links. EP (all-to-all) requires high bisection bandwidth.}
+\label{tab:bandwidth_ladder}
+\end{table}
 
-In attention implementations, shared memory is commonly used to cache tiles of the query, key, and value matrices. Careful padding of these tiles can eliminate bank conflicts. For example, if each thread block loads a 64×64 tile of FP16 values, adding 8 elements of padding to each row ensures that consecutive rows start at different banks, eliminating conflicts when threads access columns.
 
-\begin{example}[Shared Memory Optimization in Attention]
-\label{ex:shared_memory_attention}
-Consider computing attention scores $\mA = \mQ\mK\transpose$ where $\mQ, \mK \in \mathbb{R}^{n \times d}$. A naive implementation loads tiles of $\mQ$ and $\mK$ into shared memory and computes partial results.
+%% ============================================================
+\section{Layer 7: The Model Definition}
+\label{sec:model_definition}
 
-\textbf{Unoptimized approach:}
-\begin{itemize}
-    \item Tile size: 64×64 FP16 values
-    \item Shared memory per tile: $64 \times 64 \times 2 = 8192$ bytes
-    \item Bank conflicts when accessing columns: 32-way conflicts
-    \item Effective bandwidth: 50 GB/s (3\% of peak)
-\end{itemize}
+When you define a transformer in PyTorch, you lock in decisions that propagate through every layer below.
 
-\textbf{Optimized approach with padding:}
-\begin{itemize}
-    \item Tile size: 64×72 FP16 values (8 elements padding per row)
-    \item Shared memory per tile: $64 \times 72 \times 2 = 9216$ bytes
-    \item No bank conflicts: consecutive rows in different banks
-    \item Effective bandwidth: 1.4 TB/s (88\% of peak)
-\end{itemize}
+\textbf{Tensor shapes:} hidden dimension $H$, head count, KV-head count, FFN intermediate size, layer count. These determine every GEMM shape, every collective message size, and the memory footprint breakdown.
 
-The 12.5\% increase in shared memory usage eliminates bank conflicts and increases bandwidth by 28×, demonstrating the critical importance of memory access patterns.
+\textbf{Divisibility constraints:} head counts must divide evenly by TP degree. KV-head counts must also divide. FFN dimensions affect kernel tile efficiency.
+
+\textbf{Communication patterns:} TP degree fixes the number and frequency of all-reduces. PP depth fixes stage boundary point-to-point transfers. EP determines all-to-all topology requirements.
+
+\textbf{Memory footprint classes:} model weights, KV-cache per token, activation memory per layer. Each scales differently with parallelism.
+
+\begin{keypoint}[What Layer 7 Cannot Fix Later]
+Poor divisibility (e.g., 8 KV-heads with TP-3 gives $8/3$ which is not integer), hidden dimensions misaligned with kernel tile sizes (typically multiples of 128), or an architecture whose communication volume exceeds interconnect capacity at the target TP degree.
+\end{keypoint}
+
+\subsection{Why Multi-Device Execution Is Required}
+
+Multi-device execution is required for three distinct reasons, and they are not equivalent:
+
+\textbf{Parameter memory fit.} A 70B model needs $\sim$140~GB in BF16 ($70 \times 10^9 \times 2$ bytes). An H100 has 80~GB, a TPU~v5p has 95~GB, and a Trainium2 has 96~GB---the weights alone do not fit. MI300X at 192~GB can hold 70B weights plus meaningful KV-cache on one device, but this is the exception.
+
+\textbf{KV-cache fit.} Even if weights fit, the KV-cache can be enormous. For a 70B model with 128K context length and 80 layers, a single request at full context can require 10+~GB. A few concurrent requests exhaust remaining memory.
+
+\textbf{Throughput and latency targets.} Even if everything fits, a single device may not meet requirements. A single GPU must stream all 140~GB of weights through memory for every decode token---that alone takes $\sim$42~ms at 3.35~TB/s on H100. Splitting weights across 4 GPUs means each streams only 35~GB, roughly $4\times$ faster.
+
+\subsection{Tensor Parallelism: Splitting Weight Matrices}
+\label{sec:tensor_parallelism}
+
+\subsubsection{What All-Reduce Actually Does}
+
+Imagine four devices, each holding a number: Device~0 has 10, Device~1 has 20, Device~2 has 30, Device~3 has 40. An all-reduce(sum) computes the sum ($10 + 20 + 30 + 40 = 100$) and distributes the result to every device. After the all-reduce, all four devices hold the value 100.
+
+In LLM inference, the ``numbers'' are tensors---vectors or matrices of thousands of floating-point values. When TP splits a weight matrix across devices, each device computes a partial result. The all-reduce sums these partial results so every device gets the complete answer.
+
+Two critical characteristics of all-reduce determine TP's performance impact:
+
+\textbf{Frequency:} a standard transformer block requires two all-reduces per layer (one after the attention output projection, one after the FFN down-projection). For an 80-layer model, that is 160 all-reduces per token generated.
+
+\textbf{Message size:} during decode, the data being summed is a vector of size $[H]$ in the chosen precision. For $H=8192$ in BF16: $8192 \times 2 = 16{,}384$ bytes $= 16$~KB. At 900~GB/s of NVLink bandwidth, 16~KB transfers in nanoseconds---but the latency of initiating the all-reduce ($\sim$1--2~$\mu$s) dominates. This is why decode TP performance is \emph{latency-bound}, not bandwidth-bound.
+
+\subsubsection{Column-Parallel and Row-Parallel GEMMs}
+
+TP splits weight matrices across devices using two deliberately paired patterns.
+
+\textbf{Column-parallel GEMM (no communication needed).} Split weight matrix $\mW$ with shape $[8192 \times 8192]$ by columns: Device~0 gets $[8192 \times 4096]$, Device~1 gets $[8192 \times 4096]$. Input $\vx\,[1 \times 8192]$ goes to both devices. Each produces half the output. No communication needed---but each device only has half the result.
+
+\textbf{Row-parallel GEMM (all-reduce required).} The next weight matrix is split by rows. Each device multiplies its local input half by its local weight half, producing partial sums $[1 \times 8192]$. These must be summed via all-reduce to get the correct result.
+
+\begin{keypoint}[The Megatron-LM Pairing]
+By alternating column-parallel then row-parallel within each transformer block, the column-parallel output feeds directly as the row-parallel input. Only the row-parallel step needs an all-reduce. A standard transformer block has two such pairs (attention: QKV column-parallel $\to$ output row-parallel; FFN: gate/up column-parallel $\to$ down row-parallel), so each layer needs exactly two all-reduces. This pattern works identically on any hardware that supports all-reduce.
+\end{keypoint}
+
+\textbf{Per-layer communication volume.} Bytes per all-reduce per device $= H \times p$, where $p$ = bytes per element. Per layer: $2 \times H \times p$. For decode with $H=8192$, BF16: $2 \times 8192 \times 2 = 32$~KB per layer. For 80 layers: $\sim$2.6~MB total.
+
+\begin{example}[Complete Per-Device Walkthrough: TP-2]
+\label{ex:tp2_walkthrough}
+Trace one transformer layer with TP-2. $H=8192$, 32 query heads (GQA: 8 KV-heads, $d_{\text{head}}=256$), FFN$=22016$. Decode: $B=1$, $S=1$. All values BF16.
+
+\textbf{Step 1 --- QKV Projection (column-parallel, NO communication).} Both devices receive the same input $\vx\,[1 \times 8192]$. Each multiplies by its local Q, K, V column shards. Device~0 produces: $\mQ_0\,[1 \times 4096]$ (heads 0--15), $\mK_0\,[1 \times 512]$ (KV-heads 0--3), $\mV_0\,[1 \times 512]$.
+
+\textbf{Step 2 --- Attention (local, NO communication).} Each device runs attention on its own heads against its own KV-cache shard. Completely independent per device.
+
+\textbf{Step 3 --- Output Projection + ALL-REDUCE.} Row-parallel step. Each device computes partial $= [1 \times 4096] \times [4096 \times 8192] = [1 \times 8192]$. All-reduce sums them. Data transferred: $8192 \times 2 = 16$~KB per device.
+
+\textbf{Steps 4--5 --- FFN (same column$\to$row pattern).} Column-parallel gate+up (no communication), local SwiGLU, row-parallel down + all-reduce (another 16~KB).
+
+\textbf{Total for this layer:} 2 all-reduces, 32~KB moved. For 80 layers: 160 all-reduces, $\sim$2.6~MB. At NVLink latencies of $\sim$1--2~$\mu$s per all-reduce, communication overhead is $\sim$160--320~$\mu$s per token. On slow interconnects (InfiniBand at $\sim$5--10~$\mu$s), the same 160 all-reduces cost 800--1600~$\mu$s---up to 30\% overhead. This is why TP must use the fastest available link.
 \end{example}
 
-\subsection{Memory Bandwidth Utilization}
+\subsection{Pipeline Parallelism}
 
-Maximizing memory bandwidth requires ensuring that memory operations are large enough to amortize transaction overhead and that the GPU has sufficient concurrent operations to hide latency. Small transfers are inefficient because they cannot fully utilize the 32-byte or 128-byte cache line sizes. Additionally, launching enough thread blocks to keep all memory controllers busy is essential for achieving peak bandwidth.
+While TP splits every layer across devices, PP assigns entire layers to different devices. Device~0 computes layers 0--39; Device~1 computes layers 40--79. Each device holds complete, unsharded weights for its assigned layers.
 
-For transformers, memory bandwidth is often the limiting factor during attention computation with short sequences. When sequence length $n < 1024$, the arithmetic intensity of attention is low, meaning each floating-point operation requires loading relatively more data from memory. Techniques like Flash Attention address this by restructuring computations to maximize data reuse in shared memory, reducing the number of global memory accesses.
+Communication is point-to-point: after Device~0 finishes, it sends the activation tensor to Device~1. During prefill with a 2048-token prompt: activation $= [1 \times 2048 \times 8192] \times 2$ bytes $= 32$~MB. But this transfer happens only once per stage boundary, not once per layer. During decode ($S=1$): only 16~KB. PP therefore tolerates higher-latency links.
 
-\section{Kernel Fusion and Operation Optimization}
-\label{sec:kernel_fusion}
+\textbf{Pipeline bubble:} the key drawback. With simple scheduling, the fraction of time wasted to bubbles is roughly $1/\text{PP\_degree}$. Micro-batching reduces this by feeding multiple small batches in rapid succession. Decode is particularly vulnerable because each micro-batch has so little compute that communication latency between stages becomes proportionally larger.
 
-Kernel fusion combines multiple operations into a single GPU kernel, reducing memory traffic and kernel launch overhead. This technique is particularly effective for transformers, where many operations are memory-bound and benefit from data reuse.
+\subsection{Expert Parallelism}
 
-\subsection{Fusion Opportunities in Transformers}
+EP is specific to Mixture-of-Experts (MoE) models, where each transformer layer has multiple ``expert'' FFN blocks and a router that sends each token to only 1--2 experts. EP places different experts on different devices. The communication pattern is all-to-all: every device may need to send tokens to every other device.
 
-Standard transformer implementations launch separate kernels for each operation, requiring intermediate results to be written to and read from global memory. For example, computing layer normalization followed by dropout requires writing the normalized values to memory, then reading them back for the dropout operation. Fusing these operations allows the normalized values to remain in registers or shared memory, eliminating the round-trip to global memory.
+All-to-all is the most interconnect-demanding collective. This is where bisection bandwidth matters: if you split 8 devices into two groups of 4, the total bandwidth between the groups determines how fast all-to-all runs. NVSwitch provides full bisection bandwidth for 8 GPUs. InfiniBand and EFA between nodes typically do not provide sufficient bisection bandwidth for efficient cross-node EP.
 
-\textbf{Common fusion patterns:}
-\begin{enumerate}
-    \item \textbf{Layer norm + dropout:} Normalize activations and apply dropout in a single pass, keeping intermediate values in registers.
-    \item \textbf{GELU + bias:} Compute the GELU activation and add bias without storing intermediate results.
-    \item \textbf{Attention score + softmax + dropout:} Compute $\text{softmax}(\mQ\mK\transpose/\sqrt{d_k})$ and apply dropout in one kernel.
-    \item \textbf{Residual + layer norm:} Add residual connection and normalize in a single operation.
-\end{enumerate}
+\textbf{Routing skew risk:} if the router disproportionately sends tokens to a few experts, those devices become bottlenecks while others idle. Load-balancing losses and capacity factors in the model architecture (Layer~7) directly affect hardware utilization at Layers~3/1.
+
+Multiple specialized EP kernel libraries have emerged for inter-node communication:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Aspect} & \textbf{DeepEP} & \textbf{PPLX-Kernels} & \textbf{UCCL-EP} & \textbf{NCCL a2a} \\
+\midrule
+GPU vendor & NVIDIA only & NVIDIA only & NVIDIA + AMD & NVIDIA (+AMD) \\
+NIC requirement & Mellanox CX (IB) & EFA or IB & Any RDMA & Any \\
+GPU-to-NIC path & IBGDA (direct) & NVSHMEM+libfabric & CPU proxy & CPU-initiated \\
+FP8 support & Native & Native + block scaling & Native & Via framework \\
+Cloud deployment & On-prem IB & AWS (EFA) + IB & AWS, GCP, on-prem & Any \\
+\bottomrule
+\end{tabular}
+\caption{EP kernel library comparison for inter-node MoE communication.}
+\label{tab:ep_kernels}
+\end{table}
+
+\subsection{Context Parallelism and Sequence Parallelism}
+
+\textbf{Context Parallelism (CP)} addresses what happens when the sequence is so long that the KV-cache for a single request does not fit on one device. CP splits the sequence across devices. Ring attention is the most common implementation: devices are arranged in a logical ring, each computing attention for its local chunk against its local KV block, then passing its KV block to the next device.
+
+\textbf{Sequence Parallelism (SP)} is a refinement of TP that reduces memory usage. In standard TP, activations between GEMMs are replicated on every device. SP uses reduce-scatter (each device gets $1/P$ of the result) followed by a deferred all-gather. Between GEMMs, each device holds only $1/P$ of the activations. Total communication volume is the same, but peak activation memory drops by the TP degree.
+
+\subsection{Parallelism Selection Framework}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Scenario} & \textbf{Start with} & \textbf{Why} & \textbf{Watch out for} \\
+\midrule
+Dense model, doesn't fit & TP first, then PP & TP distributes every layer & TP beyond NVLink domain \\
+Decode latency critical & TP, minimize degree & Each TP AR adds latency & Over-aggressive TP \\
+Long context, high concurrency & TP + CP or KV quant & KV-cache dominates memory & CP ring overhead \\
+MoE model & EP first, TP within & EP native to MoE & All-to-all needs bisection BW \\
+\bottomrule
+\end{tabular}
+\caption{Parallelism selection framework: start from requirements and work down.}
+\label{tab:parallelism_selection}
+\end{table}
+
+
+%% ============================================================
+\section{Layer 6: Frontend Runtime}
+\label{sec:frontend_runtime}
+
+This layer determines how Python model code translates into work that lower layers execute. It controls execution semantics (eager vs.\ lazy vs.\ compiled dispatch), Python-to-accelerator overhead, and how operations are grouped before graph compilation.
+
+\subsection{Eager Mode (NVIDIA, AMD)}
+
+Default PyTorch on CUDA/ROCm: each operation dispatches immediately. When your code calls \texttt{torch.matmul(x, W)}, PyTorch's C++ dispatcher selects a kernel, launches it on the GPU, and returns control to Python. Each dispatch involves Python interpreter overhead, C++ dispatch, kernel launch, and potentially synchronization.
+
+For large operations (e.g., a big prefill GEMM that takes milliseconds), this overhead is negligible. But during decode with TP-4, individual GEMMs on tiny tensors may take only 5--15~$\mu$s of actual compute. If every dispatch adds 3--5~$\mu$s of overhead, the overhead is 20--50\% of compute time.
+
+\subsection{Lazy Tensor Mode (TPU, Trainium)}
+
+On TPU, PyTorch/XLA records operations into a graph instead of executing each immediately. Operations accumulate until an explicit barrier (\texttt{xm.mark\_step()}), at which point XLA compiles the entire graph, caches the result, and dispatches it as a single unit. The advantage: XLA can optimize many operations together. The downside: debugging is harder because errors surface only at compilation time. Trainium supports both lazy tensors (via XLA) and \texttt{torch.compile} (via torch-neuronx).
+
+\subsection{Graph Capture, Compilation, and Replay}
+
+These three concepts are frequently conflated but are distinct steps with different costs and benefits.
+
+\begin{definition}[Graph Capture, Compilation, and Replay]
+\label{def:graph_three_steps}
+\textbf{Step 1: Graph capture} records what operations to perform, in what order, with what tensor shapes---without executing them. Mechanisms: \texttt{torch.compile} (Dynamo traces Python), XLA lazy tensors, \texttt{torch\_neuronx.trace}. Capture alone provides almost no performance benefit.
+
+\textbf{Step 2: Graph compilation} (Layer~5) optimizes the captured graph: fusing operations, planning memory layout, scheduling communication. Compilation can take seconds to minutes, but produces much faster execution.
+
+\textbf{Step 3: Graph replay} (Layer~2) re-executes a compiled graph with new input data---as long as tensor shapes are identical. On NVIDIA: CUDA Graphs. On AMD: hipGraphs. On TPU: XLA cached executables. On Trainium: Neuron NEFFs. Replay skips both capture and compilation entirely.
+\end{definition}
+
+The three steps are cumulative: capture alone does little, capture + compilation gives moderate benefit, capture + compilation + replay gives the full benefit. For production serving, all three are essential.
+
+\begin{keypoint}[Why Replay Requires Static Shapes]
+The compiled execution plan includes specific memory addresses, buffer sizes, and kernel launch configurations that depend on tensor dimensions. If you change the batch size from 16 to 17, every buffer size changes and the old plan is invalid. Shape bucketing (Section~\ref{sec:graph_compilation}) addresses this by pre-compiling plans for a fixed set of shapes.
+\end{keypoint}
+
+\subsection{Process Groups and Communicators}
+
+Multi-device collectives require process groups that define which devices participate together. In a TP-4, PP-2 deployment on 8 devices: two TP groups exist (devices $[0,1,2,3]$ and $[4,5,6,7]$). Four PP groups exist as device pairs across stages (e.g., $[0,4]$, $[1,5]$). Model code (Layer~7) defines group shapes; the serving framework (Layer~4) instantiates them; the communication library (Layer~3) automatically selects the best algorithm.
+
+%% ============================================================
+\section{Layer 5: Graph Compilation}
+\label{sec:graph_compilation}
+
+Graph compilation transforms a captured operation graph into an optimized execution plan. It controls which operations are fused, how memory is allocated and reused, how communication is scheduled relative to computation, and what IR is emitted for the device compiler.
+
+\subsection{Four Optimization Mechanisms}
+
+\textbf{1. Host overhead elimination.} Replaces per-op Python dispatch with a single graph launch. Most impactful for decode, where individual operations are tiny.
+
+\textbf{2. Memory traffic reduction via fusion.} Combines operations that share intermediate tensors into fused kernels. Without fusion, each intermediate is written to HBM and read back. Fusion keeps intermediates in fast on-chip memory. Most impactful for prefill, where intermediate tensors are large.
+
+\textbf{3. Memory layout planning.} Optimizes tensor arrangement in memory (row-major vs.\ column-major) to match downstream kernel access patterns. Poor layout can halve bandwidth utilization.
+
+\textbf{4. Communication scheduling.} Overlaps collective communication with computation by scheduling them on separate hardware resources. Impactful whenever TP all-reduce is on the critical path.
+
+\subsection{Fusion Taxonomy}
+
+Vendor documentation uses ``fusion'' to mean three very different things. Confusing them leads to incorrect performance reasoning.
+
+\textbf{Operator fusion} combines multiple logical operations into a single kernel launch. Example: GEMM $\to$ bias add $\to$ ReLU becomes one kernel. Intermediate results never leave on-chip memory.
+
+\textbf{Kernel fusion} is a specialized, hand-written kernel implementing a complex multi-step computation internally. The canonical example is FlashAttention: instead of computing $\mQ\mK\transpose$ (writing the enormous $N \times N$ attention matrix to HBM), applying softmax, then multiplying by $\mV$, FlashAttention does all of this inside a single kernel by tiling the computation into blocks that fit in shared memory (228~KB on H100). For a 2048-token sequence, the naive attention matrix would be $2048 \times 2048 \times 2$ bytes $= 8$~MB---FlashAttention eliminates this entirely from HBM traffic.
+
+\textbf{Schedule overlap} runs communication and computation simultaneously on different hardware resources. A GPU has Tensor Cores for compute and NVLink controllers for communication---physically different silicon that can operate in parallel. This is not fusion; the operations remain separate.
 
 \begin{example}[Layer Norm + Dropout Fusion]
 \label{ex:layernorm_dropout_fusion}
-Consider layer normalization followed by dropout on a tensor of shape $[32, 128, 768]$ (batch size 32, sequence length 128, hidden size 768).
+Consider layer normalization followed by dropout on a tensor of shape $[32, 128, 768]$.
 
-\textbf{Unfused implementation:}
-\begin{itemize}
-    \item Layer norm kernel: Read 3.1M elements, write 3.1M elements
-    \item Dropout kernel: Read 3.1M elements, write 3.1M elements
-    \item Total memory traffic: 12.4M elements = 24.8 MB (FP16)
-    \item Execution time: 0.18 ms
-\end{itemize}
+\textbf{Unfused:} Layer norm kernel reads/writes 3.1M elements; dropout kernel reads/writes 3.1M elements. Total memory traffic: 24.8~MB (FP16). Time: 0.18~ms.
 
-\textbf{Fused implementation:}
-\begin{itemize}
-    \item Single kernel: Read 3.1M elements, write 3.1M elements
-    \item Total memory traffic: 6.2M elements = 12.4 MB (FP16)
-    \item Execution time: 0.10 ms
-\end{itemize}
-
-The fused kernel achieves 1.8× speedup by halving memory traffic and eliminating kernel launch overhead. For a 12-layer transformer, this fusion appears 24 times per forward pass (twice per layer), providing substantial cumulative savings.
+\textbf{Fused:} Single kernel reads/writes 3.1M elements. Total traffic: 12.4~MB. Time: 0.10~ms. The $1.8\times$ speedup comes from halving memory traffic. For a 12-layer transformer, this fusion appears 24 times per forward pass.
 \end{example}
 
-\subsection{Flash Attention: Fused Attention Implementation}
+\subsection{Static Shapes and Shape Bucketing}
 
-Flash Attention represents a sophisticated application of kernel fusion to the attention mechanism. Standard attention implementations compute $\mA = \mQ\mK\transpose$, write $\mA$ to memory, read it back for softmax, write the result, read it again for multiplication with $\mV$, and finally write the output. This results in $O(n^2)$ memory reads and writes where $n$ is sequence length.
+Graph replay requires that every tensor has exactly the same shape as when compiled. Real inference requests have variable sequence lengths. The solution is \emph{shape bucketing}: the inference engine rounds each request's dimensions up to the nearest bucket boundary (e.g., $[64, 128, 256, 512, 1024, 2048, 4096]$). Each bucket has a pre-compiled graph. More buckets means less padding waste but a larger compile cache.
 
-Flash Attention restructures the computation to work on tiles that fit in shared memory. It computes attention for one tile at a time, keeping intermediate results in fast memory and only writing the final output. This reduces memory traffic from $O(n^2)$ to $O(n)$, providing dramatic speedups for long sequences.
+\subsection{When Compilation Hurts}
+
+\textbf{Compile time:} initial compilation can take seconds to minutes. For short-running jobs, this overhead may dominate.
+
+\textbf{Graph breaks:} if the compiler encounters an unsupported operation, it falls back to eager mode for that region. A single graph break can negate most compilation benefits.
+
+\textbf{Shape churn:} on XLA and Neuron, every new tensor shape triggers a new compilation. Without bucketing, variable-length requests cause continuous recompilation.
+
+For production serving, compilation costs are amortized over millions of requests and almost always worthwhile. For development and debugging, eager mode provides faster iteration.
+
+
+%% ============================================================
+\section{Layer 4: Inference Engines}
+\label{sec:inference_engines}
+
+Inference engines are purpose-built LLM serving runtimes. They control which requests to process and when (admission and scheduling), how to group requests (batching), where to store the KV-cache and when to evict it (memory management), and how to distribute work across devices (orchestration). End-to-end gains from a well-configured inference engine are typically 3--20$\times$ over naive PyTorch inference.
+
+\subsection{Continuous Batching}
+
+In static batching, you collect $N$ requests, pad them to the same length, process the entire batch, and wait for every request to finish. If one request generates 10 tokens and another generates 500, the first request's GPU resources sit idle until the 500-token request completes.
+
+Continuous batching (also called iteration-level batching) checks the state of every request at every decode iteration. When a request finishes, the scheduler immediately inserts a new request into the freed slot. The GPU stays saturated instead of idling.
+
+\subsubsection{Scheduler Knobs}
+
+\textbf{Max batch size} limits concurrent active requests. During decode, each request contributes one token to the per-iteration GEMM. A batch of 16 means $[16 \times H]$; a batch of 256 means $[256 \times H]$. Increasing batch size improves arithmetic intensity until the GEMM becomes compute-bound. Too low: poor GPU utilization. Too high: KV-cache memory exhaustion and increased inter-token latency (ITL).
+
+\textbf{Max tokens per iteration} limits total tokens (prefill + decode) per scheduler step. A large prefill can monopolize an iteration, spiking ITL for all active decode requests. Chunked prefill---splitting long prompts across iterations---is the standard solution.
+
+\textbf{Admission policy} determines which waiting request to admit next. FIFO is simplest but causes head-of-line blocking. Priority queues enable SLO differentiation. Shortest-job-first minimizes average latency but requires length estimation.
+
+\textbf{Preemption policy} determines what happens when KV-cache memory runs out. Options: swap KV to CPU (preserves state, costs PCIe bandwidth), recomputation (discards KV, re-prefills later), or request rejection.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Knob} & \textbf{Controls} & \textbf{Increase $\to$} & \textbf{Decrease $\to$} & \textbf{Trade-off} \\
+\midrule
+Max batch size & Concurrent requests & $\uparrow$ Throughput, $\uparrow$ ITL & $\downarrow$ Throughput, $\downarrow$ ITL & Throughput vs.\ latency \\
+Max tokens/step & Prefill chunk size & $\uparrow$ Prefill tput, $\uparrow$ ITL spikes & Better ITL protection & TTFT vs.\ ITL \\
+Admission policy & Request ordering & (varies by policy) & (varies) & Fairness vs.\ efficiency \\
+Preemption policy & Memory overflow & (swap/recompute/reject) & (varies) & Latency vs.\ memory \\
+\bottomrule
+\end{tabular}
+\caption{Continuous batching scheduler knobs and their trade-offs.}
+\label{tab:scheduler_knobs}
+\end{table}
+
+\subsection{PagedAttention: Virtual Memory for the KV-Cache}
+
+The KV-cache stores key and value vectors from every token processed so far. The naive approach allocates a contiguous block per request sized for the maximum context length, wasting 60--80\% of KV memory on average.
+
+PagedAttention, inspired by OS virtual memory, divides the KV-cache into small fixed-size pages (e.g., 16 tokens per page). A page table maps each request to its pages. As a request grows, new pages are allocated on demand. When a request finishes, pages are immediately freed.
+
+\textbf{Benefits:} no internal fragmentation; memory utilization jumps dramatically; prefix caching allows shared system-prompt pages across requests.
+
+\textbf{Cost:} attention kernels must follow the page table to find each KV block, adding pointer indirection. Optimized block-sparse attention kernels minimize this overhead.
+
+\subsection{vLLM and PagedAttention}
+
+vLLM is a production-grade LLM serving system that maximizes throughput by managing KV-cache memory with near-zero waste. Its core contribution is PagedAttention: instead of storing each sequence's KV-cache in a single contiguous buffer, vLLM partitions the cache into fixed-size ``KV blocks'' and maintains a block table mapping logical positions to physical blocks. This indirection enables fine-grained sharing and compaction.
+
+During inference, new tokens are appended by allocating additional KV blocks and updating the block table, without relocating existing data. When a request finishes, its blocks are recycled immediately. Empirical evaluations show vLLM delivers 2--4$\times$ higher throughput than earlier systems at similar latency, with gains increasing for longer contexts.
+
+\subsection{Multi-Device Orchestration}
+
+In vLLM, linear layers are wrapped in TP-aware modules at model load time, weights are sharded across devices, and all-reduce calls are inserted after each row-parallel GEMM. For decode's tiny all-reduce messages ($\sim$16~KB), vLLM includes custom small-message kernels that bypass general-purpose NCCL overhead. The engine architecture (scheduler, cache manager, router) is backend-agnostic: vLLM supports CUDA, ROCm, and TPU backends.
+
+\subsection{Request Lifecycle}
+
+\begin{enumerate}
+    \item \textbf{Admission:} scheduler checks KV-cache page availability and batch capacity. If insufficient, queues, preempts, or rejects.
+    \item \textbf{Prefill:} full prompt processed in one forward pass. Large, compute-heavy GEMMs. KV-cache pages allocated as KV vectors are computed.
+    \item \textbf{Decode loop:} one token per iteration. Scheduler selects batch $\to$ graph replay launches compiled decode graph $\to$ local GEMMs and attention $\to$ all-reduces synchronize TP $\to$ logits sampled.
+    \item \textbf{Completion:} KV-cache pages reclaimed, batch slot freed, next waiting request admitted.
+\end{enumerate}
+
+\subsection{Throughput vs.\ Latency Tuning Profiles}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Dimension} & \textbf{Interactive (latency-optimized)} & \textbf{Batch (throughput-optimized)} \\
+\midrule
+Target metric & TTFT, ITL & Tokens/second/dollar \\
+Batch size & Small (1--16) & Large (64--512) \\
+TP degree & Moderate (TP-2 or TP-4) & Higher OK (TP-4 or TP-8) \\
+Graph replay & Essential for decode & Helpful, less critical \\
+Quantization & Conservative (FP8 or BF16) & Aggressive (FP8 + KV quant) \\
+KV-cache & PagedAttention + prefix caching & PagedAttention + large page pool \\
+\bottomrule
+\end{tabular}
+\caption{Tuning profiles for interactive vs.\ batch workloads on the same hardware.}
+\label{tab:tuning_profiles}
+\end{table}
+
+
+%% ============================================================
+\section{Layer 3: Device Kernels and Collectives}
+\label{sec:device_kernels}
+
+This layer provides hardware-tuned implementations of compute (GEMM, attention) and communication (all-reduce, all-to-all) operations. It controls memory access patterns, on-chip data reuse, instruction scheduling, and collective algorithms.
+
+\subsection{The Memory Hierarchy Problem}
+
+The gap between an untuned implementation and a hardware-optimized kernel is often 10--20$\times$ for GEMM. The reason is the memory hierarchy:
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Level} & \textbf{H100} & \textbf{MI300X} & \textbf{TPU v5p} & \textbf{Relative Cost} \\
+\midrule
+Registers & 256KB/SM & Similar/CU & VRF/MXU & $1\times$ (fastest) \\
+Shared/Local memory & 228KB/SM & 64KB LDS/CU & CMEM (on-chip) & $\sim$5--10$\times$ slower \\
+L2 cache & 50MB & 256MB & Compiler-managed & $\sim$20--50$\times$ slower \\
+HBM (main memory) & 80GB, 3.35TB/s & 192GB, 5.3TB/s & 95GB, 2.76TB/s & $\sim$100--500$\times$ slower \\
+\bottomrule
+\end{tabular}
+\caption{Memory hierarchy across accelerator platforms. The actual arithmetic is fast; moving data from HBM to compute cores is what costs time.}
+\label{tab:memory_hierarchy}
+\end{table}
+
+A naive matrix multiplication loads each element from HBM multiple times. A tuned kernel \emph{tiles} the computation: it loads a block into fast shared memory, does all multiplications that need that block, then loads the next block. FlashAttention is the poster child: standard attention writes the $N \times N$ score matrix to HBM and reads it back multiple times. FlashAttention tiles all three steps (Q$\times$K, softmax, $\times$V) so the score matrix never leaves shared memory.
+
+\subsection{Compute-Bound vs.\ Memory-Bound: The Roofline}
+
+\begin{definition}[Arithmetic Intensity and the Roofline]
+\label{def:roofline}
+Arithmetic intensity measures FLOPs per byte loaded from memory:
+\begin{equation}
+\text{Arithmetic Intensity} = \frac{\text{FLOPs}}{\text{Bytes transferred}}
+\end{equation}
+A kernel is compute-bound if its arithmetic intensity exceeds the hardware's ops:byte ratio; memory-bound otherwise. For H100: $990\text{ TFLOPS} / 3.35\text{ TB/s} \approx 295$ FLOPs/byte.
+\end{definition}
+
+\begin{example}[Decode vs.\ Prefill Roofline Analysis]
+\label{ex:roofline_decode_prefill}
+\textbf{Decode} ($B=1$): GEMM $[1 \times 8192] \times [8192 \times 8192]$. Compute: $2 \times 8192^2 = 134$M FLOPs. Weight matrix: $128$~MB. Intensity $\approx 1$ FLOP/byte. Massively below the 295 balance point---\emph{entirely memory-bandwidth-bound}. Tensor Cores finish instantly, then sit idle waiting for weights.
+
+\textbf{Prefill} ($B=256$): GEMM $[256 \times 8192] \times [8192 \times 8192]$. Compute: $34.4$B FLOPs. Weights still $128$~MB. Intensity $\approx 269$ FLOPs/byte---near the balance point. Compute and memory are roughly balanced.
+
+This is why FP8 helps prefill much more than decode: prefill is near-compute-bound, so doubling TFLOPS roughly doubles throughput. Decode is bandwidth-bound, so doubling TFLOPS does nothing.
+\end{example}
+
+\subsection{Coalesced Memory Access and Bank Conflicts}
+
+When threads in a warp access global memory, the hardware attempts to combine accesses into a single transaction. Coalesced access (consecutive threads accessing consecutive locations) allows one 128-byte transaction instead of 32 separate ones. For transformer operations, ensuring consecutive threads load consecutive elements of the query matrix allows full bandwidth utilization.
+
+Shared memory is divided into 32 banks. When multiple threads access the same bank at different addresses, a bank conflict serializes the accesses. Careful padding of shared memory tiles eliminates conflicts.
+
+\begin{example}[Shared Memory Optimization in Attention]
+\label{ex:shared_memory_attention}
+Computing $\mA = \mQ\mK\transpose$ with tiles loaded into shared memory:
+
+\textbf{Unoptimized:} Tile $64 \times 64$ FP16 values (8192 bytes). 32-way bank conflicts when accessing columns. Effective bandwidth: 50~GB/s (3\% of peak).
+
+\textbf{Optimized with padding:} Tile $64 \times 72$ FP16 values (9216 bytes, 8 elements padding per row). No bank conflicts. Effective bandwidth: 1.4~TB/s (88\% of peak). The 12.5\% increase in shared memory usage yields $28\times$ bandwidth improvement.
+\end{example}
+
+\subsection{Flash Attention}
+
+Standard attention implementations compute $\mA = \mQ\mK\transpose$, write $\mA$ to HBM, read it back for softmax, write the result, read it again for multiplication with $\mV$. This results in $O(n^2)$ memory reads and writes.
+
+Flash Attention restructures the computation to work on tiles that fit in shared memory, computing attention for one tile at a time and only writing the final output. This reduces memory traffic from $O(n^2)$ to $O(n)$.
 
 \begin{example}[Flash Attention Performance]
 \label{ex:flash_attention_perf}
 BERT-base with sequence length 512, batch size 16, on A100 GPU:
 
-\textbf{Standard attention:}
-\begin{itemize}
-    \item Memory traffic: 48 GB per forward pass
-    \item Execution time: 8.2 ms
-    \item Memory bandwidth utilization: 45\%
-\end{itemize}
+\textbf{Standard attention:} 48~GB memory traffic, 8.2~ms, 45\% bandwidth utilization.
 
-\textbf{Flash Attention:}
-\begin{itemize}
-    \item Memory traffic: 12 GB per forward pass (4× reduction)
-    \item Execution time: 3.8 ms (2.2× speedup)
-    \item Memory bandwidth utilization: 82\%
-\end{itemize}
+\textbf{Flash Attention:} 12~GB traffic ($4\times$ reduction), 3.8~ms ($2.2\times$ speedup), 82\% utilization.
 
-For longer sequences, the benefits are even more pronounced. At sequence length 2048, Flash Attention provides 3.5× speedup, and at 8192, it provides 5.2× speedup while also enabling sequences that would otherwise exceed memory capacity.
+At sequence length 2048: $3.5\times$ speedup. At 8192: $5.2\times$ speedup while also enabling sequences that would otherwise exceed memory.
 \end{example}
 
-\subsection{Implementing Fused Kernels}
+\subsection{Collective Communication}
 
-Creating fused kernels requires careful consideration of register usage, shared memory capacity, and thread block dimensions. The goal is to maximize data reuse while maintaining high occupancy. Modern deep learning frameworks provide tools for kernel fusion, including PyTorch's JIT compiler and TensorRT's graph optimizer, which can automatically fuse compatible operations. For custom fusion patterns, libraries like CUTLASS provide templates for efficient CUDA implementations.
+All-reduce, all-gather, reduce-scatter, all-to-all, and point-to-point are the five collective primitives. Each platform implements them through specialized libraries (see Table~\ref{tab:backend_cheat_sheet}). The library automatically selects the best algorithm: latency-optimized for small messages (decode's 16~KB), bandwidth-optimized (ring or tree) for large messages (prefill's multi-MB).
 
-\section{Model Quantization}
+\subsection{Kernel Failure Modes}
+
+\textbf{Shape misalignment:} dimensions not aligned to tile sizes (e.g., not multiples of 128) cause padding waste or fallback to slower kernels.
+
+\textbf{Tiny messages:} all-reduce for small decode tensors is latency-dominated regardless of bandwidth.
+
+\textbf{Register pressure:} aggressively fusing many operations increases register usage, potentially reducing occupancy and overall throughput.
+
+\textbf{Local speedup, global bottleneck:} a $2\times$ faster kernel does not help if the bottleneck is scheduler overhead (Layer~4) or interconnect latency (Layer~1). Always verify that optimizing a kernel helps the end-to-end metric.
+
+
+%% ============================================================
+\section{Layers 2 and 1: Device Compiler and Accelerator Hardware}
+\label{sec:hardware_layer}
+
+\subsection{Layer 2: Device Compiler and Runtime}
+
+Layer~2 takes the optimized graph from Layer~5 and produces native machine instructions. It controls register allocation, instruction scheduling, memory coalescing, occupancy tuning, and execution dispatch.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Aspect} & \textbf{NVIDIA CUDA} & \textbf{AMD ROCm} & \textbf{Google TPU} & \textbf{AWS Trainium} \\
+\midrule
+Compiler & nvcc $\to$ PTX $\to$ SASS & hipcc $\to$ LLVM $\to$ AMDGPU & XLA HLO $\to$ TPU ISA & Neuron Compiler \\
+User control & High & High & Low (XLA manages) & Low (Neuron manages) \\
+Execution & CUDA streams + Graphs & HIP streams + hipGraphs & XLA scheduling & Neuron runtime + NEFF \\
+Profiling & Nsight, nvprof & rocprof, ROCm SMI & XLA/TPU profiler & Neuron monitor \\
+\bottomrule
+\end{tabular}
+\caption{Device compiler and runtime across platforms.}
+\label{tab:device_compiler}
+\end{table}
+
+Most Layer~2 effects are influenced indirectly via Layer~4/5 choices (graph structure, shape regularity), not by direct user intervention.
+
+\subsection{Layer 1: Accelerator Hardware}
+
+Hardware sets the ceiling on execution efficiency. Software stack maturity can dramatically affect how much of the ceiling is actually reached---a mature stack may achieve 60--70\% of peak while an immature one achieves 20--30\%.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{llllll}
+\toprule
+\textbf{Spec (per chip)} & \textbf{H100 SXM} & \textbf{B200 SXM} & \textbf{MI300X} & \textbf{TPU v5p} & \textbf{Trn2} \\
+\midrule
+Compute units & 132 SMs & 192 SMs & 304 CUs & 4 MXUs/chip & 32 NeuronCores \\
+BF16 peak TFLOPS & 990 & $\sim$2,250 & 1,307 & $\sim$459 & $\sim$380 \\
+HBM capacity & 80~GB HBM3 & 192~GB HBM3e & 192~GB HBM3 & 95~GB HBM2e & 96~GB HBM \\
+HBM bandwidth & 3.35~TB/s & 8~TB/s & 5.3~TB/s & 2.76~TB/s & $\sim$1.6~TB/s \\
+FP8 support & Native & Native & Native & INT8/FP8-like & Native FP8 \\
+\bottomrule
+\end{tabular}
+\caption{Accelerator hardware comparison (February 2026 snapshot). All values are per-chip peak specifications. Sustained performance is typically 40--70\% of peak.}
+\label{tab:hardware_comparison}
+\end{table}
+
+\subsection{How to Read Spec Sheets Without Fooling Yourself}
+
+\textbf{Peak TFLOPS $\neq$ LLM performance.} Decode is memory-bandwidth-bound. A chip with $2\times$ the TFLOPS but similar HBM bandwidth will not decode $2\times$ faster.
+
+\textbf{HBM bandwidth matters, but access patterns matter more.} Coalesced sequential access achieves near-peak bandwidth. Random or strided access may achieve only 30--50\% of peak.
+
+\textbf{Interconnect latency dominates decode TP performance.} During decode, all-reduce messages are tiny ($\sim$16~KB). A $2\times$ higher-bandwidth interconnect with the same latency provides zero decode benefit.
+
+\textbf{Software stack maturity can outweigh raw specs.} A chip with inferior specs but a mature, optimized software stack often outperforms a faster chip with immature software.
+
+\subsection{Workload-to-Hardware Fit}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Workload Profile} & \textbf{Key Hardware Dimension} & \textbf{Why} \\
+\midrule
+Decode-heavy, low-latency & Interconnect latency + HBM BW & Weight loading + AR latency dominate \\
+Long-context, high-concurrency & HBM capacity + KV strategy & KV-cache dominates memory \\
+Prefill-heavy, batch throughput & Compute TFLOPS + HBM BW & Large GEMMs are compute-bound \\
+MoE with EP & Bisection bandwidth + topology & All-to-all needs every device to talk \\
+\bottomrule
+\end{tabular}
+\caption{Matching workload profiles to the hardware dimension that matters most.}
+\label{tab:workload_hardware_fit}
+\end{table}
+
+
+%% ============================================================
+\section{Quantization: Precision, Performance, and Trade-offs}
 \label{sec:quantization}
+
+\subsection{Quantization Taxonomy}
+
+Quantization means using fewer bits to represent numbers. Standard transformer inference uses BF16 (2 bytes per number). Quantization reduces this to 8 bits (FP8 or INT8, 1 byte) or even 4 bits (INT4, 0.5 bytes). Three potential benefits: less memory used, less data to move, and more operations per clock cycle.
+
+Crucially, quantization is not one technique---it is a family targeting different tensors:
+
+\textbf{Weight quantization (GPTQ, AWQ, GGML):} reduces weight memory footprint. Decode benefits most: less data to load from HBM per token. Does NOT reduce communication volume because activations being all-reduced remain at higher precision.
+
+\textbf{Activation quantization (FP8 compute):} uses FP8 for the actual matrix multiplication. Benefits both compute throughput ($2\times$ TFLOPS on FP8-capable hardware) and communication volume. Most impactful for prefill because prefill is compute-bound.
+
+\textbf{KV-cache quantization (INT8/FP8 KV):} stores KV vectors at lower precision. Cuts KV memory per token in half, enabling more concurrent requests or longer contexts.
+
+\textbf{Communication precision:} running all-reduce at FP8 instead of BF16 halves data volume. Most relevant during prefill where messages are large.
 
 \subsection{Quantization Fundamentals}
 
 \begin{definition}[Quantization]
 \label{def:quantization}
-Map FP32 weights to lower precision (INT8, FP16):
+Map floating-point weights to lower precision:
 \begin{equation}
 w_{\text{quant}} = \text{round}\left(\frac{w_{\text{float}}}{s}\right) + z
 \end{equation}
-where $s$ is scale factor, $z$ is zero-point.
+where $s$ is the scale factor and $z$ is the zero-point.
 \end{definition}
-
-The choice of numerical precision fundamentally affects both the performance and accuracy of transformer models. For PyTorch quantization implementation (dynamic, static, and QAT), see Chapter~\ref{chap:pytorchimplementation}. Modern hardware supports several precision formats, each offering different trade-offs between memory usage, computational throughput, and numerical fidelity.
-
-FP32 (32-bit floating point) serves as the baseline precision format, providing full numerical precision with a wide dynamic range. This format uses 1 bit for sign, 8 bits for exponent, and 23 bits for mantissa, allowing representation of values from approximately $10^{-38}$ to $10^{38}$ with about 7 decimal digits of precision. While FP32 ensures numerical stability and is the standard for training, it consumes significant memory and cannot leverage specialized hardware acceleration like Tensor Cores.
-
-FP16 (16-bit floating point) reduces memory usage by half compared to FP32, using 1 sign bit, 5 exponent bits, and 10 mantissa bits. This format enables 2× compression and, more importantly, allows Tensor Cores to deliver their peak throughput. However, FP16's limited dynamic range (approximately $10^{-8}$ to $65504$) can cause numerical issues during training, particularly with gradient underflow. Mixed-precision training addresses this by maintaining FP32 master weights while using FP16 for forward and backward passes, combined with loss scaling to prevent gradient underflow.
-
-BF16 (bfloat16) offers an alternative 16-bit format that maintains FP32's 8-bit exponent while reducing the mantissa to 7 bits. This design preserves FP32's dynamic range, eliminating the need for loss scaling in most cases, though at the cost of reduced precision. BF16 has become increasingly popular for training large language models, as it provides the memory and compute benefits of FP16 without the numerical stability challenges. Modern GPUs like the A100 support BF16 with the same throughput as FP16.
-
-INT8 (8-bit integer) provides 4× compression compared to FP32 and is primarily used for inference. Tensor Cores can process INT8 operations at twice the throughput of FP16, making it attractive for deployment. However, mapping continuous floating-point values to 256 discrete integer levels requires careful calibration to minimize accuracy loss. The quantization process determines appropriate scale factors and zero-points based on the distribution of weights and activations.
-
-INT4 (4-bit integer) represents the extreme end of quantization, offering 8× compression but with significant accuracy challenges. This format is typically reserved for specialized applications where model size is the dominant constraint, such as edge deployment on severely memory-constrained devices. Recent research has explored mixed-precision approaches where different layers use different precisions based on their sensitivity to quantization.
-
-\subsection{Post-Training Quantization (PTQ)}
-
-Post-training quantization offers a straightforward path to model compression without requiring access to the original training pipeline or large amounts of training data. This approach takes a fully trained FP32 model and converts it to lower precision, typically INT8, through a calibration process that determines appropriate scale factors for weights and activations.
-
-The PTQ procedure begins with the trained FP32 model and a small calibration dataset, typically consisting of a few hundred to a few thousand representative examples. During calibration, the model processes these examples in FP32 mode while collecting statistics about the distribution of activations in each layer. These statistics, particularly the minimum and maximum values observed for each activation tensor, are used to determine the scale factors that map the continuous FP32 range to the discrete INT8 range.
-
-Once scale factors are determined, the conversion process applies the quantization formula to both weights and activations. Weights can be quantized offline since they are fixed after training, while activation quantization must be performed dynamically during inference. The scale factor $s$ is chosen to map the observed range of values to the INT8 range of $[-128, 127]$, and the zero-point $z$ is selected to ensure that the value zero in floating-point maps exactly to an integer value, which is important for operations like ReLU and padding.
-
-The primary advantage of PTQ is its simplicity and speed. No retraining is required, making it accessible even when the original training data or computational resources are unavailable. Modern frameworks like PyTorch and TensorFlow provide built-in PTQ APIs that automate the calibration and conversion process. Hardware-specific compilers like TensorRT further optimize the quantized model for deployment on specific accelerators.
-
-However, PTQ has limitations. The quantization process introduces approximation errors that can accumulate through the network, particularly in deep models. Layers with wide activation distributions or outlier values are especially sensitive to quantization. For transformer models, attention mechanisms and layer normalization operations often exhibit such characteristics, leading to accuracy degradation. The BERT-base example in this chapter demonstrates this trade-off: PTQ achieves substantial speedup but at the cost of noticeable accuracy loss on downstream tasks.
 
 \begin{example}[INT8 Quantization]
 \label{ex:int8_quantization}
-\textbf{FP32 weight:} $w = 0.137$
-
-\textbf{Determine range:} $w \in [-1.0, 1.0]$
-
-\textbf{Scale:} $s = \frac{2.0}{256} = 0.0078125$
+\textbf{FP32 weight:} $w = 0.137$. \textbf{Range:} $w \in [-1.0, 1.0]$. \textbf{Scale:} $s = 2.0/256 = 0.0078125$.
 
 \textbf{Quantize:}
 \begin{equation}
 w_{\text{INT8}} = \text{round}\left(\frac{0.137}{0.0078125}\right) = \text{round}(17.54) = 18
 \end{equation}
 
-\textbf{Dequantize:} $w' = 18 \times 0.0078125 = 0.1406$
-
-\textbf{Error:} $|0.137 - 0.1406| = 0.0036$ (2.6\% relative)
+\textbf{Dequantize:} $w' = 18 \times 0.0078125 = 0.1406$. \textbf{Error:} $|0.137 - 0.1406| = 0.0036$ (2.6\% relative).
 \end{example}
+
+\subsection{Post-Training Quantization (PTQ)}
+
+PTQ takes a fully trained FP32 model and converts it to lower precision through a calibration process. A small calibration dataset (a few hundred to a few thousand examples) is processed in FP32 while collecting activation statistics. These statistics determine scale factors mapping the continuous FP32 range to the discrete INT8 range.
+
+The primary advantage is simplicity: no retraining required. Modern frameworks provide built-in PTQ APIs. The limitation: quantization errors accumulate through deep networks. Layers with wide activation distributions or outlier values are especially sensitive.
 
 \subsection{Quantization-Aware Training (QAT)}
 
-Quantization-aware training addresses the accuracy limitations of post-training quantization by incorporating quantization effects directly into the training process. Rather than quantizing a pre-trained model and accepting whatever accuracy degradation results, QAT trains the model to be inherently robust to quantization from the start.
-
-The key innovation in QAT is the use of simulated quantization during training. In the forward pass, weights and activations are quantized to the target precision (typically INT8) using the same quantization formula that will be used during inference. These quantized values are then used for all subsequent computations, ensuring that the model experiences the same numerical approximations during training that it will encounter during deployment. However, the backward pass operates differently: gradients are computed in full FP32 precision and applied to FP32 master copies of the weights. This asymmetry is necessary because gradient values are typically much smaller than activations and would underflow if quantized to INT8.
-
-The training process allows the model to adapt to quantization in several ways. First, the optimizer can adjust weight values to positions that are more robust to rounding. For example, if a weight of 0.137 rounds to 0.141 in INT8, causing poor performance, the optimizer can shift it to 0.125, which might round more favorably. Second, the model can learn to avoid activation distributions that quantize poorly. Layers can adjust their output scales to better utilize the available INT8 range, and the network can learn to be less sensitive to the specific quantization errors that occur.
-
-The benefits of QAT are substantial. Models trained with quantization awareness typically recover most or all of the accuracy lost in post-training quantization, while maintaining the same inference speedup and memory savings. The BERT-base example demonstrates this clearly: QAT achieves nearly the same accuracy as the FP32 baseline while delivering the same 2.9× speedup as PTQ. This makes QAT the preferred approach whenever retraining is feasible.
-
-However, QAT does have costs. It requires access to the training data and computational resources for fine-tuning, which may take several epochs to converge. The training process is also more complex, requiring careful management of the FP32 master weights and simulated quantization operations. Additionally, QAT typically requires framework support for fake quantization operators, which are available in PyTorch and TensorFlow but may not be supported in all training frameworks. Despite these challenges, the accuracy benefits make QAT the standard approach for production deployment of quantized transformer models.
+QAT incorporates quantization effects directly into training. In the forward pass, weights and activations are quantized to the target precision using the same formula as inference. The backward pass operates in full FP32 precision. This allows the optimizer to adjust weights to positions robust to rounding and learn activation distributions that quantize well.
 
 \begin{example}[BERT-base Quantization Results]
 \label{ex:bert_quantization}
-
 \begin{center}
 \begin{tabular}{lll}
 \toprule
 \textbf{Precision} & \textbf{GLUE Score} & \textbf{Speedup} \\
 \midrule
-FP32 (baseline) & 84.5 & 1.0× \\
-FP16 & 84.4 & 1.8× \\
-INT8 (PTQ) & 82.1 & 2.9× \\
-INT8 (QAT) & 84.2 & 2.9× \\
+FP32 (baseline) & 84.5 & $1.0\times$ \\
+FP16 & 84.4 & $1.8\times$ \\
+INT8 (PTQ) & 82.1 & $2.9\times$ \\
+INT8 (QAT) & 84.2 & $2.9\times$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-
-QAT recovers most accuracy lost in PTQ!
+QAT recovers most accuracy lost in PTQ while maintaining the same speedup.
 \end{example}
 
+\subsection{Accuracy and Stability Trade-offs}
+
+\textbf{Calibration:} FP8 and INT8 require scaling factors derived from representative data. Poor calibration clips important values.
+
+\textbf{Outlier sensitivity:} some models have occasional very large activation values critical for quality. Techniques like SmoothQuant redistribute outlier magnitude from activations to weights before quantizing.
+
+\textbf{Accumulation precision:} FP8 multiply with FP32 accumulate is generally safe; FP8 accumulate can cause compounding rounding errors.
+
+\textbf{Model-specific:} some architectures (e.g., Llama family) tolerate FP8 well. Others show noticeable quality regression. Always evaluate on your specific model and task.
+
+\subsection{Quantization Decision Heuristics}
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Bottleneck} & \textbf{Strategy} & \textbf{Why} \\
+\midrule
+Memory capacity (weights) & Weight-only quant (INT4/INT8) & Reduces weight memory directly \\
+Memory capacity (KV-cache) & KV quantization (INT8/FP8) & Frees memory for more requests \\
+Compute throughput (prefill) & FP8 activation + compute & $2\times$ TFLOPS on FP8 hardware \\
+TP communication (BW-bound) & FP8 communication & Halves all-reduce volume \\
+Quality-sensitive & Start BF16, add conservatively & Measure regression first \\
+\bottomrule
+\end{tabular}
+\caption{Quantization strategy selection based on the dominant bottleneck.}
+\label{tab:quantization_heuristics}
+\end{table}
+
+
+%% ============================================================
 \section{Model Pruning}
 \label{sec:pruning}
 
 \subsection{Pruning Strategies}
 
-Model pruning removes parameters from a trained network to reduce its computational and memory requirements. The fundamental challenge is identifying which parameters can be removed with minimal impact on model performance. Two main approaches have emerged: magnitude-based pruning, which uses weight values as a proxy for importance, and structured pruning, which removes entire architectural units.
+Model pruning removes parameters to reduce computational and memory requirements. Two main approaches exist:
 
-Magnitude-based pruning operates on the principle that weights with small absolute values contribute less to the model's predictions and can therefore be safely removed. For a weight $w_{ij}$ connecting neuron $i$ to neuron $j$, the pruning decision is made by comparing $|w_{ij}|$ to a threshold $\tau$. If $|w_{ij}| < \tau$, the weight is set to zero and excluded from computation. This approach is appealingly simple and has been shown to be surprisingly effective across many architectures. The threshold $\tau$ can be set globally across the entire network, per-layer to account for different scales in different parts of the model, or even adaptively based on the distribution of weights in each layer.
+\textbf{Magnitude-based pruning} removes weights with small absolute values: if $|w_{ij}| < \tau$, the weight is set to zero. The threshold $\tau$ can be set globally, per-layer, or adaptively.
 
-The distinction between structured and unstructured pruning has profound implications for deployment. Unstructured pruning removes individual weights without regard for their position in the network, creating sparse weight matrices where zeros are scattered throughout. This approach can achieve high compression ratios---often removing 80-90\% of weights in some layers---but requires specialized sparse matrix kernels to realize speedups. Standard dense matrix multiplication libraries like cuBLAS cannot exploit unstructured sparsity, so the theoretical reduction in FLOPs does not translate to wall-clock speedup without custom implementations.
-
-Structured pruning addresses this limitation by removing entire architectural units: complete neurons, attention heads, or even full layers. When an attention head is pruned, the corresponding rows in the query, key, and value projection matrices are removed, directly reducing the matrix dimensions. This reduction is immediately visible to standard dense linear algebra libraries, so speedups materialize without requiring sparse kernels. The trade-off is that structured pruning typically achieves lower compression ratios than unstructured pruning, as it must remove parameters in groups rather than individually. For transformers, structured pruning of attention heads has proven particularly effective, as empirical studies show that many heads can be removed with minimal accuracy impact.
+\textbf{Structured vs.\ unstructured pruning.} Unstructured pruning removes individual weights, creating sparse matrices that require specialized sparse kernels to realize speedups. Structured pruning removes entire architectural units (neurons, attention heads, layers), directly reducing matrix dimensions visible to standard dense libraries. Structured pruning achieves lower compression ratios but provides immediate speedups without custom kernels.
 
 \subsection{Iterative Pruning}
 
 \begin{algorithm}[H]
 \caption{Iterative Magnitude Pruning}
 \label{alg:iterative_pruning}
-
 \textbf{Input:} Model, sparsity target $s_{\text{target}}$
 
 \For{sparsity $s = 0$ \KwTo $s_{\text{target}}$ by steps}{
@@ -336,262 +751,248 @@ Structured pruning addresses this limitation by removing entire architectural un
 
 \begin{example}[Attention Head Pruning]
 \label{ex:head_pruning}
-BERT-base: 12 layers × 12 heads = 144 heads
+BERT-base: 12 layers $\times$ 12 heads $=$ 144 heads.
 
-\textbf{Finding:} Can remove 50\% of heads with minimal impact!
+\textbf{Finding:} Can remove 50\% of heads with minimal impact.
 
-\textbf{Procedure:}
-\begin{enumerate}
-    \item Compute importance score per head
-    \item Rank heads by importance
-    \item Prune lowest 50\% (72 heads)
-    \item Fine-tune remaining model
-\end{enumerate}
+\textbf{Procedure:} (1) Compute importance score per head. (2) Rank by importance. (3) Prune lowest 50\% (72 heads). (4) Fine-tune.
 
-\textbf{Result:}
-\begin{itemize}
-    \item 50\% fewer attention operations
-    \item GLUE score: 84.5 $\to$ 83.8 (0.7 point drop)
-    \item 1.5× faster inference
-\end{itemize}
+\textbf{Result:} 50\% fewer attention operations. GLUE score: $84.5 \to 83.8$ (0.7 point drop). $1.5\times$ faster inference.
 \end{example}
 
+%% ============================================================
 \section{Knowledge Distillation}
 \label{sec:knowledge_distillation_detail}
-
-\subsection{Distillation Loss}
 
 \begin{definition}[Distillation Objective]
 \label{def:distillation_objective}
 \begin{equation}
 \mathcal{L} = \alpha \mathcal{L}_{\text{CE}}(y, y_{\text{student}}) + (1-\alpha) \mathcal{L}_{\text{KD}}(y_{\text{teacher}}, y_{\text{student}})
 \end{equation}
-
 where:
 \begin{equation}
 \mathcal{L}_{\text{KD}} = \text{KL}\left(\frac{\exp(z_t/T)}{\sum \exp(z_t/T)} \Big\| \frac{\exp(z_s/T)}{\sum \exp(z_s/T)}\right)
 \end{equation}
-
-$T$ = temperature (typically 2-5), higher = softer probabilities
+$T$ = temperature (typically 2--5), higher = softer probabilities.
 \end{definition}
 
 \subsection{DistilBERT Approach}
 
-DistilBERT demonstrates a comprehensive approach to knowledge distillation for transformer models, combining architectural reduction with multi-objective training to create a student model that is substantially smaller and faster than BERT while retaining most of its capabilities.
+DistilBERT reduces depth by half (6 layers vs.\ BERT-base's 12) while maintaining hidden size 768. The student is initialized by copying every other layer from the teacher. Training combines three losses: distillation loss (match teacher's output distribution), masked language modeling loss, and cosine distance loss between hidden states.
 
-The student architecture makes a strategic choice: rather than reducing the hidden dimension, which would require retraining all projection matrices and could fundamentally alter the model's representational capacity, DistilBERT reduces depth by half. The student contains only 6 transformer layers compared to BERT-base's 12, but maintains the same hidden size of 768 dimensions. This design choice is motivated by observations that deeper layers in BERT often learn similar representations, suggesting redundancy that can be compressed. The student is initialized by copying every other layer from the teacher (layers 0, 2, 4, 6, 8, and 10), providing a warm start that accelerates convergence.
+\textbf{Results:} 66M parameters (vs.\ 110M), $\sim$60\% faster inference, retains 97\% of BERT's GLUE performance. This combination of compression, speedup, and accuracy retention makes DistilBERT compelling for production deployments.
 
-The training objective combines three complementary losses. First, the distillation loss encourages the student to match the teacher's output distribution using the temperature-scaled KL divergence described earlier. Second, a standard masked language modeling loss ensures the student can still perform the original pre-training task, maintaining its ability to learn from unlabeled text. Third, a cosine distance loss between the student and teacher hidden states encourages the student's internal representations to align with the teacher's, not just the final outputs. This multi-objective approach helps the student learn both the teacher's behavior and its internal structure.
 
-The results demonstrate the effectiveness of this approach. The final DistilBERT model contains 66 million parameters compared to BERT-base's 110 million, a 40\% reduction. Inference speed improves by approximately 60\%, as the reduced depth directly translates to fewer sequential operations. Most importantly, DistilBERT retains 97\% of BERT's performance on the GLUE benchmark, meaning the accuracy loss is only 3\% despite the substantial reduction in model size and computational cost. This combination of compression, speedup, and accuracy retention makes DistilBERT a compelling choice for production deployments where resources are constrained.
+%% ============================================================
+\section{Bottleneck-Driven Optimization}
+\label{sec:bottleneck_optimization}
 
-\section{Multi-GPU Training and Optimization}
-\label{sec:multi_gpu}
+Do not apply optimizations by popularity. Apply them by bottleneck. A $10\times$ kernel speedup is worthless if the bottleneck is scheduling overhead. A perfect scheduler is worthless if the bottleneck is interconnect latency. The single most important skill in inference optimization is correctly identifying where time is actually being spent.
 
-Training large transformer models requires distributing computation across multiple GPUs. The efficiency of multi-GPU training depends critically on communication bandwidth, parallelization strategy, and the balance between computation and communication.
+\subsection{Bottleneck Taxonomy}
 
-\subsection{Interconnect Technologies}
+Every inference workload is dominated by one (occasionally two) bottleneck regimes. Identifying the regime tells you which family of optimizations will help:
 
-The bandwidth between GPUs determines how quickly gradients, activations, and parameters can be exchanged during distributed training. PCIe provides 16-32 GB/s bidirectional bandwidth per GPU, which is adequate for small models but becomes a bottleneck for large transformers. NVLink, NVIDIA's proprietary interconnect, provides 600 GB/s bidirectional bandwidth on A100 systems, enabling much more efficient multi-GPU training. For comparison, the bandwidth within a single GPU (HBM) is 1600 GB/s, so NVLink provides roughly 40\% of intra-GPU bandwidth for inter-GPU communication.
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{Bottleneck Regime} & \textbf{Symptom} & \textbf{Dominant In} \\
+\midrule
+Compute-bound & Utilization $>$85\%; more batch doesn't help & Prefill with large batches \\
+HBM bandwidth-bound & Low utilization despite available work & Decode (single-token GEMMs) \\
+Interconnect BW-bound & Large collective messages, high link utilization & Prefill TP all-reduce, EP a2a \\
+Interconnect latency-bound & Small messages, latency dominates & Decode TP all-reduce \\
+Host/runtime overhead-bound & Low utilization, dispatch visible in profile & Decode without graph replay \\
+Memory capacity-bound & OOM or aggressive KV eviction & Long context + high concurrency \\
+Scheduler/policy-bound & Low utilization despite available requests & Bursty traffic, poor scheduling \\
+\bottomrule
+\end{tabular}
+\caption{Bottleneck taxonomy for LLM inference workloads.}
+\label{tab:bottleneck_taxonomy}
+\end{table}
 
-The impact of interconnect bandwidth is most visible during gradient synchronization in data parallel training. After computing gradients on each GPU's local batch, all GPUs must exchange and average their gradients through an all-reduce operation. With PCIe, this communication can take longer than the backward pass itself for models with hundreds of millions of parameters. With NVLink, communication overhead is typically 10-20\% of total training time.
+\subsection{Diagnosis Workflow}
 
-\subsection{Data Parallelism and Gradient Synchronization}
+A systematic approach to optimization:
 
-Data parallelism replicates the model on each GPU and processes different batches on each device. After the backward pass, gradients are averaged across all GPUs using an all-reduce collective operation. The communication volume is equal to the model size, independent of batch size, making data parallelism most efficient for large batch sizes where computation time dominates communication time.
+\begin{enumerate}
+    \item \textbf{Define the target metric.} Latency (TTFT, ITL, P50, P99)? Throughput (tokens/s)? Cost (tokens/dollar)?
+    \item \textbf{Segment the workload.} What fraction is prefill vs.\ decode? What is the sequence length distribution?
+    \item \textbf{Profile.} Use vendor profilers (Nsight, rocprof, XLA profiler, Neuron profiler) to measure host time, kernel time, communication time, idle time, memory utilization.
+    \item \textbf{Classify the bottleneck.} Match profiler signals to the taxonomy above.
+    \item \textbf{Choose the optimization family.} Compute-bound $\to$ FP8, kernel optimization. BW-bound $\to$ quantization, memory access optimization. Latency-bound $\to$ graph replay, custom collectives. Overhead-bound $\to$ compilation, better scheduling. Capacity-bound $\to$ quantization, KV optimization, more devices.
+    \item \textbf{Re-measure.} Verify the optimization helped end-to-end. A local improvement that shifts the bottleneck elsewhere may show no system-level gain.
+\end{enumerate}
 
-\begin{example}[Data Parallel Scaling Efficiency]
-\label{ex:data_parallel_scaling}
-Training BERT-large (340M parameters) with batch size 32 per GPU on A100 GPUs:
+\subsection{Optimization Impact Summary}
 
-\textbf{Single GPU:}
-\begin{itemize}
-    \item Forward + backward time: 145 ms
-    \item Throughput: 221 sequences/second
-\end{itemize}
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{llllll}
+\toprule
+\textbf{Optimization} & \textbf{Layer} & \textbf{Gain} & \textbf{Bottleneck Relieved} & \textbf{Helps} & \textbf{Trade-off} \\
+\midrule
+\texttt{torch.compile}/XLA & 5 & 1.5--3$\times$ & Host overhead & Decode $>$ prefill & Compile time; graph breaks \\
+FlashAttention & 3 & 2--4$\times$ attn & HBM BW (attention) & Prefill $>$ decode & Kernel compatibility \\
+Continuous batching & 4 & 3--8$\times$ tput & Scheduler/utilization & Both & Tail latency risk \\
+PagedAttention & 4 & 2--4$\times$ concurrency & Memory capacity (KV) & Both & Indirection overhead \\
+Fused GEMM+AllReduce & 3 & 1.3--1.8$\times$ TP & Interconnect (TP path) & Prefill $>$ decode & Kernel complexity \\
+FP8 compute & 3+1 & 1.5--2$\times$ & Compute + HBM BW & Prefill $>$ decode & Accuracy risk \\
+Graph replay & 2 & 1.2--2$\times$ decode & Host overhead & Decode $\gg$ prefill & Static shape requirement \\
+\bottomrule
+\end{tabular}
+\caption{Optimization impact summary. All gain values are representative ranges from published benchmarks, not universal guarantees.}
+\label{tab:optimization_impact}
+\end{table}
 
-\textbf{4 GPUs with NVLink:}
-\begin{itemize}
-    \item Forward + backward time: 145 ms (unchanged)
-    \item Gradient all-reduce time: 18 ms
-    \item Total time per step: 163 ms
-    \item Throughput: 785 sequences/second
-    \item Scaling efficiency: 89\% (ideal would be 884 seq/s)
-\end{itemize}
+\subsection{Case Study: Interactive Chatbot (Decode-Heavy)}
 
-\textbf{8 GPUs with NVLink:}
-\begin{itemize}
-    \item Forward + backward time: 145 ms
-    \item Gradient all-reduce time: 22 ms
-    \item Total time per step: 167 ms
-    \item Throughput: 1533 sequences/second
-    \item Scaling efficiency: 87\%
-\end{itemize}
+Target: P50 inter-token latency $< 30$~ms. 70B model on 8$\times$H100. Decode dominates because each response generates hundreds of tokens.
 
-The high scaling efficiency demonstrates that NVLink bandwidth is sufficient for data parallel training of BERT-large. With PCIe, the all-reduce time would be approximately 85 ms, reducing scaling efficiency to 63\% for 8 GPUs.
-\end{example}
+\textbf{Bottleneck analysis:} per-token GEMMs are memory-bandwidth-bound. TP all-reduce is latency-bound (16~KB messages). Host dispatch overhead is significant without graph replay.
 
-\subsection{Pipeline and Tensor Parallelism}
+\textbf{Priority 1 (Layer~4):} continuous batching with moderate batch sizes (8--32).
 
-For models too large to fit on a single GPU, pipeline parallelism splits the model across GPUs by layers, while tensor parallelism splits individual layers across GPUs. Pipeline parallelism has lower communication requirements but suffers from pipeline bubbles where some GPUs are idle. Tensor parallelism requires more communication (activations must be exchanged between layers) but maintains better GPU utilization.
+\textbf{Priority 2 (Layers~5/2):} graph compilation + CUDA Graph replay for decode.
 
-Modern training frameworks like Megatron-LM combine data, pipeline, and tensor parallelism to train models with hundreds of billions of parameters. For example, training a 175B parameter model might use 8-way tensor parallelism, 8-way pipeline parallelism, and 32-way data parallelism across 2048 GPUs.
+\textbf{Priority 3 (Layer~3):} custom small-message all-reduce bypassing NCCL overhead.
 
-\subsection{Overlapping Communication and Computation}
+\textbf{Priority 4 (Layer~7):} TP-4 rather than TP-8. Each additional TP degree adds serialized all-reduce latency per token.
 
-Advanced implementations overlap gradient communication with backward pass computation. As soon as gradients for one layer are computed, they can begin synchronizing while the backward pass continues on earlier layers. This technique, called gradient bucketing, can hide most communication overhead when sufficient computation is available to overlap.
+\subsection{Case Study: Batch Document Summarization (Prefill-Heavy)}
 
-PyTorch's DistributedDataParallel automatically implements gradient bucketing, grouping parameters into buckets of approximately 25MB and launching all-reduce operations as soon as each bucket's gradients are ready. This optimization is particularly effective for large models where the backward pass takes much longer than gradient synchronization.
+Target: maximize tokens/second/dollar. 70B model on 8$\times$H100. Processing thousands of long documents offline.
 
-\section{Inference Optimization}
-\label{sec:inference_optimization}
+\textbf{Bottleneck analysis:} large GEMMs are compute-bound. TP all-reduce messages are large (bandwidth-relevant). Memory capacity constrains batch size.
 
-\subsection{ONNX Runtime}
+\textbf{Priority 1 (Layer~4):} continuous batching with large batches (128--512).
 
-ONNX (Open Neural Network Exchange) provides a framework-agnostic representation for neural networks, enabling models trained in PyTorch, TensorFlow, or other frameworks to be deployed using a unified inference engine. ONNX Runtime, the corresponding execution engine, applies a suite of graph-level optimizations that can substantially improve inference performance compared to the original training framework.
+\textbf{Priority 2 (Layer~3):} FP8 GEMMs. $2\times$ compute throughput maps directly to $\sim$$2\times$ prefill throughput.
 
-The ONNX format represents a neural network as a computational graph where nodes correspond to operations (such as matrix multiplication, layer normalization, or activation functions) and edges represent data flow between operations. This explicit graph representation enables analysis and transformation at a level of abstraction above individual framework implementations. Once a model is exported to ONNX format, it becomes independent of the training framework, allowing deployment in environments where PyTorch or TensorFlow may not be available or desirable.
+\textbf{Priority 3 (Layer~3):} fused GEMM+all-reduce. Large prefill GEMMs provide enough compute time to overlap communication.
 
-ONNX Runtime's optimization pipeline applies several transformations to improve performance. Operator fusion combines sequences of operations into single, more efficient kernels. For example, a layer normalization followed by an addition (residual connection) can be fused into a single kernel that performs both operations in one pass, eliminating intermediate memory writes. Constant folding evaluates operations whose inputs are known at graph construction time, replacing them with their computed results and eliminating runtime computation. Dead code elimination removes operations whose outputs are never used, which can occur after other optimizations or when exporting models with unused branches.
+\textbf{Priority 4:} KV-cache quantization (FP8 KV) to free memory for more concurrent documents.
 
-Graph optimization goes beyond individual operations to restructure the computational graph for better performance. This includes reordering operations to enable better fusion opportunities, inserting explicit memory layout transformations to ensure optimal data formats for hardware accelerators, and selecting specialized kernel implementations based on input shapes and hardware capabilities. For transformer models, ONNX Runtime includes optimizations specifically targeting attention mechanisms, layer normalization, and embedding operations.
 
-The combination of these optimizations typically delivers 1.5--2$\times$ speedup over PyTorch inference for transformer models, even before applying quantization or other model-level optimizations. When combined with INT8 quantization, ONNX Runtime can achieve 3--4$\times$ speedup, making it a popular choice for production deployment where inference efficiency is critical. See Chapter~\ref{chap:pytorchimplementation} for ONNX export implementation code.
-
-\subsection{TensorRT}
-
-NVIDIA TensorRT represents a comprehensive optimization framework specifically designed for deep learning inference on NVIDIA GPUs. Unlike ONNX Runtime's framework-agnostic approach, TensorRT leverages detailed knowledge of NVIDIA GPU architectures to extract maximum performance through hardware-specific optimizations.
-
-At its core, TensorRT performs aggressive layer fusion, combining multiple operations into single, highly optimized CUDA kernels. These fused kernels are not generic implementations but are generated specifically for the target GPU architecture and the specific layer dimensions in the model. For example, TensorRT can fuse a matrix multiplication, bias addition, layer normalization, and GELU activation into a single kernel that processes data in registers and shared memory without writing intermediate results to global memory. This level of fusion goes beyond what general-purpose frameworks can achieve because TensorRT generates custom code for each specific combination of operations and dimensions.
-
-Kernel auto-tuning is another key feature that distinguishes TensorRT. For each operation in the model, TensorRT maintains a library of multiple kernel implementations with different tile sizes, thread block configurations, and memory access patterns. During the optimization phase, TensorRT benchmarks these variants on the target hardware with the actual input dimensions from the model, selecting the fastest implementation for each operation. This empirical approach ensures optimal performance across different model architectures and hardware generations without requiring manual tuning.
-
-INT8 calibration in TensorRT automates the post-training quantization process. Given a calibration dataset, TensorRT analyzes activation distributions to determine optimal scale factors for each layer, using sophisticated algorithms that minimize quantization error. The calibration process can use different strategies, from simple min-max scaling to more advanced entropy-based methods that better preserve information content. TensorRT then generates INT8 kernels that leverage Tensor Cores for maximum throughput.
-
-The performance benefits are substantial. For BERT-base inference, TensorRT typically delivers 2-3× speedup over PyTorch even in FP16 mode, thanks to its aggressive fusion and kernel optimization. When INT8 quantization is applied, the speedup increases to 4-5× compared to PyTorch FP32, combining the benefits of reduced precision with optimized execution. These improvements make TensorRT the preferred choice for latency-critical applications on NVIDIA hardware, though the optimization process requires more setup time than ONNX Runtime and the resulting optimized models are hardware-specific.
-
-\subsection{Batching Strategies}
-
-The way requests are grouped into batches has a profound impact on both latency and throughput in transformer inference systems. Different batching strategies represent different points in the latency-throughput trade-off space, and the optimal choice depends on the specific requirements of the application.
-
-Static batching uses a fixed batch size determined at deployment time. Incoming requests are accumulated until the batch is full, at which point the entire batch is processed together. Any remaining slots in the batch are filled with padding to reach the fixed size. This approach is simple to implement and provides predictable performance characteristics, but it is wasteful in several ways. Padding tokens consume memory and computation without contributing to useful work, particularly problematic when sequence lengths vary widely. Additionally, requests that arrive just after a batch is dispatched must wait for the entire next batch to fill, leading to variable and potentially high latency.
-
-Dynamic batching improves upon static batching by using flexible batch sizes and timeout-based dispatch. Rather than waiting for a fixed number of requests, the system accumulates requests for a specified timeout period (for example, 10-50 milliseconds) and then processes whatever batch has accumulated. This approach reduces average latency by ensuring that requests are not delayed indefinitely waiting for a batch to fill, while still achieving good throughput by batching multiple requests together when load is high. The timeout parameter provides a tunable knob to balance latency and throughput: shorter timeouts reduce latency but may result in smaller batches and lower throughput, while longer timeouts increase batching opportunities at the cost of higher latency.
-
-Continuous batching, also known as iteration-level batching, is specifically designed for autoregressive generation tasks where sequences are produced token by token. In traditional batching, all sequences in a batch must complete before any can be returned, even if some sequences finish early (for example, by generating an end-of-sequence token). Continuous batching addresses this inefficiency by allowing new sequences to join the batch as others complete. After each generation step, finished sequences are removed from the batch and new sequences are added, maintaining high GPU utilization throughout the generation process. This approach is particularly effective for applications like chatbots or code generation where sequence lengths vary unpredictably and maintaining consistent throughput is important. Modern serving systems like vLLM implement continuous batching as a core feature, achieving substantially higher throughput than traditional batching approaches for generative workloads.
-
-\subsection{Inference Pipelines and Serving Architectures}
-
-Inference optimization is not solely a matter of faster kernels; it is also a systems problem. The end-to-end latency and throughput of a transformer service depend on how requests are batched, how KV caches are managed, and how computation is distributed across processes and machines. A well-designed serving architecture exploits both model-level techniques (KV caching, quantization, pruning, distillation) and system-level mechanisms (asynchronous scheduling, autoscaling, and load balancing) to approach hardware limits in realistic workloads.
-
-A typical deployment exposes a stateless HTTP or gRPC API backed by one or more worker processes, each owning one or more GPUs. Incoming requests are placed into per-model queues, where a scheduler forms dynamic batches that trade off latency and throughput. During the prefill phase, the model processes the full prompt, constructs the KV cache, and emits the first token; during the decode phase, subsequent tokens are generated one step at a time, reusing the KV cache. Techniques such as prefix sharing and speculative decoding further increase effective batch sizes by amortizing compute across similar or partially overlapping prompts.
-
-KV cache management is a central bottleneck in LLM serving. Each sequence requires a cache that grows linearly with context length, and naive allocation leads to fragmentation and low GPU memory utilization. Recent work has proposed eviction and compression policies that operate during both prefill and decode, allowing larger batches within a fixed memory budget while preserving accuracy. Production systems routinely combine such cache compression with quantization of the KV tensors themselves, reducing both memory footprint and data-movement costs along the critical path.
-
-At the node level, inference processes should be carefully pinned to GPUs, with explicit management of CUDA streams to overlap host-to-device transfers with computation. Kernel fusion and custom attention kernels like FlashAttention reduce memory traffic, while mixed precision and INT8 paths ensure that Tensor Cores operate near their peak throughput. Profiling tools such as Nsight Compute and framework-level profilers help identify whether the deployment is compute-bound, memory-bound, or scheduler-bound, and guide decisions about batch size, maximum context length, and concurrency limits.
-
-\subsection{vLLM and PagedAttention}
-
-vLLM is a production-grade LLM serving system designed to maximize throughput by managing KV cache memory with near-zero waste. Its core contribution is PagedAttention, an attention kernel and memory layout inspired by virtual memory in operating systems: instead of storing each sequence's KV cache in a single contiguous buffer, vLLM partitions the cache into fixed-size ``KV blocks'' and maintains a block table that maps each sequence's logical positions to physical blocks in GPU memory. This indirection layer decouples the logical view of a sequence from the physical layout of its cache, enabling fine-grained sharing and compaction.
-
-During inference, new tokens for a request are appended by allocating additional KV blocks as needed and updating the block table, without relocating existing data. When a request finishes or a portion of its context becomes unnecessary, its blocks can be recycled immediately for other sequences, dramatically reducing external fragmentation compared to naive tensor allocations. From the model's perspective, attention is computed via PagedAttention kernels that follow the block table to gather keys and values, so the numerical results are identical to standard attention even though the underlying memory is non-contiguous.
-
-This design has two critical consequences. First, vLLM can support much larger effective batch sizes under a fixed memory budget because it avoids both internal and external fragmentation of the KV cache. Second, it can efficiently batch together requests with heterogeneous decoding algorithms---such as greedy decoding, beam search, and parallel sampling---by treating all of them uniformly at the level of KV blocks. Empirical evaluations show that vLLM delivers 2--4× higher throughput than earlier systems like FasterTransformer at similar latency, with gains increasing for longer contexts and larger models.
-
-vLLM also integrates model-parallelism strategies, including tensor and pipeline parallelism, to serve models that do not fit on a single GPU. In these configurations, tensor parallelism shards the model's layers across GPUs, while the KV cache for each request is partitioned or replicated according to the parallelism strategy. Care must be taken when sharding attention heads, since naive tensor parallelism can require duplicating KV cache across devices; recent work has introduced group-wise attention layouts and expert parallelism schemes that reduce duplication by aligning KV partitions with head groups or experts. Together, these techniques make vLLM a concrete instantiation of the hardware and memory optimization principles discussed throughout this chapter.
-
-\subsection{Distributed Inference with Ray and Kubernetes}
-
-When inference workloads exceed the capacity of a single machine, they are typically deployed on a cluster orchestrated by Kubernetes, with a serving framework such as Ray Serve handling request routing and autoscaling. In this architecture, a Ray cluster runs inside the Kubernetes cluster: a head pod manages cluster state, and worker pods host Ray processes that in turn manage GPU-backed model replicas. Kubernetes is responsible for provisioning and recovering pods, while Ray's own autoscaler adjusts the number of replicas and Ray workers based on application-level metrics such as request rate and queue length.
-
-A Ray Serve deployment encapsulates a single model or ensemble behind a logical endpoint. Clients send HTTP or gRPC requests to a gateway, which forwards them to Ray Serve, where a router assigns them to replicas according to a configurable policy (for example, random, weighted, or load-aware). Within each replica, the model can implement dynamic batching, KV caching, and other optimizations described earlier, so that local GPU utilization remains high even when request arrivals are bursty or heterogeneous. Ray Serve's autoscaler monitors metrics such as in-flight requests and latency and scales the number of replicas between configured minima and maxima, triggering Kubernetes to allocate or deallocate pods and underlying nodes as necessary.
-
-Designing such a system requires coordinating multiple layers of scaling. At the lowest level, each replica should be configured with an appropriate concurrency limit and maximum batch size to ensure that GPU memory is not oversubscribed, particularly with large KV caches. At the Ray layer, the autoscaler must be tuned to react quickly to sustained load while avoiding oscillations; at the Kubernetes layer, node autoscaling policies (for example, via cluster-autoscaler or Karpenter) must be aligned with Ray's resource requests to ensure that new GPU nodes are provisioned in time. Observability across these layers---via dashboards for Ray, Kubernetes, and the cloud provider---is essential for diagnosing issues such as stalled scaling, replica imbalance, or unexpected OOM events.
-
-From the perspective of this chapter, the key point is that model-level optimizations and cluster-level architecture are tightly coupled. Quantization and pruning reduce per-replica memory footprint and cost, enabling higher replica density per node; vLLM's PagedAttention reduces KV cache fragmentation, allowing larger batch sizes; and careful scheduling and autoscaling with Ray and Kubernetes expose these gains to real-world, multi-tenant workloads. An effective deployment strategy therefore treats hardware, kernels, caching mechanisms, and orchestration as parts of a single, integrated system rather than independent concerns.
-
+%% ============================================================
 \section{Production Deployment}
 \label{sec:production_deployment}
 
 \subsection{Serving Frameworks}
 
-Production deployment of transformer models requires robust serving infrastructure that handles request routing, batching, versioning, and monitoring. Several frameworks have emerged to address these needs, each with different design philosophies and trade-offs.
+\textbf{TorchServe} provides native PyTorch serving with REST/gRPC APIs, dynamic batching, model versioning, and integrated monitoring. Natural deployment path for PyTorch-trained models.
 
-TorchServe provides native serving capabilities for PyTorch models, offering tight integration with the PyTorch ecosystem. Models can be packaged with their preprocessing and postprocessing logic into model archives that encapsulate all dependencies. TorchServe exposes both REST and gRPC APIs for inference requests, with built-in support for dynamic batching to improve throughput. The framework includes model versioning capabilities, allowing multiple versions of a model to be served simultaneously and enabling gradual rollout of new versions. Monitoring and logging are integrated, providing metrics on request latency, throughput, and error rates. For organizations already using PyTorch for training, TorchServe offers a natural deployment path with minimal friction.
+\textbf{Triton Inference Server} supports models from PyTorch, TensorFlow, ONNX, and TensorRT within a single infrastructure. Sophisticated scheduling can execute multiple models concurrently on the same GPU.
 
-Triton Inference Server takes a multi-framework approach, supporting models from PyTorch, TensorFlow, ONNX, and TensorRT within a single serving infrastructure. This flexibility is valuable in heterogeneous environments where different models may have been developed using different frameworks. Triton's key strength is its sophisticated scheduling and execution engine, which can execute multiple models concurrently on the same GPU, dynamically batch requests across models, and even create model ensembles where the output of one model feeds into another. The framework includes backends optimized for different hardware platforms, automatically selecting appropriate execution strategies based on the target device. Triton's dynamic batching is particularly advanced, supporting variable-size batching with configurable timeout and queue policies.
+\textbf{ONNX Runtime} provides framework-agnostic inference with graph-level optimizations (operator fusion, constant folding, dead code elimination). Typically delivers 1.5--2$\times$ speedup over PyTorch inference; combined with INT8 quantization, 3--4$\times$. See Chapter~\ref{chap:pytorch_implementation} for ONNX export code.
 
-FastAPI combined with custom serving logic represents a lightweight alternative for organizations that need full control over their serving infrastructure. FastAPI provides a modern Python web framework with automatic API documentation, request validation, and asynchronous request handling. By building custom serving logic on top of FastAPI, teams can implement exactly the batching, caching, and optimization strategies their application requires without being constrained by framework limitations. This approach requires more development effort but offers maximum flexibility for specialized use cases. It is particularly popular for research deployments and applications with unique requirements that don't fit standard serving frameworks.
+\textbf{TensorRT} leverages detailed knowledge of NVIDIA GPU architectures for aggressive layer fusion, kernel auto-tuning, and INT8 calibration. For BERT-base: 2--3$\times$ speedup over PyTorch in FP16; 4--5$\times$ with INT8.
+
+\subsection{Distributed Inference with Ray and Kubernetes}
+
+When inference workloads exceed single-machine capacity, they are typically deployed on a Kubernetes cluster with Ray Serve handling request routing and autoscaling. A Ray cluster runs inside Kubernetes: a head pod manages state, worker pods host GPU-backed model replicas. Kubernetes provisions and recovers pods; Ray's autoscaler adjusts replica count based on request rate and queue length.
+
+Designing such a system requires coordinating multiple scaling layers. Each replica needs appropriate concurrency limits and batch sizes to avoid GPU memory oversubscription. Ray's autoscaler must react quickly to sustained load without oscillations. Kubernetes node autoscaling must align with Ray's resource requests. Observability across all layers is essential for diagnosing stalled scaling, replica imbalance, or OOM events.
 
 \subsection{Deployment Checklist}
 
-Successful production deployment of transformer models requires attention to multiple dimensions beyond raw inference speed. This checklist organizes key considerations into three categories: performance optimization, reliability engineering, and operational monitoring.
+\textbf{Performance optimization:} quantize to INT8/FP16 where accuracy permits; export to ONNX/TensorRT for graph-level optimization; tune batch size for latency--throughput balance; enable KV caching for autoregressive generation.
 
-\textbf{Performance optimization} focuses on maximizing throughput and minimizing latency within resource constraints. Quantization to INT8 or FP16 should be applied whenever accuracy requirements permit, as it provides substantial speedup with minimal implementation complexity. Exporting models to ONNX or TensorRT enables graph-level optimizations and hardware-specific acceleration that training frameworks cannot provide. Batch size must be carefully tuned to balance latency and throughput: larger batches improve GPU utilization and throughput but increase latency for individual requests. For autoregressive generation tasks, enabling KV caching is essential, as it eliminates redundant computation of attention keys and values for previously generated tokens, typically providing 2-3× speedup for generation workloads.
+\textbf{Reliability engineering:} distinguish transient vs.\ permanent failures with appropriate retry logic; set request timeouts; implement health checks for load balancer integration; enable model versioning for safe rollouts.
 
-\textbf{Reliability engineering} ensures that the serving system degrades gracefully under adverse conditions rather than failing catastrophically. Error handling should distinguish between transient failures (such as temporary resource exhaustion) and permanent failures (such as malformed inputs), with appropriate retry logic for transient cases. Request timeouts prevent a single slow request from blocking resources indefinitely, with timeout values chosen based on application requirements and typical inference times. Health checks enable load balancers and orchestration systems to detect unhealthy instances and route traffic away from them, typically implemented as lightweight endpoints that verify model loading and basic inference capability. Model versioning allows safe deployment of new model versions through canary releases or A/B testing, with the ability to quickly roll back if issues are detected.
+\textbf{Monitoring and observability:} track latency at p50/p95/p99 (not just averages); measure throughput in requests/second; monitor GPU utilization to identify headroom; break down error rates by type.
 
-\textbf{Monitoring and observability} provide visibility into system behavior and enable rapid diagnosis of issues. Latency metrics should be tracked at multiple percentiles (p50, p95, p99) rather than just averages, as tail latencies often reveal problems that averages obscure. Throughput measured in requests per second indicates overall system capacity and helps identify when scaling is needed. GPU utilization shows whether the system is compute-bound or has headroom for additional load, with consistently low utilization suggesting inefficient batching or other optimization opportunities. Error rates broken down by error type help distinguish between client errors (such as invalid inputs) and server errors (such as out-of-memory conditions), guiding troubleshooting efforts. These metrics should be collected continuously and visualized in dashboards that enable both real-time monitoring and historical analysis.
+\subsection{Hardware Selection}
 
-\section{Hardware Selection and Cost Analysis}
-\label{sec:hardware_selection}
+\subsubsection{CPU vs.\ GPU Trade-offs}
 
-Selecting appropriate hardware for transformer workloads requires balancing performance, cost, and operational requirements. This section provides guidance for different use cases and scales.
+CPUs suit small models ($<$100M parameters) with batch size 1--4 and latency-critical single-request scenarios. A distilled BERT (66M parameters) achieves 15~ms latency on modern CPU with batch size 1.
 
-\subsection{CPU vs GPU Trade-offs}
+GPUs become the clear choice for training (any size), large models ($>$100M), batch inference (batch $>$ 8), and throughput-oriented applications. BERT-large achieves 2.5 seq/s on CPU vs.\ 45 seq/s on T4 GPU ($18\times$ advantage).
 
-The choice between CPU and GPU depends on model size, batch size, latency requirements, and cost constraints. CPUs excel at low-latency inference with small batch sizes, while GPUs provide superior throughput for larger batches and are essential for training.
+Cost analysis often favors GPUs despite higher instance cost: T4 GPU at \$0.35/hour processes 162K sequences/hour (\$0.0000022/seq) vs.\ CPU at \$0.10/hour processing 9K sequences/hour (\$0.000011/seq)---GPU is $5\times$ more cost-effective.
 
-CPUs are the appropriate choice for several specific scenarios. Small models with fewer than 100 million parameters running with batch sizes of 1-4 can achieve acceptable performance on modern CPUs without the overhead of GPU memory transfers. Latency-critical applications requiring response times below 10 milliseconds may benefit from CPU deployment, as the overhead of transferring data to and from GPU memory can dominate total latency for small workloads. Cost-sensitive deployments with low throughput requirements can leverage CPU instances that cost 3-5× less than GPU instances, making them more economical when the lower throughput is acceptable. Edge deployment scenarios where GPU hardware is unavailable or impractical, such as mobile devices or embedded systems, necessitate CPU inference.
+\subsubsection{Training Hardware Selection}
 
-For example, a distilled BERT model with 66 million parameters can achieve 15 millisecond latency on a modern CPU (Intel Xeon or AMD EPYC) with batch size 1. The same model on a T4 GPU achieves 8 millisecond latency but requires batching to amortize GPU overhead, making it less suitable for single-request scenarios where latency is paramount.
+\begin{itemize}
+    \item \textbf{$<$1B parameters:} single V100 or A100. BERT-base trains in $\sim$3 days on V100.
+    \item \textbf{1--10B parameters:} 4--8 A100 GPUs with NVLink. GPT-2 (1.5B) trains in $\sim$2 weeks on 8$\times$A100.
+    \item \textbf{10--100B parameters:} 16--64 A100 GPUs with NVLink + InfiniBand. Requires pipeline and tensor parallelism.
+    \item \textbf{$>$100B parameters:} hundreds to thousands of GPUs. Training costs reach millions of dollars.
+\end{itemize}
 
-GPUs become the clear choice for several categories of workloads. Training any transformer model, regardless of size, benefits dramatically from GPU acceleration due to the massive parallelism in backpropagation and gradient computation. Large models exceeding 100 million parameters achieve substantially higher throughput on GPUs even for inference. Batch inference with batch sizes greater than 8 can fully utilize GPU compute resources, delivering throughput that CPUs cannot match. Throughput-oriented applications where processing many requests per second is more important than individual request latency should use GPUs to maximize overall system capacity.
+\subsubsection{Inference Hardware Selection}
 
-A BERT-large model with 340 million parameters illustrates the GPU advantage for larger models: it achieves only 2.5 sequences per second on CPU but 45 sequences per second on a T4 GPU with batch size 16, demonstrating an 18× throughput advantage. This performance gap widens further for even larger models.
+\begin{itemize}
+    \item \textbf{Batch throughput:} A100 or A10 GPUs with large batches (32--128). BERT-large: 520 seq/s on A100 with batch 64.
+    \item \textbf{Low-latency:} T4 or A10 with TensorRT + INT8. BERT-base: 5~ms latency on T4 with batch 1.
+    \item \textbf{Cost-optimized:} CPU or T4 with quantized models. Distilled BERT on CPU: $\sim$\$0.000005/inference.
+    \item \textbf{Edge:} mobile CPUs, edge TPUs, Jetson. MobileBERT (25M params): 30~ms on mobile CPU.
+\end{itemize}
 
-Cost analysis reveals that while cloud GPU instances cost approximately 3-5× more than equivalent CPU instances, the higher throughput often makes GPUs more cost-effective per inference. For BERT-large inference, a T4 GPU instance costs \$0.35 per hour and processes 162,000 sequences per hour, yielding \$0.0000022 per sequence. A CPU instance costs \$0.10 per hour and processes 9,000 sequences per hour, yielding \$0.000011 per sequence, making the GPU 5× more cost-effective despite the higher instance cost.
 
-Energy efficiency considerations also favor GPUs for large models. The T4 GPU consumes 70 watts and processes 45 sequences per second, yielding 0.64 sequences per second per watt. A high-end CPU consumes 200 watts and processes 2.5 sequences per second, yielding 0.0125 sequences per second per watt, making the GPU 51× more energy-efficient. This efficiency advantage becomes increasingly important at scale and in environmentally conscious deployments.
+%% ============================================================
+\section{Key Takeaways and Engineering Decision Checklist}
+\label{sec:key_takeaways}
 
-\subsection{Training Hardware Selection}
+\subsection{Principles}
 
-Training requirements scale dramatically with model size, from single GPUs for small models to thousands of GPUs for the largest models.
+\textbf{1. Parallelism at Layer~7 is typically the most consequential decision.} It determines communication patterns, memory distribution, and constraints on every layer below.
 
-For small models with fewer than 1 billion parameters, a single high-end GPU typically suffices. A V100 with 32GB of memory or an A100 with 40GB can accommodate most models in this category along with reasonable batch sizes. Training time remains manageable: BERT-base trained on a 16GB dataset completes in approximately 3 days on a V100. Cloud costs range from \$2.50 per hour for V100 instances to \$4.00 per hour for A100 instances, making this scale accessible for research projects, fine-tuning tasks, and domain-specific model development.
+\textbf{2. The top of the stack is portable.} Layers 7--5 work across vendors. Invest in understanding these first.
 
-Medium models ranging from 1 to 10 billion parameters require multi-GPU configurations to achieve reasonable training times and accommodate model size. A typical setup uses 4-8 A100 GPUs with 40GB or 80GB memory each, connected via NVLink for efficient gradient synchronization. Training time scales accordingly: GPT-2 with 1.5 billion parameters trains in approximately 2 weeks on 8 A100 GPUs. Cloud costs reach \$32 per hour for an 8-GPU A100 instance, positioning this scale for production model development and large-scale fine-tuning projects. NVLink connectivity is essential at this scale, as it enables 85-90\% scaling efficiency through its 600 GB/s bandwidth, whereas PCIe would reduce efficiency to 60-70\%.
+\textbf{3. Layers~4 and~3 often deliver the largest end-to-end gains.} Inference engine optimizations and custom kernels provide the biggest multipliers, but only after parallelism and compilation are correctly configured.
 
-Large models spanning 10 to 100 billion parameters demand substantial infrastructure with 16-64 A100 GPUs equipped with 80GB memory each. These systems require both NVLink for intra-node communication and InfiniBand for inter-node connectivity to maintain training efficiency. The scale of these training runs is substantial: GPT-3 with 175 billion parameters consumed approximately 10,000 V100-days of compute. Cloud costs range from \$128 to \$256 per hour for 32-64 GPU configurations. These models require pipeline and tensor parallelism in addition to data parallelism to distribute both computation and memory across the cluster. This scale is appropriate for foundation model development and large-scale pretraining efforts.
+\textbf{4. Communication follows the Bandwidth Ladder.} TP on fastest link, PP tolerates slower links, EP needs bisection bandwidth.
 
-Extreme models exceeding 100 billion parameters represent the frontier of current capabilities, requiring hundreds to thousands of A100 GPUs distributed across multiple nodes. Training times extend to months even on these large clusters, and full pretraining costs reach millions of dollars. InfiniBand provides 200-400 Gb/s bandwidth between nodes, enabling efficient multi-node training through sophisticated parallelism strategies. This scale is currently limited to state-of-the-art foundation models such as GPT-4 and PaLM, developed by organizations with substantial computational resources.
+\textbf{5. Diagnose before optimizing.} Profile to classify the bottleneck regime. Apply the optimization family that addresses that regime. Re-measure.
 
-\subsection{Inference Hardware Selection}
+\textbf{6. Numbers require context.} Every speedup claim is scoped to a workload phase, hardware configuration, and software version.
 
-Inference requirements vary widely based on latency, throughput, and cost constraints, leading to different optimal hardware choices for different deployment scenarios.
+\subsection{Engineering Decision Checklist}
 
-Batch inference optimized for throughput prioritizes processing large volumes of requests efficiently rather than minimizing individual request latency. A100 or A10 GPUs excel in this regime, processing large batches of 32-128 sequences simultaneously to maximize GPU utilization. This approach is ideal for offline processing tasks, data pipelines, and batch prediction workloads where results are not needed immediately. For example, BERT-large processes 520 sequences per second on an A100 with batch size 64, demonstrating the throughput achievable when latency constraints are relaxed.
+\begin{enumerate}
+    \item What is the objective metric? Latency (TTFT, ITL)? Throughput (tokens/s)? Cost (tokens/dollar)?
+    \item Is the workload prefill- or decode-dominated?
+    \item What is the bottleneck regime? Profile first.
+    \item Is parallelism required for fit or chosen for performance?
+    \item Is shape regularity sufficient for graph replay? If not, implement bucketing.
+    \item Is the interconnect appropriate for TP/EP?
+    \item What precision trade-off is acceptable? Measure accuracy impact before committing.
+    \item Does the optimization help end-to-end? Always measure the system-level metric.
+\end{enumerate}
 
-Low-latency inference targets real-time applications where response time is critical. T4 or A10 GPUs combined with TensorRT optimization provide the best balance of latency and cost for this use case. These deployments use small batches of 1-8 sequences to minimize queuing delays and leverage TensorRT's aggressive kernel fusion and INT8 quantization to reduce computation time. Interactive systems, real-time applications, and user-facing services typically fall into this category. BERT-base achieves 5 millisecond latency on a T4 GPU with batch size 1 using INT8 quantization, meeting the requirements of most interactive applications.
+%% ============================================================
+\section{Worked End-to-End Token Trace}
+\label{sec:token_trace}
 
-Cost-optimized inference prioritizes minimizing operational expenses while maintaining acceptable performance. CPU instances or small GPUs like the T4 provide the most economical deployment options when combined with quantized models and efficient batching strategies. High-volume, cost-sensitive applications such as content moderation, spam detection, or large-scale classification tasks benefit from this approach. A distilled BERT model with 66 million parameters running on CPU costs approximately \$0.000005 per inference, making it viable for applications processing billions of requests per month.
+One complete decode step for a 70B model on TP-4 (4$\times$H100, NVSwitch). BF16. $B=16$ concurrent requests.
 
-Edge deployment brings inference to devices with limited computational resources, such as mobile phones, embedded systems, or IoT devices. Mobile CPUs, edge TPUs, or NVIDIA Jetson modules provide the necessary compute capability within tight power and cost budgets. Models must be heavily optimized through INT8 or INT4 quantization and aggressive pruning to fit within memory constraints and achieve acceptable latency. MobileBERT with 25 million parameters runs at 30 milliseconds on mobile CPUs, enabling on-device inference for privacy-sensitive applications or scenarios with limited connectivity.
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{cllll}
+\toprule
+\textbf{\#} & \textbf{Layer} & \textbf{What Happens} & \textbf{Time (illustrative)} & \textbf{Bottleneck} \\
+\midrule
+1 & 4: Scheduler & Select batch of 16 reqs, allocate KV pages & $\sim$10--50~$\mu$s & Host overhead \\
+2 & 5/2: Replay & Launch compiled decode graph for $[B\!=\!16,S\!=\!1]$ & $\sim$5--10~$\mu$s & Host overhead \\
+3 & 3: GEMM & QKV projection (column-parallel) & $\sim$15--30~$\mu$s & HBM BW-bound \\
+4 & 3: Attention & FlashAttention: 8 local heads, KV-cache lookup & $\sim$10--40~$\mu$s & HBM BW-bound \\
+5 & 3: GEMM+AR & Output proj (row-par) + all-reduce 256~KB & $\sim$15--30 + 2--5~$\mu$s & HBM BW + latency \\
+6 & 3: FFN & Gate+Up (col-par), SwiGLU, Down (row-par) + AR & $\sim$30--60 + 2--5~$\mu$s & HBM BW-bound \\
+7 & Repeat & $\times$80 layers & $\sim$5--15~ms total & Accumulated \\
+8 & 4: Complete & Detokenize, check stop, reclaim KV & $\sim$5--20~$\mu$s & Host overhead \\
+\bottomrule
+\end{tabular}
+\caption{End-to-end decode step trace. Decode is dominated by memory-bandwidth-bound GEMMs with small but frequent latency-bound all-reduces, bookended by host scheduling overhead.}
+\label{tab:token_trace}
+\end{table}
 
-\subsection{Hardware Selection Decision Tree}
-
-The following decision tree provides guidance for hardware selection based on workload characteristics and requirements.
-
-The first decision point distinguishes between training and inference workloads, as they have fundamentally different characteristics. Training requires backpropagation and gradient computation, which benefit dramatically from GPU parallelism regardless of model size. Inference can sometimes be performed efficiently on CPUs, particularly for small models with low throughput requirements. If the workload involves training, proceed to evaluate model size; if it involves inference, proceed to evaluate latency requirements.
-
-For training workloads, model size determines the appropriate hardware configuration. Models with fewer than 1 billion parameters can typically be trained on a single V100 or A100 GPU, providing a cost-effective solution for research and fine-tuning. Models ranging from 1 to 10 billion parameters require 4-8 A100 GPUs with NVLink to achieve reasonable training times and accommodate model size. Models spanning 10 to 100 billion parameters demand 16-64 A100 GPUs with both NVLink and InfiniBand for efficient multi-node training. Models exceeding 100 billion parameters require hundreds to thousands of GPUs and are currently limited to organizations with substantial computational resources.
-
-Budget constraints provide a secondary consideration for training hardware. Research projects and organizations with limited budgets may opt for V100 or A10 GPUs, which offer lower cost at the expense of reduced performance. Production deployments and performance-critical applications typically justify the higher cost of A100 GPUs, which provide superior throughput and memory capacity.
-
-For inference workloads, latency requirements drive the initial hardware selection. Applications requiring response times below 10 milliseconds should consider T4 GPUs with TensorRT optimization or CPUs for small models, as these configurations minimize the overhead of data movement and kernel launch. Applications with latency requirements between 10 and 50 milliseconds can use T4 or A10 GPUs with moderate batch sizes to balance latency and throughput. Applications with latency requirements exceeding 50 milliseconds have flexibility to choose hardware based primarily on cost considerations.
-
-Throughput requirements provide the final consideration for inference hardware. Applications processing fewer than 10 sequences per second can use CPU instances cost-effectively, as the lower throughput is sufficient and GPU overhead is not justified. Applications processing 10-100 sequences per second benefit from T4 GPUs, which provide good throughput at moderate cost. Applications processing more than 100 sequences per second require A10 or A100 GPUs to achieve the necessary throughput, with the choice between them depending on budget and specific latency requirements.
-
+%% ============================================================
 \section{Exercises}
 \label{sec:exercises}
 
@@ -626,59 +1027,24 @@ Optimize inference pipeline:
 \end{enumerate}
 \end{exercise}
 
-
 \begin{exercise}
-Analyze Tensor Core utilization:
+Analyze the prefill vs.\ decode asymmetry:
 \begin{enumerate}
-    \item Profile BERT-base training with FP32 and FP16
-    \item Measure Tensor Core utilization using NVIDIA Nsight Compute
-    \item Experiment with different batch sizes and sequence lengths
-    \item Identify which operations benefit most from Tensor Cores
-    \item Calculate achieved TFLOPS as percentage of theoretical peak
+    \item For a model with $H=4096$ and 32 layers, compute the arithmetic intensity of a single-token decode GEMM and a 512-token prefill GEMM
+    \item Determine whether each is compute-bound or memory-bound on an H100 (3.35~TB/s, 990~TFLOPS)
+    \item Calculate the theoretical speedup from switching to FP8 ($2\times$ TFLOPS) for each phase
+    \item Explain why the speedup differs between phases
 \end{enumerate}
 \end{exercise}
 
 \begin{exercise}
-Implement and benchmark kernel fusion:
+Tensor parallelism communication analysis:
 \begin{enumerate}
-    \item Create separate kernels for layer norm and dropout
-    \item Implement a fused layer norm + dropout kernel
-    \item Measure memory bandwidth utilization for both approaches
-    \item Compare execution time across different tensor sizes
-    \item Analyze the speedup and explain the performance difference
-\end{enumerate}
-\end{exercise}
-
-\begin{exercise}
-Optimize memory access patterns:
-\begin{enumerate}
-    \item Implement matrix multiplication with and without coalesced access
-    \item Add padding to eliminate shared memory bank conflicts
-    \item Profile both implementations using Nsight Compute
-    \item Measure effective memory bandwidth for each version
-    \item Document the impact of access patterns on performance
-\end{enumerate}
-\end{exercise}
-
-\begin{exercise}
-Multi-GPU scaling analysis:
-\begin{enumerate}
-    \item Train BERT-base on 1, 2, 4, and 8 GPUs
-    \item Measure training time and throughput for each configuration
-    \item Calculate scaling efficiency relative to single GPU
-    \item Profile communication overhead using NVIDIA Nsight Systems
-    \item Compare PCIe vs NVLink if available
-\end{enumerate}
-\end{exercise}
-
-\begin{exercise}
-Hardware selection analysis:
-\begin{enumerate}
-    \item Choose a transformer model and deployment scenario
-    \item Estimate throughput requirements and latency constraints
-    \item Compare cost per inference for CPU, T4, and A100
-    \item Calculate break-even point where GPU becomes cost-effective
-    \item Recommend hardware configuration with justification
+    \item For a 70B model with $H=8192$ and 80 layers, calculate the total all-reduce data volume per decode token with TP-4 in BF16
+    \item Calculate the communication time assuming NVLink latency of 2~$\mu$s per all-reduce
+    \item Repeat for InfiniBand at 8~$\mu$s per all-reduce
+    \item If decode compute takes 10~ms per token, what percentage overhead does communication add in each case?
+    \item At what TP degree does InfiniBand communication overhead exceed 50\% of compute time?
 \end{enumerate}
 \end{exercise}
 
@@ -693,6 +1059,40 @@ Flash Attention implementation study:
 \end{enumerate}
 \end{exercise}
 
+\begin{exercise}
+Inference engine configuration:
+\begin{enumerate}
+    \item Deploy a 7B model using vLLM with default settings
+    \item Measure throughput and P50/P99 latency under load
+    \item Experiment with max batch size: 1, 8, 32, 128
+    \item Enable PagedAttention and measure memory utilization improvement
+    \item Compare static batching vs.\ continuous batching throughput
+    \item Identify the bottleneck regime at each batch size using profiling
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Bottleneck diagnosis:
+\begin{enumerate}
+    \item Choose a transformer model and deployment scenario (interactive chatbot or batch processing)
+    \item Profile the deployment using available tools
+    \item Classify the bottleneck using the taxonomy in Table~\ref{tab:bottleneck_taxonomy}
+    \item Select and apply the appropriate optimization from Table~\ref{tab:optimization_impact}
+    \item Measure end-to-end improvement and verify the bottleneck shifted
+    \item Document the before/after metrics and explain why the optimization helped
+\end{enumerate}
+\end{exercise}
+
+\begin{exercise}
+Hardware selection analysis:
+\begin{enumerate}
+    \item Choose a transformer model and deployment scenario
+    \item Estimate throughput requirements and latency constraints
+    \item Compare cost per inference for CPU, T4, and A100
+    \item Calculate break-even point where GPU becomes cost-effective
+    \item Recommend hardware configuration with justification
+\end{enumerate}
+\end{exercise}
 
 \section{Solutions}
 
@@ -713,21 +1113,11 @@ QAT INT8 & 110 & 18.1 & 84.2\% \\
 \hline
 \end{tabular}
 
-\textbf{Analysis:}
-\begin{itemize}
-    \item \textbf{Model size:} 4x reduction (438 MB $\to$ 110 MB)
-    \item \textbf{Speed:} 2.5x faster inference
-    \item \textbf{PTQ:} 0.7\% accuracy drop, no retraining
-    \item \textbf{QAT:} 0.3\% accuracy drop, requires fine-tuning
-\end{itemize}
-
-\textbf{Recommendation:} Use QAT for production (better accuracy with same speed/size)
+\textbf{Analysis:} $4\times$ size reduction (438~MB $\to$ 110~MB). $2.5\times$ faster inference. PTQ: 0.7\% accuracy drop, no retraining. QAT: 0.3\% drop, requires fine-tuning. \textbf{Recommendation:} QAT for production.
 \end{solution}
 
 \begin{solution}
 \textbf{Exercise 2: Attention Head Pruning}
-
-\textbf{Results:}
 
 \begin{tabular}{|c|c|c|}
 \hline
@@ -740,13 +1130,11 @@ QAT INT8 & 110 & 18.1 & 84.2\% \\
 \hline
 \end{tabular}
 
-\textbf{Key Insight:} Can prune 25-50\% of heads with minimal accuracy loss (<2\%), but 75\% pruning causes significant degradation.
+\textbf{Key Insight:} Can prune 25--50\% of heads with minimal accuracy loss ($<$2\%), but 75\% causes significant degradation.
 \end{solution}
 
 \begin{solution}
 \textbf{Exercise 3: Optimize Inference Pipeline}
-
-\textbf{Progressive Optimization:}
 
 \begin{tabular}{|l|c|c|}
 \hline
@@ -759,108 +1147,56 @@ PyTorch FP32 & 45.2 & 22.1 \\
 \hline
 \end{tabular}
 
-\textbf{Final Improvement:} 7.3x throughput increase (22.1 $\to$ 162.4 samples/s)
+\textbf{Final Improvement:} $7.3\times$ throughput increase ($22.1 \to 162.4$ samples/s).
 \end{solution}
 
+\begin{solution}
+\textbf{Exercise 4: Prefill vs.\ Decode Asymmetry}
 
+For $H=4096$, weight matrix $[4096 \times 4096]$, size $= 4096^2 \times 2 = 32$~MB.
+
+\textbf{Decode} ($B=1$): FLOPs $= 2 \times 4096^2 = 33.6$M. Intensity $= 33.6\text{M} / 32\text{M} \approx 1$ FLOP/byte. H100 balance point: $990\text{T}/3.35\text{T} = 295$ FLOPs/byte. Decode is deeply memory-bound.
+
+\textbf{Prefill} ($B=512$): FLOPs $= 2 \times 512 \times 4096^2 = 17.2$B. Intensity $= 17.2\text{B}/32\text{M} = 537$ FLOPs/byte. Prefill is compute-bound.
+
+FP8 ($2\times$ TFLOPS): prefill speedup $\approx 1.8\times$ (compute-bound, nearly doubles). Decode speedup $\approx 1.0\times$ (bandwidth-bound, TFLOPS irrelevant). The asymmetry arises because decode's bottleneck is loading weights from HBM, not computing with them.
+\end{solution}
 
 \begin{solution}
-\textbf{Exercise 4: Tensor Core Utilization}
+\textbf{Exercise 5: TP Communication Analysis}
 
-\textbf{Results (A100 GPU):}
+Per all-reduce: $H \times p = 8192 \times 2 = 16$~KB. Per layer: $2 \times 16 = 32$~KB. For 80 layers: $80 \times 32 = 2560$~KB $\approx 2.5$~MB total. Number of all-reduces: $80 \times 2 = 160$.
 
-\begin{tabular}{|l|c|c|c|}
+\textbf{NVLink} ($2~\mu$s/AR): $160 \times 2 = 320~\mu$s. Overhead: $320~\mu\text{s} / 10~\text{ms} = 3.2\%$.
+
+\textbf{InfiniBand} ($8~\mu$s/AR): $160 \times 8 = 1280~\mu$s. Overhead: $1280~\mu\text{s} / 10~\text{ms} = 12.8\%$.
+
+For 50\% overhead on IB: $160 \times 8 \times \text{TP} = 5000~\mu$s requires TP $\approx 4$ (since overhead scales with TP degree through additional synchronization points). This demonstrates why TP must use the fastest available link.
+\end{solution}
+
+\begin{solution}
+\textbf{Exercise 7: Inference Engine Configuration}
+
+Representative results for a 7B model on a single A100:
+
+\begin{tabular}{|l|c|c|c|c|}
 \hline
-\textbf{Config} & \textbf{TC Util} & \textbf{TFLOPS} & \textbf{\% Peak} \\
+\textbf{Config} & \textbf{Batch} & \textbf{Tput (tok/s)} & \textbf{P50 (ms)} & \textbf{P99 (ms)} \\
 \hline
-FP32, batch=16 & 0\% & 8.2 & 5.3\% \\
-FP16, batch=16 & 45\% & 89.4 & 28.7\% \\
-FP16, batch=64 & 78\% & 187.3 & 60.1\% \\
-FP16, batch=128 & 85\% & 214.6 & 68.9\% \\
+Static, no paging & 1 & 42 & 24 & 31 \\
+vLLM, batch=8 & 8 & 285 & 28 & 45 \\
+vLLM, batch=32 & 32 & 890 & 36 & 72 \\
+vLLM, batch=128 & 128 & 1,650 & 78 & 185 \\
 \hline
 \end{tabular}
 
-\textbf{Key Findings:}
-\begin{itemize}
-    \item Attention and MLP benefit most from Tensor Cores
-    \item Larger batches improve utilization (more parallelism)
-    \item FP16 essential for Tensor Core activation
-    \item Achieved 68.9\% of theoretical peak (good for transformers)
-\end{itemize}
+\textbf{Key findings:} PagedAttention increases effective concurrency by $\sim$$3\times$ vs.\ contiguous allocation. Continuous batching provides $\sim$$4\times$ throughput over static batching at batch=32. At batch=128, the bottleneck shifts from scheduling to HBM bandwidth (decode GEMMs). P99 latency grows faster than P50, indicating tail effects from prefill interference.
 \end{solution}
 
 \begin{solution}
-\textbf{Exercise 5: Kernel Fusion}
+\textbf{Exercise 9: Hardware Selection}
 
-\textbf{Results:}
-
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Implementation} & \textbf{Time (μs)} & \textbf{Bandwidth (GB/s)} & \textbf{Speedup} \\
-\hline
-Separate Kernels & 142 & 385 & 1.0x \\
-Fused Kernel & 58 & 943 & 2.45x \\
-\hline
-\end{tabular}
-
-\textbf{Analysis:}
-\begin{itemize}
-    \item Fused kernel eliminates intermediate memory writes
-    \item 2.45x speedup from reduced memory traffic
-    \item Bandwidth utilization improves from 385 to 943 GB/s
-    \item Most beneficial for memory-bound operations
-\end{itemize}
-\end{solution}
-
-\begin{solution}
-\textbf{Exercise 6: Memory Access Patterns}
-
-\textbf{Results:}
-
-\begin{tabular}{|l|c|c|}
-\hline
-\textbf{Implementation} & \textbf{Bandwidth (GB/s)} & \textbf{Speedup} \\
-\hline
-Uncoalesced & 287 & 1.0x \\
-Coalesced & 823 & 2.87x \\
-+ No Bank Conflicts & 1,142 & 3.98x \\
-\hline
-\end{tabular}
-
-\textbf{Key Insight:} Proper memory access patterns provide 4x speedup through coalescing and eliminating bank conflicts.
-\end{solution}
-
-\begin{solution}
-\textbf{Exercise 7: Multi-GPU Scaling}
-
-\textbf{Results:}
-
-\begin{tabular}{|c|c|c|c|}
-\hline
-\textbf{GPUs} & \textbf{Time (min)} & \textbf{Throughput} & \textbf{Efficiency} \\
-\hline
-1 & 240 & 1.0x & 100\% \\
-2 & 126 & 1.90x & 95.2\% \\
-4 & 67 & 3.58x & 89.6\% \\
-8 & 36 & 6.67x & 83.3\% \\
-\hline
-\end{tabular}
-
-\textbf{Communication Overhead:}
-\begin{itemize}
-    \item PCIe: 12-15\% overhead
-    \item NVLink: 5-8\% overhead (2x better)
-\end{itemize}
-
-\textbf{Recommendation:} NVLink for multi-GPU training (better scaling)
-\end{solution}
-
-\begin{solution}
-\textbf{Exercise 8: Hardware Selection}
-
-\textbf{Scenario:} BERT-base inference, 1M requests/day, <50ms latency
-
-\textbf{Cost Analysis:}
+\textbf{Scenario:} BERT-base inference, 1M requests/day, $<$50~ms latency.
 
 \begin{tabular}{|l|c|c|c|}
 \hline
@@ -872,8 +1208,5 @@ A100 GPU & 650 req/s & \$2.50 & \$1.07 \\
 \hline
 \end{tabular}
 
-\textbf{Break-even:} T4 becomes cost-effective at >10k requests/day
-
-\textbf{Recommendation:} T4 GPU (best cost/performance for this workload)
+\textbf{Break-even:} T4 becomes cost-effective at $>$10K requests/day. \textbf{Recommendation:} T4 GPU (best cost/performance for this workload).
 \end{solution}
-

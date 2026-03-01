@@ -562,7 +562,7 @@ TorchScript compilation typically provides 10-30\% speedup for transformer infer
 
 \subsection{KV Cache for Autoregressive Generation}
 
-Autoregressive generation in models like GPT requires computing attention over all previous tokens at each step. Without optimization, this results in redundant computation as the keys and values for previous tokens are recomputed at every step. Implementing a KV cache stores these values and reuses them, dramatically reducing computation. For systems-level KV cache management at scale (PagedAttention, memory fragmentation, batch scheduling), see Chapter~\ref{chap:hardwareoptimization}.
+Autoregressive generation in models like GPT requires computing attention over all previous tokens at each step. Without optimization, this results in redundant computation as the keys and values for previous tokens are recomputed at every step. Implementing a KV cache stores these values and reuses them, dramatically reducing computation. For systems-level KV cache management at scale (PagedAttention, memory fragmentation, batch scheduling), see Chapter~\ref{chap:hardware_optimization}.
 
 \begin{verbatim}
 class GPTWithKVCache(nn.Module):
@@ -709,7 +709,7 @@ outputs = session.run(
 )
 \end{verbatim}
 
-ONNX Runtime typically delivers 1.5--2$\times$ speedup over PyTorch for transformer inference through operator fusion, memory layout optimization, and hardware-specific kernel selection. Combined with INT8 quantization, 3--4$\times$ speedup is achievable (see Chapter~\ref{chap:hardwareoptimization} for quantization fundamentals).
+ONNX Runtime typically delivers 1.5--2$\times$ speedup over PyTorch for transformer inference through operator fusion, memory layout optimization, and hardware-specific kernel selection. Combined with INT8 quantization, 3--4$\times$ speedup is achievable (see Chapter~\ref{chap:hardware_optimization} for quantization fundamentals).
 
 \subsection{TensorRT Optimization}
 
@@ -780,7 +780,7 @@ TensorRT optimization is particularly effective for deployment scenarios where i
 
 \subsection{Quantization}
 
-Quantization reduces model size and inference latency by using lower precision representations for weights and activations. PyTorch supports several quantization approaches, from simple dynamic quantization to full quantization-aware training. For the theoretical foundations of quantization (precision formats, scale factors, zero-points) and pruning/distillation techniques, see Chapter~\ref{chap:hardwareoptimization}.
+Quantization reduces model size and inference latency by using lower precision representations for weights and activations. PyTorch supports several quantization approaches, from simple dynamic quantization to full quantization-aware training. For the theoretical foundations of quantization (precision formats, scale factors, zero-points) and pruning/distillation techniques, see Chapter~\ref{chap:hardware_optimization}.
 
 \begin{verbatim}
 import torch.quantization as quant

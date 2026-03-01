@@ -187,23 +187,35 @@
 
 <p>Effective training of transformer models requires careful attention to hyperparameter selection, monitoring, and debugging. This section provides comprehensive guidance on the key decisions that impact training success.</p>
 
-<h3>Learning Rate Selection and Tuning</h3>
+<h3>Learning Rate Selection</h3>
 
-<p>The learning rate is the single most important hyperparameter for transformer training. The optimal learning rate depends on model size, batch size, and whether you are pre-training or fine-tuning. For fine-tuning pre-trained models, learning rates are typically much smaller than for training from scratch, as the pre-trained weights already occupy a good region of the loss landscape.</p>
+<div style="text-align: center;">
 
-<p>For BERT fine-tuning, learning rates between $1 \times 10^{-5}$ and $5 \times 10^{-5}$ work well across most tasks. The smaller end of this range is appropriate for tasks with limited data or when fine-tuning for many epochs, while the larger end works better with abundant data and shorter training. GPT fine-tuning typically uses slightly higher learning rates, in the range of $2 \times 10^{-5}$ to $1 \times 10^{-4}$, as the autoregressive objective is somewhat more stable than BERT's masked language modeling.</p>
+<table>
+<tr><th><strong>Scenario</strong></th><th><strong>Range</strong></th><th><strong>Notes</strong></th></tr>
+<tr><td>BERT fine-tuning</td><td>$1$--$5 \times 10^{-5}$</td><td>Lower end for small datasets</td></tr>
+<tr><td>GPT fine-tuning</td><td>$2 \times 10^{-5}$--$10^{-4}$</td><td>Autoregressive is more stable</td></tr>
+<tr><td>Pre-training from scratch</td><td>$10^{-4}$--$6 \times 10^{-4}$</td><td>Requires longer warmup</td></tr>
+</table>
 
-<p>The learning rate should scale approximately linearly with batch size. If you double the batch size, you can typically increase the learning rate by a factor of 1.5 to 2 without harming convergence. This relationship holds because larger batches provide more accurate gradient estimates, allowing the optimizer to take larger steps safely. However, this scaling breaks down at very large batch sizes, where additional techniques like LAMB optimizer become necessary.</p>
+<p></div>
 
-<p>A learning rate warmup is essential for stable training. During warmup, the learning rate increases linearly from zero to the target value over a specified number of steps. This prevents the large gradients that can occur early in training from pushing the model into a poor region of the loss landscape. For fine-tuning, a warmup period covering 5-10\% of total training steps is typical. For pre-training from scratch, longer warmup periods of 10,000 to 50,000 steps are common.</p>
+<p><strong>Rules of thumb:</strong> Scale LR $\sim$linearly with batch size (use LAMB for very large batches). Warmup: 5--10\% of steps for fine-tuning, 10K--50K steps for pre-training.</p>
 
 <h3>Batch Size Selection</h3>
 
-<p>Batch size selection involves balancing computational efficiency, memory constraints, and optimization dynamics. Larger batches improve GPU utilization and training throughput but require more memory and can sometimes harm generalization. For fine-tuning on a single GPU, batch sizes between 16 and 32 are typical, as these fit comfortably in memory while providing reasonable gradient estimates.</p>
+<div style="text-align: center;">
 
-<p>When memory constraints prevent using your desired batch size, gradient accumulation provides an effective solution. By accumulating gradients over multiple forward-backward passes before updating weights, you can simulate larger batch sizes without increasing memory requirements. For example, using a batch size of 8 with 4 accumulation steps is equivalent to a batch size of 32 in terms of optimization dynamics, though it takes four times as long to complete each update.</p>
+<table>
+<tr><th><strong>Scenario</strong></th><th><strong>Typical Range</strong></th><th><strong>Notes</strong></th></tr>
+<tr><td>Fine-tuning (single GPU)</td><td>16--32</td><td>Gradient accumulation for larger effective batch</td></tr>
+<tr><td>Fine-tuning (multi-GPU)</td><td>32--256</td><td>Scale LR accordingly</td></tr>
+<tr><td>Pre-training</td><td>256--4096</td><td>Requires LR warmup + LAMB</td></tr>
+</table>
 
-<p>The relationship between batch size and training dynamics is subtle. Very small batches (below 8) introduce significant noise into gradient estimates, which can slow convergence and lead to instability. Very large batches (above 512 for fine-tuning) can lead to sharp minima that generalize poorly, though this effect is less pronounced when using appropriate learning rate scaling and warmup. For most fine-tuning tasks, batch sizes between 16 and 64 provide a good balance.</p>
+<p></div>
+
+<p>If memory-limited, use gradient accumulation: $B_{\text{eff}} = B_{\text{micro}} \times N_{\text{accum}}$ (see Chapter~[ref] for implementation).</p>
 
 <h3>Checkpointing and Monitoring Strategy</h3>
 
@@ -215,49 +227,23 @@
 
 <h2>Memory Management</h2>
 
-<p>Memory management is often the primary constraint in transformer training and deployment. Understanding memory requirements and optimization strategies enables training larger models and processing longer sequences.</p>
+<p>Memory is often the primary constraint in transformer training. Rather than repeating the detailed memory analysis from Chapter~21, this section provides a quick-reference decision guide.</p>
 
-<h3>Estimating Memory Requirements</h3>
+<h3>Out-of-Memory Decision Checklist</h3>
 
-<p>The memory footprint of transformer training consists of several components. Model parameters themselves require 4 bytes per parameter in FP32 or 2 bytes in FP16. For BERT-base with 110 million parameters, this amounts to 440 MB in FP32 or 220 MB in FP16. However, parameters are only a small fraction of total memory usage during training.</p>
+<p>When encountering memory errors, apply these steps in order:</p>
 
-<p>Optimizer states typically dominate memory consumption. The Adam optimizer maintains two additional tensors per parameter for first and second moment estimates, tripling the memory required for parameters. For BERT-base, this adds another 880 MB in FP32, bringing the total for parameters and optimizer states to 1.32 GB. This explains why mixed precision training provides such substantial memory savings, as storing optimizer states in FP32 while computing in FP16 reduces this component significantly.</p>
+<ol>
+    <li><strong>Reduce sequence length</strong> (if task permits). Attention memory scales quadratically with sequence length---truncating from 512 to 256 tokens saves $\sim$4× attention memory. Many classification tasks work well at 128 tokens.
+    <li><strong>Enable mixed precision</strong> (<code>torch.cuda.amp</code>). Halves activation and gradient memory with 2--3× speedup on tensor-core GPUs. Minimal code changes required. See Chapter~21 for implementation.
+    <li><strong>Enable gradient checkpointing.</strong> Trades 20--30\% additional compute time for 40--50\% activation memory reduction. Apply via <code>torch.utils.checkpoint</code>.
+    <li><strong>Reduce batch size and use gradient accumulation.</strong> Maintain effective batch size $B_{\text{eff}} = B_{\text{micro}} \times N_{\text{accum}}$ while fitting in memory. Linear memory savings.
+    <li><strong>Consider model parallelism.</strong> When the model itself exceeds single-GPU memory, use pipeline parallelism (split by layers) or tensor parallelism (split within layers). Frameworks: DeepSpeed, Megatron-LM. See Chapter~22 for multi-GPU strategies.
+</ol>
 
-<p>Activations for backpropagation constitute the other major memory consumer. Each transformer layer stores activations for all tokens in the batch, and these accumulate across layers. For a batch size of 32 with sequence length 512 and hidden size 768, each attention layer stores approximately 150 MB of activations. With 12 layers, this totals 1.8 GB just for attention activations, not including feed-forward layers and other components.</p>
+<h3>Memory Estimation Rule of Thumb</h3>
 
-<p>A practical formula for estimating total training memory is: Memory (GB) = (Parameters × 16 bytes) + (Batch Size × Sequence Length × Hidden Size × Layers × 4 bytes × 10). The factor of 16 accounts for parameters, gradients, and optimizer states in mixed precision. The factor of 10 in the activation term is an empirical multiplier accounting for all activation storage. For BERT-base with batch size 32 and sequence length 512, this formula predicts approximately 8 GB, which matches observed usage.</p>
-
-<h3>Choosing Batch Size and Sequence Length</h3>
-
-<p>When memory is constrained, you must balance batch size and sequence length. Reducing sequence length has a quadratic effect on memory usage due to the self-attention mechanism, while reducing batch size has only a linear effect. Therefore, if your task permits, reducing sequence length is more effective for memory savings.</p>
-
-<p>Many tasks do not require the full 512-token context that BERT supports. For sentence classification, sequences are often much shorter, and truncating to 128 or 256 tokens may have minimal impact on performance while reducing memory by 4× or 2× respectively. For tasks that do require long contexts, consider hierarchical approaches that process the input in chunks rather than all at once.</p>
-
-<p>When you cannot reduce sequence length, reducing batch size is the next option. As discussed earlier, gradient accumulation allows you to maintain effective batch size while using smaller micro-batches that fit in memory. The trade-off is increased training time, as you perform more forward-backward passes per update. However, this is often preferable to being unable to train at all.</p>
-
-<h3>Gradient Checkpointing</h3>
-
-<p>Gradient checkpointing trades computation for memory by recomputing activations during the backward pass rather than storing them. This technique can reduce activation memory by a factor of 4-8 with only a 20-30\% increase in training time. For memory-constrained scenarios, this trade-off is often worthwhile.</p>
-
-<p>The implementation is straightforward in modern frameworks. In PyTorch, wrapping transformer layers with checkpoint functions causes activations to be recomputed during backpropagation. The memory savings are substantial because activations typically consume more memory than parameters and optimizer states combined. For BERT-base, gradient checkpointing can reduce memory usage from 8 GB to 4 GB, enabling training with twice the batch size or sequence length.</p>
-
-<p>The computational overhead of gradient checkpointing is less severe than it might appear. Modern GPUs are often memory-bound rather than compute-bound for transformer training, meaning that the additional forward passes during backpropagation can be performed with minimal wall-clock time increase. The actual slowdown is typically 20-30\% rather than the 50\% that naive analysis would suggest.</p>
-
-<h3>Mixed Precision Training</h3>
-
-<p>Mixed precision training uses FP16 for most computations while maintaining FP32 master copies of weights for numerical stability. This approach reduces memory usage by approximately 2× and can accelerate training by 2-3× on modern GPUs with tensor cores. The memory savings come from storing activations and gradients in FP16, while the speed improvements come from faster FP16 arithmetic on specialized hardware.</p>
-
-<p>Implementing mixed precision requires careful attention to numerical stability. Loss scaling prevents gradient underflow by multiplying the loss by a large constant before backpropagation, then dividing gradients by the same constant before the optimizer step. Dynamic loss scaling automatically adjusts this constant to maximize precision without causing overflow. Modern frameworks like PyTorch's automatic mixed precision handle these details automatically.</p>
-
-<p>The performance benefits of mixed precision are most pronounced on GPUs with tensor cores, such as NVIDIA V100, A100, and later architectures. On these devices, FP16 matrix multiplications can be 2-8× faster than FP32 operations. For transformer training, which is dominated by matrix multiplications in attention and feed-forward layers, this translates to substantial end-to-end speedups.</p>
-
-<h3>Multi-GPU Strategies</h3>
-
-<p>When training exceeds the capacity of a single GPU, several parallelism strategies are available. Data parallelism replicates the model across GPUs and splits batches across devices, with gradients synchronized after each backward pass. This approach scales well up to 8-16 GPUs and is the simplest to implement, requiring minimal code changes.</p>
-
-<p>Model parallelism splits the model itself across GPUs, with different layers or components on different devices. This becomes necessary when the model is too large to fit on a single GPU, even with batch size 1. Pipeline parallelism is a variant that divides the model into stages and processes multiple micro-batches concurrently, improving efficiency by keeping all GPUs busy.</p>
-
-<p>For very large models, tensor parallelism splits individual layers across GPUs, partitioning matrix multiplications so that each GPU computes a portion of each layer. This requires more sophisticated implementation but provides the finest-grained parallelism. Modern frameworks like DeepSpeed and Megatron-LM combine these strategies, using tensor parallelism within nodes and pipeline parallelism across nodes for maximum efficiency.</p>
+<p>Total training memory (GB) $\approx$ (Parameters $\times$ 16 bytes) + (Batch $\times$ SeqLen $\times$ Hidden $\times$ Layers $\times$ 40 bytes). The first term covers parameters, gradients, and optimizer states; the second covers activations. For BERT-base (110M params, batch 32, seq 512): $\sim$8 GB.</p>
 
 <h2>Debugging Transformers</h2>
 
@@ -312,76 +298,67 @@
 
 <h3>Gradient Analysis</h3>
 
-<strong>Monitor per-layer gradient norms:</strong>
-<pre><code>
-for name, param in model.named_parameters():
-    if param.grad is not None:
-        grad_norm = param.grad.norm().item()
-        print(f"{name}: {grad_norm:.6f}")
-</code></pre>
+<p>Monitor per-layer gradient norms throughout training (see Chapter~[ref] for PyTorch profiling tools). Healthy gradients have norms between $10^{-4}$ and $10^{1}$, are similar across layers, and are non-zero for all layers. Sudden spikes precede divergence; vanishing gradients indicate dead layers.</p>
 
-<p><strong>Healthy gradients:</strong>
-<ul>
-    <li>Norms between $10^{-4}$ and $10^{1}$
-    <li>Similar across layers (no extreme differences)
-    <li>Non-zero for all layers
-</ul>
+<h3>Common Training Issues: Quick Reference</h3>
 
-<h3>Common Training Issues and Solutions</h3>
+<div style="text-align: center;">
 
-<p>Out of memory errors are among the most common issues in transformer training. When you encounter OOM errors, the first step is to reduce batch size. If you are already at batch size 1, consider reducing sequence length, enabling gradient checkpointing, or using mixed precision training. As a last resort, you may need to use a smaller model or move to a GPU with more memory.</p>
+<table>
+<tr><th><strong>Symptom</strong></th><th><strong>Likely Cause</strong></th><th><strong>Fix</strong></th></tr>
+<tr><td>Out of memory</td><td>Batch/sequence too large</td><td>See memory checklist (Section~[ref])</td></tr>
+<tr><td>Loss not decreasing</td><td>Learning rate too low</td><td>Increase LR 3--10$\times$; verify overfit on 1 batch</td></tr>
+<tr><td>Loss diverges / NaN</td><td>LR too high or no clipping</td><td>Reduce LR; clip gradients to norm 1.0</td></tr>
+<tr><td>Slow training</td><td>Low GPU utilization</td><td>Increase batch size; add DataLoader workers</td></tr>
+<tr><td>Train/val gap growing</td><td>Overfitting</td><td>More dropout; data augmentation; smaller model</td></tr>
+</table>
 
-<p>Slow training can result from several factors. Poor GPU utilization often indicates that your batch size is too small or that data loading is a bottleneck. Monitor GPU utilization using nvidia-smi, and if it is below 80\%, try increasing batch size or using more data loading workers. If training is slow despite high GPU utilization, you may be using an inefficient implementation or could benefit from mixed precision training.</p>
-
-<p>Poor convergence manifests as loss that decreases slowly or plateaus at a suboptimal value. This often indicates that your learning rate is too low. Try increasing it by a factor of 3-10 and observe whether convergence improves. If loss diverges with higher learning rates, the issue may be poor initialization or an architectural problem. Verify that your model can overfit a small batch of data, as this confirms that the architecture and implementation are correct.</p>
-
-<p>Gradient explosion appears as sudden spikes in loss or NaN values. The immediate solution is gradient clipping, which limits the norm of gradients to a maximum value, typically 1.0 or 5.0. If gradient explosion persists despite clipping, reduce the learning rate or increase warmup duration. Check for numerical instability in attention masks, ensuring that masked positions use -1e9 rather than -infinity, as the latter can cause numerical issues in some implementations.</p>
+<p></div>
 
 <h2>Inference Optimization</h2>
 
-<p>Optimizing transformer inference is critical for production deployment, as inference costs often exceed training costs over the lifetime of a model. This section covers techniques for reducing latency and increasing throughput while maintaining accuracy.</p>
+<p>Inference costs often exceed training costs over a model's lifetime. This section provides decision tables for choosing optimization strategies; see Chapters~21 and~22 for detailed implementations.</p>
 
-<h3>Batch Size for Throughput versus Latency</h3>
+<h3>Optimizing for Latency</h3>
 
-<p>The batch size used during inference involves a fundamental trade-off between throughput and latency. Processing requests individually minimizes latency, as each request is handled immediately without waiting for others. However, this approach severely underutilizes GPU resources, as transformers achieve much higher throughput when processing multiple examples simultaneously.</p>
+<div style="text-align: center;">
 
-<p>For throughput-oriented applications like batch processing of documents, use the largest batch size that fits in memory. This maximizes GPU utilization and minimizes cost per example. For BERT-base inference on a V100 GPU, batch sizes of 64-128 typically achieve near-optimal throughput, processing 500-1000 examples per second depending on sequence length.</p>
+<table>
+<tr><th><strong>Technique</strong></th><th><strong>Speedup</strong></th><th><strong>Accuracy Cost</strong></th><th><strong>Effort</strong></th></tr>
+<tr><td>FP16 inference</td><td>1.5--2$\times$</td><td>$<$0.1\%</td><td>Minimal</td></tr>
+<tr><td>INT8 quantization (PTQ)</td><td>2--4$\times$</td><td>0.5--2\%</td><td>Low (calibration)</td></tr>
+<tr><td>INT8 quantization (QAT)</td><td>2--4$\times$</td><td>$<$0.5\%</td><td>Medium (retraining)</td></tr>
+<tr><td>KV caching (autoregressive)</td><td>5--10$\times$</td><td>None</td><td>Low</td></tr>
+<tr><td>TorchScript / torch.compile</td><td>1.2--1.5$\times$</td><td>None</td><td>Low</td></tr>
+<tr><td>TensorRT compilation</td><td>2--5$\times$</td><td>$<$0.5\%</td><td>Medium</td></tr>
+</table>
 
-<p>For latency-sensitive applications like real-time search or chatbots, dynamic batching provides a middle ground. Requests are accumulated for a short time window, typically 10-50 milliseconds, and then processed together. This approach increases average latency slightly but dramatically improves throughput, allowing a single GPU to serve many more requests per second. The optimal batching window depends on your latency requirements and request rate.</p>
+<p></div>
 
-<h3>KV Caching for Generation</h3>
+<h3>Optimizing for Throughput</h3>
 
-<p>Autoregressive generation in GPT-style models requires generating tokens sequentially, with each token depending on all previous tokens. Naive implementation recomputes attention for all previous tokens at each step, resulting in quadratic complexity in generation length. Key-value caching eliminates this redundancy by storing the key and value projections from previous tokens and reusing them for subsequent tokens.</p>
+<ul>
+    <li><strong>Dynamic batching:</strong> Accumulate requests for 10--50\,ms, process together. Improves GPU utilization from 20--30\% to 70--90\%.
+    <li><strong>ONNX Runtime / TensorRT:</strong> Graph-level optimizations provide 1.5--5$\times$ throughput gains via operator fusion and kernel selection.
+    <li><strong>Model distillation:</strong> Train a smaller student (e.g., 6-layer DistilBERT retains 97\% of BERT-base accuracy at 1.6$\times$ speed). Combine with quantization for 5--10$\times$ cumulative speedup.
+    <li><strong>Continuous batching (vLLM):</strong> For autoregressive generation, allow new requests to join in-flight batches as others complete. See Chapter~22.
+</ul>
 
-<p>With KV caching, generating a sequence of length $n$ requires $n$ forward passes through the model, but each pass only processes a single new token. The cached keys and values from previous tokens are concatenated with the new token's keys and values for attention computation. This reduces generation time by a factor of 5-10× for typical sequence lengths, making interactive generation practical.</p>
+<h3>Hardware Selection Summary</h3>
 
-<p>The memory cost of KV caching is proportional to sequence length, batch size, and model size. For GPT-2 medium generating sequences of length 512 with batch size 8, the KV cache requires approximately 1 GB of memory. This is substantial but worthwhile given the dramatic speedup. For very long sequences or large batch sizes, memory constraints may limit the effectiveness of KV caching.</p>
+<div style="text-align: center;">
 
-<h3>Quantization Strategies</h3>
+<table>
+<tr><th><strong>Scenario</strong></th><th><strong>Recommended Hardware</strong></th><th><strong>Rationale</strong></th></tr>
+<tr><td>$<$10 req/s, small model</td><td>CPU</td><td>Lower cost, sufficient throughput</td></tr>
+<tr><td>10--100 req/s</td><td>T4 GPU + TensorRT</td><td>Good latency/cost balance</td></tr>
+<tr><td>$>$100 req/s</td><td>A10/A100 GPU</td><td>Maximum throughput</td></tr>
+<tr><td>Edge / mobile</td><td>INT8/INT4 on device</td><td>Memory and power constrained</td></tr>
+</table>
 
-<p>Quantization reduces model size and accelerates inference by using lower-precision representations for weights and activations. FP16 quantization is the simplest approach, reducing model size by 2× with minimal accuracy loss. Modern GPUs with tensor cores also execute FP16 operations faster than FP32, providing both memory and speed benefits.</p>
+<p></div>
 
-<p>INT8 quantization provides more aggressive compression, reducing model size by 4× compared to FP32. This requires calibration to determine appropriate scaling factors for each layer, but modern tools like TensorRT and ONNX Runtime automate this process. INT8 quantization typically causes accuracy degradation of 0.5-2 percentage points on downstream tasks, which is acceptable for many applications.</p>
-
-<p>INT4 and even lower precision quantization push compression further, achieving 8× or greater size reduction. However, accuracy degradation becomes more significant, and specialized hardware support is less common. These extreme quantization levels are most appropriate for deployment on edge devices where memory is severely constrained and some accuracy loss is acceptable.</p>
-
-<p>Dynamic quantization applies quantization only to weights while keeping activations in higher precision. This provides a good balance between compression and accuracy, as weights are more tolerant of quantization than activations. For BERT models, dynamic INT8 quantization typically achieves 3-4× speedup with less than 1 percentage point accuracy loss.</p>
-
-<h3>Model Distillation</h3>
-
-<p>Knowledge distillation trains a smaller student model to mimic a larger teacher model, achieving better performance than training the student from scratch. The student learns from both the ground truth labels and the soft probability distributions produced by the teacher. This additional signal helps the student learn more effectively, often achieving 95-98\% of the teacher's performance with 40-60\% of the parameters.</p>
-
-<p>DistilBERT exemplifies successful distillation, reducing BERT-base from 12 layers to 6 while retaining 97\% of its performance on GLUE benchmarks. The distillation process uses a combination of distillation loss (matching teacher's output distributions), masked language modeling loss, and cosine embedding loss (matching hidden state directions). Training requires approximately the same compute as fine-tuning the teacher model.</p>
-
-<p>The benefits of distillation compound with other optimization techniques. A distilled model can be further quantized and optimized, achieving cumulative speedups of 5-10× compared to the original model. For production deployment, this combination of distillation and quantization often provides the best balance of performance and efficiency.</p>
-
-<h3>Hardware Selection</h3>
-
-<p>Choosing appropriate hardware for inference depends on throughput requirements, latency constraints, and cost considerations. For high-throughput batch processing, GPUs provide the best performance per dollar. NVIDIA T4 GPUs offer excellent inference performance at moderate cost, while A10 and A100 GPUs provide higher throughput for demanding applications.</p>
-
-<p>For latency-critical applications with moderate throughput, CPUs may be more cost-effective than GPUs. Modern CPUs with AVX-512 instructions can achieve respectable inference performance, especially for smaller models and shorter sequences. Intel's Deep Learning Boost and similar technologies further accelerate neural network inference on CPUs.</p>
-
-<p>Specialized inference accelerators like Google's TPUs, AWS Inferentia, and NVIDIA's TensorRT provide optimized performance for specific workloads. These platforms often achieve better performance per watt and performance per dollar than general-purpose GPUs, but require more effort to deploy and optimize. They are most appropriate for very high-volume applications where the engineering investment is justified.</p>
+<p>See Chapter~22 for detailed hardware analysis and cost breakdowns.</p>
 
 <h2>Cost Optimization</h2>
 
@@ -425,45 +402,19 @@ for name, param in model.named_parameters():
 
 <h2>Production Deployment</h2>
 
-<p>Deploying transformer models in production requires careful attention to serving infrastructure, monitoring, and operational practices. This section covers the key considerations for reliable production deployment.</p>
+<p>Production deployment involves serving infrastructure, monitoring, and safe rollout practices. Chapter~22 covers serving frameworks (TorchServe, Triton, vLLM), deployment architectures (Ray Serve, Kubernetes), and KV cache management in detail. Here we summarize the key decision points.</p>
 
-<h3>Model Serving Frameworks</h3>
+<h3>Deployment Checklist</h3>
 
-<p>Several frameworks specialize in serving transformer models efficiently. TorchServe provides a production-ready serving solution for PyTorch models with built-in support for batching, versioning, and metrics. It handles request queuing, dynamic batching, and model lifecycle management, making it suitable for production deployment with minimal custom code.</p>
+<p><strong>Before deployment:</strong>
+<ol>
+    <li>Optimize model: quantize (INT8/FP16), export to ONNX or TensorRT, enable KV caching for generation.
+    <li>Benchmark under realistic conditions (expected batch sizes, sequence lengths, peak load).
+    <li>Set up monitoring: latency percentiles (p50, p95, p99), throughput, error rate, GPU utilization.
+    <li>Plan scaling: autoscaling rules, load balancing, maximum replica count.
+</ol>
 
-<p>ONNX Runtime offers cross-platform inference with optimizations for various hardware backends. Converting models to ONNX format enables deployment on CPUs, GPUs, and specialized accelerators with a single model artifact. ONNX Runtime includes graph optimizations and kernel fusion that can improve inference speed by 2-3× compared to native PyTorch inference.</p>
-
-<p>TensorRT provides highly optimized inference for NVIDIA GPUs, achieving the best possible performance on this hardware. It performs aggressive optimizations including layer fusion, precision calibration, and kernel auto-tuning. For latency-critical applications on NVIDIA hardware, TensorRT often provides 2-5× speedup compared to other serving solutions.</p>
-
-<p>Triton Inference Server supports multiple frameworks and provides advanced features like model ensembling, dynamic batching, and concurrent model execution. It is particularly well-suited for complex serving scenarios involving multiple models or preprocessing pipelines. The learning curve is steeper than simpler solutions, but the flexibility and performance justify the investment for large-scale deployments.</p>
-
-<h3>Scaling Strategies</h3>
-
-<p>Horizontal scaling distributes load across multiple model instances, providing both higher throughput and fault tolerance. Load balancers distribute requests across instances, and autoscaling adjusts the number of instances based on demand. This approach is straightforward to implement and scales well to very high request volumes.</p>
-
-<p>Vertical scaling uses more powerful hardware for each instance, such as GPUs with more memory or faster CPUs. This approach is simpler to manage than horizontal scaling but has limits, as individual hardware units have maximum capacities. Vertical scaling is often combined with horizontal scaling, using appropriately-sized instances and scaling the number of instances as needed.</p>
-
-<p>Model parallelism splits large models across multiple GPUs within a single instance, enabling serving of models too large for a single GPU. This requires more sophisticated implementation but is necessary for very large models. Pipeline parallelism can improve efficiency by processing multiple requests concurrently through different stages of the model.</p>
-
-<h3>Monitoring and Logging</h3>
-
-<p>Comprehensive monitoring is essential for maintaining reliable production systems. At minimum, track request rate, latency percentiles (p50, p95, p99), error rate, and resource utilization (CPU, GPU, memory). These metrics provide early warning of issues and help with capacity planning.</p>
-
-<p>Model-specific metrics provide insight into model behavior. Track input length distributions to detect shifts in request patterns. Monitor output confidence scores to identify cases where the model is uncertain. Log a sample of inputs and outputs for qualitative analysis and debugging.</p>
-
-<p>Alerting should trigger on both immediate issues and gradual degradation. Set alerts for error rate spikes, latency increases, and resource exhaustion. Also monitor for gradual trends like slowly increasing latency or decreasing confidence scores, which may indicate model drift or infrastructure degradation.</p>
-
-<p>Distributed tracing helps debug issues in complex serving pipelines. Tools like Jaeger or Zipkin track requests through preprocessing, model inference, and postprocessing, identifying bottlenecks and failures. This visibility is invaluable when debugging performance issues or errors in production.</p>
-
-<h3>A/B Testing and Deployment</h3>
-
-<p>A/B testing enables safe deployment of model updates by gradually rolling out changes to a subset of traffic. Start by routing 5-10\% of traffic to the new model while monitoring key metrics. If metrics remain stable or improve, gradually increase traffic to the new model. If metrics degrade, roll back immediately.</p>
-
-<p>Shadow deployment runs the new model alongside the existing model without affecting user-facing results. Requests are sent to both models, but only the existing model's outputs are returned to users. This allows testing the new model's performance and behavior with production traffic before committing to deployment.</p>
-
-<p>Canary deployment is similar to A/B testing but focuses on detecting errors rather than measuring performance improvements. A small percentage of traffic (1-5\%) is routed to the new model, and error rates are monitored closely. If error rates remain acceptable for several hours or days, the deployment proceeds to full rollout.</p>
-
-<p>Blue-green deployment maintains two complete production environments and switches traffic between them. This enables instant rollback if issues are detected, as switching back to the previous environment is immediate. The cost is maintaining duplicate infrastructure, but the operational safety is valuable for critical applications.</p>
+<p><strong>Safe rollout:</strong> Use canary deployment (1--5\% traffic) or shadow mode (run new model alongside production without serving results) before full rollout. Monitor key metrics for several hours before increasing traffic. Maintain instant rollback capability.</p>
 
 <h2>Practical Checklists</h2>
 
@@ -878,6 +829,8 @@ def reverse_string(s):
 
 <h2>Solutions</h2>
 
+<p>Full solutions for all exercises are available at \url{https://deeplearning.hofkensvermeulen.be}.</p>
+
 <div class="solution"><strong>Solution:</strong> <strong>Exercise 1: Reproduce DistilBERT</strong>
 
 <p><strong>Training Configuration:</strong>
@@ -1147,7 +1100,7 @@ Monitoring (Prometheus + Grafana)
 </div>
         
         <div class="chapter-nav">
-  <a href="chapter22_hardware_optimization.html">← Chapter 22: Hardware Optimization</a>
+  <a href="chapter22_hardware_optimization.html">← Chapter 22: From PyTorch to Accelerator Silicon</a>
   <a href="../../deeptech.html">📚 Table of Contents</a>
   <a href="chapter24_domain_specific_models.html">Chapter 24: Domain-Specific Models →</a>
 </div>

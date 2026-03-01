@@ -36,7 +36,7 @@ CHAPTERS = [
     ("chapter19_long_context", "Chapter 19: Long Context Handling"),
     ("chapter20_pretraining_strategies", "Chapter 20: Pretraining Strategies"),
     ("chapter21_pytorch_implementation", "Chapter 21: PyTorch Implementation"),
-    ("chapter22_hardware_optimization", "Chapter 22: Hardware Optimization"),
+    ("chapter22_hardware_optimization", "Chapter 22: From PyTorch to Accelerator Silicon"),
     ("chapter23_best_practices", "Chapter 23: Best Practices"),
     ("chapter24_domain_specific_models", "Chapter 24: Domain-Specific Models"),
     ("chapter25_enterprise_nlp", "Chapter 25: Enterprise NLP"),
